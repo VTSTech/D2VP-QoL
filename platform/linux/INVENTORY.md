@@ -164,7 +164,7 @@ Round 3 grew the file (verbatim content, weak linkage, same yield rule):
 | Threads (CreateThread/Open/Suspend/Resume/Priority) | pthread + tids; SIGSTOP/SIGCONT for suspend | Application crash path, LogManager |
 | Toolhelp (snapshot + Thread/Process/Module walks) | /proc/self/task, /proc, dl_iterate_phdr | Fog/File, Fog/Debug, crashy |
 | Memory status + VirtualQuery + GetSystemInfo | sysinfo, /proc/self/maps, sysconf | Fog/Memory OOM path, stack walker |
-| Module info (GetModuleHandle/FileName/Information) | /proc/self/exe + maps | Fog/Debug symbolizer |
+| Module info (GetModuleHandle/FileName/Information) | /proc/self/exe + maps; **round 3 fix: GetModuleFileNameA answers the Win32 face** — slashes flipped to `\`, because every decompiled caller munges the module path with 0x5C arithmetic (FindMpqFromDiskOrCd's strrchr + SStrPack module-dir fallback, FindMPQOnCd's SStrChr walk); d2_posix_path translates back at the open/stat boundary | Fog/Debug symbolizer, **the MPQ module-dir fallback (round 3)** |
 | Text conversion (MultiByteToWideChar/WideCharToMultiByte) | hand-rolled UTF-8/UTF-16 codec, BMP-complete | Fog/File, Debug, Application |
 | Errors (FormatMessageA, Get/SetLastError, WSAGetLastError) | code-family tables + TSD | Fog/File, SErr |
 | Winsock (socket/connect/send/recv/closesocket/ioctlsocket/select + fd_set) | BSD fds; the winsock fd_set shape macro-mapped; select translates to poll(2) | Safesock client path |
@@ -178,14 +178,18 @@ Round 3 grew the file (verbatim content, weak linkage, same yield rule):
 ## 6b. The Storm/MPQ routing round found (round 3)
 
 The vendored Storm's OS layer is plain `CreateFileA/ReadFile/SetFilePointer/
-GetFileSize/CloseHandle` — the M1 file shim IS the MPQ routing layer. Three
+GetFileSize/CloseHandle` — the M1 file shim IS the MPQ routing layer. Four
 gaps closed at the shim, no Storm edits:
-1. backslash paths (above); 2. fd-aware CloseHandle (above); 3. nothing else
-— the archive open path (SFileOpenArchive → SFILE_s_OpenArchive) parses the
-header at 0x200 steps, decrypts the hash/block tables with SFILE_Hash(3, ...
-) + SFILE_Decrypt (the decomp's own crypt — the fixture generator
-transcribes it), and reads stored single-unit files contiguously
+1. backslash paths (above); 2. fd-aware CloseHandle (above); 3. the archive
+open path itself needed nothing — SFileOpenArchive → SFILE_s_OpenArchive
+parses the header at 0x200 steps, decrypts the hash/block tables with
+SFILE_Hash(3, ...) + SFILE_Decrypt (the decomp's own crypt — the fixture
+generator transcribes it), and reads stored single-unit files contiguously
 (`dwFlags & 0xff00` gates the sector table; EXISTS|SINGLE_UNIT reads raw).
+4. [round 3 fix, CI] GetModuleFileNameA's Win32 face (row above): the
+module-dir fallback truncated the module path at strrchr(0x5C), and a
+POSIX-slash answer made it miss — the MPQ name glued onto the full exe path
+("/build/d2linuxd2vp_smoke.mpq"), the CI round's mpq self-test failure.
 The smoke fixture (platform/linux/tests/d2vp_smoke.mpq, 1136 bytes, generated
 by tools/gen-mpq-fixture.py and validated against the independent mpyq
 reader) exercises all of it in CI.
@@ -202,6 +206,17 @@ reader) exercises all of it in CI.
   SKIPPED there — no game TUs in the 64-bit binary, charter R1).
 - sandbox: the smoke fixture self-checks against the decomp's own crypt and
   passes the independent mpyq reader (open + read + byte-verify).
+- sandbox [round 3 fix]: the native gate (check-build-linux.sh, no multilib)
+  is green again at the fix commit — d2_linux_static_init.cpp compiles empty
+  under native (its StaticInit_* callees are i386-only; the gate is
+  D2LINUX_HAS_GAME_SLICE, the same define the MPQ probes use), instead of
+dangling 18 undefined references at link.
+- sandbox [round 3 fix]: the module-dir fallback proven both ways by the
+  standalone harness (scripts/mpq_fallback_harness.cpp, verbatim port of
+  FindMpqFromDiskOrCd's path shape + d2_posix_path): Win32 face opens
+  "\dir\d2vp_smoke.mpq" → "/dir/d2vp_smoke.mpq"; the pre-fix POSIX face
+  produces "/dir/binaryd2vp_smoke.mpq" and fails — the exact CI shape.
+  The i386 RUN itself is still CI's ring (no multilib here).
 - sandbox: PE gates **380/380** on the shared-TU diff (tools/check-vanilla-plus.sh).
 - CI (this push): the i386 `linux-native` job builds the charter binary and
   runs `--smoke`, whose verdict now includes the MPQ gates: missing-MPQ

@@ -821,6 +821,20 @@ DWORD GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize) {
     ssize_t n = readlink("/proc/self/exe", lpFilename, nSize - 1);
     if (n <= 0) { lpFilename[0] = '\0'; return 0; }
     lpFilename[n] = '\0';
+    // [d2linux M2 round 3 fix] Win32 face: every decompiled caller munges the
+    // module path with backslash arithmetic — D2Hell's FindMpqFromDiskOrCd
+    // strrchr(0x5C) + SStrPack("\\") module-dir fallback (the path the smoke's
+    // MPQ fixture rides), FindMPQOnCd's SStrChr(0x5C) component walk, and the
+    // Fog/Storm/Bnclient exe-relative path builders. readlink answers
+    // POSIX-slash, so returning it verbatim made strrchr(0x5C) miss and the
+    // fallback concatenate the MPQ name onto the full exe path
+    // ("/build/d2linuxd2vp_smoke.mpq" — the CI round's mpq self-test failure).
+    // Slash-flip here keeps the shim's contract (Win32 paths out,
+    // d2_posix_path translates back at the open/stat boundary; mixed
+    // separators pass through both directions untouched).
+    for (char* p = lpFilename; *p; ++p) {
+        if (*p == '/') *p = '\\';
+    }
     return (DWORD)n;
 }
 

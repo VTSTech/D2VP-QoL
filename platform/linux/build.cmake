@@ -301,7 +301,10 @@ set(D2LINUX_SHIM_SOURCES
     # the PE's pre-WinMain _initterm pass, subset to the slice's TUs. Without
     # it Storm's complement-encoded list heads stay zeroed BSS and the first
     # SFILE_AllocFileRecord writes through pointer 0 (the round-3 smoke's
-    # 0xC0000005 in SFILE_InsertFileRecordIntoList2).
+    # 0xC0000005 in SFILE_InsertFileRecordIntoList2). The TU body gates on
+    # D2LINUX_HAS_GAME_SLICE (below): its 18 StaticInit_* callees are defined
+    # in the i386-only game TUs, so native builds compile it empty instead of
+    # dangling at link.
     platform/linux/d2_linux_static_init.cpp
 )
 

@@ -26,6 +26,18 @@
 // unprioritized constructor.
 //
 // PE safety: this file compiles only in the linux build (build.cmake).
+//
+// [d2linux M2 round 3 fix] native-build gate: every StaticInit_* this pass
+// calls is DEFINED in a game TU, and the game TUs build i386-only (charter
+// R1). build.cmake defines D2LINUX_HAS_GAME_SLICE exactly when they are in
+// the link — the same gate d2_linux_main.cpp's MPQ probes use. In native
+// builds (tools/check-build-linux.sh's no-multilib default) this TU must
+// compile EMPTY: unguarded, its 18 calls dangle at link and take the whole
+// native build down ("undefined reference to
+// Fog::Src::LogManager::StaticInit_gLogMessageQueueCS()" et al — the CI
+// round's local-repo failure). The skeleton smoke needs none of this: its
+// lists stay untouched BSS and the MPQ self-tests are SKIPPED there.
+#if defined(D2LINUX_HAS_GAME_SLICE)
 
 #include "Fog/Src/LogManager.h"
 #include "Storm/Source/SComp.h"
@@ -68,3 +80,5 @@ extern "C" __attribute__((constructor(200))) void D2RunCppStaticInitializers() {
     // [65] 006ca6f0 — the main-thread id cache (SSystem).
     Storm::Source::SSystem::SetCurrentThreadId();
 }
+
+#endif  // D2LINUX_HAS_GAME_SLICE
