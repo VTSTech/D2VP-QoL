@@ -45,7 +45,7 @@
 #include "Source/D2Client/UI/ui.data.h"
 #include "Source/D2Client/UI/VanillaPlusOptions.h" // VP: vanilla-plus options page API
 #include "Source/D2Client/UI/VanillaPlusCore.h" // VP: vanilla-plus AUTO_GOLD_Tick / ALTTOGGLE_Reset
-#include "Source/D2Win/Src/D2WinFont.h" // VP: [11th sync re-plant] the shift-compare second channel draw (D2WinFont::DRAW_CompareTooltipUnderCursor); upstream include-only list dropped it
+#include "Source/D2Win/Src/D2WinFont.h" // VP: [11th sync re-plant] the shift-compare second channel draw (declared in the D2WinFont module header); upstream include-only list dropped it
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 

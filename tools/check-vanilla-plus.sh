@@ -217,7 +217,7 @@ gate "options page: shared ini path"      Source/D2Client/UI/VanillaPlusOptions.
 
 # ---- automap crash tolerance ----------------------------------------------
 gate "automap tolerance VP blocks (4 sites + macro)" Source/D2Client/UI/Automap.cpp 'VP-BEGIN \[automap tolerance\]' 5
-gate "automap tolerant frees"             Source/D2Client/UI/Automap.cpp         'D2_FREE\(nErrorAddress\);'  4
+gate "automap tolerant frees"  Source/D2Client/UI/Automap.cpp 'D2_FREE\(pCellData\);' 4  # [11th sync] upstream regen renamed the local nErrorAddress -> pCellData; the four tolerance frees follow it
 
 # ---- sound-defect: class sound tables + sounds.txt null guard ---------------
 gate "sounds.txt null guard in SOUND_PlaySound" Source/D2Client/Sound/Sound.cpp 'VP: lookup returns null' 1

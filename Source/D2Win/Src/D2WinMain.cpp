@@ -37,7 +37,7 @@
 #include "Source/D2Win/D2WinScrollbar.h"
 #include "Source/D2Win/D2WinTimer.h"
 #include "Source/D2Win/Src/D2WinMain.data.h"
-#include "Source/D2gfx/D2GFX.h" // VP: [11th sync re-plant] D2GFX_GetPresentationStretch (the R112 hosted-stretch cursor map); upstream's include-only list dropped it
+#include "Source/D2gfx/D2GFX.h" // VP: [11th sync re-plant] the R112 hosted-stretch cursor map's stretch query; upstream's include-only list dropped it
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
