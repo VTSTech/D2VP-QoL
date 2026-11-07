@@ -21,6 +21,12 @@ struct D2StormAsyncCompletionStrc;
 // Data types
 #ifndef _WIN32  // provided by the Win32 SDK / CRT on Windows
 
+// VP: defer to the host syntax sweep's shim definition (tools/vp_host_api.h) -
+// Fog.h embeds _SYSTEM_INFO by value without including this header, so on the
+// host the shim must own the struct. The real build never parses this block
+// (_WIN32), so the guard is host-only. Eleventh sync.
+#ifndef VP_HOST_DEFINED__SYSTEM_INFO
+#define VP_HOST_DEFINED__SYSTEM_INFO 1
 struct _SYSTEM_INFO {
     /* 0x00 */ uint32_t u;
     /* 0x04 */ DWORD dwPageSize;
@@ -33,6 +39,7 @@ struct _SYSTEM_INFO {
     /* 0x20 */ WORD wProcessorLevel;
     /* 0x22 */ WORD wProcessorRevision;
 };
+#endif // VP_HOST_DEFINED__SYSTEM_INFO
 
 struct _WIN32_FIND_DATAA {
     /* 0x000 */ DWORD dwFileAttributes;

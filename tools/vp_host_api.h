@@ -58,6 +58,7 @@ typedef struct _OSVERSIONINFOW {
 #define CREATE_ALWAYS             2u
 #define OPEN_EXISTING             3u
 #define FILE_SHARE_READ           0x00000001u
+#define FILE_SHARE_WRITE          0x00000002u
 #define FILE_ATTRIBUTE_NORMAL     0x00000080u
 #define FILE_BEGIN                0u
 #define INVALID_HANDLE_VALUE      ((HANDLE)(intptr_t)-1)
@@ -66,6 +67,69 @@ typedef struct _OSVERSIONINFOW {
 #define MAX_PATH                  260
 #define TRUE                      1
 #define FALSE                     0
+
+// --- system info (winbase.h) - Fog.h embeds it by value (sWinSystemInfo) ---
+// Eleventh-sync host-sweep finding: Fog.h embeds _SYSTEM_INFO without
+// including SFile.h, whose #ifndef _WIN32 fallback defines it; the real build
+// gets the SDK form through windows.h. d2_platform.h's non-Windows path
+// carries neither, so the shim family owns the SDK-faithful definition and
+// SFile.h's fallback defers through the shared guard (fork-marked edit).
+#define VP_HOST_DEFINED__SYSTEM_INFO 1
+struct _SYSTEM_INFO {
+    /* 0x00 */ uint32_t u;
+    /* 0x04 */ DWORD dwPageSize;
+    /* 0x08 */ LPVOID lpMinimumApplicationAddress;
+    /* 0x0C */ LPVOID lpMaximumApplicationAddress;
+    /* 0x10 */ DWORD_PTR dwActiveProcessorMask;
+    /* 0x14 */ DWORD dwNumberOfProcessors;
+    /* 0x18 */ DWORD dwProcessorType;
+    /* 0x1C */ DWORD dwAllocationGranularity;
+    /* 0x20 */ WORD wProcessorLevel;
+    /* 0x22 */ WORD wProcessorRevision;
+};
+
+// --- process walk (processthreadsapi/memoryapi) - d2_hangwatch.cpp ---------
+// Eleventh sync: d2_hangwatch joined the sweep list; its frame-grabber is the
+// first fork TU touching the thread-walk API. Canonical winbase forms; the
+// host check only needs the declarations to resolve.
+#define THREAD_SUSPEND_RESUME     0x0002u
+#define THREAD_GET_CONTEXT        0x0008u
+#define THREAD_QUERY_INFORMATION  0x0040u
+#define CONTEXT_FULL              0x00010007u /* i386|CONTROL|INTEGER|SEGMENTS */
+HANDLE OpenThread(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId);
+DWORD SuspendThread(HANDLE hThread);
+DWORD ResumeThread(HANDLE hThread);
+BOOL ReadProcessMemory(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer,
+                       SIZE_T nSize, SIZE_T* lpNumberOfBytesRead);
+#define ZeroMemory(dst, len) memset((dst), 0, (len))
+
+// --- tool help (tlhelp32.h) - d2_hangwatch.cpp's thread walk ----------------
+// Canonical forms; the fork reads dwSize/th32ThreadID/th32OwnerProcessID and
+// passes the rest by pointer.
+#define TH32CS_SNAPTHREAD 0x00000004u
+typedef struct tagTHREADENTRY32 {
+    DWORD dwSize;               /* 0x00 */
+    DWORD cntUsage;             /* 0x04 */
+    DWORD th32ThreadID;         /* 0x08 */
+    DWORD th32OwnerProcessID;   /* 0x0C */
+    LONG  tpBasePri;            /* 0x10 */
+    LONG  tpDeltaPri;           /* 0x14 */
+    DWORD dwFlags;              /* 0x18 */
+} THREADENTRY32;
+typedef THREADENTRY32* LPTHREADENTRY32;
+HANDLE CreateToolhelp32Snapshot(DWORD dwFlags, DWORD th32ProcessID);
+BOOL Thread32First(HANDLE hSnapshot, LPTHREADENTRY32 lpte);
+BOOL Thread32Next(HANDLE hSnapshot, LPTHREADENTRY32 lpte);
+BOOL GetThreadContext(HANDLE hThread, LPCONTEXT lpContext);
+
+// --- message box (winuser.h) - d2_boot.cpp's fatal-error path --------------
+#define MB_OK        0x00000000u
+#define MB_ICONERROR 0x00000010u
+
+// --- keyboard (winuser.h) - VanillaPlusCore's hotkey poller ----------------
+// d2_platform.h's non-Windows path declares GetKeyState but not the async
+// variant the fork's UI poller reads.
+SHORT GetAsyncKeyState(int nVirtKey);
 
 // --- gdi/user misc ----------------------------------------------------------
 // HACCEL must spell exactly what D2Client/Message.h re-declares

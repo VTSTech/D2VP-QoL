@@ -47,6 +47,7 @@
 #include "Source/D2Client/Cursor.h" // VP: upstream moved GetMouseX/GetMouseY from ui:: to Cursor::
 
 #include "Source/D2CMP/SRC/CelCmp.h"
+#include "Source/D2Client/GAME/Game/Game.h" // VP: [eleventh sync] D2Client.h's public-header-split copy of D2Client::GAME::Game doesn't carry the exit-flag surface; the options-exit probes call GAME::Game::GAMEDATA_GetExitFlag3 from the module-internal header directly
 #include "Source/D2Client/D2Client.h"
 #include "Source/D2Client/UI/VanillaPlusCore.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
