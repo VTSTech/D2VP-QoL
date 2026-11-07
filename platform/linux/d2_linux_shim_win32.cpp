@@ -196,19 +196,165 @@ BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
     return TRUE;
 }
 
+// [d2linux M2 round 3 fix] The reservation ledger shared by VirtualAlloc and
+// VirtualFree: every successful allocation records {base, extent} so an
+// in-place commit can verify it lands inside this process's own reservation
+// (the PE's ERROR_INVALID_ADDRESS verdict otherwise) and MEM_RELEASE can
+// unmap the WHOLE extent from the exact base the PE passes (dwSize 0).
+namespace {
+
+struct D2VirtualRange { void* pBase; size_t nBytes; };
+constexpr int kMaxVirtualRanges = 1024;
+D2VirtualRange g_virtualRanges[kMaxVirtualRanges];
+int g_nVirtualRanges = 0;
+pthread_mutex_t g_csVirtualRanges = PTHREAD_MUTEX_INITIALIZER;
+
+void d2_track_virtual_range(void* pBase, size_t nBytes) {
+    pthread_mutex_lock(&g_csVirtualRanges);
+    if (g_nVirtualRanges < kMaxVirtualRanges) {
+        g_virtualRanges[g_nVirtualRanges].pBase = pBase;
+        g_virtualRanges[g_nVirtualRanges].nBytes = nBytes;
+        ++g_nVirtualRanges;
+    } else {
+        fprintf(stderr, "d2linux: VirtualAlloc range table full - VirtualFree will leak\n");
+    }
+    pthread_mutex_unlock(&g_csVirtualRanges);
+}
+
+bool d2_range_within_tracked(void* pAddr, size_t nBytes) {
+    pthread_mutex_lock(&g_csVirtualRanges);
+    const uintptr_t nAddr = (uintptr_t)pAddr;
+    const uintptr_t nStop = nAddr + nBytes;
+    bool bFound = false;
+    for (int i = 0; i < g_nVirtualRanges && !bFound; ++i) {
+        const uintptr_t nBase = (uintptr_t)g_virtualRanges[i].pBase;
+        bFound = nAddr >= nBase && nStop <= nBase + g_virtualRanges[i].nBytes;
+    }
+    pthread_mutex_unlock(&g_csVirtualRanges);
+    return bFound;
+}
+
+size_t d2_untrack_virtual_range(void* pBase) {
+    pthread_mutex_lock(&g_csVirtualRanges);
+    size_t nBytes = 0;
+    for (int i = 0; i < g_nVirtualRanges; ++i) {
+        if (g_virtualRanges[i].pBase == pBase) {
+            nBytes = g_virtualRanges[i].nBytes;
+            g_virtualRanges[i] = g_virtualRanges[--g_nVirtualRanges];
+            break;
+        }
+    }
+    pthread_mutex_unlock(&g_csVirtualRanges);
+    return nBytes;
+}
+
+}  // namespace
+
+// [d2linux M2 round 3 fix] Windows hands VirtualAlloc bases out on the 64 KB
+// allocation granularity (SYSTEM_INFO.dwAllocationGranularity), and the
+// game's heap identity DEPENDS on it: SMEM_AllocateHeap stores the high 16
+// bits of the heap base as the heap signature (0x6f6d<<16 | base>>16) and
+// SMemFree reconstructs the descriptor as (signature & 0xffff) << 16 — a
+// round-trip that only works when the base's low 16 bits are zero. mmap only
+// guarantees page (4 KB) alignment, so carve a 64 KB-aligned window out of an
+// oversized mapping and drop the head/tail slack.
+void* d2_mmap_64k_aligned(size_t nBytes, int prot) {
+    const uintptr_t kGran = 0x10000;   // Windows allocation granularity
+    const uintptr_t kPage = 0x1000;
+    uint8_t* pRaw = (uint8_t*)mmap(NULL, nBytes + 2 * kGran, prot,
+                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (pRaw == (uint8_t*)MAP_FAILED) return MAP_FAILED;
+    uint8_t* pAligned = (uint8_t*)(((uintptr_t)pRaw + kGran - 1) & ~(kGran - 1));
+    if (pAligned > pRaw) munmap(pRaw, (size_t)(pAligned - pRaw));
+    const uintptr_t nKeepEnd = (uintptr_t)pAligned + ((nBytes + kPage - 1) & ~(kPage - 1));
+    const uintptr_t nRawEndPage =
+        ((uintptr_t)pRaw + nBytes + 2 * kGran + kPage - 1) & ~(kPage - 1);
+    if (nKeepEnd < nRawEndPage) munmap((void*)nKeepEnd, (size_t)(nRawEndPage - nKeepEnd));
+    return pAligned;
+}
+
 LPVOID VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect) {
-    // Named site (Fog pool reservations): anonymous read/write mmap. The
-    // reserve/commit distinction does not exist in mmap; MEM_RESERVE-only
-    // requests map PROT_NONE so later commits re-map over them.
-    int prot = PROT_READ | PROT_WRITE;
-    if (flProtect == 0x01 /* PAGE_NOACCESS */) prot = PROT_NONE;
-    return mmap(lpAddress, dwSize ? dwSize : 1, prot,
-                MAP_PRIVATE | MAP_ANONYMOUS | (lpAddress ? MAP_FIXED_NOREPLACE : 0), -1, 0);
+    // [d2linux M2 round 3 fix] Windows reserve/commit ladder, PE-faithful.
+    // Named sites: SMEM_AllocateHeap (Storm/Source/SMem.cpp) RESERVES with
+    // PAGE_NOACCESS then COMMITS the header range IN PLACE — a MEM_COMMIT at
+    // a non-null lpAddress over a previous reservation. mmap has no such
+    // ladder: RESERVE maps PROT_NONE, COMMIT over that reservation flips the
+    // protection with mprotect(). The old body passed the in-place commit to
+    // mmap with MAP_FIXED_NOREPLACE, which fails with EEXIST on the already
+    // reserved range — and mmap's failure value is MAP_FAILED (-1), not NULL,
+    // so the caller's !pCommitted check passed and the first header write
+    // faulted on the still-PROT_NONE page (the 0xC0000005 the M2 round-3
+    // smoke met in CI). Commit over unreserved space stays the PE's
+    // ERROR_INVALID_ADDRESS verdict: NULL. MEM_RELEASE unmaps the full
+    // tracked extent (the PE frees by exact base, dwSize 0); MEM_DECOMMIT
+    // puts the pages back to PROT_NONE but keeps the reservation.
+    static const DWORD kMEM_COMMIT = 0x1000;
+    static const DWORD kMEM_RESERVE = 0x2000;
+    if (!dwSize) dwSize = 1;
+    int prot;
+    switch (flProtect & 0xFF) {
+        case 0x01: prot = PROT_NONE; break;                        // PAGE_NOACCESS
+        case 0x02: prot = PROT_READ; break;                        // PAGE_READONLY
+        case 0x08: prot = PROT_READ | PROT_WRITE; break;           // PAGE_WRITECOPY
+        case 0x10: prot = PROT_EXEC; break;                        // PAGE_EXECUTE
+        case 0x20: prot = PROT_READ | PROT_EXEC; break;            // PAGE_EXECUTE_READ
+        case 0x40: prot = PROT_READ | PROT_WRITE | PROT_EXEC; break; // PAGE_EXECUTE_READWRITE
+        case 0x80: prot = PROT_READ | PROT_WRITE | PROT_EXEC; break; // PAGE_EXECUTE_WRITECOPY
+        default:   prot = PROT_READ | PROT_WRITE; break;           // PAGE_READWRITE et al.
+    }
+    if (flAllocationType & kMEM_COMMIT) {
+        if (lpAddress) {
+            // Commit over reserved space: the pages exist (the PROT_NONE
+            // reservation) — flip protection. Only within a range this
+            // process reserved/allocated; otherwise the PE verdict.
+            if (!d2_range_within_tracked(lpAddress, dwSize) ||
+                mprotect(lpAddress, dwSize, prot) != 0) {
+                return NULL;
+            }
+            return lpAddress;
+        }
+        void* p = d2_mmap_64k_aligned(dwSize, prot);
+        if (p == MAP_FAILED) return NULL;   // the PE's failure value is NULL, not MAP_FAILED
+        d2_track_virtual_range(p, dwSize);
+        return p;
+    }
+    if (flAllocationType & kMEM_RESERVE) {
+        if (lpAddress) {
+            // The game never reserves at a chosen address; if one ever does,
+            // it must arrive 64 KB-aligned the way the PE requires.
+            void* pFixed = mmap(lpAddress, dwSize, prot, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+            if (pFixed == MAP_FAILED) return NULL;
+            d2_track_virtual_range(pFixed, dwSize);
+            return pFixed;
+        }
+        // Fresh reservation (SMEM_AllocateHeap's PAGE_NOACCESS ladder): still
+        // 64 KB-aligned, because the commit that follows and every block
+        // address the heap hands out hang off this base.
+        void* p = d2_mmap_64k_aligned(dwSize, prot);
+        if (p == MAP_FAILED) return NULL;
+        d2_track_virtual_range(p, dwSize);
+        return p;
+    }
+    return NULL;   // neither COMMIT nor RESERVE: the PE rejects the call
 }
 
 BOOL VirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType) {
-    // MEM_RELEASE (0x8000): the PE build passes dwSize=0 for release.
-    return munmap(lpAddress, dwSize ? dwSize : 1) == 0;
+    // MEM_RELEASE (0x8000): the PE build passes dwSize=0 for release and the
+    // allocation's exact base — free the WHOLE tracked extent, not one page
+    // (the old body leaked nReserveSize-4096 bytes of every pool release).
+    // MEM_DECOMMIT (0x4000): pages leave the commit state, stay reserved.
+    static const DWORD kMEM_DECOMMIT = 0x4000;
+    static const DWORD kMEM_RELEASE = 0x8000;
+    if (!lpAddress) return FALSE;
+    if (dwFreeType & kMEM_RELEASE) {
+        size_t nBytes = d2_untrack_virtual_range(lpAddress);
+        if (!nBytes) nBytes = dwSize ? dwSize : 1;   // untracked base: the old 1-page fallback
+        return munmap(lpAddress, nBytes) == 0;
+    }
+    if (dwFreeType & kMEM_DECOMMIT) {
+        return mprotect(lpAddress, dwSize ? dwSize : 1, PROT_NONE) == 0;
+    }
+    return FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +362,16 @@ BOOL VirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType) {
 // tree embeds by value; on i386 it is 24 bytes, exactly a pthread_mutex_t, so
 // the shim constructs one in place. (DebugInfo stays NULL — there is no
 // loader lock to report to.)
+//
+// [d2linux M2 round 3 fix] RECURSIVE. A Win32 CRITICAL_SECTION may be entered
+// N times by its owning thread (Leave N times); the game relies on it —
+// Storm's global SFile lock lpCriticalSection_00779068 is nested by design
+// (SFILE_s_OpenArchive -> SFILE_ReadFile both enter it). The old body built a
+// default (fast) pthread mutex, so the first legal re-entry self-deadlocked:
+// the round-3 smoke hung forever in RunMpqFixtureSelfTest with main and the
+// async worker both futex-waiting on the same lock. The RECURSIVE attribute
+// changes only the kind field — the storage size (and the static_assert
+// below) is unaffected.
 // ---------------------------------------------------------------------------
 static_assert(sizeof(_RTL_CRITICAL_SECTION) >= sizeof(pthread_mutex_t),
               "d2linux: lock storage must hold a pthread_mutex_t");
@@ -223,7 +379,11 @@ static_assert(sizeof(_RTL_CRITICAL_SECTION) >= sizeof(pthread_mutex_t),
 void InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
     if (!lpCriticalSection) return;
     lpCriticalSection->DebugInfo = NULL;
-    pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(lpCriticalSection), NULL);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(lpCriticalSection), &attr);
+    pthread_mutexattr_destroy(&attr);
 }
 
 void EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
@@ -1533,7 +1693,17 @@ BOOL CreateProcessA(LPCSTR, LPSTR, SECURITY_ATTRIBUTES*, SECURITY_ATTRIBUTES*, B
 BOOL CreateProcessW(LPCWSTR, LPWSTR, SECURITY_ATTRIBUTES*, SECURITY_ATTRIBUTES*, BOOL, DWORD,
                     LPVOID, LPCWSTR, void*, void*) { tls_lastError = 2; return FALSE; }
 BOOL GetExitCodeProcess(HANDLE, LPDWORD lpExitCode) { if (lpExitCode) *lpExitCode = 1; return FALSE; }
-BOOL TerminateProcess(HANDLE, UINT) { return FALSE; }
+BOOL TerminateProcess(HANDLE, UINT uExitCode) {
+    // [d2linux M2 round 3 fix] The PE's only caller is SErrDisplayError's
+    // terminate tail, on GetCurrentProcess(): a fatal Storm error ENDS the
+    // process with the caller's exit code. The old stub returned FALSE, so
+    // the game ran on past the fatal report (the post-fatal fault cascade the
+    // round-3 smoke met in CI). _exit: TerminateProcess is abrupt on the PE —
+    // no finalizers — and stderr is unbuffered, so the report lands.
+    fflush(stderr);
+    _exit((int)uExitCode);
+    return FALSE;  // unreachable
+}
 
 // [d2linux M2 round 3] the lstring family's bodies — declared in
 // tools/vp_host_api.h since M1 but first linked now: support/d2_boot.cpp's

@@ -297,6 +297,12 @@ set(D2LINUX_SHIM_SOURCES
     platform/linux/d2_linux_globals_step1.cpp
     platform/linux/d2_linux_shim_crt.cpp
     platform/linux/d2_linux_crash.cpp
+    # [d2linux M2 round 3 fix] the linux twin of support/d2_static_init.cpp:
+    # the PE's pre-WinMain _initterm pass, subset to the slice's TUs. Without
+    # it Storm's complement-encoded list heads stay zeroed BSS and the first
+    # SFILE_AllocFileRecord writes through pointer 0 (the round-3 smoke's
+    # 0xC0000005 in SFILE_InsertFileRecordIntoList2).
+    platform/linux/d2_linux_static_init.cpp
 )
 
 # The platform shadow: d2_platform.h with the non-Windows stubs that clash

@@ -364,7 +364,11 @@ struct D2FaultInstaller {
 };
 // Install before main() runs, so even the earliest game fault lands in the
 // report path (the M0 skeleton installs its own crash paths after SDL; this
-// is the same layered-fault order the PE uses).
-D2FaultInstaller g_faultInstaller;
+// is the same layered-fault order the PE uses). init_priority(150): the
+// static-init twin (d2_linux_static_init.cpp, constructor(200) — the linux
+// twin of support/d2_static_init.cpp's pre-WinMain pass) must find the
+// report path already armed; the PE file documents the same contract with
+// its d2_trace.cpp-at-150 ordering note.
+D2FaultInstaller g_faultInstaller __attribute__((init_priority(150)));
 
 }  // namespace

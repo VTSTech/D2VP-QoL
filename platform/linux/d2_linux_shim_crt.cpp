@@ -13,6 +13,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +24,10 @@
 
 #include "platform/linux/d2_linux_compat.h"
 #include "platform/linux/d2_linux_api.h"
+// The crash twin's address formatter + EBP unwinder: the unhandled tail below
+// names the faulting function in the log (CI has no core and no debugger).
+#include "Fog/Engine/Application.h"
+#include "Fog/File.h"  // D2CrashFrameStrc (the unwinder's frame array)
 // The exception struct bodies (_EXCEPTION_RECORD/_CONTEXT/_EXCEPTION_POINTERS)
 // are the tree's own (Fog/Debug.h's non-Windows block) — the shim constructs
 // them, so it sees the same definitions the handlers do.
@@ -317,7 +322,39 @@ void d2_linux_dispatch_exception(EXCEPTION_RECORD* pRecord, CONTEXT* pContext) {
         if (disposition == 0xFFFFFFFFu) return;
     }
     // Nothing handled it: abort produces the core the platform debugger reads.
+    // Before the abort, name what faulted: EIP through DEBUG_FormatAddressInfo
+    // (maps + dladdr against the -rdynamic executable) and the callers through
+    // the i386 EBP chain the crash twin already unwinds. A CI log then carries
+    // the faulting function even when no core is collected.
     fprintf(stderr, "d2linux: unhandled fault 0x%08lx, aborting\n", (unsigned long)pRecord->ExceptionCode);
+    if (pContext) {
+        char szAddr[256];
+        if (Fog::Engine::Application::DEBUG_FormatAddressInfo(pContext->Eip, szAddr)) {
+            fprintf(stderr, "d2linux:   EIP=0x%08x %s\n", (unsigned)pContext->Eip, szAddr);
+        } else {
+            fprintf(stderr, "d2linux:   EIP=0x%08x\n", (unsigned)pContext->Eip);
+        }
+        D2CrashFrameStrc pFrames[16];
+        const int nFrames = Fog::Engine::Application::DEBUG_UnwindStackFrames(pContext, 0, pFrames, 0);
+        for (int i = 0; i < nFrames; ++i) {
+            if (Fog::Engine::Application::DEBUG_FormatAddressInfo(pFrames[i].dwReturnAddr, szAddr)) {
+                fprintf(stderr, "d2linux:   #%02d 0x%08x %s\n", i, (unsigned)pFrames[i].dwReturnAddr, szAddr);
+            } else {
+                fprintf(stderr, "d2linux:   #%02d 0x%08x\n", i, (unsigned)pFrames[i].dwReturnAddr);
+            }
+        }
+    }
+    fflush(stderr);
+    // [d2linux M2 round 3 fix] SIGABRT goes back to default BEFORE the abort:
+    // SIGABRT is one of the installed fault signals (d2_linux_crash.cpp maps
+    // it to EXCEPTION_BREAKPOINT 0x80000003), so the bare abort() below used
+    // to re-enter this dispatcher from inside the handler — a second
+    // "unhandled fault 0x80000003" print, then another abort(), until the
+    // recursion ate the stack and the process died with a confusing SIGSEGV
+    // (the CI shell's "Segmentation fault (core dumped)" after a clean fault
+    // report). The report above is the whole story; the abort is just the
+    // core producer.
+    signal(SIGABRT, SIG_DFL);
     abort();
 }
 
