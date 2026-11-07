@@ -620,6 +620,34 @@ const char* RunMpqFixtureSelfTest() {
     return nullptr;
 }
 
+const char* RunMpqCaseFoldSelfTest() {
+    // [d2linux M2 round 3] the NTFS-at-home contract: MPQ_LoadAllDataMpqFiles
+    // asks for the lowercase "patch_d2.mpq" baked into the PE, while modern
+    // installs ship "Patch_D2.mpq" (mixed case). Windows resolves that at the
+    // filesystem; POSIX answers ENOENT — the shim's d2_casefold_path boundary
+    // now does. The fixture bytes ride the module-dir fallback under an
+    // all-uppercase on-disk name (d2vp-namespaced, so no real-install data
+    // dir can collide), opened through the exact lowercase request string.
+    D2FogArchiveStrc* pArchive =
+        D2Hell::ARCHIVE_LoadMPQ((char*)"d2vp_case.mpq", 0, nullptr, 1000);
+    if (!pArchive) {
+        return "d2vp_case.mpq did not open against on-disk D2VP_CASE.MPQ "
+               "(the case-fold boundary failed)";
+    }
+    // Prove it is the fixture archive: the file round-trip inside it.
+    void* pFile = nullptr;
+    bool bOk = Storm::Source::SFile::SFileOpenFileEx(pArchive->hArchive,
+                                                     (char*)"d2vp_fix.txt", 0, &pFile) && pFile;
+    DWORD dwSize = bOk ? Storm::Source::SFile::SFileGetFileSize(
+                             (D2MPQFileStrc*)pFile, nullptr)
+                       : 0;
+    if (pFile) Storm::Source::SFile::SFileCloseFile((D2MPQFileStrc*)pFile);
+    D2Hell::ARCHIVE_FreeMpqFile(pArchive);
+    if (!bOk) return "case-folded archive opened but d2vp_fix.txt is missing";
+    if (dwSize != 512) return "case-folded archive file size wrong";
+    return nullptr;
+}
+
 bool GameDirPrepare(const char* szDir) {
     if (chdir(szDir) != 0) {
         std::printf("d2linux: --game-dir '%s': %s\n", szDir, strerror(errno));
@@ -651,6 +679,9 @@ int RunMpqCheck() {
     // legacy rungs modern installs don't ship — the PE loads them if present
     // and boots without them, so the probe reports them but does not fail on
     // them (this check used to; a real 1.14d data dir would false-FAIL).
+    // Names stay lowercase — they mirror the PE's baked strings; real
+    // installs' mixed-case "Patch_D2.mpq" resolves through the shim's
+    // case-fold boundary (pinned by RunMpqCaseFoldSelfTest in --smoke).
     struct Probe { const char* name; const char* note_if_missing; };
     static const Probe kProbes[] = {
         {"d2data.mpq", nullptr},
@@ -658,7 +689,7 @@ int RunMpqCheck() {
         {"d2speech.mpq", nullptr},
         {"d2delta.mpq", "legacy MPQ, absent on modern installs (boot-tolerant)"},
         {"d2kfixup.mpq", "legacy MPQ, absent on modern installs (boot-tolerant)"},
-        {"patch_d2.mpq", nullptr},
+        {"patch_d2.mpq", "no patch installed (boot-tolerant — the PE boots unpatched the same way)"},
         {"d2exp.mpq", "classic-only install (boot-tolerant)"},
     };
     int nOpened = 0, nRequiredMissing = 0, nToleratedMissing = 0;
@@ -838,7 +869,15 @@ int main(int argc, char** argv) {
             SDL_Quit();
             return 1;
         }
-        std::printf("d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close)\n");
+        mpq_fail = d2linux::RunMpqCaseFoldSelfTest();
+        if (mpq_fail) {
+            std::printf("d2linux mpq self-test FAILED: %s\n", mpq_fail);
+            d2linux::Audio_Shutdown();
+            d2linux::Video_Shutdown();
+            SDL_Quit();
+            return 1;
+        }
+        std::printf("d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close + case-fold boundary)\n");
 #else
         std::printf("d2linux mpq self-test SKIPPED (skeleton build: no game TUs, i386 charter)\n");
 #endif

@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <poll.h>
 #include <sys/mman.h>
 // NOTE: <sys/socket.h> is deliberately NOT included — its C++ declarations
@@ -1035,6 +1036,10 @@ DWORD GetTempPathW(DWORD nBufferLength, LPWSTR lpBuffer) {
 // Win32 -> POSIX path translation (defined next to CreateFileA below;
 // the file-attribute probes above use it too).
 static const char* d2_posix_path(char* szBuf, size_t cbBuf, LPCSTR lpFileName);
+// Case-insensitive resolution (defined next to d2_posix_path below): NTFS,
+// the PE's home filesystem, matches file names case-insensitively — POSIX
+// does not. Call only AFTER the exact spelling failed.
+static const char* d2_casefold_path(char* szBuf, size_t cbBuf, const char* lpPosixPath);
 
 DWORD GetFileAttributesA(LPCSTR lpFileName) {
     // [d2linux M2 round 3] named site: Storm's SFILE_FileExistsOnDisk probe and
@@ -1044,7 +1049,18 @@ DWORD GetFileAttributesA(LPCSTR lpFileName) {
     lpFileName = d2_posix_path(szPath, sizeof(szPath), lpFileName);
     if (!lpFileName) return 0xFFFFFFFFu;
     struct stat st;
-    if (stat(lpFileName, &st) != 0) { tls_lastError = 2 /* ERROR_FILE_NOT_FOUND */; return 0xFFFFFFFFu; }
+    if (stat(lpFileName, &st) != 0) {
+        // [d2linux M2 round 3] the game's baked "patch_d2.mpq" must find a
+        // real install's "Patch_D2.mpq" the way it does on Windows (the
+        // boot chain probes D2WINARCHIVE_GetArchiveHandle's d2char.mpq the
+        // same way). Wine's unixfs rule at this boundary: fold and re-stat.
+        char szCase[1024];
+        const char* lpFolded = d2_casefold_path(szCase, sizeof(szCase), lpFileName);
+        if (lpFolded == lpFileName || stat(lpFolded, &st) != 0) {
+            tls_lastError = 2 /* ERROR_FILE_NOT_FOUND */;
+            return 0xFFFFFFFFu;
+        }
+    }
     return (S_ISDIR(st.st_mode)) ? 0x10u /* FILE_ATTRIBUTE_DIRECTORY */ : 0x80u /* FILE_ATTRIBUTE_NORMAL */;
 }
 DWORD GetFileAttributesW(LPCWSTR lpFileName) {
@@ -1445,6 +1461,71 @@ static const char* d2_posix_path(char* szBuf, size_t cbBuf, LPCSTR lpFileName) {
     return szBuf;
 }
 
+// [d2linux M2 round 3] NTFS (the PE's home filesystem) matches file names
+// case-insensitively; POSIX does not. The game opens real installs'
+// "Patch_D2.mpq" through the lowercase "patch_d2.mpq" string baked into
+// MPQ_LoadAllDataMpqFiles (D2Win/Src/D2WinArchive.cpp:133) — Windows resolves
+// that at the filesystem, ext4 answers ENOENT. Wine's unixfs rule applies at
+// this boundary: call only AFTER the exact spelling failed; each component
+// then resolves case-insensitively against its parent directory, and the
+// first component with no match loses (the original pointer comes back and
+// the caller keeps its ENOENT). A case-only match has the same length, so
+// the in-place overwrite stays in bounds; every folded component is
+// stat-verified on the way in, so a folded return is safe to open.
+static const char* d2_casefold_path(char* szBuf, size_t cbBuf, const char* lpPosixPath) {
+    if (!lpPosixPath) return lpPosixPath;
+    bool bAbs = (*lpPosixPath == '/');
+    bool bChanged = false;
+    size_t n = 0;
+    if (bAbs) szBuf[n++] = '/';
+    const char* p = lpPosixPath + (bAbs ? 1 : 0);
+    while (*p) {
+        while (*p == '/') ++p;  // collapse separators
+        if (!*p) break;
+        const char* q = strchr(p, '/');
+        size_t nLen = q ? (size_t)(q - p) : strlen(p);
+        if (n && szBuf[n - 1] != '/') {
+            if (n + nLen + 2 > cbBuf) return lpPosixPath;
+            szBuf[n++] = '/';
+        } else if (n + nLen + 1 > cbBuf) {
+            return lpPosixPath;
+        }
+        size_t nComp = n;  // component starts here
+        memcpy(szBuf + n, p, nLen);
+        n += nLen;
+        szBuf[n] = '\0';
+        struct stat st;
+        if (stat(szBuf, &st) != 0) {
+            // the parent prefix for the directory scan
+            char szParent[1024];
+            size_t nParent = (nComp > 1) ? nComp - 1 : 0;
+            if (nParent == 0) {
+                strcpy(szParent, bAbs ? "/" : ".");
+            } else {
+                memcpy(szParent, szBuf, nParent);
+                szParent[nParent] = '\0';
+            }
+            DIR* pDir = opendir(szParent);
+            if (!pDir) return lpPosixPath;
+            const char* lpFound = nullptr;
+            struct dirent* pEnt;
+            while ((pEnt = readdir(pDir)) != nullptr) {
+                if (strcasecmp(pEnt->d_name, szBuf + nComp) == 0) {
+                    lpFound = pEnt->d_name;
+                    break;
+                }
+            }
+            closedir(pDir);
+            if (!lpFound) return lpPosixPath;
+            memcpy(szBuf + nComp, lpFound, nLen + 1);  // case-only match: same length
+            bChanged = true;
+            if (stat(szBuf, &st) != 0) return lpPosixPath;
+        }
+        p = q ? q + 1 : p + nLen;
+    }
+    return bChanged ? szBuf : lpPosixPath;
+}
+
 HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
                    SECURITY_ATTRIBUTES*, DWORD dwCreationDisposition, DWORD, HANDLE) {
     // Named site: Fog/Source/SFile.cpp's save-file creator (thunk_CreateFileA)
@@ -1466,6 +1547,16 @@ HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
         default: tls_lastError = 87 /* ERROR_INVALID_PARAMETER */; return INVALID_HANDLE_VALUE;
     }
     int fd = open(lpFileName, nFlags, 0644);
+    if (fd < 0 && errno == ENOENT &&
+        dwCreationDisposition != 1u /* CREATE_NEW: an other-case existing file
+                                       must NOT satisfy it (Win32 wouldn't) */) {
+        // [d2linux M2 round 3] SFileOpenArchive opens the install's
+        // "Patch_D2.mpq" through the game's baked "patch_d2.mpq" string,
+        // exactly as Windows spells it (d2_casefold_path, above).
+        char szCase[1024];
+        const char* lpFolded = d2_casefold_path(szCase, sizeof(szCase), lpFileName);
+        if (lpFolded != lpFileName) fd = open(lpFolded, nFlags, 0644);
+    }
     if (fd < 0) { tls_lastError = (errno == EEXIST) ? 80 : 2; return INVALID_HANDLE_VALUE; }
     return (HANDLE)(intptr_t)fd;
 }

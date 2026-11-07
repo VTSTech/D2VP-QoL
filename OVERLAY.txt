@@ -1,0 +1,50 @@
+D2VP-QoL overlay zip — M2-R4 -> 667d3357 (case-fold boundary + SDL3 gate)
+==========================================================================
+
+Base  : ba3e8647  (origin/linux "M2-R4" — what your checkout is at)
+Result: 667d3357  (M2 r3 fix - case-fold file boundary + smoke leg)
+
+Apply (from the repo root):
+  unzip -o D2VP-QoL-overlay-667d3357-casefold.zip -d .
+  git diff                 # review — 5 files modified
+  git add -A && git commit -m "M2-R5 case-fold boundary"   # optional snapshot
+
+Rebuild (i386, your multilib box):
+  git submodule update --init --depth 1 external/SDL   # once per clone
+  rm -rf build-i386 && cmake -S . -B build-i386 -G Ninja \
+      -DD2LINUX_ARCH=i386 -DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF
+  cmake --build build-i386 --target d2linux
+
+Expect:
+  ./build-i386/d2linux --smoke
+    d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close
+                               + case-fold boundary)
+  mv patch_d2.mpq Patch_D2.mpq   # restore the real install spelling
+  ./build-i386/d2linux --mpq-check=/home/vtstech/workspace/D2
+    patch_d2.mpq  OK            # resolves Patch_D2.mpq through the case-fold
+
+Files in this overlay (full replacements, repo-relative paths):
+
+  README-FIRST.txt
+    gate list + case-fold note (never rename Patch_D2.mpq for --mpq-check)
+    sha256 2f0386d264d86b2a4204c5f338302bad484bd79259aa5d65dac17e2d86bb3bf6  (9799 bytes)
+
+  platform/linux/INVENTORY.md
+    row 5 (case-fold boundary) + verification bullets for this round
+    sha256 594ff88c4c0dd14b60b5efaa0d961e7303c043b2508bd7e97685f6a0f84de25d  (20076 bytes)
+
+  platform/linux/build.cmake
+    D2VP_CASE.MPQ fixture copy + the i386 configure-time SDL3 gate (system x86_64 libSDL3.so can never enter a 32-bit link — fail at cmake, not at ld)
+    sha256 b6462ebc16372ecef9d896db733fe7bde392af5f16e93f41f233ad1df521e0a9  (24929 bytes)
+
+  platform/linux/d2_linux_main.cpp
+    smoke case-fold leg (RunMpqCaseFoldSelfTest: D2VP_CASE.MPQ on disk, opened as d2vp_case.mpq) + mpq-check stops requiring patch_d2 (never-patched installs boot unpatched)
+    sha256 f5724a244c0f7dc6019c0b130fab879b0f4206a7f3ba52b2221cfcc9c37dfd11  (39544 bytes)
+
+  platform/linux/d2_linux_shim_win32.cpp
+    case-fold boundary: d2_casefold_path (Wine-unixfs per-component resolve on ENOENT) wired into GetFileAttributesA + CreateFileA (CREATE_NEW excluded) — the PE's baked "patch_d2.mpq" now opens the install's "Patch_D2.mpq" on ext4
+    sha256 3ad22ce6cd3d0cc96e3ff78eb5a3781a327cd693210ea1736e52bcff9da3e477  (86811 bytes)
+
+Overlay semantics: these are complete file replacements cut from
+667d3357; after unzip the tree is byte-identical to that commit.
+OVERLAY.txt itself is new and untracked — keep or delete freely.

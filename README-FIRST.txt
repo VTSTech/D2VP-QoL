@@ -79,11 +79,17 @@ through SFileOpenFileEx/SFileGetFileSize/SFileReadFile and byte-verifies it.
 Your --smoke now runs THREE Win32/data gates:
   d2linux user32 self-test OK (...)
   d2linux ddraw self-test OK (...)
-  d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close)
+  d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close + case-fold boundary)
 (the missing-MPQ half opens "d2vp_definitely_absent.mpq" — relative, module
 dir and drive scan all miss, and the verdict must be a clean nullptr: the M2
 plan's "missing MPQ is a clean diagnosed error, not a crash" requirement,
-asserted in CI.)
+asserted in CI. The case-fold half copies the fixture next to the binary
+under the all-uppercase name D2VP_CASE.MPQ and opens it through the lowercase
+"d2vp_case.mpq" request — the real-install shape, where MPQ_LoadAllDataMpqFiles
+asks for "patch_d2.mpq" and the shipped file is "Patch_D2.mpq". Windows
+resolves that at the filesystem; the shim's d2_casefold_path now does on
+Linux, at the GetFileAttributesA probe AND the CreateFileA open — so never
+rename Patch_D2.mpq on a real install to run --mpq-check.)
 
 TWO NEW OWNER FACING MODES
 --------------------------

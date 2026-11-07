@@ -193,6 +193,29 @@ POSIX-slash answer made it miss — the MPQ name glued onto the full exe path
 The smoke fixture (platform/linux/tests/d2vp_smoke.mpq, 1136 bytes, generated
 by tools/gen-mpq-fixture.py and validated against the independent mpyq
 reader) exercises all of it in CI.
+5. [round 3 fix, owner field] the case-fold boundary: NTFS, the PE's home
+   filesystem, matches file names case-insensitively — ext4 does not. The
+   PE's baked lowercase "patch_d2.mpq" (MPQ_LoadAllDataMpqFiles,
+   D2Win/Src/D2WinArchive.cpp:133) opens a real install's mixed-case
+   "Patch_D2.mpq" on Windows and got ENOENT here (the owner renamed the file
+   lowercase for the first --mpq-check pass). The shim resolves it
+   Wine-unixfs style: d2_casefold_path walks each path component against its
+   parent directory on the ENOENT path only, at BOTH faces the MPQ ladder
+   meets (GetFileAttributesA's SFILE_FileExistsOnDisk probe and CreateFileA's
+   open; CREATE_NEW excluded — an other-case existing file must not satisfy a
+   create-new, exactly as Win32 wouldn't). A case-only match has the same
+   length, every folded component is stat-verified on the way in, and a true
+   absent still answers ENOENT. Pinned in --smoke by RunMpqCaseFoldSelfTest
+   (the fixture rides the module dir as D2VP_CASE.MPQ, opened through the
+   lowercase "d2vp_case.mpq" request — the real-install shape with a
+   collision-proof name), and — while the sandbox i386 RUN stays
+   seccomp-refused — by the verbatim-copy harness
+   (scripts/mpq_fallback_harness.cpp): root fold, nested fold (BOTH
+   components), exact spelling untouched, absent stays absent, phantom
+   parent no fold. Also in this fix: --mpq-check's probe stops requiring
+   patch_d2 (a never-patched install boots unpatched — the mirrored
+   boot verdict only needs d2data+d2sfx+d2speech, +d2exp for expansion; the
+   probe table now says what the code does).
 
 ## 7. Verification (this round)
 
@@ -218,6 +241,15 @@ dangling 18 undefined references at link.
   produces "/dir/binaryd2vp_smoke.mpq" and fails — the exact CI shape.
   The i386 RUN itself is still CI's ring (no multilib here).
 - sandbox: PE gates **380/380** on the shared-TU diff (tools/check-vanilla-plus.sh).
+- sandbox [round 3 fix]: the case-fold boundary proven by the standalone
+  harness (verbatim copy of d2_casefold_path + the open/stat boundary):
+  "\tmp\patch_d2.mpq" resolves the on-disk "Patch_D2.mpq" (the owner's exact
+  scenario), "\data\patch_d2.mpq" folds BOTH components onto
+  "Data/PATCH_D2.MPQ", the exact spelling is untouched, and absents/phantom
+  parents keep their ENOENT. The i386 --smoke (which runs the same logic
+  through the real ARCHIVE_LoadMPQ ladder via RunMpqCaseFoldSelfTest) is
+  CI's ring; both arch builds compile+link clean and the native gate
+  (check-build-linux.sh) is green at the fix commit.
 - CI (this push): the i386 `linux-native` job builds the charter binary and
   runs `--smoke`, whose verdict now includes the MPQ gates: missing-MPQ
   clean-null + the fixture open/read/close ("d2linux mpq self-test OK").
