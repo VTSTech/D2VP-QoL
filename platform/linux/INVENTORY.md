@@ -1,6 +1,8 @@
 # INVENTORY.md — the M1 Win32-surface inventory and shim ledger (d2linux)
 
-> Status: v1, 2026-11-03 — the M1 inventory pass (PLAN.md §6 M1, first bullet).
+> Status: v2, 2026-11-08 — updated through the M2 round 3 (Storm/MPQ file
+> routing — the archive rung). Original: the M1 inventory pass (PLAN.md §6
+> M1, first bullet).
 > Method: empirical. Every candidate translation unit was compiled with the
 > linux forced-include chain (`d2_linux_compat.h` → platform-shadow
 > `d2_platform.h` → `tools/vp_host_api.h` → `d2_linux_api.h`) under the i386
@@ -63,13 +65,23 @@ platform/linux shims
 SDL3 (static, vendored release-3.4.18) + glibc (i386)
 ```
 
-The slice (build.cmake's `D2LINUX_GAME_SOURCES`, 44 TUs — the ledger grows
-5-10 per step): PKWARE; Fog foundation (SMem, Memory, BitBuffer, File, Fog,
-Save, Debug, DataArrays, ErrorManager, LogManager, FogString, Safesock,
-AsyncData, Source/{SFile, SSComp}, 3rdparty/crashy + crashy/Report); Storm
-foundation (SReg, SErr, SComp, SBig, SMem, SSTR, SSystem, SEVT, SLog, SFile,
-WindowHandle, 3rdparty/zlib 9 TUs); both SSignature files; D2Hell's two CRT
-support files; globals/Fog.cpp + globals/Storm.cpp.
+The slice (build.cmake's `D2LINUX_GAME_SOURCES`, 49 TUs after round 3 — the
+ledger grows 5-10 per step): PKWARE; Fog foundation (SMem, Memory, BitBuffer,
+File, Fog, Save, Debug, DataArrays, ErrorManager, LogManager, FogString,
+Safesock, AsyncData, Source/{SFile, SSComp}, 3rdparty/crashy + crashy/Report);
+Storm foundation (SReg, SErr, SComp, SBig, SMem, SSTR, SSystem, SEVT, SLog,
+SFile, WindowHandle, 3rdparty/zlib 9 TUs); both SSignature files; D2Hell's two
+CRT support files; globals/Fog.cpp + globals/Storm.cpp.
+
+Round 3 added the ARCHIVE RUNG (5): D2Hell/D2Hell.cpp (the archive layer:
+ARCHIVE_LoadMPQ / D2FILE_* / FaultError, whose ARCHIVE_LoadMPQ is exactly
+what D2WinArchive::MPQ_LoadAllDataMpqFiles runs at boot) + the D2Lang string
+layer (strtable, D2Lang, UNISYS) + their per-TU globals files
+(globals/D2Lang.cpp, globals/D2Hell.cpp). globals/D2Win.cpp stays OUT — its
+closure is the D2Win UI handler tables (D2WIN_Handle*/INPUT_Form*), the
+round-4 rung; its three zero-initialized MPQ slot pointers ride the weak
+file instead. support/d2_boot.cpp stays PE-only: d2_linux_shim_crt.cpp's
+boot twins already serve D2Hell's D2BOOT_MarkFmt marks.
 
 ## 3. The platform shadow (mk-platform-shadow.sh, 12 patches)
 
@@ -112,6 +124,7 @@ re-apply it. The tree file is never edited; every patch sits inside
 | support/d2_crt_support.cpp | the `d2_CRT_Floor` asm label spells `CRT_Floor` under `D2LINUX_GAME` | ELF carries no user-label underscore |
 | D2Net/in_addr.h | the simple regen body stood down under `D2_LINUX_SDK_IN_ADDR` | Safesock.cpp's regenerated bodies reference the SDK-faithful union members (`_union_1226`); the compat layer supplies that shape |
 | Fog/Src/Safesock.h | the winsock fallback types stood down under `D2_LINUX_WINSOCK_SUPPLIED` | they clash with the glibc types already in scope (timeval via bits/types, fd_set via sys/select); the api header supplies the winsock shapes |
+| D2Win/Src/D2WinMain.h | the tagMONITORINFO/tagTRACKMOUSEEVENT fallbacks stood down under `D2_LINUX_SDK_WINDOW_SUPPLIED` | they double-define the real winuser.h layouts the compat layer has carried since M2 (round 2 added them for D2WinMain's shapes); the guard is nested inside the existing `#ifndef _WIN32`, so the PE path is untouched |
 
 ## 5. The step-1 weak globals (d2_linux_globals_step1.cpp)
 
@@ -123,6 +136,21 @@ brings globals.cpp in: ExceptionList, the s_* error texts, the bit-mask and
 zlib tables, z_errmsg, MISC_OperatorDeleteShim (free → Fog pools at step 2),
 the D2Client GS-handler thunk (stored, never dispatched), and the two language
 probes (default-language answers until the strtable layer joins).
+
+Round 3 grew the file (verbatim content, weak linkage, same yield rule):
+- the strtable layer's needs: the 13 font-name strings + the 4 language-code
+  answers + the s_* language-label strings + gszCrashDumpRegisterFormatString
+  (all globals.cpp verbatim), D2Client::UI::ui::CharacterLookupTable[256]
+  (globals.cpp:38499, the case-fold table UNISYS's STRING_Compare maps
+  through), D2Launch::MainMenus::STRING_ZeroOneWCHAR (MainMenus.cpp:526
+  verbatim — one zero-filled wchar slot), and
+  Fog::Engine::Application::MISC_OperatorNewShim — the CRT-heap twin of the
+  existing weak DeleteShim, so the weak PAIR stays in one domain (weak new +
+  strong delete would cross free() with SMemAlloc; the comment in the file
+  says never mix).
+- the archive slots: MPQ_d2data/MPQ_patch_d2/MPQ_d2exp — globals/D2Win.cpp's
+  zero-initialized pointers at file scope; that TU's UI handler tables are
+  the round-4 closure, so its data rides here until then.
 
 ## 6. Shim honesty table (every family has named call sites)
 
@@ -140,25 +168,57 @@ probes (default-language answers until the strtable layer joins).
 | Text conversion (MultiByteToWideChar/WideCharToMultiByte) | hand-rolled UTF-8/UTF-16 codec, BMP-complete | Fog/File, Debug, Application |
 | Errors (FormatMessageA, Get/SetLastError, WSAGetLastError) | code-family tables + TSD | Fog/File, SErr |
 | Winsock (socket/connect/send/recv/closesocket/ioctlsocket/select + fd_set) | BSD fds; the winsock fd_set shape macro-mapped; select translates to poll(2) | Safesock client path |
-| CreateFileA/ReadFile/WriteFile/SetFilePointer/GetFileSize/FlushFileBuffers/CreateFileMappingA/MapViewOfFile | open(2) + a two-entry fd table + mmap | SFile save paths |
-| Fail-soft (service control, CreateProcess, window fns, LoadLibrary, WinVerifyTrust/crypt32, FindResource) | the same failures the PE handles without the feature | Application boot, SFile signature probe |
+| CreateFileA/ReadFile/WriteFile/SetFilePointer/GetFileSize/FlushFileBuffers/CreateFileMappingA/MapViewOfFile | open(2) + fd-honest HANDLEs (HANDLE = fd) + mmap; **round 3: Win32→POSIX path translation at the boundary** (`d2_posix_path`: backslash→slash, separator bytes only) — the archive open path composes `dir\name` shapes (FindMpqFromDiskOrCd, GetArchiveHandle) that open(2) would otherwise refuse | SFile save paths, **Storm MPQ opens (round 3)** |
+| CloseHandle | **round 3: fd-aware** — fd-range handles close(fd); events still delete; pseudo-handles no-op. Storm closes every MPQ OS handle through here (SFileCloseArchive, SFileCloseFile, the failed-open cleanup); the M1 event-only body would have deleted an fd | **Storm MPQ archive/file closes (round 3)**, crash-dump handshake |
+| Local heap (LocalAlloc/LocalFree) | **round 3**: glibc malloc, LMEM_ZEROINIT honored | D2Hell.cpp's Authenticode msg-info scratch |
+| lstring (lstrcpyA/lstrcatA/lstrlenA) | **round 3**: straight CRT copies | d2_boot's log paths (the shim-crt boot twins), strtable paths |
+| Fail-soft (service control, CreateProcess, window fns, LoadLibrary, FindResource) | the same failures the PE handles without the feature | Application boot |
+| Authenticode (WinVerifyTrust, CryptQueryObject, CryptMsg*, Cert*) | **round 3**: the PE's "signature cannot be verified" outcome — TRUST_E_NOSIGNATURE, FALSE/NULL down the chain; D2FILE_GetFileSignature proceeds unsigned, exactly as a PE without crypt32 | D2Hell.cpp's SFile signature probe |
+
+## 6b. The Storm/MPQ routing round found (round 3)
+
+The vendored Storm's OS layer is plain `CreateFileA/ReadFile/SetFilePointer/
+GetFileSize/CloseHandle` — the M1 file shim IS the MPQ routing layer. Three
+gaps closed at the shim, no Storm edits:
+1. backslash paths (above); 2. fd-aware CloseHandle (above); 3. nothing else
+— the archive open path (SFileOpenArchive → SFILE_s_OpenArchive) parses the
+header at 0x200 steps, decrypts the hash/block tables with SFILE_Hash(3, ...
+) + SFILE_Decrypt (the decomp's own crypt — the fixture generator
+transcribes it), and reads stored single-unit files contiguously
+(`dwFlags & 0xff00` gates the sector table; EXISTS|SINGLE_UNIT reads raw).
+The smoke fixture (platform/linux/tests/d2vp_smoke.mpq, 1136 bytes, generated
+by tools/gen-mpq-fixture.py and validated against the independent mpyq
+reader) exercises all of it in CI.
 
 ## 7. Verification (this round)
 
-- sandbox: the full slice compiles i386 and links — `d2linux`, ELF 32-bit,
-  statically linked (the smoke run of the i386 binary is CI's ring; this
-  container's seccomp refuses static-i386 glibc startup — even a hello world).
+- sandbox: the full slice (49 game TUs) compiles i386 and links — `d2linux`,
+  ELF 32-bit PIE, via a user-space multilib sysroot (scripts/i386-gcc /
+  i386-g++ wrappers + sysroot-i386/; no root in the container; the i386
+  RUN is still seccomp-refused — the smoke run of the charter binary is
+  CI's ring).
 - sandbox: the `native` build (skeleton + shim layer, host arch) configures,
-  builds and passes `d2linux --smoke` headless.
+  builds and passes `d2linux --smoke` headless (the MPQ self-test prints
+  SKIPPED there — no game TUs in the 64-bit binary, charter R1).
+- sandbox: the smoke fixture self-checks against the decomp's own crypt and
+  passes the independent mpyq reader (open + read + byte-verify).
 - sandbox: PE gates **380/380** on the shared-TU diff (tools/check-vanilla-plus.sh).
-- CI (this push): `linux-native` flips to `-DD2LINUX_ARCH=i386` + multilib,
-  builds and smokes the charter binary (build.yml).
+- CI (this push): the i386 `linux-native` job builds the charter binary and
+  runs `--smoke`, whose verdict now includes the MPQ gates: missing-MPQ
+  clean-null + the fixture open/read/close ("d2linux mpq self-test OK").
+- owner field pass: `./d2linux --mpq-check=<game dir>` next to a 1.14d
+  install — opens all seven data MPQs through ARCHIVE_LoadMPQ and reports
+  per-archive verdicts (missing essential = exit 1, cleanly diagnosed).
 
-## 8. Step 2 (next slice, toward M2)
+## 8. Next slice (round 4, toward M2's title screen)
 
-The boot chain: globals/globals.cpp + D2Launch + D2Client (ClientModeInGame,
-WindowHandle, the GAME::Game core) + D2Multi + D2Common — the AppMode table
-Fog/Engine/Application.cpp's boot dispatch references, and the DEBUG_* crash
-functions migrate from the weak step-1 file to Application.cpp's strong
-bodies (or stay linux-native, by the same weak rule). Then M2's Storm/MPQ
-wiring onto the M0 presentation surface.
+The D2Win rung: D2Win/Src/D2WinArchive.cpp (MPQ_LoadAllDataMpqFiles/
+MPQ_LoadAllMediaMpqFiles — ApplicationMain's first calls) + D2WinMain (the
+form manager) + the DC6/CelCmp image layer it pulls (IMAGE_LoadDC6), then
+globals/D2Win.cpp (the UI handler tables) — and with those, the boot chain
+rungs after it: globals/globals.cpp + Fog/Engine/Application.cpp (the strong
+operator shims + SystemSurvey) + D2Client/Engine/Application.cpp
+(ApplicationMain itself) + the D2GFX/D2gfx renderer front onto the DirectDraw
+shim. The storm/MPQ routing this round built is the floor all of that stands
+on: ApplicationMain's SFILE_InitializeFileSystem + MPQ_LoadAllDataMpqFiles
+call straight into it.

@@ -311,15 +311,26 @@ DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds) {
 }
 
 BOOL CloseHandle(HANDLE hObject) {
+    // [d2linux M2 round 3] fd-honest file handles close the fd. Named sites:
+    // Storm closes every MPQ archive's OS handle through here
+    // (SFILE_s_OpenArchive's SFILE_FreeArchiveRecord path and
+    // SFileCloseArchive -> CloseHandle(pArchive->hFile), plus
+    // SFileCloseFile for plain-file records, plus SFILE_FreeArchiveRecord on
+    // a failed open). The previous event-only body would have deleted an fd.
     // Events are this file's allocations; pseudo-handles and thread handles
     // are not closable here (Windows semantics too for the pseudo forms).
-    D2Event* ev = (D2Event*)hObject;
+    intptr_t fd = (intptr_t)hObject;
+    if (fd > 0 && fd < 4096) {
+        close((int)fd);
+        return TRUE;
+    }
     if (hObject == (HANDLE)kProcessHeapSentinel || hObject == (HANDLE)(intptr_t)-1 ||
         hObject == (HANDLE)(intptr_t)-2) {
         return TRUE;  // pseudo-handles close as no-ops, as on the PE build
     }
     // Heap-allocated event vs anything else: the M1 handle set is small and
     // event-typed; anything unrecognized fails soft.
+    D2Event* ev = (D2Event*)hObject;
     delete ev;
     return TRUE;
 }
@@ -847,7 +858,16 @@ DWORD GetTempPathW(DWORD nBufferLength, LPWSTR lpBuffer) {
     return n;
 }
 
+// Win32 -> POSIX path translation (defined next to CreateFileA below;
+// the file-attribute probes above use it too).
+static const char* d2_posix_path(char* szBuf, size_t cbBuf, LPCSTR lpFileName);
+
 DWORD GetFileAttributesA(LPCSTR lpFileName) {
+    // [d2linux M2 round 3] named site: Storm's SFILE_FileExistsOnDisk probe and
+    // D2WINARCHIVE_GetArchiveHandle's d2char.mpq probes compose Win32-style
+    // paths with backslashes (FindMpqFromDiskOrCd's SStrPack("\\") shapes).
+    char szPath[1024];
+    lpFileName = d2_posix_path(szPath, sizeof(szPath), lpFileName);
     if (!lpFileName) return 0xFFFFFFFFu;
     struct stat st;
     if (stat(lpFileName, &st) != 0) { tls_lastError = 2 /* ERROR_FILE_NOT_FOUND */; return 0xFFFFFFFFu; }
@@ -1234,10 +1254,31 @@ static int d2_fd_of(HANDLE hFile) {
     return (fd > 0 && fd < 4096) ? (int)fd : -1;
 }
 
+// [d2linux M2 round 3] Win32 -> POSIX path translation at the OS boundary.
+// The game composes archive paths with backslashes (D2Hell's
+// FindMpqFromDiskOrCd: GetModuleFileNameA dir + SStrPack("\\") + MPQ name;
+// SFileOpenArchive's "drive probe" strstr(":\\") shapes) and POSIX
+// open(2)/stat(2) want '/'. A path with no backslash returns the original
+// pointer unchanged; only the separator byte is rewritten, never the name.
+static const char* d2_posix_path(char* szBuf, size_t cbBuf, LPCSTR lpFileName) {
+    if (!lpFileName) return lpFileName;
+    if (!strchr(lpFileName, '\\')) return lpFileName;
+    size_t n = 0;
+    for (const char* p = lpFileName; *p && n + 1 < cbBuf; ++p) {
+        szBuf[n++] = (*p == '\\') ? '/' : *p;
+    }
+    szBuf[n] = '\0';
+    return szBuf;
+}
+
 HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
                    SECURITY_ATTRIBUTES*, DWORD dwCreationDisposition, DWORD, HANDLE) {
-    // Named site: Fog/Source/SFile.cpp's save-file creator (thunk_CreateFileA).
-    // The access/disposition flags the PE passes map onto open(2) honestly.
+    // Named site: Fog/Source/SFile.cpp's save-file creator (thunk_CreateFileA)
+    // and Storm's SFileOpenArchive (the MPQ OS handles). The access/disposition
+    // flags the PE passes map onto open(2) honestly; Win32 backslash paths are
+    // translated at this boundary (d2_posix_path above).
+    char szPath[1024];
+    lpFileName = d2_posix_path(szPath, sizeof(szPath), lpFileName);
     int nFlags = 0;
     if (dwDesiredAccess & 0x40000000u /* GENERIC_WRITE */) nFlags = O_WRONLY;
     if (dwDesiredAccess & 0x80000000u /* GENERIC_READ */)
@@ -1493,6 +1534,63 @@ BOOL CreateProcessW(LPCWSTR, LPWSTR, SECURITY_ATTRIBUTES*, SECURITY_ATTRIBUTES*,
                     LPVOID, LPCWSTR, void*, void*) { tls_lastError = 2; return FALSE; }
 BOOL GetExitCodeProcess(HANDLE, LPDWORD lpExitCode) { if (lpExitCode) *lpExitCode = 1; return FALSE; }
 BOOL TerminateProcess(HANDLE, UINT) { return FALSE; }
+
+// [d2linux M2 round 3] the lstring family's bodies — declared in
+// tools/vp_host_api.h since M1 but first linked now: support/d2_boot.cpp's
+// BootLogOpen (lstrcpyA) and D2BOOT_Fail's path composition. Straight CRT
+// semantics; PE's lstr* are also plain copies (no error reporting).
+LPSTR lstrcpyA(LPSTR lpString1, LPCSTR lpString2) {
+    if (lpString1 && lpString2) strcpy(lpString1, lpString2);
+    return lpString1;
+}
+LPSTR lstrcatA(LPSTR lpString1, LPCSTR lpString2) {
+    if (lpString1 && lpString2) strcat(lpString1, lpString2);
+    return lpString1;
+}
+int lstrlenA(LPCSTR lpString1) { return lpString1 ? (int)strlen(lpString1) : 0; }
+
+// [d2linux M2 round 3] the local-heap pair — named site: D2Hell.cpp's
+// Authenticode msg-info scratch (LocalAlloc(0x40, size) = LMEM_ZEROINIT |
+// LMEM_FIXED). Plain CRT heap, zero-init honored; LocalReAlloc is not
+// referenced by any TU in the slice (inventory rule).
+HLOCAL LocalAlloc(UINT uFlags, SIZE_T uBytes) {
+    void* p = malloc(uBytes ? uBytes : 1);
+    if (!p) return NULL;
+    if (uFlags & 0x0040u /* LMEM_ZEROINIT */) memset(p, 0, uBytes);
+    return (HLOCAL)p;
+}
+HLOCAL LocalFree(HLOCAL hMem) {
+    free(hMem);
+    return NULL;
+}
+
+// [d2linux M2 round 3] the Authenticode family, fail-soft — named site:
+// D2Hell.cpp's SFile signature probe (CryptQueryObject -> CryptMsgGetParam ->
+// CertFindCertificateInStore -> CertGetNameStringW, gated by WinVerifyTrust).
+// The PE handles the "signature cannot be verified" outcome (unsigned files,
+// no crypt32 loaded); this IS that outcome: every call reports not-trusted,
+// and D2FILE_GetFileSignature proceeds down the same unsigned path.
+LONG WinVerifyTrust(HWND, void*, void*) {
+    // A non-zero value = trust failed; the PE's own ERROR_SUCCESS is 0.
+    tls_lastError = 0x800b0100u /* CERT_E_UNTRUSTEDROOT family */ & 0xFFFF;
+    return (LONG)0x800b0100u;  // TRUST_E_NOSIGNATURE
+}
+BOOL CryptQueryObject(DWORD, const void*, DWORD, DWORD, DWORD, DWORD*, DWORD*,
+                      DWORD*, HCERTSTORE*, HCRYPTMSG*, PCCERT_CONTEXT*) {
+    tls_lastError = 2;  // ERROR_FILE_NOT_FOUND's family: nothing decoded
+    return FALSE;
+}
+BOOL CryptMsgGetParam(HCRYPTMSG, DWORD, DWORD, void*, DWORD*) { return FALSE; }
+BOOL CryptMsgClose(HCRYPTMSG) { return TRUE; }
+PCCERT_CONTEXT CertFindCertificateInStore(HCERTSTORE, DWORD, DWORD, DWORD, const void*,
+                                          PCCERT_CONTEXT) { return NULL; }
+DWORD CertGetNameStringW(PCCERT_CONTEXT, DWORD, DWORD, void*, LPWSTR pszNameString,
+                         DWORD cchNameString) {
+    if (pszNameString && cchNameString) pszNameString[0] = L'\0';
+    return 0;
+}
+void CertCloseStore(HCERTSTORE, DWORD) {}
+BOOL CertFreeCertificateContext(PCCERT_CONTEXT) { return TRUE; }
 HANDLE FindFirstFileA(LPCSTR, LPWIN32_FIND_DATAA) { tls_lastError = 2; return INVALID_HANDLE_VALUE; }
 HANDLE CreateFileW(LPCWSTR, DWORD, DWORD, SECURITY_ATTRIBUTES*, DWORD, DWORD, HANDLE) {
     tls_lastError = 2;
@@ -1515,6 +1613,11 @@ int wsprintfA(LPSTR lpOut, LPCSTR lpFmt, ...) {
     int n = vsnprintf(lpOut, 1024, lpFmt, ap);
     va_end(ap);
     return n;
+}
+// [d2linux M2 round 3] the va_list twin — named site: support/d2_boot.cpp's
+// D2BOOT_MarkFmt (D2Hell.cpp's CreateProcess marks route through it).
+int wvsprintfA(LPSTR lpDest, LPCSTR lpFormat, va_list arglist) {
+    return vsnprintf(lpDest, 1024, lpFormat, arglist);
 }
 int wsprintfW(LPWSTR lpOut, LPCWSTR lpFmt, ...) { (void)lpOut; (void)lpFmt; return 0; }
 void OutputDebugStringA(LPCSTR lpOutputString) { fprintf(stderr, "%s", lpOutputString ? lpOutputString : ""); }

@@ -93,6 +93,15 @@ typedef long __time32_t;
 #define D2_LINUX_TIME32_SUPPLIED 1
 extern "C" __time32_t _time32(__time32_t* pTime);
 
+// [d2linux M2 round 3] The window-shape SDK structs (tagMONITORINFO /
+// tagTRACKMOUSEEVENT, with tagWINDOWPLACEMENT beside them below) are supplied
+// HERE with real winuser.h layouts. D2Win/Src/D2WinMain.h's own
+// "#ifndef _WIN32" fallbacks carry the same shapes and would double-define
+// them in every TU that includes the header — the guard stands those
+// fallbacks down, exactly like D2_LINUX_WINSOCK_SUPPLIED does for Fog/Src/
+// Safesock.h's fallback types (INVENTORY §4's guarded-edit ledger).
+#define D2_LINUX_SDK_WINDOW_SUPPLIED 1
+
 // ---------------------------------------------------------------------------
 // 4. Win32 SDK types the decompiled headers import from windows.h when
 //    _WIN32 and carry no non-Windows fallback for. Absorbed from

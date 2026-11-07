@@ -60,6 +60,7 @@ typedef struct _OSVERSIONINFOW {
 #define CREATE_ALWAYS             2u
 #define OPEN_EXISTING             3u
 #define FILE_SHARE_READ           0x00000001u
+#define FILE_SHARE_WRITE          0x00000002u
 #define FILE_ATTRIBUTE_NORMAL     0x00000080u
 #define FILE_BEGIN                0u
 #define INVALID_HANDLE_VALUE      ((HANDLE)(intptr_t)-1)
@@ -68,6 +69,14 @@ typedef struct _OSVERSIONINFOW {
 #define MAX_PATH                  260
 #define TRUE                      1
 #define FALSE                     0
+
+// --- user32 MessageBox flags (winuser.h) - d2_boot.cpp's D2BOOT_Fail --------
+#ifndef MB_OK
+#define MB_OK                     0x00000000u
+#endif
+#ifndef MB_ICONERROR
+#define MB_ICONERROR              0x00000010u
+#endif
 
 // --- gdi/user misc ----------------------------------------------------------
 // HACCEL must spell exactly what D2Client/Message.h re-declares

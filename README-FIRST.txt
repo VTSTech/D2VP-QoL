@@ -1,107 +1,167 @@
-d2linux - M2 round 2 overlay: the DirectDraw COM shim — first game pixels
-=========================================================================
-on top of your current HEAD (91927833, the banner/warnings round your VM built green)
+d2linux - M2 round 3 overlay: Storm/MPQ file routing — the archive rung
+=======================================================================
+on top of your current HEAD (1675d6e9, the M2 round-2 DirectDraw shim)
 
 WHAT THIS ROUND IS
 ------------------
-The banner's "next" pointer does what it says: the DirectDraw shim exists.
-The game's 2D renderer (D2DDraw::Renderer::DirectDraw) talks DirectDraw 1 —
-this round implements that COM surface as host code over SDL3, so the first
-"game-shaped" pixels flow through the real pipeline: game-style ladder ->
-8-bit surfaces -> palette -> INDEX8 staging -> one conversion pass into the
-streaming texture -> screen. The rainbow M0 pattern now shares its present
-path with a real DirectDraw flip.
+The banner's "next" pointer again: Storm/MPQ file routing + the boot-chain
+slice. The vendored Storm (Storm/Source/SFile.cpp — the real MPQ reader the
+PE links) has been in the M1 slice since the start; nothing drove it. This
+round drives it: the GAME's own archive layer (D2Hell.cpp — ARCHIVE_LoadMPQ,
+the exact function D2WinArchive::MPQ_LoadAllDataMpqFiles runs at boot) joins
+the slice with the D2Lang string layer, the shim closes the three gaps the
+archive path meets, and the smoke now proves the whole rung end to end with
+a committed MPQ fixture. This is the first round where the binary READS GAME
+DATA.
 
-THE LADDER THE SHIM IMPLEMENTS (your game's own call sites)
------------------------------------------------------------
-  DirectDrawCreate(NULL, &dd, NULL)              d2linux ddraw: DirectDrawCreate ...
-  dd->SetCooperativeLevel(hwnd, 0x11)            fullscreen-exclusive, hwnd validated
-                                                 against the user32 shim's window
-                                                 registry (a window this process never
-                                                 created is refused)
-  dd->SetDisplayMode(640, 480, 8)                8bpp modes only, loudly
-  dd->CreateSurface(primary + N back buffers)    falls back 2 -> 1 -> 0 like the game
-  primary->GetAttachedSurface(BACKBUFFER)
-  dd->CreateSurface(offscreen, SYSTEMMEMORY)     the compose surface, pitch == width
-  primary->SetPalette(pal)                       DDPCAPS_8BIT, mirrored into the SDL
-                                                 palette on SetPalette AND SetEntries
-  BeginScene:  offscreen->Lock(WAIT|WRITEONLY) -> the game writes indices
-  EndScene2:   back->BltFast(0,0, offscreen, full, WAIT) -> primary->Flip -> PRESENT
-  cutscenes:   primary->Blt(DDBLT_COLORFILL) black
-  deferred:    pal->SetEntries(0, 1, 255, entries+1) (EndScene2's palette path)
+THE FINDING THAT SHAPED THE ROUND
+---------------------------------
+Storm's OS layer is plain Win32 file API — CreateFileA / ReadFile /
+SetFilePointer / GetFileSize / CloseHandle. The M1 file shim was already the
+MPQ routing layer; it just had two live bugs for this path:
 
-Semantics worth knowing (all documented in the source):
-- SetDisplayMode keeps the DX1 3-ARG ABI. The ghidra header (DirectDraw.h)
-  spells it with the later-SDK 5-arg signature — that is a reconstruction
-  typo; the game pushes 3 args, so the shim's callee pops 3. On i386
-  __stdcall the mismatch would corrupt the stack; it cannot here. (When the
-  D2DDraw TUs join the slice, that one header typedef needs the same fix —
-  the platform-shadow mechanism is the place.)
-- pitch == width on every surface. The game stores Lock's lPitch into what
-  EndScene2's BltFast rect uses as a WIDTH — any row padding would leak into
-  blit geometry. There is none.
-- one back buffer regardless of the requested count: the game fully
-  recomposes every frame (ClearScreen + full-rect BltFast), so real DD's
-  chain rotation is unobservable through its calls.
-- Release(back) returns 1 while the chain lives — the flip chain owns the
-  last reference and it dies with the primary (real DD ownership).
-- out-of-ladder calls: DD_OK-noops where real DD is a no-op, otherwise
-  DDERR_UNSUPPORTED with a ONE-SHOT log line. Never silent lies.
+1. BACKSLASH PATHS. FindMpqFromDiskOrCd composes
+   GetModuleFileNameA-dir + "\" + "d2data.mpq" — open(2) refuses that.
+   Fix: d2_posix_path() in the shim — Win32->POSIX separator translation at
+   the CreateFileA/GetFileAttributesA boundary (separator bytes only, never
+   the name; a path with no backslash passes through untouched).
+2. CloseHandle WAS EVENT-ONLY. Storm closes every MPQ OS handle through it
+   (SFileCloseArchive line 2862, SFileCloseFile line 3143) — the old body
+   would have `delete`d an fd. Fix: fd-range handles close(fd); events still
+   delete; pseudo-handles no-op.
 
-THE SELF-TEST (your --smoke now runs two Win32-contract gates)
---------------------------------------------------------------
-"ddraw self-test OK" = 16 checks in the game's own call order: create, QI
-refused, coop-level accept + refuse, mode accept + refuse (8bpp yes, 32bpp
-no), primary desc, GetAttachedSurface, GetSurfaceDesc (640x480 / pitch 640 /
-8bpp indexed), palette create + attach, offscreen create, the BeginScene
-lock shape, BltFast, the GetBackBuffer readback ROUND-TRIP, Flip-present
-count (+1 exactly), PlayCutScene COLORFILL, EndScene2 SetEntries, status
-stubs, and the full release ladder. It also exercises the letterbox path
-(640x480 mode presented inside the 800x600 M0 host — the fullscreen-
-exclusive analogue: centered on black).
+No Storm edits. No D2Hell edits. Everything at the shim, at named sites.
 
-WHAT THE OVERLAY CHANGES (7 files)
-----------------------------------
-- platform/linux/d2_linux_shim_ddraw.h    NEW - the DX1 COM types (D2-prefixed,
-                                          no ODR clash with the game header),
-                                          DD_* constants, i386 layout
-                                          static_asserts (DDSURFACEDESC 0x6C,
-                                          DDBLTFX 100 / dwFillColor at 0x50).
-- platform/linux/d2_linux_shim_ddraw.cpp  NEW - the shim (~950 lines).
-- platform/linux/d2_linux_video.h/.cpp    Video_SetPalette / Video_PresentIndexed /
-                                          Video_PresentCount; the shared present
-                                          folds the 8->32 conversion into the
-                                          texture lock (the per-frame
-                                          SDL_ConvertSurface intermediate is
-                                          GONE - one pass, zero extra allocs).
-- platform/linux/d2_linux_main.cpp        RunDdrawSelfTest + smoke wiring.
-- platform/linux/d2_linux_shim_user32.cpp the internal cross-shim hook
-                                          d2linux_user32_window_registered()
-                                          (link-level, NOT game API).
-- platform/linux/build.cmake              the shim joins D2LINUX_SHIM_SOURCES;
-                                          project stage bumped to
-                                          "M2 round 2 - DirectDraw onto the
-                                          INDEX8 surface".
+THE SLICE (44 -> 49 TUs)
+------------------------
++ D2Hell/D2Hell.cpp        the archive layer: ARCHIVE_LoadMPQ (relative
+                           path -> module dir -> CD scan, clean nullptr on
+                           miss), D2FILE_* helpers, FaultError registration
++ D2Lang/D2Lang.cpp        the string-compare layer (UNISYS-backed)
++ D2Lang/StrTable/strtable.cpp   MPQ-backed string tables + language codes
++ D2Lang/Unicode/UNISYS.cpp      the Unicode mapping layer
++ globals/D2Lang.cpp       the strtable globals (gaLang*, gpString*, MPQ
+                           language tables)
++ globals/D2Hell.cpp       gFaultHandlerList + the AUT message-source string
+
+globals.cpp is still OUT (its closure is the whole client — the boot-chain
+round); its + D2Win.cpp's symbols the new TUs extern ride the weak file,
+verbatim (CharacterLookupTable[256], 14 font-name strings, the language-code
+answers, MPQ_d2data/patch_d2/d2exp zero slots, STRING_ZeroOneWCHAR, and the
+MISC_OperatorNewShim weak — deliberately the CRT-heap twin of the existing
+weak DeleteShim so the weak PAIR stays in one heap domain).
+
+One guarded decomp edit, same shape as the M1 ledger: D2Win/Src/D2WinMain.h's
+tagMONITORINFO/tagTRACKMOUSEEVENT fallbacks stand down under
+D2_LINUX_SDK_WINDOW_SUPPLIED (the compat layer has carried the real
+winuser.h layouts since round 2). Nested inside the existing #ifndef _WIN32,
+so the PE path is untouched.
+
+THE SMOKE MPQ FIXTURE (the CI verdict grows a gate)
+---------------------------------------------------
+platform/linux/tests/d2vp_smoke.mpq (1136 bytes, committed) is a minimal but
+structurally complete MPQ v1: Blizzard-style MPQ\x1b user-data header at 0,
+real header at 0x200 (where Storm's scan finds it), 4-entry encrypted hash
+table, 1-entry encrypted block table, one stored single-unit file
+"d2vp_fix.txt" (512 bytes: magic + deterministic filler). Generated by
+tools/gen-mpq-fixture.py, whose crypt/hash code is transcribed EXACTLY from
+the decomp (SFILE_InitializeHashSource / SFILE_Hash / SFILE_Decrypt — note
+the decomp's decrypt folds the PLAINTEXT into its key update, so the
+generator's encrypt replays the chain), and the container was additionally
+validated against the independent mpyq reader.
+
+The fixture rides next to the binary (CMake configure_file), so the smoke's
+probe opens it through ARCHIVE_LoadMPQ's MODULE-DIR fallback — the same
+GetModuleFileNameA + "\" + name shape the boot chain uses, which is what
+exercises the backslash translation. The smoke then reads the file back
+through SFileOpenFileEx/SFileGetFileSize/SFileReadFile and byte-verifies it.
+
+Your --smoke now runs THREE Win32/data gates:
+  d2linux user32 self-test OK (...)
+  d2linux ddraw self-test OK (...)
+  d2linux mpq self-test OK (missing-MPQ clean null + fixture open/read/close)
+(the missing-MPQ half opens "d2vp_definitely_absent.mpq" — relative, module
+dir and drive scan all miss, and the verdict must be a clean nullptr: the M2
+plan's "missing MPQ is a clean diagnosed error, not a crash" requirement,
+asserted in CI.)
+
+TWO NEW OWNER FACING MODES
+--------------------------
+  ./d2linux --mpq-check=<game dir>     (or cd to the game dir; --mpq-check)
+      Opens all seven data MPQs through the game's own ARCHIVE_LoadMPQ and
+      reports per-archive verdicts:
+        d2data.mpq        OK
+        d2sfx.mpq         OK
+        ...
+        d2exp.mpq         MISSING   (classic-only install: this one is
+                                    reported, not failed)
+      Missing ESSENTIAL MPQs = exit 1 with the fix in the message. This is
+      the field diagnostic for every "my MPQs are not found" report.
+
+  ./d2linux --game-dir=<game dir>
+      chdir to the install AND seed the file-backed registry's
+      Software\Blizzard Entertainment\Diablo II\InstallPath (both roots), so
+      SFILE_GetInstallPath and every SRegLoadString consumer agree with the
+      CWD. (SReg reads it via the same file-backed store as the M1 shim.)
+
+WHAT THE OVERLAY CHANGES (12 files)
+-----------------------------------
+- platform/linux/d2_linux_shim_win32.cpp  d2_posix_path + CreateFileA/
+                                          GetFileAttributesA translation;
+                                          fd-aware CloseHandle; LocalAlloc/
+                                          LocalFree; lstrcpyA/lstrcatA/
+                                          lstrlenA; the Authenticode fail-soft
+                                          family (WinVerifyTrust ->
+                                          TRUST_E_NOSIGNATURE and down).
+- platform/linux/d2_linux_main.cpp        --game-dir / --mpq-check modes;
+                                          RunMpqMissingSelfTest +
+                                          RunMpqFixtureSelfTest + smoke
+                                          wiring (D2LINUX_HAS_GAME_SLICE-
+                                          gated, so the native skeleton still
+                                          builds and prints SKIPPED).
+- platform/linux/d2_linux.h               HostOptions: mpq_check + game_dir.
+- platform/linux/d2_linux_globals_step1.cpp  the round-3 weaks (verbatim).
+- platform/linux/d2_linux_compat.h        D2_LINUX_SDK_WINDOW_SUPPLIED.
+- platform/linux/build.cmake              the 5 archive-rung TUs + globals
+                                          join D2LINUX_GAME_SOURCES;
+                                          D2LINUX_HAS_GAME_SLICE define; the
+                                          fixture configure_file; stage bumped
+                                          to "M2 round 3 - Storm/MPQ file
+                                          routing (the archive rung)".
+- platform/linux/INVENTORY.md             the ledger: 49 TUs, the new shim
+                                          rows, the Storm-routing findings,
+                                          round-4 next steps.
+- platform/linux/tests/d2vp_smoke.mpq     NEW - the fixture.
+- tools/gen-mpq-fixture.py                NEW - its generator (decomp-exact
+                                          crypt, self-checking).
+- D2Win/Src/D2WinMain.h                   the guarded fallback stand-down.
+- tools/vp_host_api.h                     FILE_SHARE_WRITE + MB_OK/MB_ICONERROR
+                                          (additive #ifndef-guarded).
+- README-FIRST.txt                        this file.
 
 HOW TO APPLY
 ------------
-Copy the platform/ tree over your checkout (paths line up), then:
+Copy the overlay over your checkout (paths line up), then:
 
   rm -rf build && cmake -S . -B build -G "Unix Makefiles" && cmake --build build -j
   ./build/d2linux --smoke
 
-Expected on top of your last green run: the banner's middle line now reads
-"project: M2 round 2 - DirectDraw onto the INDEX8 surface (first game pixels)",
-the ddraw ladder prints its evidence lines (DirectDrawCreate / coop / mode /
-surfaces / palette), then:
+Expected: the banner's middle line reads "project: M2 round 3 - Storm/MPQ
+file routing (the archive rung / first game data)", the three self-test OK
+lines (user32 / ddraw / mpq), then "d2linux smoke OK".
 
-  d2linux ddraw self-test OK (create/coop/mode/flipchain/palette/lock/blt/flip)
-  d2linux smoke OK (3 frames, dummy video/audio)
+Then the field pass (the real game data):
 
-And in a WINDOWED run (no args): 3 rainbow frames, then the last frames show
-the DD test frame — a red/green/cyan index ramp letterboxed inside the
-window — because the self-test's Flip presents to the same pipeline.
+  ./build/d2linux --mpq-check=/path/to/your/1.14d/install
 
-NEXT (per PLAN.md): Storm/MPQ file routing + the boot-chain slice
-(globals.cpp step 2 + D2Launch/D2Client) - the M2 exit gate is the title
-screen rendered through THIS shim.
+The window still shows the M0 rainbow on a plain run — the game's own frame
+composition (D2WinArchive -> DC6 -> the DirectDraw shim) is the round-4
+rung; this round makes every MPQ the boot chain will ask for openable and
+proven.
+
+NEXT (per PLAN.md): the D2Win rung (D2WinArchive + D2WinMain + DC6/CelCmp +
+globals/D2Win.cpp), then globals.cpp + Fog/Engine/Application.cpp +
+D2Client/Engine/Application.cpp — ApplicationMain, whose first calls
+(SFILE_InitializeFileSystem, MPQ_LoadAllDataMpqFiles) land directly on this
+round's floor. M2 exit: the title screen rendered through the DirectDraw
+shim.

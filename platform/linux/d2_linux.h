@@ -16,6 +16,8 @@ namespace d2linux {
 struct HostOptions {
     bool smoke = false;       // --smoke: dummy drivers, a few frames, exit 0
     bool list_video = false;  // --list-video: compiled drivers + session, exit 0
+    bool mpq_check = false;   // [d2linux M2 round 3] --mpq-check: open the data MPQs
+    const char* game_dir = nullptr;  // --game-dir=PATH: chdir + registry seed
     int  smoke_frames = 3;
     int  window_w = 800;
     int  window_h = 600;
