@@ -20,7 +20,15 @@
 #include "Redivivus/d2_boot.h" // [d2boot]
 #include "Redivivus/d2_hangwatch.h" // [vanilla-plus hangwatch]
 #include "Source/D2Sound/D2Sound.h" // VP: [d2boot] sound-init verdict getters
-#include "Source/D2Sound/VanillaPlusSound.h" // VP: [d2boot] EAX verdict via the fork's D2Sound-module bridge (the tenth sync's per-module gates made SOUND_GetEAXEnabledFlag module-private)
+// VP: [d2boot] EAX verdict via the fork's D2Sound-module bridge - the prototype
+// lives here, not an include: VanillaPlusSound.h sits in Source/D2Sound/ beside
+// the module-private SOUND_GetEAXEnabledFlag it wraps (the tenth sync's per-module
+// gates made it module-private), and the module gates charge a non-public D2Sound
+// header to the including module - Game is strict, so the include is an
+// internal-include failure (the owner's R136 build was the first to reach the
+// module-gates edge and caught it; R137). The bridge TU stays fork-owned in
+// Source/D2Sound/, where the private is visible.
+DWORD __stdcall VPSOUND_GetEAXEnabledFlag();
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -1054,7 +1062,7 @@ int __fastcall ApplicationMain(HINSTANCE hInstance, D2IniConfigStrc * pD2IniData
     // marks, the hangwatch arm and the ini bootstrap actually run, in the order the
     // d2boot patch intended. (Re-planted R106: file refiled upstream as Game/Main.cpp.)
     D2BOOT_MarkFmt("ApplicationMain enter (mode=%d)", (int)geModState); // [d2boot]
-    D2BOOT_Mark("Vanilla+0.0.8-R136"); // [d2boot] build self-identification (local builds do not always rotate the commit hash)
+    D2BOOT_Mark("Vanilla+0.0.8-R137"); // [d2boot] build self-identification (local builds do not always rotate the commit hash)
     D2HANGWATCH_Start(); // [vanilla-plus hangwatch] arm the freeze watchdog (evaluates from the first main-loop beat)
     // VP-BEGIN [alt-toggle]: create d2vp.ini next to the exe when missing
     // (documented all-defaults template, one attempt per process) so the
