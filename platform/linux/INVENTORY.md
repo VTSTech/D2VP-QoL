@@ -223,7 +223,12 @@ dangling 18 undefined references at link.
   clean-null + the fixture open/read/close ("d2linux mpq self-test OK").
 - owner field pass: `./d2linux --mpq-check=<game dir>` next to a 1.14d
   install — opens all seven data MPQs through ARCHIVE_LoadMPQ and reports
-  per-archive verdicts (missing essential = exit 1, cleanly diagnosed).
+  per-archive verdicts. The FAIL set mirrors MPQ_LoadAllDataMpqFiles's own
+  boot verdict (D2WinArchive.cpp:139-147): only d2data+d2sfx+d2speech
+  (missing = exit 1, cleanly diagnosed); d2delta/d2kfixup/patch_d2/d2exp
+  report ABSENT-tolerated, exactly what a modern install without the legacy
+  MPQs meets. The native skeleton binary explains that the probe needs the
+  i386 game slice instead of silently ignoring the flag.
 
 ## 8. Next slice (round 4, toward M2's title screen)
 

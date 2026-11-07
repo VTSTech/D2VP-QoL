@@ -644,16 +644,24 @@ bool GameDirPrepare(const char* szDir) {
 }
 
 int RunMpqCheck() {
-    // The seven data MPQs in MPQ_LoadAllDataMpqFiles's exact order. d2exp is
-    // the expansion marker: a classic-only install reports it missing without
-    // failing the check (D2WinArchive's own logic treats it the same way).
-    struct Probe { const char* name; bool essential; };
+    // The seven data MPQs in MPQ_LoadAllDataMpqFiles's exact order
+    // (D2Win/Src/D2WinArchive.cpp:127-134). The boot verdict there is NARROW:
+    // it fails only when d2data+d2sfx+d2speech are not all loaded (and, for
+    // an expansion game, when d2exp is missing on top). d2delta/d2kfixup are
+    // legacy rungs modern installs don't ship — the PE loads them if present
+    // and boots without them, so the probe reports them but does not fail on
+    // them (this check used to; a real 1.14d data dir would false-FAIL).
+    struct Probe { const char* name; const char* note_if_missing; };
     static const Probe kProbes[] = {
-        {"d2data.mpq", true},    {"d2sfx.mpq", true},   {"d2speech.mpq", true},
-        {"d2delta.mpq", true},   {"d2kfixup.mpq", true}, {"patch_d2.mpq", true},
-        {"d2exp.mpq", false},
+        {"d2data.mpq", nullptr},
+        {"d2sfx.mpq", nullptr},
+        {"d2speech.mpq", nullptr},
+        {"d2delta.mpq", "legacy MPQ, absent on modern installs (boot-tolerant)"},
+        {"d2kfixup.mpq", "legacy MPQ, absent on modern installs (boot-tolerant)"},
+        {"patch_d2.mpq", nullptr},
+        {"d2exp.mpq", "classic-only install (boot-tolerant)"},
     };
-    int nOpened = 0, nEssentialMissing = 0, nOptionalMissing = 0;
+    int nOpened = 0, nRequiredMissing = 0, nToleratedMissing = 0;
     std::printf("d2linux mpq-check (through D2Hell::ARCHIVE_LoadMPQ):\n");
     for (const Probe& p : kProbes) {
         D2FogArchiveStrc* pArchive =
@@ -662,22 +670,25 @@ int RunMpqCheck() {
             std::printf("  %-16s OK\n", p.name);
             D2Hell::ARCHIVE_FreeMpqFile(pArchive);
             ++nOpened;
+        } else if (p.note_if_missing) {
+            std::printf("  %-16s ABSENT (%s)\n", p.name, p.note_if_missing);
+            ++nToleratedMissing;
         } else {
             std::printf("  %-16s MISSING\n", p.name);
-            p.essential ? ++nEssentialMissing : ++nOptionalMissing;
+            ++nRequiredMissing;
         }
     }
-    if (nEssentialMissing) {
+    if (nRequiredMissing) {
         std::printf(
-            "d2linux mpq-check FAILED: %d essential MPQ(s) missing. Put this\n"
-            "  binary next to your 1.14d install (or pass --mpq-check=<dir>)\n"
-            "  and re-run; the archive layer above is fine, the game data is\n"
-            "  not reachable from here.\n", nEssentialMissing);
+            "d2linux mpq-check FAILED: %d required MPQ(s) missing — the boot\n"
+            "  verdict (MPQ_LoadAllDataMpqFiles) needs d2data+d2sfx+d2speech.\n"
+            "  The archive layer above is fine; the game data is not reachable\n"
+            "  from here.\n", nRequiredMissing);
         return 1;
     }
     std::printf("d2linux mpq-check OK: %d/%d archives opened%s\n", nOpened,
                 (int)(sizeof(kProbes) / sizeof(kProbes[0])),
-                nOptionalMissing ? " (classic-only install: expansion MPQs absent)"
+                nToleratedMissing ? " (absent MPQs are boot-tolerant — the PE boots the same way)"
                                  : "");
     return 0;
 }
@@ -708,6 +719,23 @@ int main(int argc, char** argv) {
     }
     if (opts.mpq_check) {
         return d2linux::RunMpqCheck();
+    }
+#else
+    // [d2linux M2 round 3] the skeleton binary has no game TUs (charter R1:
+    // the game slice is i386-only), so there is no archive layer behind
+    // these flags. Say so instead of silently ignoring the flag and opening
+    // the test window — that is exactly the "SKIPPED" line the smoke prints.
+    if (opts.mpq_check) {
+        std::printf(
+            "d2linux: --mpq-check needs the game-slice build (charter R1: the\n"
+            "  game TUs are i386-only and this is the native skeleton). Rebuild\n"
+            "  with -DD2LINUX_ARCH=i386 (g++-multilib) or run the CI artifact.\n");
+        return 2;
+    }
+    if (opts.game_dir) {
+        std::printf(
+            "d2linux: --game-dir noted, but this native skeleton has no game\n"
+            "  TUs (charter R1) — nothing consumes the install path yet.\n");
     }
 #endif
     if (opts.smoke) {
