@@ -1167,13 +1167,26 @@ void __stdcall VANILLAPLUS_SelfCheck() {
             ++nWired;
             if (pDeleteCharTable[i].fpDrawCallback !=
                 &D2Client::UI::EscMenu::UI_SLIDER_DrawResolutionValue) {
+                D2BOOT_MarkFmt("vanilla-plus: resolution draw mismatch at row %d [R138]", i); // [R138] evidence
                 D2BOOT_Fail("vanilla-plus self-check: Resolution row draw "
                             "callback not wired - the resolution-mode "
                             "globals.cpp edit was lost (see docs/merge-upstream.md)");
                 exit(-1);
             }
         }
+        // [R138] the scan's evidence rides d2boot.log even when it passes:
+        // a mismatch whose source looks correct (stale object in the build
+        // dir, a TU linked twice, a scribbled row) is diagnosable from the
+        // log alone - rows/wired pin the scan, the address pair pins which
+        // side of the compare lied.
+        D2BOOT_MarkFmt("vanilla-plus: resolution wiring rows=%d wired=%d [R138]",
+                       kVidRowCount, nWired);
         if (nWired != 1) {
+            D2BOOT_MarkFmt("vanilla-plus: resolution evidence exp.init=%p exp.draw=%p row1.init=%p row1.draw=%p [R138]",
+                           (const void*)&D2Client::UI::EscMenu::UI_SLIDER_LoadAndApplyResolution,
+                           (const void*)&D2Client::UI::EscMenu::UI_SLIDER_DrawResolutionValue,
+                           (kVidRowCount > 1 ? (const void*)pDeleteCharTable[1].fpInitCallback : nullptr),
+                           (kVidRowCount > 1 ? (const void*)pDeleteCharTable[1].fpDrawCallback : nullptr));
             D2BOOT_Fail("vanilla-plus self-check: Resolution row init callback "
                         "not found (or duplicated) - the resolution-mode table "
                         "wiring was lost or doubled in a merge "

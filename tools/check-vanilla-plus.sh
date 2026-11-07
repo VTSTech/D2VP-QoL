@@ -286,7 +286,11 @@ gate "resolution: init attach"                  Source/D2Client/UI/EscMenu.cpp  
 gate "resolution: minipanel clamp + modes 4/5/6" Source/D2Client/UI/MiniPanel.cpp   'nResolution > 5|nScreenMode_lcl = 6|nScreenMode_lcl = 5|nScreenMode_lcl = 4' 4
 gate "resolution: core blank builder"        Source/D2Client/UI/VanillaPlusCore.cpp '__stdcall VPRES_BuildBlankPlaceholder' 1
 gate "resolution: core font pick"            Source/D2Client/UI/VanillaPlusCore.cpp '__stdcall VPRES_PickFontMatchingDC6' 1
-gate "resolution: self-check wiring"         Source/D2Client/UI/VanillaPlusCore.cpp 'UI_SLIDER_DrawResolutionValue' 1
+# R138: count 1 -> 2 - the self-check's evidence dump takes exp.draw's address
+# beside the scan's compare (the wiring is still ONE table row; both hits are
+# in VanillaPlusCore.cpp itself).
+gate "resolution: self-check wiring"         Source/D2Client/UI/VanillaPlusCore.cpp 'UI_SLIDER_DrawResolutionValue' 2
+gate "resolution: self-check evidence mark"  Source/D2Client/UI/VanillaPlusCore.cpp 'resolution wiring rows=%d wired=%d \[R138\]' 1
 # Issue #23: the visible 1280x720 label must sit where the retail value
 # images sit - right-aligned to the value-column anchor (alignment 2) and on
 # their ink line (glyph-cell descent compensated: DRAW_text anchors the cell
@@ -1082,7 +1086,8 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # the 100-int cache sat adjacent in the original .data; the regen's separate
 # statics made it an OOB read of unrelated globals (pointer read as roll bound
 # -> seed%ptr -> pTable+idx*4 fault). Cache moved to file scope + accessor.)
-gate "res: self-id 0.0.8-R137"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R137' 1
+gate "res: self-id 0.0.8-R138"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R138' 1
+gate "res: self-id R137 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R137' 0
 gate "res: self-id R136 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R136' 0
 gate "res: self-id R127 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R127' 0
 gate "res: self-id R135 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 0
