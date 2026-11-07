@@ -93,7 +93,9 @@
         "TSBaseArray_Ui_Subscript"
       ],
       "usedTypes": [
-        "int32_t"
+        "TSGrowableArray_Ui",
+        "int32_t",
+        "uint32_t"
       ]
     },
     {
@@ -110,7 +112,8 @@
         "TSBaseArray_Ui_Top"
       ],
       "usedTypes": [
-        "int32_t"
+        "BigBuffer",
+        "uint32_t"
       ]
     },
     {
@@ -127,8 +130,9 @@
         "TSBaseArray_Uc_Subscript"
       ],
       "usedTypes": [
-        "BigBuffer",
-        "int32_t"
+        "TSGrowableArray_Uc",
+        "int32_t",
+        "uint8_t"
       ]
     },
     {
@@ -195,6 +199,9 @@
       "namespace": "Storm::Source::SBig",
       "calledFunctions": [
         "Unreferenced_00421050"
+      ],
+      "usedTypes": [
+        "uint8_t"
       ]
     },
     {
@@ -209,6 +216,9 @@
       "namespace": "Storm::Source::SBig",
       "calledFunctions": [
         "Unreferenced_00421090"
+      ],
+      "usedTypes": [
+        "uint8_t"
       ]
     },
     {
@@ -261,6 +271,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Ui",
         "int32_t",
         "uint32_t"
       ]
@@ -387,6 +398,9 @@
       "namespace": "Storm::Source::SBig",
       "calledFunctions": [
         "Unreferenced_004212a0"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -401,6 +415,9 @@
       "namespace": "Storm::Source::SBig",
       "calledFunctions": [
         "Unreferenced_004212c0"
+      ],
+      "usedTypes": [
+        "uint8_t"
       ]
     },
     {
@@ -587,6 +604,9 @@
       "calledFunctions": [
         "TSFixedArray_Ui_Destructor_Unref_00421570",
         "SMemFree"
+      ],
+      "usedTypes": [
+        "TSGrowableArray_Ui"
       ]
     },
     {
@@ -602,6 +622,9 @@
       "calledFunctions": [
         "TSFixedArray_Ui_Destructor_Unref_00421590",
         "SMemFree"
+      ],
+      "usedTypes": [
+        "TSGrowableArray_Ui"
       ]
     },
     {
@@ -637,6 +660,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Ui",
         "uint32_t"
       ]
     },
@@ -675,6 +699,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "int32_t",
         "uint32_t"
       ]
@@ -694,6 +719,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "int32_t",
         "uint32_t"
       ]
@@ -715,6 +741,7 @@
         "SMemFree"
       ],
       "usedTypes": [
+        "BigBuffer",
         "uint32_t"
       ]
     },
@@ -735,7 +762,9 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "uint32_t"
+        "TSGrowableArray_Uc",
+        "uint32_t",
+        "uint8_t"
       ]
     },
     {
@@ -751,6 +780,9 @@
       "calledFunctions": [
         "TSFixedArray_Ui_Destructor_Unref_004217f0",
         "SMemFree"
+      ],
+      "usedTypes": [
+        "TSGrowableArray_Ui"
       ]
     },
     {
@@ -794,6 +826,9 @@
       "namespace": "Storm::Source::SBig",
       "calledFunctions": [
         "Unreferenced_00421860"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -844,6 +879,7 @@
         "TSFixedArray_Uc_ReallocData"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -923,6 +959,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "uint32_t",
         "uint8_t"
       ]
@@ -942,6 +979,7 @@
         "SMemReAlloc"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "uint32_t",
         "uint8_t"
       ]
@@ -982,6 +1020,7 @@
         "TSFixedArray_UcAlt_ReallocData"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "int32_t",
         "uint32_t"
       ]
@@ -1001,6 +1040,7 @@
         "TSBaseArray_Ui_Copy"
       ],
       "usedTypes": [
+        "TSGrowableArray_Ui",
         "uint32_t"
       ]
     },
@@ -1151,6 +1191,7 @@
         "TSFixedArray_UcAlt_ReallocData"
       ],
       "usedTypes": [
+        "TSGrowableArray_Uc",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -1194,7 +1235,8 @@
       ],
       "usedTypes": [
         "BigBuffer",
-        "int32_t"
+        "int32_t",
+        "uint32_t"
       ]
     },
     {
@@ -1293,6 +1335,7 @@
         "TSBaseArray_Ui_Copy"
       ],
       "usedTypes": [
+        "BigBuffer",
         "uint32_t"
       ]
     },
@@ -3156,6 +3199,27 @@
       ],
       "usedTypes": [
         "BigBuffer"
+      ]
+    },
+    {
+      "name": "__GSHandlerCheck_EH_6c9f58",
+      "address": "006c9f58",
+      "lines": [
+        {
+          "line": 1,
+          "address": "006c9f58"
+        }
+      ],
+      "namespace": "Storm::Source::SBig",
+      "calledFunctions": [
+        "__GSHandlerCheck_EH_6c9f58",
+        "__security_check_cookie"
+      ],
+      "usedTypes": [
+        "EHExceptionRecord",
+        "EHRegistrationNode",
+        "_CONTEXT",
+        "_EXCEPTION_DISPOSITION"
       ]
     },
     {

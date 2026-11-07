@@ -3,57 +3,23 @@
 #include "Source/D2Game/PLAYER/PlayerMsg.h"
 #include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/GAME/Game/SGAMEDATA.h"
-#include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/Chat.h"
-#include "Source/D2Common/Collision.h"
-#include "Source/D2Common/D2BitBufferStrc.h"
-#include "Source/D2Common/D2DynamicPathStrc.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2MissilesTxt.h"
-#include "Source/D2Common/D2MonStatsTxt.h"
-#include "Source/D2Common/D2RoomExStrc.h"
-#include "Source/D2Common/D2RoomStrc.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/D2SkillStrc.h"
-#include "Source/D2Common/D2SkillsTxt.h"
-#include "Source/D2Common/D2StatListExStrc.h"
+#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2CharStatsTxt.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Common/D2WaypointStrc.h"
-#include "Source/D2Common/DATATBLS/ItemStats.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DATATBLS/ObjectTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/Preset.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/PATH/DynamicPath.h"
-#include "Source/D2Common/QuestRecord.h"
-#include "Source/D2Common/Stats/StatsEx.h"
-#include "Source/D2Common/Txt/Skills.h"
 #include "Source/D2Common/Unit.h"
-#include "Source/D2Common/Units.h"
-#include "Source/D2Common/Units/UnitFinds.h"
-#include "Source/D2Common/Waypoints.h"
 #include "Source/D2Game/Ai/AiGeneral.h"
-#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
 #include "Source/D2Game/GAME/Arena.h"
 #include "Source/D2Game/GAME/Clients.h"
 #include "Source/D2Game/GAME/Event.h"
 #include "Source/D2Game/GAME/Level.h"
 #include "Source/D2Game/GAME/SCmd.h"
 #include "Source/D2Game/GAME/Server.h"
-#include "Source/D2Game/GAME/Targets.h"
 #include "Source/D2Game/ITEMS/ItemMode.h"
 #include "Source/D2Game/ITEMS/Items/Drop.h"
 #include "Source/D2Game/Monster/AI/AI.h"
 #include "Source/D2Game/Monster/MonsterAI.h"
 #include "Source/D2Game/Monster/Monsters.h"
-#include "Source/D2Game/Objects/Objects.h"
 #include "Source/D2Game/Objects/ObjectsMode.h"
 #include "Source/D2Game/PLAYER/Player.h"
 #include "Source/D2Game/PLAYER/PlayerIntro.h"
@@ -63,94 +29,15 @@
 #include "Source/D2Game/PLAYER/PlayerTrade.h"
 #include "Source/D2Game/Quests/QUESTS.h"
 #include "Source/D2Game/SKILLS/SkillItem.h"
-#include "Source/D2Game/SKILLS/SkillsServer.h"
 #include "Source/D2Game/UNIT/PlayerList.h"
 #include "Source/D2Game/UNIT/SUNITNPC.h"
 #include "Source/D2Game/UNIT/SUnit.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/SUnitInactive.h"
 #include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/SMem.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "Source/globals/globals.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2Common.globals.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2Win.globals.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Fog.globals.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/Help.data.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Common/D2UnitDataItemStrc.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/Txt/Skills.inline.h"
 #include "Source/D2Common/Units.inline.h"
 #include "Source/D2Game/PLAYER/PlayerMsg.data.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -394,7 +281,7 @@ D2NET_SERVER_D2GS_ClientToServer NET_D2GS_SERVER_INCOMING[103] = {
         /* .field1_0x4 = */ 0x1
     },
     {
-        /* .fpHandler = */ (D2NET_SERVER_CLTtoD2GS)&D2Game::PLAYER::PlayerMsg::PLRMSG_Cmd0x39_ReturnBadParams,
+        /* .fpHandler = */ &D2Game::PLAYER::PlayerMsg::PLRMSG_Cmd0x39_ReturnBadParams,
         /* .field1_0x4 = */ 0x0
     },
     {
@@ -1862,14 +1749,14 @@ static int32_t __stdcall CheckIfInrangeAndReassign(::SGAMEDATA * pGame, uint32_t
 eD2ServerIncomingStatus __fastcall SCMD_0x01_WalkToLocation(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x01_WalkToLocation * pPacket, uint32_t nSize) {
     int32_t nStatus = CheckIfInrangeAndReassign(pGame, nSize, (uint16_t*)&pPacket, (uint16_t*)&nSize, pUnit, &pPacket->nCmd);
     if (!nStatus) {
-      PlayerModes::PLRMODES_MoveToLocation(pGame, pUnit, nullptr, 2, (uint32_t)pPacket & 0xffff, nSize & 0xffff, 0);
+      PlayerModes::PLRMODES_MoveToLocation(pGame, pUnit, nullptr, 2, (uintptr_t)pPacket & 0xffff, nSize & 0xffff, 0);
       nStatus = 0;
     }
 
     return (eD2ServerIncomingStatus)nStatus;
 }
 
-static eD2ServerIncomingStatus __stdcall AnyPacketClickOnMap(::SGAMEDATA * pGame, size_t nSize, eD2UnitType * peUnitTypeOut, size_t * nSizeEx, D2UnitStrc * pUnit, uint8_t * pPacket) {
+static eD2ServerIncomingStatus __stdcall AnyPacketClickOnMap(::SGAMEDATA * pGame, uint32_t nSize, eD2UnitType * peUnitTypeOut, uint32_t * nSizeEx, D2UnitStrc * pUnit, uint8_t * pPacket) {
     *peUnitTypeOut = UNIT_PLAYER;
     *nSizeEx = 0;
     if (nSize != 9) {
@@ -1909,7 +1796,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x02_WalkToEntity(::SGAMEDATA * pGame, D
 eD2ServerIncomingStatus __fastcall SCMD_0x03_RunToLocation(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x03_RunToLocation * pPacket, uint32_t nSize) {
     int32_t nStatus = CheckIfInrangeAndReassign(pGame, nSize, (uint16_t*)&pPacket, (uint16_t*)&nSize, pUnit, &pPacket->nCmd);
     if (!nStatus) {
-      PlayerModes::PLRMODES_MoveToLocation(pGame, pUnit, nullptr, 3, (uint32_t)pPacket & 0xffff, nSize & 0xffff, 0);
+      PlayerModes::PLRMODES_MoveToLocation(pGame, pUnit, nullptr, 3, (uintptr_t)pPacket & 0xffff, nSize & 0xffff, 0);
       nStatus = 0;
     }
 
@@ -2128,7 +2015,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x05_LeftSkillOnLocation(::SGAMEDATA * p
 
     D2Common::Stats::StatsEx::STATLIST_SetUnitStat(pUnit, UNITSTAT_pierce_idx, D2Common::Stats::StatsEx::SERVER_GetUnitStat(pUnit, UNITSTAT_pierce_idx, 0) + 1, 0);
     uint32_t nTargetY = nSize & 0xffff;
-    uint32_t nTargetX = (uint32_t)pPacket & 0xffff;
+    uint32_t nTargetX = (uintptr_t)pPacket & 0xffff;
     pLeftSkill = D2Common::Units::GetLeftSkill(pUnit);
     CastSkillOnLocation(pUnit, pGame, nTargetX, nTargetY, pLeftSkill);
     nPierceIdx = 0;
@@ -2207,9 +2094,9 @@ eD2ServerIncomingStatus __fastcall SCMD_0x08_LeftSkillOnLocationEx(::SGAMEDATA *
 // C->S Packet 0x09 - Left Skill on Unit, Repeat (9 bytes)
 // [op:1][unitType:u32][GUID:u32]
 // Held mouse: delegates to handler 0x06.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x09_CheckRangeThenLeftSkillOnEntity(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x09_LeftSkillOnEntityEx2 * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x09_CheckRangeThenLeftSkillOnEntity(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x09_LeftSkillOnEntityEx2 * pPacket, uint32_t nSize) {
     eD2UnitType eOutUnitType;
-    size_t nSize_00 = nSize;
+    uint32_t nSize_00 = nSize;
     eD2ServerIncomingStatus nStatus = AnyPacketClickOnMap(pGame, nSize, &eOutUnitType, &nSize, pUnit, &pPacket->nCmd);
     if (nStatus != SERVERSTATUS_OK) {
       return (eD2ServerIncomingStatus)nStatus;
@@ -2269,7 +2156,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x0C_RightSkillOnLocation(::SGAMEDATA * 
 
     D2Common::Stats::StatsEx::STATLIST_SetUnitStat(pUnit, UNITSTAT_pierce_idx, D2Common::Stats::StatsEx::SERVER_GetUnitStat(pUnit, UNITSTAT_pierce_idx, 0) + 1, 0);
     uint32_t nTargetY = nSize & 0xffff;
-    uint32_t nTargetX = (uint32_t)pPacket & 0xffff;
+    uint32_t nTargetX = (uintptr_t)pPacket & 0xffff;
     pRightSkill = D2Common::Units::GetRightSkill(pUnit);
     CastSkillOnLocation(pUnit, pGame, nTargetX, nTargetY, pRightSkill);
     nPierceIdx = 0;
@@ -2348,9 +2235,9 @@ eD2ServerIncomingStatus __fastcall SCMD_0x0F_RightSkillOnLocationEx(::SGAMEDATA 
 // C->S Packet 0x10 - Right Skill on Unit, Repeat (9 bytes)
 // [op:1][unitType:u32][GUID:u32]
 // Held mouse: delegates to handler 0x0D.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x10_CheckRangeThenRightSkillOnEntity(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x10_RightSkillOnEntityEx2 * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x10_CheckRangeThenRightSkillOnEntity(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x10_RightSkillOnEntityEx2 * pPacket, uint32_t nSize) {
     eD2UnitType eOutUnitType;
-    size_t nSize_00 = nSize;
+    uint32_t nSize_00 = nSize;
     eD2ServerIncomingStatus nStatus = AnyPacketClickOnMap(pGame, nSize, &eOutUnitType, &nSize, pUnit, &pPacket->nCmd);
     if (nStatus != SERVERSTATUS_OK) {
       return (eD2ServerIncomingStatus)nStatus;
@@ -3249,7 +3136,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x21_MergeStackables(::SGAMEDATA * pGame
 // C->S 0x22 Unstack Item - STUB (5 bytes)
 // [op:1][itemGUID:u32]
 // RemoveStackItem returns 0 - dead code in 1.14d.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x22_RemoveStackItem(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x22_ItemToBelt * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x22_RemoveStackItem(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x22_ItemToBelt * pPacket, uint32_t nSize) {
     if (nSize != 5) {
       return SERVERSTATUS_BAD_PARAMS;
     }
@@ -3260,7 +3147,7 @@ eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x22_RemoveStackItem(::SGAMEDATA * 
       return (eD2ServerIncomingStatus)nStatus;
     }
 
-    BOOL nRemoveResult = ITEMS::ItemMode::RemoveStackItem(dwItemGUID, (uint32_t)&nSize);
+    BOOL nRemoveResult = ITEMS::ItemMode::RemoveStackItem(dwItemGUID, &nSize);
     if (!nRemoveResult && nSize) {
       return SERVERSTATUS_BAD_PARAMS;
     }
@@ -3494,13 +3381,13 @@ eD2ServerIncomingStatus __fastcall SCMD_0x2A_ItemToCube(::SGAMEDATA * pGame, D2U
 
 // C->S 0x2C NPC Buy (stub)
 // Always returns SERVERSTATUS_BAD_PARAMS in 1.14d.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2C_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2C_DeadStub * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2C_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2C_DeadStub * pPacket, uint32_t nSize) {
     return SERVERSTATUS_BAD_PARAMS;
 }
 
 // C->S 0x2D NPC Sell (stub)
 // Always returns SERVERSTATUS_BAD_PARAMS in 1.14d.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2D_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2D_DeadStub * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2D_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2D_DeadStub * pPacket, uint32_t nSize) {
     return SERVERSTATUS_BAD_PARAMS;
 }
 
@@ -3547,7 +3434,7 @@ void __fastcall LoadAreaOrSpawnPortal(::SGAMEDATA * pGame, D2UnitStrc * pUnit, e
 
 // C->S 0x2E NPC Identify (stub)
 // Always returns SERVERSTATUS_OK in 1.14d.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2E_ReturnOk(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2E_DeadStub * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x2E_ReturnOk(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x2E_DeadStub * pPacket, uint32_t nSize) {
     return SERVERSTATUS_OK;
 }
 
@@ -3735,7 +3622,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x38_NpcMenuSelect(::SGAMEDATA * pGame, 
 }
 
 // C->S 0x39 DISABLED. Stub - always returns BAD_PARAMS.
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x39_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, char * pBytes, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x39_ReturnBadParams(::SGAMEDATA * pGame, D2UnitStrc * pUnit, char * pBytes, uint32_t nSize) {
     return SERVERSTATUS_BAD_PARAMS;
 }
 
@@ -4261,7 +4148,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x4F_GoToTownFolk(::SGAMEDATA * pGame, D
       return SERVERSTATUS_BAD_PARAMS;
     }
 
-    eD2ServerIncomingStatus eVar1 = PlayerTrade::ClickButton(pGame, pUnit, pPacket->nButton, (uint32_t)((uint32_t)(uint16_t)(short int)pPacket->dwParam << 16 | (uint32_t)(uint16_t)*(uint16_t*)((uintptr_t)&pPacket->dwParam + 2)));
+    eD2ServerIncomingStatus eVar1 = PlayerTrade::ClickButton(pGame, pUnit, pPacket->nButton, (uint32_t)((uint32_t)(uint16_t)(short int)pPacket->dwParam << 16 | (uint32_t)(uint16_t)*(uint16_t*)((intptr_t)&pPacket->dwParam + 2)));
     return (eD2ServerIncomingStatus)eVar1;
 }
 
@@ -4720,7 +4607,7 @@ static BOOL __stdcall MERC_SwapEquippedItem(D2UnitStrc * pUnit, D2UnitStrc * pUn
         D2Common::ITEMS::Items::SetBodyLoc(pClonedOldItem, (eD2BodyLoc)(uintptr_t)pItemAtBodyLoc);
         D2Common::Units::SetupUpdateFlag(pClonedOldItem, 1);
         D2Common::ITEMS::Items::ITEM_SetItemData_ePage(pClonedOldItem, INVPAGE_None);
-        ITEMS::ItemMode::ITEMMODE_AddStatsList_ForMercSwap((uint32_t)pGame, pClonedOldItem, pUnit2, 0);
+        ITEMS::ItemMode::ITEMMODE_AddStatsList_ForMercSwap(pGame, pClonedOldItem, pUnit2, 0);
         ITEMS::ItemMode::ITEMMODE_ReturnZero3(pGame, pUnit2, 0);
       }
     }
@@ -5024,7 +4911,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x63_ItemToBeltAuto(::SGAMEDATA * pGame,
               GAME::SCmd::Send0x9DRemoveItemFromContainer(UNIT::SUnit::SUNIT_GetClient(pUnit, ".\\PLAYER\\PlrMsg.cpp", 0x1834), pUnit, pItem, itemFlagMask);
               D2Common::Units::SetupUpdateFlag(pItem, 4);
               pItem->eUnitFlags &= ~UNITFLAG_TARGETABLE;
-              D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItem, (char*)((uintptr_t)&pPacket + 3), (char*)((uintptr_t)&nSize + 3), ".\\PLAYER\\PlrMsg.cpp", 0x183b);
+              D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItem, (char*)((intptr_t)&pPacket + 3), (char*)((intptr_t)&nSize + 3), ".\\PLAYER\\PlrMsg.cpp", 0x183b);
               bFoundSlot = D2Common::INVENTORY::Inventory::INVENTORY_CanPlaceItemInBelt(pInventory, pItem, nGridIndex);
               if (bFoundSlot) {
                 D2Common::ITEMS::Items::ITEM_SetItemData_ePage(pItem, INVPAGE_None);
@@ -5049,7 +4936,7 @@ eD2ServerIncomingStatus __fastcall SCMD_0x63_ItemToBeltAuto(::SGAMEDATA * pGame,
     return SERVERSTATUS_BAD_DATA;
 }
 
-eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x66_WardenResponse_ReturnOk(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x66_WardenStub * pPacket, size_t nSize) {
+eD2ServerIncomingStatus __fastcall PLRMSG_Cmd0x66_WardenResponse_ReturnOk(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2GSPacketClt0x66_WardenStub * pPacket, uint32_t nSize) {
     return SERVERSTATUS_OK;
 }
 

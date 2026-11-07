@@ -6,31 +6,7 @@
 #include "Source/Fog/Src/ErrorManager.h"
 #include "Source/Fog/Src/LogManager.h"
 #include "Source/Fog/Src/Safesock.h"
-#include "3rdparty/Storm/D2ArchiveStrc.h"
-#include "3rdparty/Storm/D2MPQFileStrc.h"
-#include "3rdparty/Storm/Source/SFile.h"
-#include "3rdparty/Storm/Source/SReg.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "3rdparty/Storm/Source/SSystem.h"
-#include "3rdparty/Storm/Storm.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Game/Objects/ObjectsRgn.h"
 #include "Source/Fog/Source/SFile.data.h"
 #include "Source/Fog/Src/ErrorManager.data.h"
 
@@ -150,7 +126,7 @@ int __fastcall SafeCreateDirectoryTree(char * szPath) {
     char* pNextSep = Storm::Source::SSTR::SStrChr(szPath + 1, '\\');
     if (pNextSep) {
       while (true) {
-        nSegmentLen = (int)pNextSep - (int)szPath;
+        nSegmentLen = (intptr_t)pNextSep - (intptr_t)szPath;
         if (nSegmentLen >= 0x104) {
           break;
         }
@@ -511,8 +487,8 @@ void __fastcall GetAndCreateSavePath(char * pBuffer, size_t nSize) {
         if (bRead) {
           pcLen = szOldSavePath;
           pcLen = pcLen + strlen(pcLen) + 1;
-          if (pcLen[(int)(szOldSavePath + (-1 - (int)(szOldSavePath + 1)))] == '\\') {
-            pcLen[(int)(szOldSavePath + (-1 - (int)(szOldSavePath + 1)))] = '\0';
+          if (pcLen[(intptr_t)(szOldSavePath + (-1 - (intptr_t)(szOldSavePath + 1)))] == '\\') {
+            pcLen[(intptr_t)(szOldSavePath + (-1 - (intptr_t)(szOldSavePath + 1)))] = '\0';
           }
 
           /* LPCSTR lpFileName for GetFileAttributesA */ dwAttributes = GetFileAttributesA(szOldSavePath);
@@ -573,11 +549,11 @@ void __fastcall GetAndCreateSavePath(char * pBuffer, size_t nSize) {
     }
 }
 
-int __fastcall Unreferenced_00407260(int param_1) {
-    *(uint32_t*)param_1 = 0;
-    *(uint32_t*)(param_1 + 4) = 0;
-    *(uint32_t*)(param_1 + 8) = 0;
-    *(uint32_t*)(param_1 + 0xc) = 0;
+uint32_t * __fastcall Unreferenced_00407260(uint32_t * param_1) {
+    *param_1 = 0;
+    param_1[1] = 0;
+    param_1[2] = 0;
+    param_1[3] = 0;
     return param_1;
 }
 
@@ -608,8 +584,8 @@ char * ERRORMANAGER_SnprintfTerminated(char * szText1, size_t nSize, char * szTe
     return szText1;
 }
 
-uint32_t __stdcall SFILE_GetGlobalPointer() {
-    return gbSystemInfoInitialized ? (uint32_t)(uintptr_t)&gbSystemInfoInitialized : 0;
+D2SystemInfoStrc * __stdcall SFILE_GetGlobalPointer() {
+    return gSystemInfo.bInitialized ? (D2SystemInfoStrc*)&gSystemInfo : nullptr;
 }
 
 int32_t __fastcall SFILE_JulianDayNumber(int32_t nYear, int32_t nMonth, int32_t nDay) {
@@ -714,7 +690,7 @@ void __stdcall LOGFILE_StoreGameStartupInfo() {
     Src::LogManager::LOGFILE_WriteStringToFile("------------------------------------------------------");
     /* LPSYSTEMTIME lpSystemTime for GetLocalTime */ GetLocalTime(&systemTime);
     Src::LogManager::LOGFILE_WriteStringToFile("%04d-%02d-%02d %02d:%02d:%02d", (uint32_t)systemTime.wYear, (uint32_t)systemTime.wMonth, (uint32_t)systemTime.wDay, (uint32_t)systemTime.wHour, (uint32_t)systemTime.wMinute, (uint32_t)systemTime.wSecond);
-    switch (g_eOSType) {
+    switch (gSystemInfo.eOSType) {
       case 1:
         memcpy(szOsName, "Windows NT", 0xb);
       break;
@@ -751,10 +727,10 @@ void __stdcall LOGFILE_StoreGameStartupInfo() {
       break;
     }
 
-    Src::LogManager::LOGFILE_WriteStringToFile("%s running under %s (Version %.3f)", "Diablo II", szOsName, (double)fGameVersion);
+    Src::LogManager::LOGFILE_WriteStringToFile("%s running under %s (Version %.3f)", "Diablo II", szOsName, (double)gSystemInfo.fOSVersion);
     Src::LogManager::LogCpuInfo();
-    float fMemBytes = (float)g_dwTotalPhysicalMemory;
-    if (g_dwTotalPhysicalMemory < 0) {
+    float fMemBytes = (float)(int)gSystemInfo.dwTotalPhysicalMemory;
+    if ((int)gSystemInfo.dwTotalPhysicalMemory < 0) {
       fMemBytes += 4294967296.0;
     }
 

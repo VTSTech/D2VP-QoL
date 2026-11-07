@@ -4,6 +4,9 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Multi)
 #error "D2Multi header included by a module that may not use D2Multi (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Multi) && !defined(D2_LOADS_D2Multi)
+#error "internal D2Multi header included from another module; include D2Multi's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -11,13 +14,16 @@
 #include <cstdarg>
 #include "Source/D2Headers/d2_platform.h"
 
+// Forward declarations
+struct D2ControlMsg;
+
 namespace D2Multi::OOG {
 
 // Function declarations
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Multi)
-int __stdcall OOGUTIL_PrintCallback_SetFlag(uint32_t dwParam);
-int __stdcall OOGUTIL_DrawCallback_SetModeAndClearMsgLoop(uint32_t dwParam);
+int __stdcall OOGUTIL_PrintCallback_SetFlag(struct D2ControlMsg * pControlMsg);
+int __stdcall OOGUTIL_DrawCallback_SetModeAndClearMsgLoop(struct D2ControlMsg * pControlMsg);
 #endif // D2_MODULE_D2Multi
 
 } // namespace D2Multi::OOG

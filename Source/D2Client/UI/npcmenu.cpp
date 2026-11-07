@@ -4,10 +4,8 @@
 #include "Source/D2Client/ClientModeInGame.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2DialogStrc.h"
 #include "Source/D2Client/D2GSPacketSrv0x2A.h"
 #include "Source/D2Client/D2GSPacketSrv0x91.h"
-#include "Source/D2Client/D2GameViewStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Msg.h"
@@ -25,159 +23,19 @@
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitMode.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/D2BitBufferStrc.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2MissilesTxt.h"
-#include "Source/D2Common/D2MonStatsTxt.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/D2SkillsTxt.h"
-#include "Source/D2Common/D2StatListExStrc.h"
+#include "Source/D2Common/D2Common.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/Drlg/Preset.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/QuestRecord.h"
-#include "Source/D2Common/Seed.h"
-#include "Source/D2Common/Stats/StatsEx.h"
-#include "Source/D2Common/Text.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Units.h"
-#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
-#include "Source/D2Game/GAME/Event.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/SUnitMsg.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Lang/Unicode/UNISYS.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "3rdparty/crashy/Report.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Debug.h"
-#include "Source/Fog/File.h"
-#include "Source/Fog/Fog.h"
-#include "Source/Fog/SMem.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "Source/globals/globals.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2BNetGatewayAccessStr.h"
-#include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/D2GSPacketSrv0x2A.h"
-#include "Source/D2Client/D2GfxMemoryStrc.h"
-#include "Source/D2Client/D2GfxSettingsStrc.h"
-#include "Source/D2Client/D2IniConfigStrc.h"
-#include "Source/D2Client/Draw/LightMap.h"
-#include "Source/D2Client/Draw/Weather.h"
-#include "Source/D2Client/Engine/Gfx.h"
-#include "Source/D2Client/GAME/Draw.h"
-#include "Source/D2Client/GAME/Game/Game.h"
-#include "Source/D2Client/GAME/Record.h"
-#include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/GAME/Sound.h"
-#include "Source/D2Client/Sound/Sound.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/Chat.h"
-#include "Source/D2Client/UI/CmdTbl.h"
-#include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/Inv.h"
-#include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UI/ShowItems.h"
-#include "Source/D2Client/UI/SkillDesc.h"
-#include "Source/D2Client/UI/SpellSel.h"
-#include "Source/D2Client/UI/Text.h"
-#include "Source/D2Client/UI/UseItem.h"
-#include "Source/D2Client/UI/Waypoint.h"
-#include "Source/D2Client/UI/npcmenu.h"
-#include "Source/D2Client/UI/npcmenu/Merc.h"
-#include "Source/D2Client/UI/ui.h"
-#include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Client/UNIT/Missile.h"
-#include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Client/UNIT/Object.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Client/Warden/WardenClient.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2Common.globals.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Game/D2Game.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2WinAnimImage.h"
-#include "Source/D2Win/Src/D2Comp.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Fog.globals.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
+#include "Source/Fog/Fog.h"
+#include "Source/D2Client/D2Client.globals.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientRoot.h"
 #include "Source/D2Client/GAME/Game/SGAMEDATA.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/MiniPanel.h"
 #include "Source/D2Client/UI/npcmenu.data.h"
-#include "Source/D2Common/Collision.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/Seed.inline.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Lang/Unicode/UNISYS.inline.h"
-#include "Source/Fog/Engine/Application.data.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -3961,32 +3819,27 @@ uint16_t __fastcall NPCMENU_FindNextUnhandledMessage(int16_t nMsgTypeToFind) {
 
     D2GSPacketSrv0x27_TextStrc* pOverheadText = Text::TEXT_GetOverheadGlobalPointer();
     nIndex = 0;
-    uint32_t nMsgTypeResult = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadText, 0);
-    short int nMsgType = (short int)nMsgTypeResult;
+    uint16_t uVar1 = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadText, 0);
     do {
-      uint16_t wMsgType;
-      if (nMsgType == -1) {
+      if (uVar1 == 0xffff) {
         return 0xffff;
       }
-
-      wMsgType = (uint16_t)nMsgTypeResult;
-      if (wMsgType != nMsgTypeToFind) {
+      if (uVar1 != nMsgTypeToFind) {
         nScrollQueueIdx = 0;
         if (!gnNpcMenuScrollMessageHead) {
-          return wMsgType;
+          return uVar1;
         }
 
-        while (gaNpcMenuHandledMessageIds[nScrollQueueIdx] != wMsgType) {
+        while (gaNpcMenuHandledMessageIds[nScrollQueueIdx] != uVar1) {
           nScrollQueueIdx++;
           if (nScrollQueueIdx >= (int)(uint32_t)gnNpcMenuScrollMessageHead) {
-            return wMsgType;
+            return uVar1;
           }
         }
       }
 
       nIndex++;
-      nMsgTypeResult = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadText, nIndex);
-      nMsgType = (short int)nMsgTypeResult;
+      uVar1 = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadText, nIndex);
     } while (true);
 }
 
@@ -4072,8 +3925,7 @@ bool inline_NPC_IsInteractableSideNpc(int32_t nNpcClassId) {
 }
 
 int __stdcall NPCMENU_ShowSelectedDialogOption() {
-    uint32_t nMessageId;
-    uint16_t wMessageId;
+    D2GSPacketSrv0x27_TextStrc* pOverheadText;
     int32_t nSelectedIndex = Dialog::DIALOG_GetSelectedIndex(Dialog::gpNpcGossipDialog);
     int nDialogBaseOffset = 3 - (uint32_t)D2NPCSpeech[gnNpcMenuCainIdentifyGUID].bNoIntro;
     if (!(nSelectedIndex >= nDialogBaseOffset && _Interaction::bInteractingWithNpc)) {
@@ -4082,7 +3934,7 @@ int __stdcall NPCMENU_ShowSelectedDialogOption() {
 
     D2UnitStrc* pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(_Interaction::nCurrentInteractedNpcGUID, UNIT_MONSTER);
     if (pNpcUnit) {
-      D2GSPacketSrv0x27_TextStrc* pOverheadText;
+      uint16_t wDialogStringId;
       nSelectedIndex = Dialog::DIALOG_GetSelectedIndex(Dialog::gpNpcGossipDialog);
       pOverheadText = Text::TEXT_GetOverheadGlobalPointer();
       if (!pOverheadText) {
@@ -4090,16 +3942,15 @@ int __stdcall NPCMENU_ShowSelectedDialogOption() {
         exit(-1);
       }
 
-      nMessageId = D2Common::Text::TEXT_GetMessageByIndex(pOverheadText, nSelectedIndex - nDialogBaseOffset);
-      wMessageId = (uint16_t)nMessageId;
-      gnNpcMenuScrollCompleteMode = wMessageId;
+      wDialogStringId = D2Common::Text::TEXT_GetMessageByIndex(pOverheadText, nSelectedIndex - nDialogBaseOffset);
+      gnNpcMenuScrollCompleteMode = wDialogStringId;
       if (_Interaction::bInteractingWithNpc) {
         pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(_Interaction::nCurrentInteractedNpcGUID, UNIT_MONSTER);
       } else {
         pNpcUnit = 0;
       }
 
-      Text::TEXT_ShowNpcDialog(pNpcUnit, wMessageId, 0);
+      Text::TEXT_ShowNpcDialog(pNpcUnit, wDialogStringId, 0);
       gnNpcMenuActiveMode = 1;
       Text::TEXT_SetScrollCompleteCallback(NPCMENU_ScrollCompleteShowNextMessage, nullptr);
       Dialog::FreeDialogStrc(Dialog::gpNpcGossipDialog);
@@ -5337,27 +5188,8 @@ void __fastcall NPCMENU_MarkNpcSpeechesUpdated(D2GSPacketSrv0x91 * pBytes) {
     } while (nMessageCount);
 }
 
-int __fastcall Unreferenced_004b3560(int param_1) {
-    *(uint32_t*)(param_1 + 0x15) = 0;
-    *(uint32_t*)(param_1 + 0x19) = 0;
-    *(uint32_t*)(param_1 + 0x1d) = 0;
-    *(uint32_t*)(param_1 + 0x21) = 0;
-    *(uint32_t*)(param_1 + 0x25) = 0;
-    *(uint32_t*)(param_1 + 0x29) = 0;
-    *(uint32_t*)(param_1 + 0x2d) = 0;
-    *(uint32_t*)(param_1 + 0x31) = 0;
-    *(uint32_t*)(param_1 + 0x35) = 0;
-    *(uint32_t*)(param_1 + 0x39) = 0;
-    *(uint32_t*)(param_1 + 0x3d) = 0;
-    *(uint32_t*)(param_1 + 0x41) = 0;
-    *(uint32_t*)(param_1 + 0x45) = 0;
-    *(uint32_t*)(param_1 + 0x49) = 0;
-    *(uint32_t*)(param_1 + 0x4d) = 0;
-    *(uint32_t*)(param_1 + 0x51) = 0;
-    *(uint32_t*)(param_1 + 0x55) = 0;
-    *(uint32_t*)(param_1 + 0x59) = 0;
-    *(uint32_t*)(param_1 + 0x5d) = 0;
-    *(uint32_t*)(param_1 + 0x61) = 0;
+uint8_t * __fastcall Unreferenced_004b3560(uint8_t * param_1) {
+    memset(param_1 + 21, 0, 80 * sizeof(param_1[0]));
     return param_1;
 }
 
@@ -6951,6 +6783,7 @@ void __stdcall NPCMENU_ShowTalkDialog(uint16_t nTitleStringId, int32_t nSpeechId
     Dialog::AddStringData(Dialog::gpNpcGossipDialog, D2Lang::StrTable::strtable::GetLocaleString(nTitleStringId), 0x15, 0, 4, 1, 0, 0);
     D2GSPacketSrv0x27_TextStrc* pMsgLog = Text::TEXT_GetOverheadGlobalPointer();
     if (pMsgLog) {
+      uint16_t nSoundId;
       nErrorLine = D2Common::Text::TEXT_CountMessagesOfType2(pMsgLog);
       gnNpcMenuCainIdentifyGUID = nSpeechIdx;
       if (!D2NPCSpeech[nSpeechIdx].bNoIntro) {
@@ -6963,10 +6796,10 @@ void __stdcall NPCMENU_ShowTalkDialog(uint16_t nTitleStringId, int32_t nSpeechId
       pfnShowCurrentGossip = (fpDialogFunc)NPCMENU_ShowCurrentGossipCallback;
       Dialog::AddStringData(Dialog::gpNpcGossipDialog, D2Lang::StrTable::strtable::GetLocaleString(0xd43), 0xf, 0, 0, 1, pfnShowCurrentGossip, nAddStringEnabled);
       for (nMsgLoopIdx = 0; nMsgLoopIdx < nErrorLine; nMsgLoopIdx++) {
-        dwFontArg = D2Common::Text::TEXT_GetMessageByIndex(pMsgLog, nMsgLoopIdx);
+        nSoundId = D2Common::Text::TEXT_GetMessageByIndex(pMsgLog, nMsgLoopIdx);
         nAddStringEnabled = 1;
         pfnShowSelectedOption = NPCMENU_ShowSelectedDialogOption;
-        Dialog::AddStringData(Dialog::gpNpcGossipDialog, Text::TEXT_LookupSoundStringIndex((uint16_t)dwFontArg), 0xf, 0, 0, 1, pfnShowSelectedOption, nAddStringEnabled);
+        Dialog::AddStringData(Dialog::gpNpcGossipDialog, Text::TEXT_LookupSoundStringIndex(nSoundId), 0xf, 0, 0, 1, pfnShowSelectedOption, nAddStringEnabled);
       }
 
       if (_Interaction::nCurrentInteractedNpcClassId == 0xc9) {
@@ -7077,11 +6910,11 @@ int __stdcall NPCMENU_BuildMercHireMenu() {
     uint16_t wNumCharBuf[10];
     int32_t nMercAct;
     uint32_t dwListBoxFontArg;
-    uint32_t dwListBoxScrollArg;
-    uint32_t dwListBoxHighlightArg;
-    uint32_t dwListBoxTranspArg;
-    uint32_t dwListBoxBorderArg;
-    uint32_t dwListBoxAlignArg;
+    uint16_t* dwListBoxScrollArg;
+    uint16_t* dwListBoxHighlightArg;
+    uint16_t* dwListBoxTranspArg;
+    uint16_t* dwListBoxBorderArg;
+    uint16_t* dwListBoxAlignArg;
     int nListBoxLineIdx;
     uint32_t dwListBoxColorArg;
     uint32_t dwListBoxEnabledArg;
@@ -7295,7 +7128,7 @@ int __stdcall NPCMENU_BuildMercHireMenu() {
       dwListBoxHighlightArg = 0;
       dwListBoxScrollArg = 0;
       pszDialogPtr = D2Lang::StrTable::strtable::GetLocaleString(0xd25);
-      pListBoxVtbl->AddItem(gpNpcMenuMercListBox, pszDialogPtr, (uint16_t*)dwListBoxScrollArg, (uint16_t*)dwListBoxHighlightArg, (uint16_t*)dwListBoxBorderArg, (uint16_t*)dwListBoxTranspArg, (uint16_t*)dwListBoxAlignArg, nListBoxLineIdx, dwListBoxColorArg, dwListBoxEnabledArg, dwListBoxFontArg);
+      pListBoxVtbl->AddItem(gpNpcMenuMercListBox, pszDialogPtr, dwListBoxScrollArg, dwListBoxHighlightArg, dwListBoxBorderArg, dwListBoxTranspArg, dwListBoxAlignArg, nListBoxLineIdx, dwListBoxColorArg, dwListBoxEnabledArg, dwListBoxFontArg);
     }
 
     Dialog::DIALOG_SetSelectedLine(Dialog::gpNpcMercListDialog, -1);
@@ -7309,9 +7142,9 @@ void __fastcall NPCMENU_HandleTradePacket(D2GSPacketSrv0x2A * pPacket) {
     D2GSPacketSrv0x2A_007c0d87.nResult = pPacket->nResult;
     *(uint8_t*)((char*)&D2GSPacketSrv0x2A_007c0d87 + 3) = pPacket->field_0x3;
     *(uint32_t*)((char*)&D2GSPacketSrv0x2A_007c0d87 + 4) = *(uint32_t*)&pPacket->field_0x4;
-    *(uint32_t*)((char*)&D2GSPacketSrv0x2A_007c0d87 + 8) = *(uint32_t*)((uintptr_t)&pPacket->nUnitGUID + 1);
-    *(uint16_t*)((char*)&D2GSPacketSrv0x2A_007c0d87.nGold + 1) = *(uint16_t*)((uintptr_t)&pPacket->nGold + 1);
-    *(uint8_t*)((char*)&D2GSPacketSrv0x2A_007c0d87.nGold + 3) = *(uint8_t*)((uintptr_t)&pPacket->nGold + 3);
+    *(uint32_t*)((char*)&D2GSPacketSrv0x2A_007c0d87 + 8) = *(uint32_t*)((intptr_t)&pPacket->nUnitGUID + 1);
+    *(uint16_t*)((char*)&D2GSPacketSrv0x2A_007c0d87.nGold + 1) = *(uint16_t*)((intptr_t)&pPacket->nGold + 1);
+    *(uint8_t*)((char*)&D2GSPacketSrv0x2A_007c0d87.nGold + 3) = *(uint8_t*)((intptr_t)&pPacket->nGold + 3);
     uint16_t wStatLayer = 0;
     eD2UnitStat eUnitStat = UNITSTAT_gold;
     PLAYER_CurrentGold = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(UNIT::Player::GetPlayerUnit_UI(), eUnitStat, wStatLayer);

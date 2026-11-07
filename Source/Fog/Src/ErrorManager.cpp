@@ -2,9 +2,7 @@
 
 #include "Source/Fog/Src/ErrorManager.h"
 #include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "3rdparty/crashy/crashy.h"
+#include "3rdparty/crashy/crashyRoot.h"
 #include "3rdparty/crashy/Report.h"
 #include "Source/Fog/Debug.h"
 #include "Source/Fog/File.h"
@@ -14,32 +12,11 @@
 #include "Source/Fog/Src/AsyncData.h"
 #include "Source/Fog/Src/LogManager.h"
 #include "Source/Fog/Src/Safesock.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Source/SReg.h"
-#include "3rdparty/Storm/Source/SSTR.h"
 #include "Redivivus/d2_trace.h"
-#include "Source/globals/globals.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Fog.globals.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
 #include "3rdparty/Storm/Storm.h"
+#include "Source/globals/globals.h"
+#include "Source/Fog/Fog.globals.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Game/Objects/ObjectsRgn.h"
-#include "Source/Fog/Engine/Application.data.h"
 #include "Source/Fog/Src/ErrorManager.data.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -82,11 +59,7 @@ static char * g_szBuildNumber = 0; D2_STATIC_GUARD(g_szBuildNumber, "g_szBuildNu
 static char * g_szPlatform = 0; D2_STATIC_GUARD(g_szPlatform, "g_szPlatform");
 static char * g_szPrimaryAssignment = 0; D2_STATIC_GUARD(g_szPrimaryAssignment, "g_szPrimaryAssignment");
 static char * g_szAssignments = 0; D2_STATIC_GUARD(g_szAssignments, "g_szAssignments");
-int gbSystemInfoInitialized = 0; D2_GLOBAL_GUARD(gbSystemInfoInitialized, "gbSystemInfoInitialized");
-uint32_t g_eOSType = 0; D2_GLOBAL_GUARD(g_eOSType, "g_eOSType");
-float fGameVersion = 0; D2_GLOBAL_GUARD(fGameVersion, "fGameVersion");
-uint32_t g_dwTotalPhysicalMemory = 0; D2_GLOBAL_GUARD(g_dwTotalPhysicalMemory, "g_dwTotalPhysicalMemory");
-_SYSTEM_INFO gSystemInfo = {}; D2_GLOBAL_GUARD(gSystemInfo, "gSystemInfo");
+D2SystemInfoStrc gSystemInfo = {}; D2_GLOBAL_GUARD(gSystemInfo, "gSystemInfo");
 static char gszCrashReportProcessPath[2048] = {}; D2_STATIC_GUARD(gszCrashReportProcessPath, "gszCrashReportProcessPath");
 static uint32_t g_dwErrorState = 0; D2_STATIC_GUARD(g_dwErrorState, "g_dwErrorState");
 static uint32_t gbFogErrorManagerInitialized = 0; D2_STATIC_GUARD(gbFogErrorManagerInitialized, "gbFogErrorManagerInitialized");
@@ -306,9 +279,8 @@ bool __fastcall WriteCrashReportProcessInfo(::Report * pReport) {
     return true;
 }
 
-int Unreferenced_00407dd0() {
-    uint32_t in_EAX;
-    return in_EAX & -256;
+uint8_t Unreferenced_00407dd0() {
+    return '\0';
 }
 
 void __stdcall InitializeSystemInfo() {
@@ -333,16 +305,16 @@ void __stdcall InitializeSystemInfo() {
         fMajorVersionF += 4294967296.0;
       }
 
-      fGameVersion = fMajorVersionF + fMinorVersionFrac / 100.0;
+      gSystemInfo.fOSVersion = fMajorVersionF + fMinorVersionFrac / 100.0;
       switch (osVersionInfo.dwPlatformId) {
         case 2:
           {
-            g_eOSType = 1;
+            gSystemInfo.eOSType = 1;
             if (osVersionInfo.dwMajorVersion >= 5) {
               if (osVersionInfo.dwMinorVersion >= 2) {
-                g_eOSType = 4;
+                gSystemInfo.eOSType = 4;
               } else {
-                g_eOSType = 3 - (uint32_t)!osVersionInfo.dwMinorVersion;
+                gSystemInfo.eOSType = 3 - !osVersionInfo.dwMinorVersion;
               }
             }
 
@@ -350,15 +322,15 @@ void __stdcall InitializeSystemInfo() {
           }
         default:
           {
-            g_eOSType = 0;
+            gSystemInfo.eOSType = 0;
           }
       }
     }
 
     /* LPMEMORYSTATUS lpBuffer for GlobalMemoryStatus */ GlobalMemoryStatus(&memoryStatus);
-    /* LPSYSTEM_INFO lpSystemInfo for GetSystemInfo */ g_dwTotalPhysicalMemory = memoryStatus.dwTotalPhys;
-    GetSystemInfo(&gSystemInfo);
-    gbSystemInfoInitialized = 1;
+    /* LPSYSTEM_INFO lpSystemInfo for GetSystemInfo */ gSystemInfo.dwTotalPhysicalMemory = memoryStatus.dwTotalPhys;
+    GetSystemInfo(&gSystemInfo.sWinSystemInfo);
+    gSystemInfo.bInitialized = 1;
 }
 
 // Registered with atexit. Tears down the Fog error/log subsystem and deletes the two critical sections at 0074c830 and 0074d848. Takes no arguments: the earlier EAX/ESI "parameters" were a callee-save PUSH ESI / POP ESI pair misread as inputs.
@@ -497,7 +469,7 @@ void OutputDebugStringSimple(char * szText, ...) {
     char* pScan = szBuffer;
     szBuffer[0] = '\0';
     pScan = pScan + strlen(pScan) + 1;
-    vsnprintf(szBuffer + ((int)pScan - (int)(szBuffer + 1)), 0x1000 - ((int)pScan - (int)(szBuffer + 1)), szText, __va);
+    vsnprintf(szBuffer + ((intptr_t)pScan - (intptr_t)(szBuffer + 1)), 0x1000 - ((intptr_t)pScan - (intptr_t)(szBuffer + 1)), szText, __va);
     /* LPCSTR lpOutputString for OutputDebugStringA */ szBuffer[0xfff] = '\0';
     OutputDebugStringA(szBuffer);
 }
@@ -513,7 +485,7 @@ void OutputDebugStringIfCapsLock(char * szText, ...) {
       pScan = szBuffer;
       szBuffer[0] = '\0';
       pScan = pScan + strlen(pScan) + 1;
-      vsnprintf(szBuffer + ((int)pScan - (int)(szBuffer + 1)), 0x1000 - ((int)pScan - (int)(szBuffer + 1)), szText, __va);
+      vsnprintf(szBuffer + ((intptr_t)pScan - (intptr_t)(szBuffer + 1)), 0x1000 - ((intptr_t)pScan - (intptr_t)(szBuffer + 1)), szText, __va);
       /* LPCSTR lpOutputString for OutputDebugStringA */ szBuffer[0xfff] = '\0';
       OutputDebugStringA(szBuffer);
     }

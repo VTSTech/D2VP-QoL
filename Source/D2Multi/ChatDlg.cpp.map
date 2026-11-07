@@ -128,8 +128,8 @@
         "LAUNCHER_GenerateJoinGameRequestId"
       ],
       "usedTypes": [
-        "uint16_t",
-        "uint32_t"
+        "D2ControlMsg",
+        "uint16_t"
       ]
     },
     {
@@ -309,7 +309,8 @@
         "D2COMP_SetCurrentFrame"
       ],
       "usedTypes": [
-        "int32_t"
+        "int32_t",
+        "uint8_t"
       ]
     },
     {
@@ -521,6 +522,9 @@
       "namespace": "D2Multi::ChatDlg",
       "calledFunctions": [
         "Unreferenced_0043e370"
+      ],
+      "usedTypes": [
+        "D2ChatDlgUnknown_0x10"
       ]
     },
     {
@@ -539,6 +543,9 @@
         "CHATDLG_AddMultiLineText",
         "FreeClientMemory",
         "D2WINTEXTBOX_ScrollToLine"
+      ],
+      "usedTypes": [
+        "D2ChatDlgUnknown_0x10"
       ]
     },
     {
@@ -601,6 +608,9 @@
       "calledFunctions": [
         "CHATDLG_EnqueueClearMessage",
         "AllocClientMemory"
+      ],
+      "usedTypes": [
+        "D2ChatDlgUnknown_0x10"
       ]
     },
     {
@@ -838,7 +848,7 @@
         "FORMS_DestroyListEx"
       ],
       "usedTypes": [
-        "uint32_t"
+        "D2ControlMsg"
       ]
     },
     {
@@ -1381,6 +1391,7 @@
         "SetText"
       ],
       "usedTypes": [
+        "D2ChatPlayerNameNodeStrc",
         "WCHAR"
       ]
     },
@@ -1397,6 +1408,9 @@
       "calledFunctions": [
         "CHATDLG_FreePlayerNameList",
         "FreeClientMemory"
+      ],
+      "usedTypes": [
+        "D2ChatPlayerNameNodeStrc"
       ]
     },
     {
@@ -1884,6 +1898,7 @@
       "usedTypes": [
         "D2ControlStrc",
         "D2WinTextBox",
+        "D2WinTimer",
         "WCHAR",
         "uint16_t",
         "uint32_t"
@@ -2089,6 +2104,7 @@
         "CHATDLG_RefreshGameNameDisplay"
       ],
       "usedTypes": [
+        "D2ChatPlayerNameNodeStrc",
         "uint32_t"
       ]
     },

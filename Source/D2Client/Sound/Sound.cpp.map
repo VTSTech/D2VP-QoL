@@ -136,6 +136,9 @@
       "namespace": "D2Client::Sound",
       "calledFunctions": [
         "Unreferenced_004b9440"
+      ],
+      "usedTypes": [
+        "D2SoundChannelStrc"
       ]
     },
     {
@@ -178,6 +181,7 @@
       ],
       "usedTypes": [
         "D2SoundChannelStrc",
+        "D2SoundListNodeStrc",
         "int32_t"
       ]
     },
@@ -504,7 +508,7 @@
         "SOUND_PlayItemSound"
       ],
       "usedTypes": [
-        "D2UnitDataItemStrc",
+        "D2SoundChannelStrc",
         "int32_t"
       ]
     },
@@ -522,6 +526,7 @@
         "SOUND_GetSoundChannel"
       ],
       "usedTypes": [
+        "D2SoundListNodeStrc",
         "int32_t"
       ]
     },
@@ -582,6 +587,9 @@
       "namespace": "D2Client::Sound",
       "calledFunctions": [
         "Unreferenced_004b9cd0"
+      ],
+      "usedTypes": [
+        "uint8_t"
       ]
     },
     {
@@ -673,7 +681,7 @@
       ],
       "usedTypes": [
         "D2SoundChannelStrc",
-        "int32_t",
+        "D2UnitStrc",
         "uint32_t"
       ]
     },
@@ -717,6 +725,7 @@
         "D2SoundChannelNodeStrc",
         "D2SoundChannelNodeStrc *",
         "D2SoundChannelStrc",
+        "D2SoundListNodeStrc",
         "D2SoundsTxt",
         "int32_t",
         "uint32_t",
@@ -772,6 +781,7 @@
         "D2SoundChannelNodeStrc",
         "D2SoundChannelStrc",
         "D2SoundEnvironTxt",
+        "D2SoundListNodeStrc",
         "D2SoundsTxt",
         "D2UnitStrc",
         "eD2GSGameType",
@@ -978,6 +988,7 @@
         "D2SoundChannelNodeStrc",
         "D2SoundChannelNodeStrc *",
         "D2SoundChannelStrc",
+        "D2SoundListNodeStrc",
         "D2SoundsTxt",
         "uint32_t",
         "uint8_t"

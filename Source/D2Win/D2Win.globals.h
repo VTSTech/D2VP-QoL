@@ -7,23 +7,21 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Win)
 #error "D2Win header included by a module that may not use D2Win (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Win) && !defined(D2_LOADS_D2Win)
+#error "internal D2Win header included from another module; include D2Win's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2gfx/D2GFX.h"
 
 // Forward declarations
 struct D2ControlStrc;
 struct D2FogArchiveStrc;
+struct D2ItemsTxt;
 struct D2WinEditBox;
 typedef LRESULT (__stdcall *WndProcB)(HWND param_1, uint32_t uMsg, uint32_t param_3, LPARAM param_4);
 
-namespace D2Win::Src::D2WinArchive {
-extern D2FogArchiveStrc * MPQ_d2data;
-extern D2FogArchiveStrc * MPQ_patch_d2;
-extern D2FogArchiveStrc * MPQ_d2exp;
-} // namespace D2Win::Src::D2WinArchive
 namespace D2Win::Src::D2WinMain {
 extern int nPosX;
 extern int nPosY;
@@ -39,7 +37,7 @@ extern uint32_t gbGfxWindowCreated;
 namespace D2Win::Src::D2Comp {
 extern uint32_t gaCompWeaponClassTokens[15];
 extern int nD2CompItemsSize;
-extern void * pD2CompItems;
+extern D2ItemsTxt * pD2CompItems;
 } // namespace D2Win::Src::D2Comp
 namespace D2Win::Src::D2WinArchive {
 extern D2FogArchiveStrc * MPQ_d2Xmusic;
@@ -48,11 +46,13 @@ extern D2FogArchiveStrc * MPQ_d2delta;
 extern D2FogArchiveStrc * MPQ_d2char;
 extern D2FogArchiveStrc * MPQ_d2video;
 extern D2FogArchiveStrc * MPQ_d2Xtalk;
-extern D2FogArchiveStrc * MPQ_d2kfixup_mpq;
+extern D2FogArchiveStrc * MPQ_d2data;
 extern D2FogArchiveStrc * MPQ_d2kfixup;
 extern D2FogArchiveStrc * MPQ_d2speech;
 extern D2FogArchiveStrc * MPQ_d2music;
 extern D2FogArchiveStrc * MPQ_d2Xvideo;
+extern D2FogArchiveStrc * MPQ_patch_d2;
+extern D2FogArchiveStrc * MPQ_d2exp;
 } // namespace D2Win::Src::D2WinArchive
 namespace D2Win::Src::D2WinButton {
 extern int gnFormControlCount;

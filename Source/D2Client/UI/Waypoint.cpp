@@ -3,7 +3,6 @@
 #include "Source/D2Client/UI/Waypoint.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Msg.h"
@@ -13,132 +12,12 @@
 #include "Source/D2Client/UI/npcmenu.h"
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2BitBufferStrc.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2RoomExStrc.h"
-#include "Source/D2Common/D2RoomStrc.h"
-#include "Source/D2Common/D2StatListExStrc.h"
-#include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Common/D2WaypointStrc.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/QuestRecord.h"
-#include "Source/D2Common/Units.h"
-#include "Source/D2Common/Waypoints.h"
-#include "Source/D2Game/GAME/Event.h"
-#include "Source/D2Game/UNIT/SUnitMsg.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Fog.h"
-#include "Source/Fog/Memory.h"
-#include "3rdparty/Storm/Storm.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2BNetGatewayAccessStr.h"
-#include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/D2GSPacketSrv0x2A.h"
-#include "Source/D2Client/D2GfxMemoryStrc.h"
-#include "Source/D2Client/D2GfxSettingsStrc.h"
-#include "Source/D2Client/D2IniConfigStrc.h"
-#include "Source/D2Client/Draw/LightMap.h"
-#include "Source/D2Client/Draw/Weather.h"
-#include "Source/D2Client/Engine/Gfx.h"
-#include "Source/D2Client/GAME/Draw.h"
-#include "Source/D2Client/GAME/Game/Game.h"
-#include "Source/D2Client/GAME/Record.h"
-#include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/GAME/Sound.h"
-#include "Source/D2Client/Sound/Sound.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/Chat.h"
-#include "Source/D2Client/UI/CmdTbl.h"
-#include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/Inv.h"
-#include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UI/ShowItems.h"
-#include "Source/D2Client/UI/SkillDesc.h"
-#include "Source/D2Client/UI/SpellSel.h"
-#include "Source/D2Client/UI/Text.h"
-#include "Source/D2Client/UI/UseItem.h"
-#include "Source/D2Client/UI/Waypoint.h"
-#include "Source/D2Client/UI/npcmenu.h"
-#include "Source/D2Client/UI/npcmenu/Merc.h"
-#include "Source/D2Client/UI/ui.h"
-#include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Client/UNIT/Missile.h"
-#include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Client/UNIT/Object.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Client/Warden/WardenClient.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Common/D2Common.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2WinAnimImage.h"
-#include "Source/D2Win/Src/D2Comp.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
+#include "Source/D2Win/D2Win.h"
+#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Client/D2Client.globals.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Launch/MainMenus.h"
 #include "Source/D2Client/UI/VanillaPlusCore.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -261,7 +140,7 @@ static int32_t WAYPOINT_GetWaypointIndexFromMouse(int32_t nMouseX, int32_t nMous
     while ((pHitTestData = (uint32_t*)(pnRowLayout + 6) , gaWaypointListEntries[nIndex].bActivated == '\0' || nMouseX <= (int)pHitTestData[-1]) || nMouseX >= (int)(pHitTestData[-1] + 0x118) || nMouseY <= (int)*pHitTestData || nMouseY >= (int)(*pHitTestData + 0x1e)) {
       nIndex++;
       pnRowLayout = (int*)pHitTestData;
-      if ((int)&gaWaypointListEntries[nIndex].bActivated >= (intptr_t)((char*)&gaWaypointListEntries + sizeof(gaWaypointListEntries) + 4)) {
+      if ((intptr_t)&gaWaypointListEntries[nIndex].bActivated >= (intptr_t)((char*)&gaWaypointListEntries + sizeof(gaWaypointListEntries) + 4)) {
         return -1;
       }
     }
@@ -496,7 +375,7 @@ void __stdcall WAYPOINT_PopulateList() {
       *pPageEntry = '\0';
       nActIdx = WaypointCurrentSelectedAct;
       pPageEntry += 5;
-    } while ((int)pPageEntry < (intptr_t)((char*)&gaWaypointListEntries + sizeof(gaWaypointListEntries) + 4));
+    } while ((intptr_t)pPageEntry < (intptr_t)((char*)&gaWaypointListEntries + sizeof(gaWaypointListEntries) + 4));
 
     if (WaypointCurrentSelectedAct > 5) {
       D2Client::Waypoint::bNeedAllocation = false;
@@ -565,11 +444,9 @@ void __stdcall WAYPOINT_PopulateList() {
     } while ((int)nWaypointIdIter <= (int)(uint32_t)gaWaypointVisited[WaypointCurrentSelectedAct * 0xb + 10]);
 }
 
-int Unreferenced_0049c980() {
+void __stdcall Unreferenced_0049c980() {
     D2RoomStrc* pRoom;
     eD2LevelId eLevel;
-    int extraout_EAX;
-    int extraout_EAX_00;
     D2UnitStrc* pUnit = UNIT::Player::GetPlayerUnit_UI();
     if (pUnit) {
       eAct eVar1;
@@ -580,14 +457,13 @@ int Unreferenced_0049c980() {
           eVar1 = D2Common::Drlg::GetActNoFromLevelNumber(eLevel);
           Waypoint_SetWaypointArea((uint32_t)eVar1);
           WAYPOINT_PopulateList();
-          return extraout_EAX;
+          return;
         }
       }
     }
 
     WaypointCurrentSelectedAct = 0;
     WAYPOINT_PopulateList();
-    return extraout_EAX_00;
 }
 
 void __stdcall DRAW_UI_Waypoint() {
@@ -611,7 +487,7 @@ void __stdcall DRAW_UI_Waypoint() {
     int nTabXOff0;
     int nTabXOff1;
     eD2LevelId currentLevelId;
-    D2WaypointListEntryStrc* ActsInGame;
+    DRAW_UI_Waypoint_Slotm8 uSlot8;
     eD2Quests eQuest;
     eD2QuestState eQuestState;
     DRAW_UI_WaypointGFXLoad();
@@ -654,10 +530,10 @@ void __stdcall DRAW_UI_Waypoint() {
     nMouseX -= Inv::gnPanelOffsetX;
     nMouseY += Inv::gnPanelOffsetY - VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
     sDrawImageArgs.pDC6 = WaypointWayGateTabs;
-    /* Figure out if game got 4 or 5 acts for spacing (classic/xpac) */ ActsInGame = (D2WaypointListEntryStrc*)0x5;
+    /* Figure out if game got 4 or 5 acts for spacing (classic/xpac) */ uSlot8.nActsInGame = 5;
     _bIsExpansionCheck = Fog::D2CheckExpansionGame();
     if (!_bIsExpansionCheck || (_bIsExpansionCheck = GAME::Game::CLIENT_CheckExpansion() , !_bIsExpansionCheck)) {
-      ActsInGame = (D2WaypointListEntryStrc*)0x4;
+      uSlot8.nActsInGame = 4;
       anTabX[0] = 3;
       anTabX[1] = 0x51;
       anTabX[2] = 0x9f;
@@ -672,7 +548,7 @@ void __stdcall DRAW_UI_Waypoint() {
     }
 
     nActIndex = 0;
-    /* Loop trough all the acts */ if (ActsInGame) {
+    /* Loop trough all the acts */ if (uSlot8.nActsInGame) {
       do {
         if (nActIndex == WaypointCurrentSelectedAct) {
           sDrawImageArgs.nFrameNumber = nActIndex * 2;
@@ -718,7 +594,7 @@ void __stdcall DRAW_UI_Waypoint() {
 
         next_act:
         nActIndex++;
-      } while (nActIndex < (int)ActsInGame);
+      } while (nActIndex < uSlot8.nActsInGame);
     }
 
     sDrawImageArgs.pDC6 = ui::GetBuySellBtnDC6();
@@ -730,11 +606,11 @@ void __stdcall DRAW_UI_Waypoint() {
     nWaypointIndex = 0;
     sDrawImageArgs.pDC6 = WaypointWaygateIcons;
     if (MaximumAmountOfWaypointInSelectedAct > 0) {
-      ActsInGame = gaWaypointListEntries;
+      uSlot8.pWaypointEntry = gaWaypointListEntries;
       pDrawOffsets = (uint32_t*)(gaWaypointRowLayout + 1);
       do {
-        if (gaWaypointListEntries[nWaypointIndex].bActivated != '\0') {
-          if (gaWaypointListEntries[nWaypointIndex].eLevelId == eCurrentLevel) {
+        if (uSlot8.pWaypointEntry->bActivated != '\0') {
+          if (uSlot8.pWaypointEntry->eLevelId == eCurrentLevel) {
             sDrawImageArgs.nFrameNumber = (int)(ClickingDownOnWaypointEntry == nWaypointIndex);
           } else {
             sDrawImageArgs.nFrameNumber = ClickingDownOnWaypointEntry == nWaypointIndex ? 4 : 3;
@@ -749,7 +625,7 @@ void __stdcall DRAW_UI_Waypoint() {
                          this is something about current area */ if (gbWaypointButtonPressed == '\0' && ClickingDownOnWaypointEntry != -1 && nWaypointIndex == ClickingDownOnWaypointEntry) {
           dwColor = 3;
         }
-        if (gaWaypointListEntries[nWaypointIndex].eLevelId == eCurrentLevel) {
+        if (uSlot8.pWaypointEntry->eLevelId == eCurrentLevel) {
           dwColor = 3;
           sDrawImageArgs.nFrameNumber = 0;
           D2gfx::D2GFX::D2GFX_DrawImage(&sDrawImageArgs, *pDrawOffsets + Inv::gnPanelOffsetX, pDrawOffsets[1] - Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
@@ -758,8 +634,8 @@ void __stdcall DRAW_UI_Waypoint() {
         nY = pDrawOffsets[3] - Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
         _bIsExpansionCheck = 0;
         nTextX = pDrawOffsets[2] + Inv::gnPanelOffsetX;
-        D2Win::Src::D2WinFont::DRAW_text(ui::CLIENT_GetLevelNameByLevelId(gaWaypointListEntries[nWaypointIndex].eLevelId), nTextX, nY, dwColor, _bIsExpansionCheck);
-        ActsInGame++;
+        D2Win::Src::D2WinFont::DRAW_text(ui::CLIENT_GetLevelNameByLevelId(uSlot8.pWaypointEntry->eLevelId), nTextX, nY, dwColor, _bIsExpansionCheck);
+        uSlot8.pWaypointEntry++;
         nWaypointIndex++;
         pDrawOffsets += 6;
       } while (nWaypointIndex < MaximumAmountOfWaypointInSelectedAct);

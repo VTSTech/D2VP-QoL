@@ -5,124 +5,11 @@
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/Sound/SoundHdr.h"
 #include "Source/D2Client/Utils.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2RoomStrc.h"
-#include "Source/D2Common/D2StatListExStrc.h"
+#include "Source/D2Common/D2Common.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgStrc.h"
-#include "Source/D2Common/Environment.h"
-#include "Source/D2Common/Units.h"
 #include "Source/D2Direct3D/Renderer/Direct3D.h"
-#include "Source/D2Game/GAME/Event.h"
-#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Sound/D2Sound.h"
-#include "Source/D2Sound/Sound.h"
-#include "Source/D2Sound/Src/D2SoundFast.h"
-#include "Source/D2Sound/Src/D2SoundSmp.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/D2MPQFileStrc.h"
-#include "3rdparty/Storm/Source/SFile.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/D2GSPacketSrv0x2A.h"
-#include "Source/D2Client/D2GfxMemoryStrc.h"
-#include "Source/D2Client/D2GfxSettingsStrc.h"
-#include "Source/D2Client/D2IniConfigStrc.h"
-#include "Source/D2Client/Draw/LightMap.h"
-#include "Source/D2Client/Draw/Weather.h"
-#include "Source/D2Client/Engine/Gfx.h"
-#include "Source/D2Client/GAME/Draw.h"
-#include "Source/D2Client/GAME/Game/Game.h"
-#include "Source/D2Client/GAME/Record.h"
-#include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/GAME/Sound.h"
-#include "Source/D2Client/Sound/Sound.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/Chat.h"
-#include "Source/D2Client/UI/CmdTbl.h"
-#include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/Inv.h"
-#include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UI/ShowItems.h"
-#include "Source/D2Client/UI/SkillDesc.h"
-#include "Source/D2Client/UI/SpellSel.h"
-#include "Source/D2Client/UI/Text.h"
-#include "Source/D2Client/UI/UseItem.h"
-#include "Source/D2Client/UI/Waypoint.h"
-#include "Source/D2Client/UI/npcmenu.h"
-#include "Source/D2Client/UI/npcmenu/Merc.h"
-#include "Source/D2Client/UI/ui.h"
-#include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Client/UNIT/Missile.h"
-#include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Client/UNIT/Object.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Client/Warden/WardenClient.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Direct3D/Renderer/Direct3D.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2WinAnimImage.h"
-#include "Source/D2Win/Src/D2Comp.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/GAME/Sound.data.h"
 
@@ -222,14 +109,14 @@ uint32_t __thiscall SOUND_MatchesSoundId(int32_t pSoundEntry, int32_t nSoundId) 
     return (uint32_t)(*(int*)(pSoundEntry + 4) == nSoundId);
 }
 
-void __fastcall SOUND_DetachUnit(int32_t pSoundEntry) {
-    if (!*(int*)(pSoundEntry + 8)) {
+void __fastcall SOUND_DetachUnit(D2ClientSoundChannelStrc * pSoundEntry) {
+    if (!pSoundEntry->pActiveSound) {
       return;
     }
 
-    *(uint32_t*)(*(int*)(pSoundEntry + 8) + 0x30) = 2;
-    *(uint32_t*)(*(int*)(pSoundEntry + 8) + 0x2c) = 0;
-    *(uint32_t*)(pSoundEntry + 8) = 0;
+    pSoundEntry->pActiveSound->nPlayMode = 2;
+    pSoundEntry->pActiveSound->pClientChannel = 0;
+    pSoundEntry->pActiveSound = 0;
 }
 
 void __fastcall SOUND_StopAndDetach(D2ClientSoundChannelStrc * ppnParam) {
@@ -276,7 +163,7 @@ void __stdcall CleanUpGame() {
       }
 
       pChannel += 8;
-    } while ((int)pChannel < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
+    } while ((intptr_t)pChannel < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
 
     D2Sound::Src::D2SoundSmp::SOUNDSMP_SetGlobalVolume(0xff);
 }
@@ -293,10 +180,10 @@ void __stdcall SOUND_UpdateNonLoopingStreams() {
     D2SoundsTxt* pSoundsTxtLine;
     int32_t bIsPlaying;
     uint32_t bIsStreaming;
-    uint32_t* pChannelEntry = (uint32_t*)&gaSoundChannels[0].pActiveSound;
+    D2SoundChannelStrc** pChannelEntry = &gaSoundChannels[0].pActiveSound;
     do {
       if (*pChannelEntry) {
-        pSoundsTxtLine = D2Client::Sound::SoundHdr::TXT_sounds_GetLineBySoundId(*(int32_t*)(*pChannelEntry + 4));
+        pSoundsTxtLine = D2Client::Sound::SoundHdr::TXT_sounds_GetLineBySoundId((*pChannelEntry)->nSoundId);
         if (!pSoundsTxtLine->Loop) {
           bIsPlaying = D2Sound::Src::D2SoundSmp::SOUNDSMP_IsPlaying((D2SoundSmpStrc*)pChannelEntry[-2]);
           if (!bIsPlaying) {
@@ -305,8 +192,8 @@ void __stdcall SOUND_UpdateNonLoopingStreams() {
               SOUND_StopAndDetach((D2ClientSoundChannelStrc*)(pChannelEntry - 2));
             }
             if (*pChannelEntry) {
-              *(uint32_t*)(*pChannelEntry + 0x30) = 2;
-              *(uint32_t*)(*pChannelEntry + 0x2c) = 0;
+              (*pChannelEntry)->nPlayMode = 2;
+              (*pChannelEntry)->pClientChannel = 0;
               *pChannelEntry = 0;
             }
           }
@@ -314,7 +201,7 @@ void __stdcall SOUND_UpdateNonLoopingStreams() {
       }
 
       pChannelEntry += 8;
-    } while ((int)pChannelEntry < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
+    } while ((intptr_t)pChannelEntry < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
 }
 
 uint32_t __fastcall SOUND_GetStreamProgress(D2ClientSoundChannelStrc * pChannel) {
@@ -369,7 +256,7 @@ D2ClientSoundChannelStrc * __fastcall SOUND_FindPlayingByIdSafe(int32_t nId) {
       }
 
       ppDVar2 += 8;
-    } while ((int)ppDVar2 < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
+    } while ((intptr_t)ppDVar2 < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8));
 
     return pDVar3;
 }
@@ -395,7 +282,7 @@ void __stdcall SOUND_ShutdownAudio() {
       D2Sound::Src::D2SoundSmp::SOUNDSMP_Destroy(ppSampleInst->pSoundSmp);
       ppSampleInst->pSoundSmp = 0;
       ppSampleInst++;
-    } while ((int)ppSampleInst < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels)));
+    } while ((intptr_t)ppSampleInst < (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels)));
 
     pAudioMixerInterface = 0;
 }
@@ -430,7 +317,7 @@ static BOOL SOUND_InitStreamChannels(int32_t nMixerMode) {
       }
 
       nChannelIdx++;
-      if ((int)&gaSoundChannels[nChannelIdx].nChannelType >= (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 4)) {
+      if ((intptr_t)&gaSoundChannels[nChannelIdx].nChannelType >= (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 4)) {
         SOUND_SetEaxEnvironment(0);
         pAudioMixerInterface = 1;
         return 1;
@@ -457,7 +344,7 @@ static D2ClientSoundChannelStrc * __stdcall SOUND_FindAvailableChannel(D2SoundCh
       }
 
       pBestChannel++;
-    } while ((int)pBestChannel < (intptr_t)&gaSoundChannels[16]);
+    } while ((intptr_t)pBestChannel < (intptr_t)&gaSoundChannels[16]);
 
     pBestChannel = 0;
     D2SoundChannelStrc** pChannelEntry;
@@ -476,7 +363,7 @@ static D2ClientSoundChannelStrc * __stdcall SOUND_FindAvailableChannel(D2SoundCh
 
       next_channel:
       pChannelEntry += 8;
-      if ((int)pChannelEntry >= (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8)) {
+      if ((intptr_t)pChannelEntry >= (intptr_t)((char*)&gaSoundChannels + sizeof(gaSoundChannels) + 8)) {
         if (!pBestChannel) {
           return nullptr;
         }
@@ -505,31 +392,31 @@ static D2ClientSoundChannelStrc * __stdcall SOUND_FindAvailableChannel(D2SoundCh
 }
 
 // Recomputes and re-applies a positional sound channel's mixing state (__fastcall, ECX=pSoundChannel). Reads the channel's sound descriptor (pSoundChannel[2]) and its sounds.txt line; halts via Fog::ErrorManager if descriptor is null. Computes effective volume by chaining music/master volume, per-channel left/right multipliers (skipping certain reserved sound-id ranges and Solo lines), and positional bias from the mixer. If the new volume and the descriptor's 3D position (offsets 0xC/0x10/0x14/0x20) match the channel's cached copy (pSoundChannel[3..7]) it returns 0 early (no change); otherwise distance-attenuates volume via falloff min/max, calls SOUNDSMP_CalculateVolumeAndPan/SetPan/Set3DPosition/SetEaxObstruction/SetVolume, caches the new pos+volume into the channel, and returns the descriptor pointer. Side-effects: drives the underlying audio mixer sample.
-int __fastcall SOUND_UpdateChannelParams(int * pSoundChannel) {
+int __fastcall SOUND_UpdateChannelParams(D2ClientSoundChannelStrc * pSoundChannel) {
     int nMixerMode;
     uint32_t nBytesRemaining;
-    uint8_t* pByteA;
-    uint8_t* pByteB;
+    float* pByteA;
+    float* pByteB;
     D2FloatIntUnion uFalloffMaxPan;
     D2FloatIntUnion uFalloffMinVolume;
-    int nSoundDescOffset;
-    nSoundDescOffset = pSoundChannel[2];
-    int* pChannelEntry;
+    SOUND_UpdateChannelParams_Slotm14 uSlot14;
+    D2SoundChannelStrc* pActiveSound;
+    pActiveSound = pSoundChannel->pActiveSound;
+    D2ClientSoundChannelStrc* pChannelEntry;
     pChannelEntry = pSoundChannel;
-    int nSoundDescSaved;
-    nSoundDescSaved = nSoundDescOffset;
-    if (!nSoundDescOffset) {
+    D2SoundChannelStrc* nSoundDescSaved;
+    nSoundDescSaved = pActiveSound;
+    if (!pActiveSound) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x1e7);
       exit(-1);
     }
 
-    D2SoundsTxt* pSoundsTxtLine;
-    pSoundsTxtLine = D2Client::Sound::SoundHdr::TXT_sounds_GetLineBySoundId(*(int32_t*)(nSoundDescOffset + 4));
-    uFalloffMinVolume.fValue = D2Client::Sound::SoundHdr::SOUNDHDR_GetFalloffMin(*(int32_t*)(nSoundDescOffset + 4));
-    uFalloffMaxPan.fValue = D2Client::Sound::SoundHdr::SOUNDHDR_GetFalloffMax(*(int32_t*)(nSoundDescOffset + 4));
+    uSlot14.pLife0 = D2Client::Sound::SoundHdr::TXT_sounds_GetLineBySoundId(pActiveSound->nSoundId);
+    uFalloffMinVolume.fValue = D2Client::Sound::SoundHdr::SOUNDHDR_GetFalloffMin(pActiveSound->nSoundId);
+    uFalloffMaxPan.fValue = D2Client::Sound::SoundHdr::SOUNDHDR_GetFalloffMax(pActiveSound->nSoundId);
     int nTmpCalc;
-    nTmpCalc = *(int*)(nSoundDescOffset + 0x1c);
-    if (pSoundsTxtLine->Music_Vol) {
+    nTmpCalc = pActiveSound->nPriority;
+    if (uSlot14.pLife0->Music_Vol) {
       nMixerMode = D2Sound::Src::D2SoundFast::SOUND_GetMusicVolume();
       nTmpCalc = nMixerMode * nTmpCalc / 100;
     }
@@ -538,12 +425,12 @@ int __fastcall SOUND_UpdateChannelParams(int * pSoundChannel) {
     float fEaxObstruction;
     fEaxObstruction = (float)(nMixerMode * nTmpCalc / 100);
     if (D2Client::Sound::nSoundVolumeLeftChannel != 100) {
-      nTmpCalc = *(int*)(nSoundDescOffset + 4);
+      nTmpCalc = pActiveSound->nSoundId;
       if ((nTmpCalc < 0x1231 || nTmpCalc > 0x125a) && (nTmpCalc < 0x34 || nTmpCalc > 0x47) && (nTmpCalc < 1 || nTmpCalc > 0xf)) {
         fEaxObstruction = (float)(D2Client::Sound::nSoundVolumeLeftChannel * (int)fEaxObstruction / 100);
       }
     }
-    if (D2Client::Sound::nSoundVolumeRightChannel != 100 && !pSoundsTxtLine->Solo) {
+    if (D2Client::Sound::nSoundVolumeRightChannel != 100 && !uSlot14.pLife0->Solo) {
       fEaxObstruction = (float)(D2Client::Sound::nSoundVolumeRightChannel * (int)fEaxObstruction / 100);
     }
 
@@ -556,103 +443,96 @@ int __fastcall SOUND_UpdateChannelParams(int * pSoundChannel) {
         if (nTmpCalc != 0x32) {
           nTmpCalc = D2Sound::Src::D2SoundFast::SOUND_GetPositionalBias();
           nTmpCalc = (nTmpCalc * 2 - 100) / 3;
-          if (*pSoundChannel && nTmpCalc > 0) {
+          if (pSoundChannel->pSoundSmp && nTmpCalc > 0) {
             fVolume = (float)((0xff - nTmpCalc * 0xff / 0x32) * (int)fVolume / 0xff);
-            nSoundDescOffset = nSoundDescSaved;
+            pActiveSound = nSoundDescSaved;
             fEaxObstruction = fVolume;
           }
-          if (*(uint8_t*)(pSoundChannel + 1) & 2 && nTmpCalc < 0) {
+          if (pSoundChannel->nChannelType & 2 && nTmpCalc < 0) {
             fVolume = (float)((nTmpCalc * 0xff / 0x32 + 0xff) * (int)fVolume / 0xff);
             fEaxObstruction = fVolume;
           }
         }
       }
     }
-    if (!(fVolume != (float)pSoundChannel[6] || (float)pSoundChannel[7] != *(float*)(nSoundDescOffset + 0x20))) {
+    if (!(fVolume != (float)pSoundChannel->nLastVolume || (float)pSoundChannel->dwLastEaxObstruction != pActiveSound->fUnitDistance)) {
       nBytesRemaining = 0xc;
-      pByteA = (uint8_t*)(pSoundChannel + 3);
-      pByteB = (uint8_t*)(nSoundDescOffset + 0xc);
+      pByteA = (float*)&pSoundChannel->dwLastPosX;
+      pByteB = &pActiveSound->fPosX;
       do {
-        if (*(int*)pByteB != *(int*)pByteA) {
+        if (*pByteB != *pByteA) {
           goto compare_mismatched_bytes;
         }
 
         nBytesRemaining -= 4;
-        pByteA += 4;
-        pByteB += 4;
+        pByteA++;
+        pByteB++;
       } while (nBytesRemaining >= 4);
 
       if (!nBytesRemaining) {
         position_unchanged:
-        nTmpCalc = 0;
+        nMixerMode = 0;
       } else {
         compare_mismatched_bytes:
-        nSoundDescOffset = (uint32_t)*pByteB - (uint32_t)*pByteA;
+        nTmpCalc = (uint32_t)*(uint8_t*)pByteB - (uint32_t)*(uint8_t*)pByteA;
         pSoundChannel = pChannelEntry;
-        if (!nSoundDescOffset) {
+        if (!nTmpCalc) {
           if (nBytesRemaining == 1) {
             goto position_unchanged;
           }
 
-          nSoundDescOffset = (uint32_t)pByteB[1] - (uint32_t)pByteA[1];
-          if (!nSoundDescOffset) {
+          nTmpCalc = (uint32_t)*(uint8_t*)((char*)pByteB + 1) - (uint32_t)*(uint8_t*)((char*)pByteA + 1);
+          if (!nTmpCalc) {
             if (nBytesRemaining == 2) {
               goto position_unchanged;
             }
 
-            nSoundDescOffset = (uint32_t)pByteB[2] - (uint32_t)pByteA[2];
-            if (!nSoundDescOffset && (nBytesRemaining == 3 || (nSoundDescOffset = (uint32_t)pByteB[3] - (uint32_t)pByteA[3] , !nSoundDescOffset))) {
+            nTmpCalc = (uint32_t)*(uint8_t*)((char*)pByteB + 2) - (uint32_t)*(uint8_t*)((char*)pByteA + 2);
+            if (!nTmpCalc && (nBytesRemaining == 3 || (nTmpCalc = (uint32_t)*(uint8_t*)((char*)pByteB + 3) - (uint32_t)*(uint8_t*)((char*)pByteA + 3) , !nTmpCalc))) {
               goto position_unchanged;
             }
           }
         }
 
-        nTmpCalc = 1;
-        if (nSoundDescOffset <= 0) {
-          nTmpCalc = -1;
+        nMixerMode = 1;
+        if (nTmpCalc <= 0) {
+          nMixerMode = -1;
         }
       }
-      if (!nTmpCalc) {
+      if (!nMixerMode) {
         return 0;
       }
     }
 
-    float fVar1 = _Utils::CalculateHypotenuse(*(float*)(nSoundDescSaved + 0xc), *(float*)(nSoundDescSaved + 0x10));
-    nSoundDescOffset = (int)fVolume;
+    float fVar1 = _Utils::CalculateHypotenuse(nSoundDescSaved->fPosX, nSoundDescSaved->fPosY);
+    nTmpCalc = (int)fVolume;
     if (uFalloffMinVolume.fValue < fVar1) {
       fVar1 = uFalloffMaxPan.fValue - fVar1;
       uFalloffMaxPan.fValue -= uFalloffMinVolume.fValue;
-      nSoundDescOffset = (int)(fVar1 * (float)(int)fEaxObstruction / uFalloffMaxPan.fValue);
+      nTmpCalc = (int)(fVar1 * (float)(int)fEaxObstruction / uFalloffMaxPan.fValue);
     }
 
-    nSoundDescOffset = (int)((uint32_t)pSoundsTxtLine->Volume * nSoundDescOffset) / 0xff;
-    fEaxObstruction = *(float*)(nSoundDescSaved + 0xc) * 0.003125;
-    pChannelEntry = (int*)d2_bits_of(*(float*)(nSoundDescSaved + 0x10) * 0.003125);
-    pSoundsTxtLine = (D2SoundsTxt*)d2_bits_of(*(float*)(nSoundDescSaved + 0x14) * 0.003125);
-    if (!pSoundChannel[1]) {
-      // [vanilla-plus fix 16, superseded R87-merge] Defect 13 (SFX silent, music OK) root cause:
-      // SOUNDSMP_CalculateVolumeAndPan writes its OUT params as 32-bit INTEGERS (volume 0..255, pan
-      // 0..255), but retail called it with the storage of two FLOAT locals and read the results back
-      // AS FLOATS — subnormal ~1e-43 truncating to 0 -> SOUNDSMP_SetVolume(0) -> att=-10000 -> silent
-      // buffer (music-flagged channels skip this block, which is why music survived). Upstream now
-      // models retail exactly with the D2FloatIntUnion below: .fValue storage, integer .nValue read
-      // back — same fix through retail-faithful code, so the explicit uint32 locals are gone.
-      D2Sound::Src::D2SoundSmp::SOUNDSMP_CalculateVolumeAndPan((uint32_t*)&uFalloffMinVolume.nValue, (uint32_t*)&uFalloffMaxPan.nValue, fEaxObstruction, (float)d2_bits_to_float(pChannelEntry), (float)d2_bits_to_float(pSoundsTxtLine));
-      D2Sound::Src::D2SoundSmp::SOUNDSMP_SetPan((D2SoundSmpStrc*)*pSoundChannel, uFalloffMaxPan.nValue);
-      nSoundDescOffset = uFalloffMinVolume.nValue * nSoundDescOffset / 0xff;
+    nTmpCalc = (int)((uint32_t)uSlot14.pLife0->Volume * nTmpCalc) / 0xff;
+    fEaxObstruction = nSoundDescSaved->fPosX * 0.003125;
+    pChannelEntry = (D2ClientSoundChannelStrc*)d2_bits_of(nSoundDescSaved->fPosY * 0.003125);
+    uSlot14.fPosZ = nSoundDescSaved->fPosZ * 0.003125;
+    if (!pSoundChannel->nChannelType) {
+      D2Sound::Src::D2SoundSmp::SOUNDSMP_CalculateVolumeAndPan((uint32_t*)&uFalloffMinVolume.nValue, (uint32_t*)&uFalloffMaxPan.nValue, fEaxObstruction, (float)d2_bits_to_float(pChannelEntry), uSlot14.fPosZ);
+      D2Sound::Src::D2SoundSmp::SOUNDSMP_SetPan(pSoundChannel->pSoundSmp, uFalloffMaxPan.nValue);
+      nTmpCalc = uFalloffMinVolume.nValue * nTmpCalc / 0xff;
     }
-    if (*(uint8_t*)(pSoundChannel + 1) & 2) {
-      D2Sound::Src::D2SoundSmp::SOUNDSMP_Set3DPosition((D2SoundSmpStrc*)*pSoundChannel, fEaxObstruction, (float)d2_bits_to_float(pChannelEntry), (float)d2_bits_to_float(pSoundsTxtLine));
+    if (pSoundChannel->nChannelType & 2) {
+      D2Sound::Src::D2SoundSmp::SOUNDSMP_Set3DPosition(pSoundChannel->pSoundSmp, fEaxObstruction, (float)d2_bits_to_float(pChannelEntry), uSlot14.fPosZ);
     }
 
-    D2Sound::Src::D2SoundSmp::SOUNDSMP_SetEaxObstruction((D2SoundSmpStrc*)*pSoundChannel, *(float*)(nSoundDescSaved + 0x20));
-    D2Sound::Src::D2SoundSmp::SOUNDSMP_SetVolume((D2SoundSmpStrc*)*pSoundChannel, nSoundDescOffset);
-    pSoundChannel[3] = *(int*)(nSoundDescSaved + 0xc);
-    pSoundChannel[4] = *(int*)(nSoundDescSaved + 0x10);
-    pSoundChannel[5] = *(int*)(nSoundDescSaved + 0x14);
-    pSoundChannel[6] = (int)fVolume;
-    pSoundChannel[7] = *(int*)(nSoundDescSaved + 0x20);
-    return nSoundDescSaved;
+    D2Sound::Src::D2SoundSmp::SOUNDSMP_SetEaxObstruction(pSoundChannel->pSoundSmp, nSoundDescSaved->fUnitDistance);
+    D2Sound::Src::D2SoundSmp::SOUNDSMP_SetVolume(pSoundChannel->pSoundSmp, nTmpCalc);
+    pSoundChannel->dwLastPosX = nSoundDescSaved->fPosX;
+    pSoundChannel->dwLastPosY = nSoundDescSaved->fPosY;
+    pSoundChannel->dwLastPosZ = nSoundDescSaved->fPosZ;
+    pSoundChannel->nLastVolume = fVolume;
+    pSoundChannel->dwLastEaxObstruction = nSoundDescSaved->fUnitDistance;
+    return (int)nSoundDescSaved;
 }
 
 BOOL __fastcall SOUND_SetSoundMixer(int32_t nMixer) {
@@ -809,7 +689,7 @@ D2ClientSoundChannelStrc * __fastcall SOUND_PlaySoundWithPanning(D2SoundChannelS
     pPlayingChannel->dwLastPosX = 0;
     pPlayingChannel->dwLastPosY = 0;
     pPlayingChannel->dwLastPosZ = 0;
-    SOUND_UpdateChannelParams((int*)pPlayingChannel);
+    SOUND_UpdateChannelParams(pPlayingChannel);
     D2SoundChannelStrc* pSoundDescBackup = pSoundDesc;
     if (!pSoundTxt->Stream) {
       nResult = D2Sound::Src::D2SoundSmp::SOUNDSMP_Play(pPlayingChannel->pSoundSmp);

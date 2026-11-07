@@ -111,6 +111,7 @@
       "usedTypes": [
         "D2DrlgTileDataStrc",
         "D2RoomExStrc",
+        "D2TileLibraryEntryStrc",
         "uint32_t"
       ]
     },
@@ -546,7 +547,7 @@
         "D2DrlgGridStrc",
         "D2DrlgTileGridStrc",
         "D2RoomExStrc",
-        "int32_t",
+        "eD2GridCellFlags",
         "uint32_t"
       ]
     },
@@ -684,6 +685,9 @@
       "calledFunctions": [
         "Unreferenced_0066f030",
         "GetRoomExFromRoom"
+      ],
+      "usedTypes": [
+        "D2RoomStrc"
       ]
     },
     {

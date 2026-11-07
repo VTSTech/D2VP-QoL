@@ -4,21 +4,11 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_Storm)
 #error "Storm header included by a module that may not use Storm (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_Storm) && !defined(D2_LOADS_Storm)
+#error "internal Storm header included from another module; include Storm's public header (see module-gates.tsv)"
+#endif
 
 #include "3rdparty/Storm/Source/SSignature.h"
-#include "Source/Fog/Debug.h"
-#include "3rdparty/Storm/D2Srp.h"
-#include "3rdparty/Storm/Source/SBig.h"
-#include "3rdparty/Storm/Source/SLog.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -26,6 +16,8 @@
 
 namespace Storm::Source::SSignature {
 
+#ifndef D2_DEFINED_INLINE_00425d90
+#define D2_DEFINED_INLINE_00425d90
 // Storm SBig SHA-1 implementation - init, update, and finalize functions
 // @oracle 2026-08-28 pass 5. Oracle: Mac PPC 1.10b Storm.
 // Was SBIG_SHA1Init. Oracle ".Initialize__4Sha1Fv" @100a2e60. Basis: both take only 'this'; both write count[0]=count[1]=0 then the five SHA-1 IV words 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 at +8..+0x18 (the PPC builds the same five constants with lis/addi pairs). SHA-1 confirmed by constant, not by name.
@@ -38,5 +30,6 @@ __attribute__((noinline)) inline void __fastcall Sha1_Initialize(D2Sha1ContextSt
     pCtx->aState[3] = 0x10325476;
     pCtx->aState[4] = 0xc3d2e1f0;
 }
+#endif // D2_DEFINED_INLINE_00425d90
 
 } // namespace Storm::Source::SSignature

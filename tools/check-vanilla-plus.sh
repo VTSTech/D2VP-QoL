@@ -184,7 +184,7 @@ gate "fork-api include in Draw.cpp"       Source/D2Client/UI/Draw.cpp           
 gate "fork-api include in ShowItems.cpp"  Source/D2Client/UI/ShowItems.cpp       'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
 # refiled R106: D2Client/Engine/Application.cpp -> Game/Main.cpp (upstream 316d537a)
 gate "fork-api include in Game/Main.cpp"   Source/Game/Main.cpp                    'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
-gate "fork-api include in D2Client.cpp"   Source/D2Client/D2Client.cpp           'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
+gate "fork-api include in D2Client.cpp"   Source/D2Client/D2ClientRoot.cpp           'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
 
 # ---- persistent orb text (FEATURES.md row 1, repurposed post-0.0.4) --------
 # The 0.0.4 orb-face readout was removed after the field round - retail
@@ -198,8 +198,8 @@ gate "fork-api include in Panel.cpp"       Source/D2Client/UI/Panel.cpp         
 gate "options page: persistent row present" Source/D2Client/UI/VanillaPlusOptions.cpp '"globe_persistent"'          1
 
 # ---- D2Client.cpp must stay hollow ----------------------------------------
-gate "hooks marked in D2Client.cpp"       Source/D2Client/D2Client.cpp           'VP-BEGIN \[alt-toggle\]'    2
-gate "gate impl NOT re-inlined in D2Client.cpp" Source/D2Client/D2Client.cpp     'gbAltToggleMode|gbAutoGoldMode|ALTTOGGLE_WriteIniTemplate' 0
+gate "hooks marked in D2Client.cpp"       Source/D2Client/D2ClientRoot.cpp           'VP-BEGIN \[alt-toggle\]'    2
+gate "gate impl NOT re-inlined in D2Client.cpp" Source/D2Client/D2ClientRoot.cpp     'gbAltToggleMode|gbAutoGoldMode|ALTTOGGLE_WriteIniTemplate' 0
 gate "D2Client.h back to pristine upstream" Source/D2Client/D2Client.h           'ALTTOGGLE_|AUTO_GOLD_|D2VP_' 0
 
 # ---- fork-owned core TU ----------------------------------------------------
@@ -337,7 +337,7 @@ gate "fork-api include in EscMenu.cpp"       Source/D2Client/UI/EscMenu.cpp     
 # 1839 merge: D2FILE_CreateProcess moved to the new D2Hell module; the
 # [d2boot] CreateProcess marks re-planted there (merge-tripwire against a
 # future regen dropping them again).
-gate "d2boot: D2Hell CreateProcess marks"    Source/D2Hell/D2Hell.cpp           'D2BOOT_MarkFmt\("CreateProcess' 2
+gate "d2boot: D2Hell CreateProcess marks"    Source/D2Hell/D2HellRoot.cpp           'D2BOOT_MarkFmt\("CreateProcess' 2
 
 # ---- resolution mode 5 (1366x768 fifth stop) + stretch present (R112) ------
 # Field round 3 (R111 -> R112): "ok, i see the black bars. can we center and
@@ -657,7 +657,7 @@ gate "site-5: summit clouds gate"          Source/D2Client/GAME/View.cpp        
 # call in DrawFloorByViewAndFloor; the first is R117's fill gate)
 gate "site-5: level edges gate (GAME)"     Source/D2Client/GAME/Draw.cpp          'VPRES_IsWideLayoutMode' 4
 # R92: 1 -> 2 (the issue #26 warp-fade wide guard adds a second classifier call)
-gate "site-5: level edges gate (client)"   Source/D2Client/D2Client.cpp           'VPRES_IsWideLayoutMode' 2
+gate "site-5: level edges gate (client)"   Source/D2Client/D2ClientRoot.cpp           'VPRES_IsWideLayoutMode' 2
 gate "site-5: listbox metrics gate"        Source/D2Client/UI/ListBox/ListBoxImplementation.cpp 'VPRES_IsWideLayoutMode' 1
 gate "site-5: fork-api include in ui.cpp"  Source/D2Client/UI/ui.cpp              'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
 gate "site-5: fork-api include in Help.cpp" Source/D2Client/UI/Help.cpp           'include "Source/D2Client/UI/VanillaPlusCore\.h"' 1
@@ -749,7 +749,9 @@ gate "glide texmem: floor size assigned (R46)"   Source/D2Glide/Renderer/Glide.c
 gate "glide texmem: debug font wired (R46)"      Source/D2Glide/Renderer/Glide.cpp 'RENDERER_GLIDE_InitDebugFont\(gnGlideTexMemBaseAddress\[0\]' 1
 gate "glide texmem: VRAM gate present (R46)"     Source/D2Glide/Renderer/Glide.cpp 'have enough video memory' 1
 gate "glide fix-3: class-slot guard (R46)"       Source/D2Glide/Renderer/Glide.cpp '< 1 \|\| 3 <' 1
-gate "glide fix-2: stale-nodeIdx guard (R46)"    Source/D2Glide/Renderer/Glide.cpp 'pSlotNode \+ 8\) != nTexStartAddress' 1
+# [11th sync] fix-2 re-expressed on upstream's typed pNodes: the guard now reads
+# pSlotNode->pHashTable != nTexStartAddress (node+8 = pHashTable, layout unchanged).
+gate "glide fix-2: stale-nodeIdx guard (R46)"    Source/D2Glide/Renderer/Glide.cpp 'pSlotNode->pHashTable != nTexStartAddress' 1
 
 # ---- rev47 track G: auto-gold trigger placement (issue #10) ----------------
 # The d6affdd merge port re-parented the VP [auto-gold] block into the
@@ -789,7 +791,7 @@ fi
 # same-LHS "= 0;" line (bad=0 - the dead-store regression signature).
 if command -v awk >/dev/null 2>&1; then
   eval "$(awk '
-    /if \(pAllocCtx\) \{/ { stage=1; next }
+    /if \((uSlot14\.)?pAllocCtx\) \{/ { stage=1; next }   # [11th sync] upstream frame-slot rename uSlot14.pAllocCtx
     stage==1 && /\/\// && !/site-6/ { next }
     stage==1 && NF {
       if (/Constructor\(/ && /VPRES_GetWideUiOffset/ && /site-6/) ok++;
@@ -1080,7 +1082,7 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # the 100-int cache sat adjacent in the original .data; the regen's separate
 # statics made it an OOB read of unrelated globals (pointer read as roll bound
 # -> seed%ptr -> pTable+idx*4 fault). Cache moved to file scope + accessor.)
-gate "res: self-id 0.0.8-R130"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R130' 1
+gate "res: self-id 0.0.8-R135"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 1
 gate "res: self-id R127 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R127' 0
 # ---- [vanilla-plus issue #32] rev 136: track T - the gamble-cache fix. Root
 # cause: D2Game/UNIT/SUNITNPC.cpp GAMBLE_GenerateGambleInventory read the
@@ -1093,10 +1095,15 @@ gate "res: self-id R127 gone"               Source/Game/Main.cpp                
 # nTxtGambleSize (ItemTbls.cpp), bounds-checked accessor GetGambleLevelCache
 # (ItemTbls.h/.cpp), consumer reads the accessor (SUNITNPC.cpp); gamble:
 # field marks added (gen start / roll / gen done).
-gate "gamble: cache at file scope (R128)"   Source/D2Common/DATATBLS/ItemTbls.cpp   'static int gnItemTblsCacheSize\[100\]' 1
-gate "gamble: cache accessor def (R128)"    Source/D2Common/DATATBLS/ItemTbls.cpp   'int __stdcall GetGambleLevelCache\(int32_t nLevel\)' 1
-gate "gamble: cache accessor decl (R128)"   Source/D2Common/DATATBLS/ItemTbls.h     'int __stdcall GetGambleLevelCache\(int32_t nLevel\);' 1
-gate "gamble: consumer uses accessor (R128)" Source/D2Game/UNIT/SUNITNPC.cpp        'GetGambleLevelCache\(\(int\)pPlayerUnit\)' 1
+# [11th sync supersession] upstream d6746a3 restored the retail one-struct
+# gamble table (D2GambleTableStrc with anLevelLimit[100] inline) - the defect
+# class is gone at the source, so the fork's separate cache static + accessor
+# are retired (dated notes at the old sites). Rows re-pinned to the
+# superseding retail form; the standing gamble: field marks stay.
+gate "gamble: retail one-struct table (11th sync)" Source/D2Common/DATATBLS/ItemTbls.cpp 'nTxtGambleSize\.anLevelLimit\[0\] = 2' 1
+gate "gamble: fork accessor retired (11th sync)"  Source/D2Common/DATATBLS/ItemTbls.cpp   'int __stdcall GetGambleLevelCache' 0
+gate "gamble: fork accessor decl retired (11th sync)" Source/D2Common/DATATBLS/ItemTbls.h 'int __stdcall GetGambleLevelCache' 0
+gate "gamble: consumer on retail bound (11th sync)" Source/D2Game/UNIT/SUNITNPC.cpp      'pGambleTable->anLevelLimit\[\(intptr_t\)pPlayerUnit\]' 1
 gate "gamble: adjacency artifact gone (R128)" Source/D2Game/UNIT/SUNITNPC.cpp      'pGambleTable\[1\]\.nSize' 0
 gate "gamble: gen start mark (R128)"        Source/D2Game/UNIT/SUNITNPC.cpp         'gamble: gen start npc=' 1
 gate "gamble: roll mark (R128)"             Source/D2Game/UNIT/SUNITNPC.cpp         'gamble: roll level=' 1
@@ -1126,7 +1133,7 @@ gate "issue26: wide walk span (R92)"          Source/D2Client/UI/Path.cpp       
 gate "issue26: wide d3d vp rect (R92)"        Source/D2Direct3D/Renderer/Direct3D.cpp  'issue #26 / R92' 1
 gate "issue26: wide glide bounds (R92)"       Source/D2Glide/Renderer/Glide.cpp        'issue #26 / R92' 1
 gate "issue26: wide click reject (R92)"       Source/D2Client/UNIT/CUnit.cpp           'issue #26 / R92' 1
-gate "issue26: wide warp fade (R92)"          Source/D2Client/D2Client.cpp             'issue #26 / R92' 1
+gate "issue26: wide warp fade (R92)"          Source/D2Client/D2ClientRoot.cpp             'issue #26 / R92' 1
 gate "issue26: wide weather clamps (R92)"     Source/D2Client/Draw/Weather.cpp         'issue #26 / R92' 4
 # R93 (rev 123): the R92 field pass (owner: "left side ... no more blackness
 # ... right side still does ... both panels ... black on all sides") showed
@@ -1259,8 +1266,8 @@ gate "d2boot: SCmd.cpp include (merge-drop tripwire)" Source/D2Game/GAME/SCmd.cp
 # lands here too). Fix passes the same values the sibling range branches pass
 # (extra varargs are harmless in cdecl). Five VP-marked sites, one per branch.
 gate "itemdesc: zero-fix VP marks (R84)"      Source/D2Client/UI/SkillDesc.cpp          'item-tooltip-zero-fix R84' 5
-gate "itemdesc: elemental single-value varargs (R84)" Source/D2Client/UI/SkillDesc.cpp  'wszFmtTemplate, pStatDescResult, (psVar1|pMaxDamage)\);' 8
-gate "itemdesc: poison single-value varargs (R84)" Source/D2Client/UI/SkillDesc.cpp      'pStatDescResult, (psVar1|pMaxDamage), (iVar2|nPoisonSeconds)\);' 2
+gate "itemdesc: elemental single-value varargs (R84)" Source/D2Client/UI/SkillDesc.cpp 'wszFmtTemplate, pStatDescResult, (psVar1|pMaxDamage|pSecondStatValue)\);' 8  # [11th sync] pSecondStatValue = the regen's rename of the max slot
+gate "itemdesc: poison single-value varargs (R84)" Source/D2Client/UI/SkillDesc.cpp 'wszFmtTemplate, (pStatDescResult|pSecondStatValue), (pMaxDamage|psVar1), (nPoisonSeconds|pStatDescResult|iVar2)\);' 2  # [11th sync] seconds live in pStatDescResult post-regen
 
 # ---- [vanilla-plus nointro] R86: the -nointro command-line switch ----------
 # The two logo .biks (New_BLIZ/BlizNorth) play on EVERY launch, and the title

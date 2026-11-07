@@ -2,12 +2,9 @@
 
 #include "Source/D2Client/UNIT/Object.h"
 #include "Source/D2Client/Core/Archive.h"
-#include "Source/D2Client/D2Client.h"
-#include "Source/D2Client/D2ClientStrc.h"
-#include "Source/D2Client/D2DialogStrc.h"
+#include "Source/D2Client/D2ClientRoot.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/SKILLS/Skills.h"
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/Source/ClientEngine.h"
 #include "Source/D2Client/UI/Dialog.h"
@@ -18,150 +15,14 @@
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitMode.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/Collision.h"
-#include "Source/D2Common/D2BitBufferStrc.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2RoomExStrc.h"
-#include "Source/D2Common/D2RoomStrc.h"
-#include "Source/D2Common/D2SkillArgStrc.h"
-#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Common/D2WaypointStrc.h"
-#include "Source/D2Common/DATATBLS/ObjectTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
-#include "Source/D2Common/Drlg/D2DrlgStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/PATH/DynamicPath.h"
-#include "Source/D2Common/QuestRecord.h"
-#include "Source/D2Common/Stats/StatsEx.h"
 #include "Source/D2Common/Unit.h"
-#include "Source/D2Common/Units.h"
-#include "Source/D2Game/GAME/Event.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/Objects/ObjectsRgn.h"
-#include "Source/D2Game/PLAYER/Player.h"
-#include "Source/D2Game/PLAYER/PlayerTrade.h"
-#include "Source/D2Game/Seed.h"
-#include "Source/D2Game/UNIT/PlayerList.h"
-#include "Source/D2Game/UNIT/SUnitMsg.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/SMem.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "Source/globals/globals.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/D2GSPacketSrv0x2A.h"
-#include "Source/D2Client/D2GfxMemoryStrc.h"
-#include "Source/D2Client/D2GfxSettingsStrc.h"
-#include "Source/D2Client/D2IniConfigStrc.h"
-#include "Source/D2Client/Draw/LightMap.h"
-#include "Source/D2Client/Draw/Weather.h"
-#include "Source/D2Client/Engine/Gfx.h"
-#include "Source/D2Client/GAME/Draw.h"
-#include "Source/D2Client/GAME/Game/Game.h"
-#include "Source/D2Client/GAME/Record.h"
-#include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/GAME/Sound.h"
-#include "Source/D2Client/Sound/Sound.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/Chat.h"
-#include "Source/D2Client/UI/CmdTbl.h"
-#include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/Inv.h"
-#include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UI/ShowItems.h"
-#include "Source/D2Client/UI/SkillDesc.h"
-#include "Source/D2Client/UI/SpellSel.h"
-#include "Source/D2Client/UI/Text.h"
-#include "Source/D2Client/UI/UseItem.h"
-#include "Source/D2Client/UI/Waypoint.h"
-#include "Source/D2Client/UI/npcmenu.h"
-#include "Source/D2Client/UI/npcmenu/Merc.h"
-#include "Source/D2Client/UI/ui.h"
-#include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Client/UNIT/Missile.h"
-#include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Client/UNIT/Object.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Client/Warden/WardenClient.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2Win.globals.h"
-#include "Source/D2Win/D2WinAnimImage.h"
-#include "Source/D2Win/Src/D2Comp.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/npcmenu.data.h"
-#include "Source/D2Client/UNIT/Missile.h"
 #include "Source/D2Client/UNIT/Object.data.h"
-#include "Source/D2Common/D2SeedStrc.h"
 #include "Source/D2Common/Units.inline.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Seed.inline.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -795,7 +656,7 @@ static void OBJECT_UpdateModeAndProperties(D2UnitStrc * pUnit, D2ServerMessageHa
 }
 
 // Gloaming shrine (nCode=16) server callback: reverses the activating player's character name string as an Easter egg effect
-void __fastcall OBJECT_ShrineGloaming_ReversePlayerName(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t pShrinesTxt) {
+void __fastcall OBJECT_ShrineGloaming_ReversePlayerName(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, D2ShrinesTxt * pShrinesTxt) {
     D2UnitDataPlayerStrc* pPlayerData = D2Common::Units::GetPlayerData(pPlayer);
     if (!pPlayerData) {
       return;
@@ -806,7 +667,7 @@ void __fastcall OBJECT_ShrineGloaming_ReversePlayerName(D2UnitStrc * pUnit, D2Un
 }
 
 // Spawns a 5×5 grid of Fireball missiles (MISSILE_Fireball) centred on pUnit's position, toggling X/Y offsets from ±5 to ±20 in steps of 5. Missile level is clamped to 1–8 based on pPlayer's level/5. Called server-side for trap objects (e.g. fire towers).
-void __fastcall OBJECT_SpawnFireballGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t pShrinesTxt) {
+void __fastcall OBJECT_SpawnFireballGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, D2ShrinesTxt * pShrinesTxt) {
     int nLevel;
     D2SkillArgStrc sSkillArg;
     int nYNeg;
@@ -879,7 +740,7 @@ void __fastcall OBJECT_SpawnFireballGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlaye
 }
 
 // Spawns a 6-missile ring of MISSILE_Explosivepotion around pUnit's position in a fixed ±6-tile grid pattern. pPlayer is the owner; skill level (nToHit) is clamped to [1,8] from pPlayer's level/5. Called when an explosive potion object triggers.
-void __fastcall OBJECT_SpawnExplosivePotionGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t pShrinesTxt) {
+void __fastcall OBJECT_SpawnExplosivePotionGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, D2ShrinesTxt * pShrinesTxt) {
     D2SkillArgStrc sSkillArg;
     int anYOffsets[12];
     eD2UnitType eUnitType;
@@ -942,7 +803,7 @@ void __fastcall OBJECT_SpawnExplosivePotionGrid(D2UnitStrc * pUnit, D2UnitStrc *
 }
 
 // Identical structure to OBJECT_SpawnExplosivePotionGrid but fires MISSILE_Chokinggaspoition. Spawns 6 choking-gas missiles in a ±6-tile ring around pUnit; pPlayer owns them with level-scaled nToHit [1,8]. Called when a choking-gas potion object triggers.
-void __fastcall OBJECT_SpawnChokingGasGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t pShrinesTxt) {
+void __fastcall OBJECT_SpawnChokingGasGrid(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, D2ShrinesTxt * pShrinesTxt) {
     D2SkillArgStrc sSkillArg;
     int anYOffsets[12];
     eD2UnitType eUnitType;
@@ -1068,7 +929,7 @@ static void __stdcall OBJECT_DispatchShrineServerActivate(int * pMessage, D2Unit
       return;
     }
     if (nShrineCode && (int)nShrineCode < nShrineDispatchTableSize && aShrineDispatchTable[nShrineCode].fpServerActivate) {
-      aShrineDispatchTable[nShrineCode].fpServerActivate(pUnit, pPlayer, (uint32_t)pShrinesTxt);
+      aShrineDispatchTable[nShrineCode].fpServerActivate(pUnit, pPlayer, pShrinesTxt);
     }
 
     OBJECT_PlayShrineSound(pPlayer, pUnit);

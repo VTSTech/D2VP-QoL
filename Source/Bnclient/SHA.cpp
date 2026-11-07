@@ -2,48 +2,6 @@
 
 #include "Source/Bnclient/SHA.h"
 #include "Source/Bnclient/SHA1.h"
-#include "3rdparty/Storm/D2Srp.h"
-#include "3rdparty/Storm/Source/SBig.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
 #include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
@@ -56,7 +14,6 @@ namespace Bnclient::SHA {
 // @sourcefile .\SHA.cpp
 int32_t __fastcall SHA1_HashWideString(uint8_t * pHashOut, char * pWideStr, int32_t nLength) {
     uint32_t i;
-    char* pOddSrcByte;
     uint8_t* pDstByte;
     uint32_t shaCtx[23];
     uint8_t aHashBuf[20];
@@ -75,12 +32,12 @@ int32_t __fastcall SHA1_HashWideString(uint8_t * pHashOut, char * pWideStr, int3
     }
 
     uint32_t nHalfLen = (uint32_t)nLength >> 1;
-    void* pTmpBuf = Storm::Source::SMem::SMemAlloc(nHalfLen, ".\\SHA.cpp", 200, 0);
+    uint8_t* pTmpBuf = (uint8_t*)Storm::Source::SMem::SMemAlloc(nHalfLen, ".\\SHA.cpp", 200, 0);
     uint32_t nByteIdx = 0;
     if (pTmpBuf) {
       if (nHalfLen > 0) {
         do {
-          *(char*)(nByteIdx + (int)pTmpBuf) = pWideStr[nByteIdx * 2];
+          pTmpBuf[nByteIdx] = pWideStr[nByteIdx * 2];
           nByteIdx++;
         } while (nByteIdx < nHalfLen);
       }
@@ -96,11 +53,11 @@ int32_t __fastcall SHA1_HashWideString(uint8_t * pHashOut, char * pWideStr, int3
 
       i = 0;
       if (nHalfLen > 0) {
-        pOddSrcByte = pWideStr + 1;
+        pDstByte = (uint8_t*)(pWideStr + 1);
         do {
-          *(char*)(i + (int)pTmpBuf) = *pOddSrcByte;
+          pTmpBuf[i] = *pDstByte;
           i++;
-          pOddSrcByte += 2;
+          pDstByte += 2;
         } while (i < nHalfLen);
       }
 

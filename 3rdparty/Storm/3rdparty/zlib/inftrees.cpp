@@ -2,14 +2,6 @@
 
 #include "3rdparty/Storm/3rdparty/zlib/inftrees.h"
 #include "3rdparty/Storm/3rdparty/zlib/inflate.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -247,7 +239,7 @@ static uint16_t gaZlibLengthExtraBitsTable[31] = {
     nLoopIdx = 2;
     do {
       nFillIdx = nLoopIdx + 2;
-      *(short int*)((int)aOffset + nLoopIdx + 2) = *(short int*)((int)aOffset + nLoopIdx) + *(short int*)((int)aCount + nLoopIdx);
+      *(short int*)((char*)aOffset + nLoopIdx + 2) = *(short int*)((char*)aOffset + nLoopIdx) + *(short int*)((char*)aCount + nLoopIdx);
       nLoopIdx = nFillIdx;
     } while (nFillIdx < 0x1e);
 
@@ -398,7 +390,7 @@ static uint16_t gaZlibLengthExtraBitsTable[31] = {
 
       (*ppOutTable)[nFillIdx].op = (uint8_t)nCurExtraBits;
       (*ppOutTable)[nFillIdx].bits = (uint8_t)nRootBits;
-      (*ppOutTable)[nFillIdx].val = (uint16_t)((int)pNextTable - (int)*ppOutTable >> 2);
+      (*ppOutTable)[nFillIdx].val = (uint16_t)((intptr_t)pNextTable - (intptr_t)*ppOutTable >> 2);
       nPrevIndex = nFillIdx;
     }
 }

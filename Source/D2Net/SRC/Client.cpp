@@ -3,33 +3,10 @@
 #include "Source/D2Net/SRC/Client.h"
 #include "Source/D2Net/Game/Server.h"
 #include "Source/D2Net/SRC/D2Net.h"
-#include "Source/D2Net/sockaddr.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/SMem.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/D2Net.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "Source/Fog/Src/Safesock.h"
-#include "Source/D2Hell/D2Hell.h"
+#include "Source/Fog/Fog.h"
 #include "Source/D2Net/D2Net.globals.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Net/SRC/Client.data.h"
-#include "Source/Fog/D2QServerStrc.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -268,46 +245,42 @@ int __stdcall NET_D2GS_CLIENT_ParseRecvBufferIntoPacketQueues() {
     return bHasCompressionPacket;
 }
 
-int Unreferenced_0052aaa0() {
+void Unreferenced_0052aaa0() {
     WSAGetLastError();
-    int iVar1 = ::D2Net::Game::Server::NET_D2GS_CLIENT_CheckIfConnectionTypeIsSinglePlayer();
-    if (!iVar1) {
-      int extraout_EAX;
-      EnterCriticalSection(&lpCriticalSection_00882ce8);
-      ::D2Net::SRC::Client::gnNetConnectionTimeoutMs = 0;
-      LeaveCriticalSection(&lpCriticalSection_00882ce8);
-      iVar1 = extraout_EAX;
+    BOOL BVar1 = ::D2Net::Game::Server::NET_D2GS_CLIENT_CheckIfConnectionTypeIsSinglePlayer();
+    if (BVar1) {
+      return;
     }
 
-    return iVar1;
+    EnterCriticalSection(&lpCriticalSection_00882ce8);
+    ::D2Net::SRC::Client::gnNetConnectionTimeoutMs = 0;
+    LeaveCriticalSection(&lpCriticalSection_00882ce8);
 }
 
-int Unreferenced_0052aad0() {
-    int iVar1 = ::D2Net::Game::Server::NET_D2GS_CLIENT_CheckIfConnectionTypeIsSinglePlayer();
-    if (!iVar1) {
-      int extraout_EAX;
-      EnterCriticalSection(&lpCriticalSection_00882ce8);
-      ::D2Net::SRC::Client::gnNetConnectionTimeoutMs = 0;
-      LeaveCriticalSection(&lpCriticalSection_00882ce8);
-      iVar1 = extraout_EAX;
+void Unreferenced_0052aad0() {
+    BOOL BVar1 = ::D2Net::Game::Server::NET_D2GS_CLIENT_CheckIfConnectionTypeIsSinglePlayer();
+    if (BVar1) {
+      return;
     }
 
-    return iVar1;
+    EnterCriticalSection(&lpCriticalSection_00882ce8);
+    ::D2Net::SRC::Client::gnNetConnectionTimeoutMs = 0;
+    LeaveCriticalSection(&lpCriticalSection_00882ce8);
 }
 
 // lpStartAddress parameter of CreateThread
 DWORD __stdcall ThreadClientToServer(void * lpThreadParam) {
     int nSelectResult;
     BOOL BVar1;
-    uint8_t* pbDecompressResult;
-    uint8_t* pCompressedConsumed;
+    int32_t pbDecompressResult;
+    int32_t pCompressedConsumed;
     fd_set fdSetRead;
     timeval tvSelectTimeout;
-    uint8_t* pCompressedEnd;
+    int32_t pCompressedEnd;
     uint8_t aCompressedBuf[2496];
     uint8_t bLenHeaderByte;
     char* lpOutputString;
-    uint8_t* pCompressedRead;
+    int32_t pCompressedRead;
     pCompressedRead = 0;
     int bCompressedMode;
     bCompressedMode = 0;
@@ -351,29 +324,29 @@ DWORD __stdcall ThreadClientToServer(void * lpThreadParam) {
 
       /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&lpCriticalSection_00882ce8);
       /* int flags for recv */ /* int len for recv */ if (bCompressedMode) {
-        /* char * buf for recv */ /* SOCKET s for recv */ nSelectResult = recv(::D2Net::SRC::Client::CLIENT_SocketToServer, (char*)(aCompressedBuf + (int)pCompressedRead), 0x5b4, 0);
+        /* char * buf for recv */ /* SOCKET s for recv */ nSelectResult = recv(::D2Net::SRC::Client::CLIENT_SocketToServer, (char*)(aCompressedBuf + pCompressedRead), 0x5b4, 0);
         if (nSelectResult > 0) {
           pCompressedRead += nSelectResult;
           while (true) {
             pCompressedEnd = pCompressedRead;
-            if ((uint8_t*)0x1 >= pCompressedRead) {
+            if ((uint32_t)pCompressedRead < 2) {
               break;
             }
 
-            bLenHeaderByte = aCompressedBuf[(int)pCompressedConsumed];
+            bLenHeaderByte = aCompressedBuf[pCompressedConsumed];
             if (bLenHeaderByte < 0xf0) {
-              pbDecompressResult = (uint8_t*)(uint32_t)bLenHeaderByte;
+              pbDecompressResult = (int32_t)bLenHeaderByte;
             } else {
-              pbDecompressResult = (uint8_t*)((bLenHeaderByte & 0xf) * 0x100 + (uint32_t)(aCompressedBuf + 1)[(int)pCompressedConsumed]);
+              pbDecompressResult = (bLenHeaderByte & 0xf) * 0x100 + (uint32_t)aCompressedBuf[pCompressedConsumed + 1];
             }
-            if (pCompressedRead < pbDecompressResult) {
+            if ((uint32_t)pCompressedRead < (uint32_t)pbDecompressResult) {
               break;
             }
 
-            nSelectResult = pbDecompressResult < (uint8_t*)0xf0 ? 0x1U : 0x2U;
-            nSelectResult = Fog::Src::D2Net::NET_D2GS_CLIENT_DecompressPacket(pD2PacketsClientBuffer->pBytes + pD2PacketsClientBuffer->nCount, 0x7b8 - pD2PacketsClientBuffer->nCount, (char*)(aCompressedBuf + (int)(pCompressedConsumed + nSelectResult)), (int)pbDecompressResult - nSelectResult);
-            pCompressedEnd += -(int)pbDecompressResult;
-            pCompressedConsumed += (int)pbDecompressResult;
+            nSelectResult = (uint32_t)pbDecompressResult < 0xf0 ? 0x1U : 0x2U;
+            nSelectResult = Fog::Src::D2Net::NET_D2GS_CLIENT_DecompressPacket(pD2PacketsClientBuffer->pBytes + pD2PacketsClientBuffer->nCount, 0x7b8 - pD2PacketsClientBuffer->nCount, (char*)(aCompressedBuf + nSelectResult + pCompressedConsumed), pbDecompressResult - nSelectResult);
+            pCompressedEnd -= pbDecompressResult;
+            pCompressedConsumed += pbDecompressResult;
             pCompressedRead = pCompressedEnd;
             if (nSelectResult > 0) {
               pD2PacketsClientBuffer->nCount += nSelectResult;
@@ -383,7 +356,7 @@ DWORD __stdcall ThreadClientToServer(void * lpThreadParam) {
           }
 
           if (pCompressedRead && pCompressedConsumed) {
-            memmove(aCompressedBuf, aCompressedBuf + (int)pCompressedConsumed, (size_t)pCompressedRead);
+            memmove(aCompressedBuf, aCompressedBuf + pCompressedConsumed, pCompressedRead);
           }
         }
       } else {
@@ -433,8 +406,8 @@ void __fastcall NET_CLIENT_SendPacketToServer(void * pUnused, uint16_t nPacketSi
     ::D2Net::Game::Server::NET_SendPacketToClient(pPacket, nPacketSize);
 }
 
-static int32_t NET_SendPacketToD2GSOnline(char * pBytes, size_t * nSize) {
-    int32_t nSendResult = send(::D2Net::SRC::Client::CLIENT_SocketToServer, pBytes, (int)nSize, 0);
+static int32_t NET_SendPacketToD2GSOnline(char * pBytes, size_t nSize) {
+    int32_t nSendResult = send(::D2Net::SRC::Client::CLIENT_SocketToServer, pBytes, nSize, 0);
     if (nSendResult == -1) {
       BOOL BVar1;
       WSAGetLastError();
@@ -468,7 +441,7 @@ uint32_t __stdcall NET_D2GS_CLIENT_SendPacketAfterChecks(size_t nSize, int32_t U
       return nSendResult;
     }
 
-    nSendResult = NET_SendPacketToD2GSOnline(pBytes, (size_t*)nSize);
+    nSendResult = NET_SendPacketToD2GSOnline(pBytes, nSize);
     return nSendResult;
 }
 
@@ -504,7 +477,7 @@ void __fastcall NET_D2GS_CLIENT_HandleIncomingBufferAndCreatePacket(char * pByte
       if (nPacketSize > (char*)0x204) {
         break;
       }
-      if ((int)nPacketSize <= 0) {
+      if ((intptr_t)nPacketSize <= 0) {
         Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x204);
         exit(-1);
       }
@@ -545,8 +518,8 @@ void __fastcall NET_D2GS_CLIENT_HandleIncomingBufferAndCreatePacket(char * pByte
 
       pD2PacketClient_to_0xAE = pNewPacket;
       pD2PacketClient_from_0xAF = pTailPacket;
-      pBytesSize -= (int)nPacketSize;
-      pBytes += (int)nPacketSize;
+      pBytesSize -= (intptr_t)nPacketSize;
+      pBytes += (intptr_t)nPacketSize;
     }
     LeaveCriticalSection(&lpCriticalSection_00882ce8);
     Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x203);

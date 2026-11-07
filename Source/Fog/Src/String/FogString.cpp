@@ -2,23 +2,6 @@
 
 #include "Source/Fog/Src/String/FogString.h"
 #include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
 #include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/Fog/SMem.data.h"
@@ -204,7 +187,7 @@ uint8_t * __fastcall SMemEscapeString(uint8_t * pbDst, uint8_t * pbSrc, size_t n
         ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0x100);
         exit(-1);
       } else {
-        if (!((int)(pbWrite2 + (1 - (int)pbDst)) <= (int)nBufSize)) {
+        if (!((intptr_t)(pbWrite2 + (1 - (intptr_t)pbDst)) <= (int)nBufSize)) {
           ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0x101);
           exit(-1);
         }

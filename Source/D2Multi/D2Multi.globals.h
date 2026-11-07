@@ -7,18 +7,18 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Multi)
 #error "D2Multi header included by a module that may not use D2Multi (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Multi) && !defined(D2_LOADS_D2Multi)
+#error "internal D2Multi header included from another module; include D2Multi's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Launch/MainMenus.h"
-#include "Source/D2Win/D2WinAnimImage.h"
 
 // Forward declarations
 struct D2ControlMsg;
 struct D2IniConfigStrc;
 struct DC6;
-struct FORMS_AnimFrameStrc;
 struct FORMS_PredefinedFormStrc;
 typedef BOOL (__stdcall *OnPress)(D2ControlMsg * pControlMsg);
 
@@ -32,15 +32,6 @@ extern char s_pal_006d5570[4];
 extern char s_bar_006d5574[4];
 extern char s_dru_006d5578[4];
 extern char s_asn_006d557c[4];
-extern int32_t gaMultiFormFontParamsFont3[2];
-extern int32_t gaMultiFormFontParamsFont7[2];
-extern int32_t gaMultiTextBoxScrollbarGeom0[3];
-extern int32_t gaMultiTextBoxScrollbarGeom1[3];
-extern int32_t gaMultiTextBoxScrollbarGeom2[3];
-extern int32_t gaMultiTextBoxScrollbarGeom3[3];
-extern int32_t gaMultiTextBoxScrollbarGeom4[3];
-extern int32_t gaMultiTextBoxScrollbarGeom5[3];
-extern FORMS_AnimFrameStrc gaMultiLogoAnimFrames[5];
 // lpCriticalSection parameter of DeleteCriticalSection
 // lpCriticalSection parameter of InitializeCriticalSection
 // lpCriticalSection parameter of LeaveCriticalSection

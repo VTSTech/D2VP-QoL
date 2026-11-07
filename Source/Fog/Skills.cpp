@@ -3,24 +3,6 @@
 #include "Source/Fog/Skills.h"
 #include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -106,14 +88,14 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
           if (!pFunction) {
             return 0;
           }
-        if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+        if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
           return 0;
         }
 
         nArgCount = (*pFunction)((uint32_t)*pbNext2, pContext);
         goto push_and_skip_byte_operand;
         case 7:
-          if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+          if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
             return 0;
           }
         nArgCount = (int)(char)*pbNext2;
@@ -126,7 +108,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
           if (!pFunction) {
             return 0;
           }
-        if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+        if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
           return 0;
         }
 
@@ -139,7 +121,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
           if (!pFunction) {
             return 0;
           }
-        if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+        if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
           return 0;
         }
 
@@ -149,7 +131,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
         nArgCount = aFormulaValueStack[0x40];
         break;
         case 8:
-          if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+          if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
             return 0;
           }
         SKILLS_PushValue(aFormulaValueStack, (int)*(short int*)pbNext2);
@@ -157,7 +139,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
         nArgCount = aFormulaValueStack[0x40];
         break;
         case 9:
-          if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+          if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
             return 0;
           }
         SKILLS_PushValue(aFormulaValueStack, *(uint32_t*)pbNext2);
@@ -504,7 +486,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
       }
 
       pbReadPtr = pbNext2;
-      if ((int)pbNext2 - (int)pFormula >= nFormulaSize) {
+      if ((intptr_t)pbNext2 - (intptr_t)pFormula >= nFormulaSize) {
         return 0;
       }
     }
@@ -524,7 +506,7 @@ uint32_t __stdcall SKILLS_CompileSkillFormula(uint32_t * pFormula, int nFormulaS
 // 12=TOKEN_GREATER_OR_EQ '>=' 13=TOKEN_GREATER '>' 14=TOKEN_LOGIC_EQUALS '==' 15=TOKEN_LOGIC_DIFFERENT '!='
 // 16=TOKEN_CUSTOM_RAW_CONSTANT (int literal / '.'id / 'string') 17=TOKEN_CUSTOM_FUNCTION_PARAMETER_CONSTANT (identifier)
 // 18=TOKEN_CUSTOM_FUNCTION_TABLE (identifier followed by '(').
-char * __fastcall SKILLS_ParseSkillDescription(CalcGetKeyWordToNumber_t pFuncLookup, CalcGetLinkerIndex_t pfnSkillLookup, int nParserContext, char * szToken, uint8_t * pTokenType, int * pnTokenValue) {
+char * __fastcall SKILLS_ParseSkillDescription(CalcGetKeyWordToNumber_t pFuncLookup, CalcGetLinkerIndex_t pfnSkillLookup, D2SkillCalcOperandStackStrc * nParserContext, char * szToken, uint8_t * pTokenType, int * pnTokenValue) {
     int nCtype;
     int nLookupResult;
     char* pcTokenEnd;
@@ -584,10 +566,10 @@ char * __fastcall SKILLS_ParseSkillDescription(CalcGetKeyWordToNumber_t pFuncLoo
         pcTokenEnd++;
       } while (true);
 
-      nLookupResult = *(int*)(nParserContext + 0x140);
+      nLookupResult = nParserContext->nTop;
       szTokenBuf[nCtype] = '\0';
       local_10c = 0;
-      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, (int*)&local_10c, (uint32_t)*(uint8_t*)(nLookupResult - 1 + nParserContext), *(uint32_t*)(nParserContext + 0x3c + nLookupResult * 4));
+      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, (int*)&local_10c, (uint32_t)nParserContext->abTokenTypes[nLookupResult - 1], nParserContext->adwTokenValues[nLookupResult - 1]);
       if (nCtype >= 0) {
         *pTokenType = !local_10c + '\x10';
         *pnValueOut = nCtype;
@@ -644,7 +626,7 @@ char * __fastcall SKILLS_ParseSkillDescription(CalcGetKeyWordToNumber_t pFuncLoo
       } while (true);
 
       bHasResolvedToConstant = 0;
-      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, &bHasResolvedToConstant, (uint32_t)*(uint8_t*)(*(int*)(nParserContext + 0x140) - 1 + nParserContext), *(uint32_t*)(nParserContext + 0x3c + *(int*)(nParserContext + 0x140) * 4));
+      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, &bHasResolvedToConstant, (uint32_t)nParserContext->abTokenTypes[nParserContext->nTop - 1], nParserContext->adwTokenValues[nParserContext->nTop - 1]);
       if (nCtype >= 0) {
         *local_10c = !bHasResolvedToConstant + '\x10';
         *pnValueOut = nCtype;
@@ -729,10 +711,10 @@ char * __fastcall SKILLS_ParseSkillDescription(CalcGetKeyWordToNumber_t pFuncLoo
         nLookupResult = isalnum((int)*pcScan);
       }
 
-      nLookupResult = *(int*)(nParserContext + 0x140);
+      nLookupResult = nParserContext->nTop;
       szTokenBuf[nCtype] = '\0';
       local_118 = 0;
-      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, (int*)&local_118, (uint32_t)*(uint8_t*)(nLookupResult - 1 + nParserContext), *(uint32_t*)(nParserContext + 0x3c + nLookupResult * 4));
+      nCtype = (*pfnGetLinkerIndex)(szTokenBuf, (int*)&local_118, (uint32_t)nParserContext->abTokenTypes[nLookupResult - 1], nParserContext->adwTokenValues[nLookupResult - 1]);
       if (nCtype >= 0) {
         *local_10c = '\x10';
         *pnValueOut = nCtype;
@@ -819,7 +801,7 @@ static uint8_t * __stdcall SKILLS_EmitFormulaBytecode(uint8_t * pWritePtr, uint8
     int nWriteOffset;
     if (*(int*)(pOperatorStack + 0x140) > 0) {
       uint8_t opcode;
-      nWriteOffset = (int)pWritePtr - (int)pBuffer;
+      nWriteOffset = (intptr_t)pWritePtr - (intptr_t)pBuffer;
       do {
         opcode = pOperatorStack[*(int*)(pOperatorStack + 0x140) - 1];
         if (opcode == 1 || bToken == 1 || opcode >= 0x17 || gaCalcOpcodePrecedence[opcode] < bToken) {
@@ -861,7 +843,7 @@ static uint8_t * __stdcall SKILLS_EmitFormulaBytecode(uint8_t * pWritePtr, uint8
 
     emit_terminator:
     if (pWritePtr != pBuffer) {
-      if ((int)pWritePtr - (int)pBuffer < nBufferSize) {
+      if ((intptr_t)pWritePtr - (intptr_t)pBuffer < nBufferSize) {
         *pWritePtr = 0;
         return pWritePtr + 1;
       }
@@ -874,20 +856,20 @@ static uint8_t * __stdcall SKILLS_EmitFormulaBytecode(uint8_t * pWritePtr, uint8
 
 static uint8_t * __fastcall SKILLS_WriteValueToBuffer(uint8_t * pBase, int nValue, int nBufferSize, D2QuestDataA5Q2Strc * pStruct, uint8_t * pWritePtr) {
     if (nValue + 0x80U <= 0xff) {
-      if ((int)pWritePtr - (int)pBase < nBufferSize) {
+      if ((intptr_t)pWritePtr - (intptr_t)pBase < nBufferSize) {
         *pWritePtr = 7;
         pWritePtr[1] = (char)nValue;
         pStruct->anWussieMonsterGUIDs[9]++;
         return pWritePtr + 2;
       }
     } else if (nValue + 0x8000U <= 0xffff) {
-      if ((int)(pWritePtr + (3 - (int)pBase)) < nBufferSize) {
+      if ((intptr_t)(pWritePtr + (3 - (intptr_t)pBase)) < nBufferSize) {
         *pWritePtr = 8;
         *(short int*)(pWritePtr + 1) = (short int)nValue;
         pStruct->anWussieMonsterGUIDs[9]++;
         return pWritePtr + 3;
       }
-    } else if ((int)(pWritePtr + (5 - (int)pBase)) < nBufferSize) {
+    } else if ((intptr_t)(pWritePtr + (5 - (intptr_t)pBase)) < nBufferSize) {
       *pWritePtr = 9;
       *(int*)(pWritePtr + 1) = nValue;
       pStruct->anWussieMonsterGUIDs[9]++;
@@ -900,20 +882,20 @@ static uint8_t * __fastcall SKILLS_WriteValueToBuffer(uint8_t * pBase, int nValu
 
 static uint8_t * __fastcall SKILLS_WriteValueToBuffer2(uint8_t * pBase, int nValue, int nBufferSize, D2QuestDataA5Q2Strc * pStruct, uint8_t * pWritePtr) {
     if (nValue + 0x80U <= 0xff) {
-      if ((int)pWritePtr - (int)pBase < nBufferSize) {
+      if ((intptr_t)pWritePtr - (intptr_t)pBase < nBufferSize) {
         *pWritePtr = '\x04';
         pWritePtr[1] = (uint8_t)nValue;
         pStruct->anWussieMonsterGUIDs[9]++;
         return pWritePtr + 2;
       }
     } else if (nValue + 0x8000U <= 0xffff) {
-      if ((int)(pWritePtr + (3 - (int)pBase)) < nBufferSize) {
+      if ((intptr_t)(pWritePtr + (3 - (intptr_t)pBase)) < nBufferSize) {
         *pWritePtr = '\x05';
         *(short int*)(pWritePtr + 1) = (short int)nValue;
         pStruct->anWussieMonsterGUIDs[9]++;
         return pWritePtr + 3;
       }
-    } else if ((int)(pWritePtr + (5 - (int)pBase)) < nBufferSize) {
+    } else if ((intptr_t)(pWritePtr + (5 - (intptr_t)pBase)) < nBufferSize) {
       *pWritePtr = '\x06';
       *(int*)(pWritePtr + 1) = nValue;
       pStruct->anWussieMonsterGUIDs[9]++;
@@ -933,31 +915,30 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
       int bLastWasValue;
       uint8_t __pad8[3];
       uint8_t aTokenBuf;
-      uint8_t aOpStackTokenTypes[64];
-      uint32_t aOpStackTokenValues[64];
-      int nOpStackTop;
+      D2SkillCalcOperandStackStrc sOpStack;
       int nPrecedenceDepth;
     };
     static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 340, "frame group __frame0_t must reproduce the Ghidra frame layout");
     __frame0_t __frame0;
     uint32_t nFunctionArg;
+    int32_t iVar1;
     int nPrecedence;
     uint8_t* pbFinalWrite;
     uint8_t bToken;
     uint8_t byFuncIdx;
     int nBytesWritten;
     eD2SkillCalcOp bEmitOpcode;
-    __frame0.nOpStackTop = 0;
+    __frame0.sOpStack.nTop = 0;
     __frame0.nPrecedenceDepth = 0;
     __frame0.bLastWasValue = 0;
     bool bHasVarRef;
     bHasVarRef = false;
     __frame0.aTokenBuf = 0;
     char* szToken;
-    szToken = SKILLS_ParseSkillDescription(pDescTable, pfnGetLinkerIndex, (int)__frame0.aOpStackTokenTypes, szExpressionString, &__frame0.aTokenBuf, (int*)&__frame0.dwTokenValue);
+    szToken = SKILLS_ParseSkillDescription(pDescTable, pfnGetLinkerIndex, &__frame0.sOpStack, szExpressionString, &__frame0.aTokenBuf, (int*)&__frame0.dwTokenValue);
     uint8_t* pbWritePtr;
     pbWritePtr = pbByteCodeOutput;
-    for (; szToken; szToken = SKILLS_ParseSkillDescription(pDescTable, pfnGetLinkerIndex, (int)__frame0.aOpStackTokenTypes, szToken, &__frame0.aTokenBuf, (int*)&__frame0.dwTokenValue)) {
+    for (; szToken; szToken = SKILLS_ParseSkillDescription(pDescTable, pfnGetLinkerIndex, &__frame0.sOpStack, szToken, &__frame0.aTokenBuf, (int*)&__frame0.dwTokenValue)) {
       /* switch on aTokenBuf[0] = eD2SkillCalcToken (parser token type). Maps each
                          token to the
                          emitted eD2SkillCalcOp opcode (see bEmitOpcode / bToken):
@@ -974,23 +955,24 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
                          TOKEN_LOGIC_DIFFERENT(0xf)->AST_NotEqual. TOKEN_CUSTOM_*(0x10/0x11/0x12) push
                          value/var/fn. */ switch (__frame0.aTokenBuf) {
         case 0:
-          if (__frame0.nOpStackTop < 0x40) {
-            __frame0.aOpStackTokenTypes[__frame0.nOpStackTop] = 2;
-            __frame0.nOpStackTop++;
+          if (__frame0.sOpStack.nTop < 0x40) {
+            __frame0.sOpStack.abTokenTypes[__frame0.sOpStack.nTop] = '\x02';
+            __frame0.sOpStack.nTop++;
             goto finish_token;
           }
         *pbByteCodeOutput = 0;
         return 0;
         case 1:
-          if (__frame0.nOpStackTop > 0) {
-            nBytesWritten = (int)pbWritePtr - (int)pbByteCodeOutput;
+          if (__frame0.sOpStack.nTop > 0) {
+            nBytesWritten = (intptr_t)pbWritePtr - (intptr_t)pbByteCodeOutput;
             while (true) {
-              __frame0.aTokenBuf = __frame0.aOpStackTokenTypes[__frame0.nOpStackTop - 1];
+              iVar1 = __frame0.sOpStack.nTop;
+              __frame0.aTokenBuf = __frame0.sOpStack.abTokenTypes[__frame0.sOpStack.nTop - 1];
               if (__frame0.aTokenBuf == 2) {
                 break;
               }
 
-              nFunctionArg = __frame0.aOpStackTokenValues[__frame0.nOpStackTop - 1];
+              nFunctionArg = __frame0.sOpStack.adwTokenValues[__frame0.sOpStack.nTop - 1];
               nPrecedence = SKILLS_GetOpcodePrecedence(__frame0.aTokenBuf, pOpcodeInfo, nFunctionArg);
               if (__frame0.nPrecedenceDepth < nPrecedence || nBytesWritten >= nMaxOutputSize) {
                 *pbByteCodeOutput = 0;
@@ -1002,7 +984,7 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
               *pbWritePtr = __frame0.aTokenBuf;
               pbFinalWrite = pbWritePtr + 1;
               if (__frame0.aTokenBuf == 1) {
-                if ((int)pbFinalWrite - (int)pbByteCodeOutput >= nMaxOutputSize) {
+                if ((intptr_t)pbFinalWrite - (intptr_t)pbByteCodeOutput >= nMaxOutputSize) {
                   *pbByteCodeOutput = 0;
                   return 0;
                 }
@@ -1013,35 +995,35 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
                 break;
               }
 
-              __frame0.nOpStackTop--;
+              __frame0.sOpStack.nTop = iVar1 - 1;
               pbWritePtr = pbFinalWrite;
-              if (__frame0.nOpStackTop <= 0) {
+              if (iVar1 - 1 <= 0) {
                 *pbByteCodeOutput = 0;
                 return 0;
               }
             }
 
-            if (__frame0.nOpStackTop > 0 && (__frame0.aOpStackTokenTypes[__frame0.nOpStackTop - 1] == 2 || __frame0.aOpStackTokenTypes[__frame0.nOpStackTop - 1] == 1)) {
-              __frame0.nOpStackTop--;
+            if (iVar1 > 0 && (__frame0.sOpStack.abTokenTypes[iVar1 - 1] == '\x02' || __frame0.sOpStack.abTokenTypes[iVar1 - 1] == '\x01')) {
+              __frame0.sOpStack.nTop = iVar1 - 1;
               goto finish_token;
             }
           }
         *pbByteCodeOutput = 0;
         return 0;
         case 0x10:
-          pbWritePtr = SKILLS_WriteValueToBuffer(pbByteCodeOutput, __frame0.dwTokenValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)__frame0.aOpStackTokenTypes, pbWritePtr);
+          pbWritePtr = SKILLS_WriteValueToBuffer(pbByteCodeOutput, __frame0.dwTokenValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)&__frame0.sOpStack, pbWritePtr);
         __frame0.bLastWasValue = 1;
         goto finish_token;
         case 0x11:
-          pbWritePtr = SKILLS_WriteValueToBuffer2(pbByteCodeOutput, __frame0.dwTokenValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)__frame0.aOpStackTokenTypes, pbWritePtr);
+          pbWritePtr = SKILLS_WriteValueToBuffer2(pbByteCodeOutput, __frame0.dwTokenValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)&__frame0.sOpStack, pbWritePtr);
         __frame0.bLastWasValue = 1;
         bHasVarRef = true;
         goto finish_token;
         case 0x12:
-          if (__frame0.nOpStackTop < 0x40) {
-            __frame0.aOpStackTokenTypes[__frame0.nOpStackTop] = 1;
-            __frame0.aOpStackTokenValues[__frame0.nOpStackTop] = __frame0.dwTokenValue;
-            __frame0.nOpStackTop++;
+          if (__frame0.sOpStack.nTop < 0x40) {
+            __frame0.sOpStack.abTokenTypes[__frame0.sOpStack.nTop] = '\x01';
+            __frame0.sOpStack.adwTokenValues[__frame0.sOpStack.nTop] = __frame0.dwTokenValue;
+            __frame0.sOpStack.nTop++;
             __frame0.bLastWasValue = 1;
             bHasVarRef = true;
           } else {
@@ -1057,10 +1039,10 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
         break;
         case 4:
           if (!__frame0.bLastWasValue) {
-            pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0x15, nullptr, 0);
+            pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.sOpStack.abTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0x15, nullptr, 0);
             __frame0.bLastWasValue = 0;
           } else {
-            pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0x11, nullptr, 0);
+            pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.sOpStack.abTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0x11, nullptr, 0);
             __frame0.bLastWasValue = 0;
           }
         goto finish_token;
@@ -1097,14 +1079,14 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
         case 8:
           bToken = 0x17;
         emit_separator_or_ternary:
-        pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, bToken, nullptr, 0);
+        pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.sOpStack.abTokenTypes, pbByteCodeOutput, nMaxOutputSize, bToken, nullptr, 0);
         goto finish_token;
         case 2:
           bToken = 3;
         goto emit_separator_or_ternary;
       }
 
-      pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, bEmitOpcode, nullptr, 0);
+      pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, __frame0.sOpStack.abTokenTypes, pbByteCodeOutput, nMaxOutputSize, bEmitOpcode, nullptr, 0);
       __frame0.bLastWasValue = 0;
       finish_token:
       if (!pbWritePtr) {
@@ -1114,16 +1096,16 @@ int __stdcall SKILLS_ParseCalcExpression(char * szExpressionString, uint8_t * pb
       __frame0.aTokenBuf = 0;
     }
 
-    pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, (uint8_t*)__frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0, nullptr, 0);
+    pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, (uint8_t*)&__frame0.sOpStack, pbByteCodeOutput, nMaxOutputSize, 0, nullptr, 0);
     if (pbWritePtr) {
       uint32_t nConstValue;
       if (!bHasVarRef) {
-        nConstValue = SKILLS_CompileSkillFormula((uint32_t*)pbByteCodeOutput, (int)pbWritePtr - (int)pbByteCodeOutput, nullptr, nullptr, 0, nullptr);
-        pbWritePtr = SKILLS_WriteValueToBuffer(pbByteCodeOutput, nConstValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)__frame0.aOpStackTokenTypes, pbByteCodeOutput);
-        pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, (uint8_t*)__frame0.aOpStackTokenTypes, pbByteCodeOutput, nMaxOutputSize, 0, nullptr, 0);
+        nConstValue = SKILLS_CompileSkillFormula((uint32_t*)pbByteCodeOutput, (intptr_t)pbWritePtr - (intptr_t)pbByteCodeOutput, nullptr, nullptr, 0, nullptr);
+        pbWritePtr = SKILLS_WriteValueToBuffer(pbByteCodeOutput, nConstValue, nMaxOutputSize, (D2QuestDataA5Q2Strc*)&__frame0.sOpStack, pbByteCodeOutput);
+        pbWritePtr = SKILLS_EmitFormulaBytecode(pbWritePtr, (uint8_t*)&__frame0.sOpStack, pbByteCodeOutput, nMaxOutputSize, 0, nullptr, 0);
       }
 
-      return (int)pbWritePtr - (int)pbByteCodeOutput;
+      return (intptr_t)pbWritePtr - (intptr_t)pbByteCodeOutput;
     }
 
     *pbByteCodeOutput = 0;

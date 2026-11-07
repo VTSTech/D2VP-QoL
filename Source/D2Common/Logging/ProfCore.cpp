@@ -3,47 +3,9 @@
 #include "Source/D2Common/Logging/ProfCore.h"
 #include "Source/D2Common/DATATBLS/MonsterTbls.h"
 #include "Source/D2Common/Logging.h"
-#include "Source/D2Common/Txt/Skills.h"
 #include "Source/globals/globals.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
 #include "Source/D2Common/D2Common.globals.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Fog.globals.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
+#include "Source/Fog/Fog.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Common/Logging/ProfCore.data.h"
 
@@ -2684,7 +2646,7 @@ void __stdcall D2ProfileDump() {
     do {
       LOGGING_LogLine(1, 2, 1, 0x80000, ".\\Logging\\ProfCore.cpp", 0x54, "FUNCTION: %30s, TIME %12d, COUNT %5d", (D2ProfilingDumpFrequency*)(pLVar1 - 0xd), pLVar1->u.LowPart, *(int*)&pLVar1[1].u);
       pLVar1 += 0xf;
-    } while ((int)pLVar1 < (intptr_t)((char*)&gaProfilingDumpFrequency + sizeof(gaProfilingDumpFrequency) + 104));
+    } while ((intptr_t)pLVar1 < (intptr_t)((char*)&gaProfilingDumpFrequency + sizeof(gaProfilingDumpFrequency) + 104));
 }
 
 void __stdcall CloseProfCore_Unref_00654ef0() {

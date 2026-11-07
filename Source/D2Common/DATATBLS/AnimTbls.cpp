@@ -2,58 +2,11 @@
 
 #include "Source/D2Common/DATATBLS/AnimTbls.h"
 #include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2InventoryStrc.h"
-#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
 #include "Source/D2Common/DATATBLS/DataTbls.h"
-#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
 #include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Units.h"
-#include "Source/D2Game/GAME/Event.h"
-#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
+#include "Source/Fog/Fog.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -117,13 +70,13 @@ void __fastcall ANIMDATA_FreeAnimDataRecord(D2AnimDataStrc * pAnimData) {
 // pdwName1 in EDI, pdwName2 in ESI: TRUE when both 8-byte names match as two dwords. Halts (AnimTbls.cpp lines 217/218, StringLength((LPCTSTR)pdwName2) <= 8) on a name longer than 8.
 // Unreferenced in 1.14d (entry: aligned start after padding); was undefined code hidden by a CALL_RETURN override on its halt call. Lines from docs/data/win-assert-oracle.tsv.
 BOOL __stdcall ANIMDATA_CompareNames(uint32_t * pdwName1, uint32_t * pdwName2) {
-    uint32_t nNameLen = Storm::Source::SSTR::SSTR_StringLength((char*)pdwName1);
+    uint32_t nNameLen = D2Hell::SSTR_StringLength((char*)pdwName1);
     if (!(nNameLen <= 8)) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xd9);
       exit(-1);
     }
 
-    nNameLen = Storm::Source::SSTR::SSTR_StringLength((char*)pdwName2);
+    nNameLen = D2Hell::SSTR_StringLength((char*)pdwName2);
     if (!(nNameLen <= 8)) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xda);
       exit(-1);
@@ -139,7 +92,7 @@ BOOL __stdcall ANIMDATA_CompareNames(uint32_t * pdwName1, uint32_t * pdwName2) {
 // byte-sum hash, then walks the hash bucket comparing 8-byte names.
 // Returns pointer to the matching record or NULL.
 // Source: .\\DATATBLS\\AnimTbls.cpp
-static int * ANIMDATA_GetRecordByNameHash(LPSTR szCofName) {
+static D2AnimDataRecordStrc * ANIMDATA_GetRecordByNameHash(LPSTR szCofName) {
     char cChar = *szCofName;
     char* pszChar = szCofName;
     while (cChar != '\0') {
@@ -169,18 +122,18 @@ static int * ANIMDATA_GetRecordByNameHash(LPSTR szCofName) {
         return nullptr;
       }
 
-      nHashValue = Storm::Source::SSTR::SSTR_StringLength(szCofName);
+      nHashValue = D2Hell::SSTR_StringLength(szCofName);
       if (nHashValue > 8) {
         break;
       }
 
-      nHashValue = Storm::Source::SSTR::SSTR_StringLength(szRecordName->szAnimDataName);
+      nHashValue = D2Hell::SSTR_StringLength(szRecordName->szAnimDataName);
       if (nHashValue > 8) {
         Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xda);
         exit(-1);
       }
       if (*(int*)szCofName == *(int*)szRecordName->szAnimDataName && *(int*)(szCofName + 4) == *(int*)(szRecordName->szAnimDataName + 4)) {
-        return (int*)szRecordName;
+        return szRecordName;
       }
 
       nRecordCount--;
@@ -200,7 +153,7 @@ D2AnimDataRecordStrc * __fastcall ANIMDATA_GetAnimDataForUnit(D2UnitStrc * pUnit
     memset(szCofName, 0, 8 * sizeof(szCofName[0]));
     int32_t nCofNameLen = 0;
     COMPOSIT::Composit::COMPOSIT_BuildCofPath(pUnit, nClassId, nCofMode, nWeaponClass, pInventory, szCofName, &nCofNameLen, 0, 1);
-    D2AnimDataRecordStrc* pRecord = (D2AnimDataRecordStrc*)ANIMDATA_GetRecordByNameHash(szCofName);
+    D2AnimDataRecordStrc* pRecord = ANIMDATA_GetRecordByNameHash(szCofName);
     if (!pRecord) {
       pDVar1 = DataTbls::TXT_AnimTbls_Get();
       pRecord = &pDVar1->pDefaultRecord;
@@ -216,9 +169,9 @@ void __stdcall ANIMDATA_SetAnimSpeedForUnit(D2UnitStrc * pUnit, int32_t nAnimSpe
     memset(szCofName, 0, 8 * sizeof(szCofName[0]));
     int nCofNameLen = 0;
     COMPOSIT::Composit::COMPOSIT_GetCofPathWithTransform(pUnit, szCofName, &nCofNameLen, 0, 1, pUnit->pInventory, -1);
-    int* pRecord = ANIMDATA_GetRecordByNameHash(szCofName);
+    D2AnimDataRecordStrc* pRecord = ANIMDATA_GetRecordByNameHash(szCofName);
     if (pRecord) {
-      pRecord[3] = nAnimSpeed;
+      pRecord->nAnimSpeed = nAnimSpeed;
     }
 }
 
@@ -228,12 +181,12 @@ void __stdcall ANIMDATA_SetAnimSpeedForUnit(D2UnitStrc * pUnit, int32_t nAnimSpe
 // fallback to default record.
 BOOL __stdcall ANIMDATA_GetFramesSpeedAndTrigger(char * pszName, uint32_t * pnFrameCount, int * pnAnimSpeed, uint32_t * pnTriggerFrame) {
     uint32_t nFrameIndex;
-    int* pRecord = ANIMDATA_GetRecordByNameHash(pszName);
+    D2AnimDataRecordStrc* pRecord = ANIMDATA_GetRecordByNameHash(pszName);
     if (pRecord) {
-      *pnFrameCount = pRecord[2];
-      *pnAnimSpeed = pRecord[3];
-      for (nFrameIndex = 0; nFrameIndex < (uint32_t)pRecord[2]; nFrameIndex++) {
-        if (nFrameIndex >= 0x90 || *(char*)(nFrameIndex + 0x10 + (int)pRecord) != '\0') {
+      *pnFrameCount = pRecord->nFrames;
+      *pnAnimSpeed = pRecord->nAnimSpeed;
+      for (nFrameIndex = 0; nFrameIndex < (uint32_t)pRecord->nFrames; nFrameIndex++) {
+        if (nFrameIndex >= 0x90 || pRecord->pFrameFlags[nFrameIndex]) {
           break;
         }
       }

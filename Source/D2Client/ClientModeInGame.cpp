@@ -11,139 +11,25 @@
 #include "Source/D2Client/UI/Draw.h"
 #include "Source/D2Client/UI/Path.h"
 #include "Source/D2Client/UI/ui.h"
-#include "Source/D2Common/Chat/Ignorelist.h"
-#include "Source/D2Common/DATATBLS/DataTbls.h"
-#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/D2Common.h"
+#include "Source/D2Game/D2Game.h"
 #include "Source/D2Game/GAME/Server.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Net/Game/Server.h"
-#include "Source/D2Net/SRC/Client.h"
-#include "Source/D2Win/D2GFX.h"
-#include "Source/D2Win/Src/D2WinArchive.h"
-#include "Source/D2Win/Src/D2WinMain.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "3rdparty/crashy/Report.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/Fog.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/SMem.h"
-#include "Source/Fog/Src/ErrorManager.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SReg.h"
-#include "3rdparty/Storm/Source/SSTR.h"
-#include "Source/globals/globals.h"
-#include "Source/Bnclient/BnSend.h"
-#include "Source/Bnclient/SRP.h"
-#include "Source/Bnclient/net_sid.h"
-#include "Source/D2CMP/Draw.h"
-#include "Source/D2CMP/SRC/Codec.h"
-#include "Source/D2CMP/SRC/LRUCache.h"
-#include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2BNetGatewayAccessStr.h"
-#include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/D2GSPacketSrv0x2A.h"
-#include "Source/D2Client/D2GfxMemoryStrc.h"
-#include "Source/D2Client/D2GfxSettingsStrc.h"
-#include "Source/D2Client/D2IniConfigStrc.h"
-#include "Source/D2Client/Draw/LightMap.h"
-#include "Source/D2Client/Draw/Weather.h"
-#include "Source/D2Client/Engine/Gfx.h"
-#include "Source/D2Client/GAME/Draw.h"
-#include "Source/D2Client/GAME/Game/Game.h"
-#include "Source/D2Client/GAME/Record.h"
-#include "Source/D2Client/GAME/SCmd.h"
-#include "Source/D2Client/GAME/Sound.h"
-#include "Source/D2Client/Sound/Sound.h"
-#include "Source/D2Client/UI/Automap.h"
-#include "Source/D2Client/UI/Chat.h"
-#include "Source/D2Client/UI/CmdTbl.h"
-#include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/Inv.h"
-#include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/QuestLog.h"
-#include "Source/D2Client/UI/ShowItems.h"
-#include "Source/D2Client/UI/SkillDesc.h"
-#include "Source/D2Client/UI/SpellSel.h"
-#include "Source/D2Client/UI/Text.h"
-#include "Source/D2Client/UI/UseItem.h"
-#include "Source/D2Client/UI/Waypoint.h"
-#include "Source/D2Client/UI/npcmenu.h"
-#include "Source/D2Client/UI/npcmenu/Merc.h"
-#include "Source/D2Client/UI/ui.h"
-#include "Source/D2Client/UNIT/Item.h"
-#include "Source/D2Client/UNIT/Missile.h"
-#include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Client/UNIT/Object.h"
-#include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Client/Warden/WardenClient.h"
-#include "Source/D2Common/COMPOSIT/Composit.h"
-#include "Source/D2Common/D2Common.globals.h"
-#include "Source/D2Common/D2SeedStrc.h"
-#include "Source/D2Common/DATATBLS/ItemTbls.h"
-#include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/DUNGEON/Dungeon.h"
-#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
-#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
-#include "Source/D2Common/Drlg/Drlg.h"
-#include "Source/D2Common/Drlg/OutSiege.h"
-#include "Source/D2Common/INVENTORY/Inventory.h"
-#include "Source/D2Common/ITEMS/ItemMods.h"
-#include "Source/D2Common/ITEMS/Items.h"
-#include "Source/D2Common/Logging/ProfCore.h"
-#include "Source/D2Common/Merc.h"
-#include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/Unit.h"
-#include "Source/D2Game/D2Game.globals.h"
-#include "Source/D2Game/D2QuestDataStrc.h"
-#include "Source/D2Game/GAME/Arena.h"
-#include "Source/D2Game/GAME/Task.h"
-#include "Source/D2Game/Monster/AI/AI.h"
-#include "Source/D2Game/Monster/AI/Baal.h"
-#include "Source/D2Game/Monster/MonsterMode.h"
-#include "Source/D2Game/Objects/Objects.h"
-#include "Source/D2Game/PLAYER/PlayerMsg.h"
-#include "Source/D2Game/Quests/QUESTS.h"
-#include "Source/D2Game/SKILLS/Items.h"
-#include "Source/D2Game/SKILLS/SkillAss.h"
-#include "Source/D2Game/UNIT/SUnitDmg.h"
-#include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Hell/D2Hell.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Lang/StrTable/strtable.h"
-#include "Source/D2Win/D2WinAnimImage.h"
-#include "Source/D2Win/Src/D2Comp.h"
-#include "Source/D2Win/Src/D2WinFont.h"
-#include "Source/D2gfx/D2GFX.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
+#include "Source/D2Net/D2Net.h"
+#include "Source/D2Win/D2Win.h"
+#include "Source/D2gfx/D2gfx.public.h"
 #include "3rdparty/Storm/Storm.h"
+#include "Source/globals/globals.h"
+#include "Source/D2Client/D2Client.globals.h"
+#include "3rdparty/Storm/H/stpl.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/ClientModeInGame.data.h"
-#include "Source/D2Client/D2Client.h"
-#include "Source/D2Client/Engine.h"
+#include "Source/D2Client/D2ClientRoot.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
 #include "Source/D2Client/GAME/Game/SGAMEDATA.h"
-#include "Source/D2MCPClient/McpConnect.data.h"
-#include "Source/Fog/D2QServerStrc.h"
-#include "Source/Fog/Src/LogManager.data.h"
-#include "3rdparty/Storm/H/CCritSect.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "Redivivus/d2_boot.h" // [vanilla-plus] enter-world stage marks
+#include "Source/D2MCPClient/D2MCPClient.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "Redivivus/d2_boot.h" // [d2boot] direct include: 11th-sync include refactor broke the transitive path
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -426,15 +312,13 @@ BOOL __stdcall LoadDataForGameAndSetupServer(D2IniConfigStrc * D2IniData) {
     return 1;
 }
 
-int Unreferenced_0044b780() {
-    int extraout_EAX;
+void Unreferenced_0044b780() {
     HWND hWnd = D2gfx::D2GFX::GetHwnd();
     if (hWnd) {
       SendMessageA(hWnd, 0x1c, 0, 0);
     }
 
     D2gfx::D2GFX::D2GFX_ResetViewport();
-    return extraout_EAX;
 }
 
 D2IniConfigStrc * __stdcall D2IniData_Getter() {
@@ -502,8 +386,8 @@ void __fastcall D2CLIENT_SetExitVar1(BOOL bResult) {
     gbQuitGame = bResult;
 }
 
-D2IniConfigStrc * __stdcall D2IniData_Getter_Unref_0044b890() {
-    return (D2IniConfigStrc*)gbQuitGame;
+BOOL __stdcall D2IniData_Getter_Unref_0044b890() {
+    return gbQuitGame;
 }
 
 // Client app-mode entry. Init memory/UI, load language + string tables, init TXT tables, then run pfModes[] loop. Returns to launcher based on quit/game type.
@@ -858,8 +742,8 @@ bool __stdcall GameLoopFuncInitGame(uint32_t dwUnused) {
     return nInitResult == 2;
 }
 
-int __fastcall Unreferenced_0044bc10(int param_1, int param_2) {
-    D2Net::SRC::Client::NET_D2GS_ConnectToServer(param_1, (char*)param_2);
+int __fastcall Unreferenced_0044bc10(int param_1, char * param_2) {
+    D2Net::SRC::Client::NET_D2GS_ConnectToServer(param_1, param_2);
     _Message::MessageGameLoop((::fpGameLoopFunction)GameLoopFuncInitGame);
     return 1;
 }

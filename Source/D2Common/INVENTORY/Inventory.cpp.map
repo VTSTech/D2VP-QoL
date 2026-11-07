@@ -89,6 +89,7 @@
       ],
       "usedTypes": [
         "D2InventoryGridInfoStrc",
+        "D2UnitStrc *",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -152,6 +153,9 @@
       "namespace": "D2Common::INVENTORY::Inventory",
       "calledFunctions": [
         "Unreferenced_0063aad0"
+      ],
+      "usedTypes": [
+        "D2UnitStrc"
       ]
     },
     {
@@ -360,8 +364,8 @@
         "D2InventoryGridInfoStrc",
         "D2InventorySizesStrc",
         "D2InventoryStrc",
+        "D2ItemInventoryNodeStrc",
         "D2RoomStrc",
-        "D2TradeRecordStrc *",
         "D2UnitStrc",
         "eD2UnitType",
         "int32_t",
@@ -489,7 +493,6 @@
       ],
       "usedTypes": [
         "D2InventoryGridInfoStrc",
-        "int *",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -556,7 +559,6 @@
       ],
       "usedTypes": [
         "D2InventoryGridInfoStrc",
-        "int *",
         "uint32_t",
         "uint8_t"
       ]
@@ -750,6 +752,7 @@
         "D2InventoryStrc",
         "D2ItemsTxt",
         "D2UnitStrc",
+        "D2UnitStrc *",
         "int32_t",
         "uint32_t"
       ]
@@ -2015,7 +2018,7 @@
       ],
       "usedTypes": [
         "D2CorpseStrc",
-        "D2RoomStrc *"
+        "eD2UnitType"
       ]
     },
     {
@@ -2110,7 +2113,6 @@
         "D2ItemsTxt",
         "D2UnitStrc",
         "eD2BodyLoc",
-        "int32_t",
         "uint32_t",
         "uint8_t"
       ]

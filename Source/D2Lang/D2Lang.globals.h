@@ -7,26 +7,35 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Lang)
 #error "D2Lang header included by a module that may not use D2Lang (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Lang) && !defined(D2_LOADS_D2Lang)
+#error "internal D2Lang header included from another module; include D2Lang's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
+
+// Forward declarations
+struct D2FogArchiveStrc;
 
 namespace D2Lang::Unicode::UNISYS {
 extern uint16_t CharacterLookupTable[256];
 } // namespace D2Lang::Unicode::UNISYS
 
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Lang)
+extern D2FogArchiveStrc * MPQ_d2data;
+extern D2FogArchiveStrc * MPQ_patch_d2;
+extern D2FogArchiveStrc * MPQ_d2exp;
 namespace D2Lang::StrTable::strtable {
 extern char gaLanguageCodeFallback[4];
 extern char gaLanguageCodeAbbrevTable[4];
 extern char gaLanguageCodeLookup[4];
-extern char * gpszStringTblPathFormat;
-extern char * gpszFontMapPathFormat;
-extern char * gpszPatchStringTblPathFormat;
-extern char * gpszExpansionStringTblPathFormat;
-extern char * gpszD2DataMpqName;
-extern char * gpszPatchD2MpqName;
-extern char * gpszD2ExpMpqName;
+extern uint16_t * * gpStringIndexBase;
+extern uint16_t * * gpStringIndexPatchD2;
+extern uint16_t * * gpStringIndexExpansion;
+extern uint16_t * gpStringBufferBase;
+extern uint16_t * gpStringBufferPatchD2;
+extern uint16_t * gpStringBufferExpansion;
+extern int gnStringTableRefCount;
 } // namespace D2Lang::StrTable::strtable
 #endif // D2_MODULE_D2Lang

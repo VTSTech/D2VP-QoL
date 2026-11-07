@@ -3,27 +3,8 @@
  * Binary: Game.exe
  */
 
-#include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Multi/OOGUtilities.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "Source/Fog/D2PoolManagerStrc.h"
-#include "Source/Fog/D2QServerStrc.h"
 #include "Source/Fog/Fog.globals.h"
-#include "Source/Fog/Memory.h"
-#include "Source/Fog/Save.h"
-#include "Source/Fog/Source/SFile.h"
-#include "Source/Fog/Source/SSComp.h"
-#include "Source/Fog/Src/LogManager.h"
-#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
-#include "3rdparty/Storm/H/stpl.h"
-#include "3rdparty/Storm/Source/SCMD.h"
-#include "3rdparty/Storm/Source/SComp.h"
-#include "3rdparty/Storm/Source/SErr.h"
-#include "3rdparty/Storm/Source/SMem.h"
-#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/Fog/D2MemoryManagerStrc.h"
-#include "3rdparty/Storm/Storm.h"
 
 
 // =============================================================================
@@ -823,7 +804,7 @@ uint8_t gabHuffmanCodeLengths[256] = {
     0x6
 }; D2_GLOBAL_GUARD(gabHuffmanCodeLengths, "Fog::Source::SSComp::gabHuffmanCodeLengths");
 
-uint32_t gaHuffmanFastDecodeTable[256] = {}; D2_GLOBAL_GUARD(gaHuffmanFastDecodeTable, "Fog::Source::SSComp::gaHuffmanFastDecodeTable");
+uint8_t * gaHuffmanFastDecodeTable[256] = {}; D2_GLOBAL_GUARD(gaHuffmanFastDecodeTable, "Fog::Source::SSComp::gaHuffmanFastDecodeTable");
 
 uint8_t gabHuffmanNextTable[256] = {}; D2_GLOBAL_GUARD(gabHuffmanNextTable, "Fog::Source::SSComp::gabHuffmanNextTable");
 
@@ -1124,10 +1105,6 @@ namespace D2Common::Chat::Ignorelist::StringEntryNode {
 namespace D2Common::Chat::Ignorelist {
 
 } // namespace D2Common::Chat::Ignorelist
-
-namespace D2Common::Logging::ProfCore {
-
-} // namespace D2Common::Logging::ProfCore
 
 namespace D2Common::DUNGEON::Dungeon {
 

@@ -4,13 +4,15 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Common)
 #error "D2Common header included by a module that may not use D2Common (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Common) && !defined(D2_LOADS_D2Common)
+#error "internal D2Common header included from another module; include D2Common's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
 #include <cstdarg>
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/Bnclient/net_sid.h"
 
 // Forward declarations
 struct D2SeedStrc;
@@ -20,7 +22,7 @@ namespace D2Common::Seed {
 // Function declarations
 __attribute__((noinline)) inline uint32_t __fastcall UNIT_GetModuloFromSeed(struct D2SeedStrc * pSeed, uint32_t nModulo);
 __attribute__((noinline)) inline uint32_t __fastcall RANDOM_RandomNumberSelector(struct D2SeedStrc * pSeed, uint32_t nModulo);
-uint32_t __fastcall RNG_GetRandomInRange(uint32_t * pSeed, int32_t nMax);
+uint32_t __fastcall RNG_GetRandomInRange(struct D2SeedStrc * pSeed, int32_t nMax);
 uint32_t __fastcall SEED_GenerateRandomSeed(int32_t nSeedOffset);
 void __fastcall SEED_InitDefault(struct D2SeedStrc * pSeed);
 void __fastcall InitSeed_Param_666(struct D2SeedStrc * pSeed, int32_t nInitSeed);

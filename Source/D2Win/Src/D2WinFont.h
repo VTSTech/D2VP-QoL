@@ -4,6 +4,9 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Win)
 #error "D2Win header included by a module that may not use D2Win (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Win) && !defined(D2_LOADS_D2Win)
+#error "internal D2Win header included from another module; include D2Win's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -19,19 +22,27 @@ struct D2FontTableHeaderStrc;
 struct D2FontGlyphStrc;
 
 // Data types
+#ifndef D2_DEFINED_D2FontCacheEntryStrc
+#define D2_DEFINED_D2FontCacheEntryStrc
 struct D2FontCacheEntryStrc {
-    /* 0x00 */ void * pFontDC6; // struct DC6* font sprite image, freed by IMAGE_FreeImage
+    /* 0x00 */ struct DC6 * pFontDC6; // struct DC6* font sprite image, freed by IMAGE_FreeImage
     /* 0x04 */ void * pFontTable; // Allocated font table/cache data, freed by FreeClientMemory
     /* 0x08 */ struct D2FontTableHeaderStrc * pFontTableHeader; // The loaded font .tbl (same buffer as pFontTable): +8 glyph count, +0xa line height
     /* 0x0C */ struct D2FontGlyphStrc * pGlyphs; // Glyph array of the loaded .tbl, pFontTableHeader + 0xc (was misnamed szFontTablePath: it is not a path)
     /* 0x10 */ uint32_t dwLRUTimestamp; // GetTickCount >> 10, used for LRU eviction
 };
 
+#endif // D2_DEFINED_D2FontCacheEntryStrc
+#ifndef D2_DEFINED_D2FontGlyphStrc
+#define D2_DEFINED_D2FontGlyphStrc
 struct D2FontGlyphStrc {
     /* 0x00 */ uint16_t wCharCode; // sorted key for the binary search
     /* 0x02 */ uint8_t abUnverified[12];
 };
 
+#endif // D2_DEFINED_D2FontGlyphStrc
+#ifndef D2_DEFINED_D2FontTableHeaderStrc
+#define D2_DEFINED_D2FontTableHeaderStrc
 struct D2FontTableHeaderStrc {
     /* 0x00 */ uint8_t abUnverified[8]; // signature and version bytes; no 1.14d reader found
     /* 0x08 */ uint16_t nGlyphCount; // glyph entries after the header (binary search bound in D2WINFONT_LookupGlyphEntry)
@@ -39,6 +50,9 @@ struct D2FontTableHeaderStrc {
     /* 0x0B */ uint8_t nUnverified0b;
 };
 
+#endif // D2_DEFINED_D2FontTableHeaderStrc
+#ifndef D2_DEFINED_D2TooltipTextStrc
+#define D2_DEFINED_D2TooltipTextStrc
 struct __attribute__((packed)) D2TooltipTextStrc {
     /* 0x000 */ uint16_t wszString[1024];
     /* 0x800 */ int nX;
@@ -48,6 +62,7 @@ struct __attribute__((packed)) D2TooltipTextStrc {
     /* 0x810 */ int nLoadProgress;
 };
 
+#endif // D2_DEFINED_D2TooltipTextStrc
 // =============================================================================
 // Global data (co-located with struct definitions)
 // =============================================================================
@@ -92,7 +107,7 @@ int32_t __fastcall D2WINFONT_GetStringPixelWidth(uint16_t * pwszString, int32_t 
 // Thin wrapper around D2GFX_DrawSolidRectEx. Adjusts Y coordinates and forwards to renderer.
 void __stdcall D2WINFONT_DrawSolidRectFromBottomLeft(int32_t nX, DRAWMODE eDrawMode, int32_t nWidth, int32_t nY, int32_t nHeight, uint32_t dwColor);
 // Right-to-left text renderer (for RTL languages). Draws glyphs from right edge backwards with horizontal bounds checking. Processes color codes, newlines. Returns pointer to last glyph data.
-void * __fastcall D2WINFONT_DrawWideStringRightToLeft(uint16_t * wszText, int32_t nXStart, int32_t nY, GLOBALPALLETE eGlobalPalette, uint32_t nLeftBound, uint32_t nRightBound);
+void __fastcall D2WINFONT_DrawWideStringRightToLeft(uint16_t * wszText, int32_t nXStart, int32_t nY, GLOBALPALLETE eGlobalPalette, uint32_t nLeftBound, uint32_t nRightBound);
 // Draws text with optional background box. If bDrawBackground is non-zero, calculates text width and adds 8px padding. Forwards to DrawWideStringWithDrawMode.
 void __fastcall D2WINFONT_DrawTextWithOptionalBackground(uint16_t * wszText, int32_t nX, int32_t nY, GLOBALPALLETE eGlobalPalette, int32_t bDrawBackground, DRAWMODE eDrawMode);
 // Thunk/wrapper for DrawWideStringSimple. Direct passthrough.

@@ -4,6 +4,9 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
+#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
+#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
+#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -21,11 +24,14 @@ typedef uint32_t GLOBALPALLETE;
 typedef uint32_t eD2Skills;
 
 // Data types
+#ifndef D2_DEFINED_D2ClassIconWithNameStrc
+#define D2_DEFINED_D2ClassIconWithNameStrc
 struct __attribute__((packed)) D2ClassIconWithNameStrc {
     /* 0x00 */ struct DC6 * pD2Archive;
     /* 0x04 */ char szSpelliconPath[30];
 };
 
+#endif // D2_DEFINED_D2ClassIconWithNameStrc
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Client)
 struct __attribute__((packed)) D2SpellSelGridIndexStrc {
     /* 0x00 */ uint8_t nCount;
@@ -33,6 +39,8 @@ struct __attribute__((packed)) D2SpellSelGridIndexStrc {
 };
 
 #endif // D2_MODULE_D2Client
+#ifndef D2_DEFINED_D2SpellSelGridRegionStrc
+#define D2_DEFINED_D2SpellSelGridRegionStrc
 struct D2SpellSelGridRegionStrc {
     /* 0x000 */ int aSkillGrid[60];
     /* 0x0F0 */ int aSkillGridRow2[60];
@@ -42,6 +50,7 @@ struct D2SpellSelGridRegionStrc {
     /* 0x3C5 */ uint8_t pad_3c0[3]; // Padding: the object runs 968 bytes to gSpellSelectionSkillIDs
 };
 
+#endif // D2_DEFINED_D2SpellSelGridRegionStrc
 namespace D2Client::UI::SpellSel {
 
 // Function declarations
@@ -71,9 +80,9 @@ void __fastcall SPELLSEL_SetSkillSlot(int32_t nSlotIndex, int32_t nSkillId, int3
 void __stdcall SPELLSEL_AutoBindNonChargedSkills();
 void __fastcall SPELLSEL_DrawSkillRequirementTooltip(short * pwSkillId, int32_t bMouseOverIn, uint32_t nChargeCount, int32_t nScreenX, int32_t nBoxBottomY);
 void __fastcall SPELLSEL_DrawSkillGrid(struct D2UnitStrc * pUnit, int32_t nGridStartX, BOOL bWeaponSwap, BOOL bShowTooltips, BOOL bChargedOnly);
-int __fastcall Unreferenced_004aa6b0(int param_1);
-int Unreferenced_004aa6e0();
-int Unreferenced_004aa710();
+void __fastcall Unreferenced_004aa6b0(BOOL bChargedOnly);
+void __stdcall Unreferenced_004aa6e0();
+void __stdcall Unreferenced_004aa710();
 void __fastcall SPELLSEL_CycleRightHandSkills(int32_t nSteps);
 void __stdcall SPELLSEL_RenderAllSkillGrids();
 void __stdcall SPELLSEL_ClearWaitingForSkillFlag_Unref_004aa8e0();
