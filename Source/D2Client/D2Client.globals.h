@@ -112,6 +112,7 @@ struct D2UIFlagStrc {
     /* 0x8C */ BOOL HireIcons;
     /* 0x90 */ BOOL MercMenu;
     /* 0x94 */ BOOL UnusedScroll;
+    /* 0x98 */ BOOL VanillaPlus; // VP: vanilla-plus UI_VANILLAPLUS page flag (row 10); keeps (&GFX_bShowUIFlag.Game)[38] in enum order [11th sync re-plant: the public-header split duplicated this struct - the fork's member must live in both copies]
 };
 #endif // D2_DEFINED_D2UIFlagStrc
 

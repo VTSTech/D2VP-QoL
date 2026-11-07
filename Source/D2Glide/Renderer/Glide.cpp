@@ -20,6 +20,7 @@
 #include "Source/D2Client/GAME/View.data.h"
 #include "Source/D2Client/UI/Help.data.h"
 #include "Source/D2Glide/Renderer/Glide.data.h"
+#include "Source/D2Glide/Renderer/ShadowDiag.h" // VP: [11th sync re-plant] glide fix-11 call sites; upstream's include-only list dropped it (upstream has no fix-11)
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 

@@ -12,6 +12,7 @@
 #include "Source/D2Client/D2Client.globals.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [issue #26 / R92] wide-layout guards
+#include "Source/D2Client/D2GameViewStrc.h" // VP: [11th sync re-plant] completes D2GameViewStrc for the wide-layout rcExtendedView reads; upstream include-only list dropped it
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 

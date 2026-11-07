@@ -1119,7 +1119,7 @@ void __stdcall AUTOMAP_LoadLayerFromFile() {
             // drop this layer's chain the way the layer-mismatch path does and
             // keep playing instead of halting. The next
             // AUTOMAP_SaveCurrentLayer rebuilds the chain.
-            D2_FREE(nErrorAddress);
+            D2_FREE(pCellData); // VP: [11th sync] was nErrorAddress - upstream's regen renamed the local
             AUTOMAP_InvalidateLayerEntry(0, hMapFile, &__frame0.nNextFilePos);
             Fog::Source::SFile::SFILE_Win32CloseHandle(hMapFile);
             return;
@@ -1160,7 +1160,7 @@ void __stdcall AUTOMAP_LoadLayerFromFile() {
           if (dwBytesRead != sFileEntry.dwWallDataSize) {
             // VP-BEGIN [automap tolerance]: same stale-entry tolerance as
             // the floor read above.
-            D2_FREE(nErrorAddress);
+            D2_FREE(pCellData); // VP: [11th sync] was nErrorAddress - upstream's regen renamed the local
             AUTOMAP_InvalidateLayerEntry(0, hMapFile, &__frame0.nNextFilePos);
             Fog::Source::SFile::SFILE_Win32CloseHandle(hMapFile);
             return;
@@ -1202,7 +1202,7 @@ void __stdcall AUTOMAP_LoadLayerFromFile() {
             if (dwBytesRead != sFileEntry.dwObjectDataSize) {
               // VP-BEGIN [automap tolerance]: same stale-entry tolerance as
               // the floor read above.
-              D2_FREE(nErrorAddress);
+              D2_FREE(pCellData); // VP: [11th sync] was nErrorAddress - upstream's regen renamed the local
               AUTOMAP_InvalidateLayerEntry(0, hMapFile, &__frame0.nNextFilePos);
               Fog::Source::SFile::SFILE_Win32CloseHandle(hMapFile);
               return;
@@ -1248,7 +1248,7 @@ void __stdcall AUTOMAP_LoadLayerFromFile() {
           if (dwBytesRead != sFileEntry.dwExtraDataSize) {
             // VP-BEGIN [automap tolerance]: same stale-entry tolerance as
             // the floor read above.
-            D2_FREE(nErrorAddress);
+            D2_FREE(pCellData); // VP: [11th sync] was nErrorAddress - upstream's regen renamed the local
             AUTOMAP_InvalidateLayerEntry(0, hMapFile, &__frame0.nNextFilePos);
             Fog::Source::SFile::SFILE_Win32CloseHandle(hMapFile);
             return;
