@@ -1,49 +1,51 @@
-# Round summary — rev 147 (2026-11-08): docs-only — CONTRIBUTING carries the three-goal charter
+# Round summary — rev 148 (2026-11-08): docs-only — the R135 salvage field pass recorded
 
-Owner: "Update CONTRIBUTING, There is 3 goals. The 3rd is porting to Linux in the linux
-branch of the repo." No code, no gate-row changes, self-ID stays `Vanilla+0.0.8-R135`.
-This overlay re-carries the full working-tree delta vs `86cd10cd` (the R135 salvage code
-round plus this docs round), so it applies cleanly whether or not the earlier zips were
-applied.
+Owner: "R135 built on Win11, Talked to Gheed, Gamble doesnt crash." No code, no
+gate-row changes, self-ID stays `Vanilla+0.0.8-R135`. This overlay is **docs only**
+(4 files) and applies on top of the rev-147 state; the code tree is unchanged.
 
-## What changed (CONTRIBUTING.md only, plus round bookkeeping)
+## What the field pass clears
 
-- **Intro: two goals → three.** Goal 3 is **port to Linux — `d2linux`**, the native
-  Linux ELF that *is* the game host (no Windows, no Wine, no PE), living on the
-  **`linux` branch** of this repo; `main` stays the Windows/PE line.
-- **New section "If you want to help port the game to Linux"** (before License),
-  grounded in the branch's own docs: SDL3 host layer under `platform/linux/`, game
-  code stays i386 (the decompiled logic assumes the 32-bit x86 ABI), verified by
-  behavior — no byte-match possible for a port; charter/milestones/build live in
-  `docs/linux-port.md` on that branch; the two-tracks ground rule (Linux-driven
-  game-source changes are `#ifdef`-guarded and must leave the PE build
-  byte-identical); branch off `linux`, start from its docs.
-- **Housekeeping:** the house-rules suite count 519 → **520** (stale since rev 146's
-  gamble retirement row).
-- Branch facts verified before writing: `linux` forked at `c0a9a6e2` (2026-11-03,
-  R101-era tree — its README badge still shows 0.0.7-R101 / 380 gates), tip `15fac275`
-  (M2-R3), 25 ahead / 158 behind `main`; carries `docs/linux-port.md`,
-  `platform/linux/`, `tools/check-build-linux.sh`.
-- Round bookkeeping: handoff rev 147 (rev 146 offloaded verbatim to HISTORY **H49**);
-  README's gates badge (519/519) left for the release-refresh cadence, per the
-  rev-138 pattern.
+- **MSYS2 build + link green on Win11** — the compile gate of record passed for the
+  whole salvage delta: the four hand-ported TAKE commits (`228dfc62` SREG flags dword,
+  `d6746a33` the gamble table back to retail's one 0x198-byte layout, `83b045a4` the
+  16-bit TEXT/OVERHEAD getters, `c16c2a68` the seed/affix/NPC/inactive-item pointer
+  typing) plus the docs rounds. First real compiler+linker pass over the R135 tree,
+  after the sandbox's 13/13-TU syntax sweep.
+- **§M1 gamble click green** — talking to Gheed and opening the gamble screen does
+  not crash: the `d6746a33` retail single-table supersession **holds the R128 field
+  fix**. Track T (issue #32) stays closed. This was the salvage program's one
+  gameplay-risk item — it is now field-de-risked.
+- The Gheed talk also ran the re-typed npcmenu gossip path (the `83b045a4` 16-bit
+  getters) crash-free — encouraging for port 3, though the log marks were not
+  captured.
+
+## What changed (docs only)
+
+- **handoff.md → rev 148**: the field-pass record (outgoing rev-147 paragraph
+  offloaded verbatim to HISTORY **H50**, proof-enforced by the swap script);
+  §2 field table — gamble row and upstream-sync row updated with the pass;
+  §8 H-index gains H50.
+- **HISTORY.md**: **H50** = the rev-147 paragraph verbatim (the three-goal charter
+  round).
+- **SMOKE-CHECKLIST.md**: the per-round history line and the §M preamble note the
+  R135 re-check (§M1 green; §M2–M4 not yet re-run on R135). No check text changed —
+  the issue template does not need a regen.
+- **Still owed (narrowed, one session's worth)**: §M2 the `gamble:` log-chain
+  discriminators (`cache=` sane count, `bound=` 2..total, `gen done items=14` —
+  glance d2boot.log next session), §M3 one purchase, §M4 the same-session re-open,
+  the explicit 16-bit gossip log check (the `msgType0=` mark + the 0x31 echo), and
+  the item-0 habit (d2boot.log line 1 = `Vanilla+0.0.8-R135`).
 
 ## Suggested commit split
 
-1. `docs: CONTRIBUTING three-goal charter - goal 3 is the Linux port (linux branch)` —
-   CONTRIBUTING.md
-2. `docs: rev 147 - three-goal charter round; rev-146 offloaded to H49` — handoff.md,
+1. `docs: R135 salvage field pass - Win11 build green, Gheed gamble click holds` —
+   SMOKE-CHECKLIST.md
+2. `docs: rev 148 - field pass recorded; rev-147 offloaded to H50` — handoff.md,
    HISTORY.md, ROUND-SUMMARY.md
 
 ## Verification
 
-- `tools/check-vanilla-plus.sh`: **520/520** (no gate rows pin CONTRIBUTING; suite
-  unaffected by docs).
-- handoff budget: checked by the suite (16 KB cap).
+- `tools/check-vanilla-plus.sh`: **520/520** (docs-only round; the suite also
+  enforces the handoff 16 KB budget).
 - No code TUs touched — no syntax sweep needed this round.
-
-## Owner owes
-
-Unchanged from rev 146: the MSYS2 build + link + the R135 smoke belt (Gheed gamble
-click §M2 discriminators, one NPC-gossip click for the re-typed 16-bit path,
-d2boot.log line 1 `Vanilla+0.0.8-R135`).
