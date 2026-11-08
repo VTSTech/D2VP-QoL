@@ -1083,8 +1083,10 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # R131-R134 (glide-perf ground-tile rounds f1-f5) bumped the self-ID but missed the
 # suite's re-pin - the row below still expected R130 and the suite ran 518/519 red.
 # Re-pinned to R134 2026-11-08 (rev 145; the rollback base, tree == 8067c4a).
-gate "res: self-id 0.0.8-R134"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R134' 1
-gate "res: self-id R127 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R127' 0
+# Re-pinned to R135 2026-11-08 (rev 146; salvage round 1 - four hand-ports from the
+# paused window, self-ID bumped per the house rule).
+gate "res: self-id 0.0.8-R135"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 1
+gate "res: self-id R134 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R134' 0
 # ---- [vanilla-plus issue #32] rev 136: track T - the gamble-cache fix. Root
 # cause: D2Game/UNIT/SUNITNPC.cpp GAMBLE_GenerateGambleInventory read the
 # per-level upper-bound cache through vanilla .data adjacency
@@ -1096,10 +1098,16 @@ gate "res: self-id R127 gone"               Source/Game/Main.cpp                
 # nTxtGambleSize (ItemTbls.cpp), bounds-checked accessor GetGambleLevelCache
 # (ItemTbls.h/.cpp), consumer reads the accessor (SUNITNPC.cpp); gamble:
 # field marks added (gen start / roll / gen done).
-gate "gamble: cache at file scope (R128)"   Source/D2Common/DATATBLS/ItemTbls.cpp   'static int gnItemTblsCacheSize\[100\]' 1
-gate "gamble: cache accessor def (R128)"    Source/D2Common/DATATBLS/ItemTbls.cpp   'int __stdcall GetGambleLevelCache\(int32_t nLevel\)' 1
-gate "gamble: cache accessor decl (R128)"   Source/D2Common/DATATBLS/ItemTbls.h     'int __stdcall GetGambleLevelCache\(int32_t nLevel\);' 1
-gate "gamble: consumer uses accessor (R128)" Source/D2Game/UNIT/SUNITNPC.cpp        'GetGambleLevelCache\(\(int\)pPlayerUnit\)' 1
+# [R135 re-pin, 2026-11-08] upstream d6746a33 hand-ported: anLevelLimit[100] moved back
+# inside D2GambleTableStrc (retail-exact 0x198, issue #104 twin) and pTable typed int*;
+# R128's file-scope static + bounds-checked accessor retired with dated notes. Rows
+# re-pinned onto the new spellings, never deleted (house rule); the adjacency-gone and
+# field-mark rows carry over unchanged.
+gate "gamble: cache in-struct (R128->R135)" Source/D2Common/DATATBLS/ItemTbls.h      'int anLevelLimit\[100\]' 1
+gate "gamble: cache static retired (R128->R135)" Source/D2Common/DATATBLS/ItemTbls.cpp 'static int gnItemTblsCacheSize' 0
+gate "gamble: accessor def retired (R128->R135)" Source/D2Common/DATATBLS/ItemTbls.cpp 'int __stdcall GetGambleLevelCache' 0
+gate "gamble: accessor decl retired (R128->R135)" Source/D2Common/DATATBLS/ItemTbls.h  'int __stdcall GetGambleLevelCache\(int32_t nLevel\);' 0
+gate "gamble: consumer in-struct (R128->R135)" Source/D2Game/UNIT/SUNITNPC.cpp        'pGambleTable->anLevelLimit\[\(int\)pPlayerUnit\]' 1
 gate "gamble: adjacency artifact gone (R128)" Source/D2Game/UNIT/SUNITNPC.cpp      'pGambleTable\[1\]\.nSize' 0
 gate "gamble: gen start mark (R128)"        Source/D2Game/UNIT/SUNITNPC.cpp         'gamble: gen start npc=' 1
 gate "gamble: roll mark (R128)"             Source/D2Game/UNIT/SUNITNPC.cpp         'gamble: roll level=' 1

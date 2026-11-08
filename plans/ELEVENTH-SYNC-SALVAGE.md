@@ -1,5 +1,17 @@
 # Eleventh-sync salvage review (read-only, no merging)
 
+> **STATUS UPDATE (rev 146, 2026-11-08 — salvage round 1 SHIPPED):** owner go
+> "Salvage what you can, whatever is least likely to break anything." All four
+> TAKE items landed in R135 as independent drops: `228dfc62` (verbatim),
+> `d6746a33` (with the required VP clamp at the diagnostics mark; R128
+> static+accessor retired with dated notes; gate rows re-pinned),
+> `83b045a4` (Text.{h,cpp} verbatim; ui.cpp's quest-gossip marks threaded),
+> `c16c2a68` (all 11 real files clean; cross-sweep clean). `92f67c4f` stays
+> OPTIONAL/deferred. The scroll-box recon note below got a decisive addition:
+> the fork's scroll chain matches upstream's byte-match state, and
+> `a633e56a`'s `TEXT_UpdateScrollingText` reorder is the new prime suspect —
+> see handoff rev 146. Suite 520/520; self-ID `Vanilla+0.0.8-R135`.
+
 Owner decision of record (2026-11-08): **upstream syncs are PAUSED.** The eleventh
 sync (merge `17d8a51b`, R135) cost a full day and never reached a clean boot; when a
 build finally ran, textures were corrupted. The whole round was rolled back to

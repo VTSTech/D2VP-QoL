@@ -260,9 +260,9 @@ void __fastcall SUNITNPC_UpdateNpcInventory(::SGAMEDATA * pGame, D2UnitStrc * pI
 
     int32_t nStatLayer = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_throwable(pItem);
     if (nStatLayer) {
-      float fIsStackable;
-      fIsStackable = (float)D2Common::ITEMS::Items::IsStackable(pItem);
-      if (fIsStackable != 0.0) {
+      BOOL fIsStackable;
+      fIsStackable = D2Common::ITEMS::Items::IsStackable(pItem);
+      if (fIsStackable) {
         nMaxStack = D2Common::ITEMS::Items::ITEM_GetMaxStack(pItem);
         D2Common::Stats::StatsEx::STATLIST_SetUnitStat(pItem, UNITSTAT_quantity, nMaxStack, 0);
         if (pUnit) {
@@ -2170,13 +2170,17 @@ void __fastcall GAMBLE_GenerateGambleInventory(::SGAMEDATA * pGame, D2UnitStrc *
     nPlayerLevel = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pPlayerUnit, UNITSTAT_level, 0);
     D2SeedStrc* pSeed;
     pSeed = sunitproxy::SUNITPROXY_GetNpcControl(pGame);
-    // VP-BEGIN [gamble-cache-fix R128]: field-verify mark (issue #32) — cache= must read a sane
-    // count (2..gamble-row total), not a pointer/garbage dword; total= is the gamble.txt row count.
+    // VP-BEGIN [gamble-table R135]: supersedes the [gamble-cache-fix R128] accessor read — the
+    // cache is pGambleTable->anLevelLimit now (retail-exact 0x198 struct, upstream d6746a33).
+    // Unlike the roll site below (where the reused pPlayerUnit slot is clamped 5..99 before
+    // use), nPlayerLevel here comes straight from STATSEX_GetCurrentStat and nothing clamps
+    // it — so the VP clamp 0..99 stays: a bogus level reads index 0/99, never past the table.
+    int nCacheLevel = nPlayerLevel < 0 ? 0 : (nPlayerLevel > 99 ? 99 : nPlayerLevel);
     D2BOOT_MarkFmt("gamble: gen start npc=0x%04x level=%d cache=%d total=%d",
                    (unsigned)pUnit->nClassId, nPlayerLevel,
-                   D2Common::DATATBLS::ItemTbls::GetGambleLevelCache(nPlayerLevel),
+                   pGambleTable->anLevelLimit[nCacheLevel],
                    pGambleTable->nSize);
-    // VP-END [gamble-cache-fix R128]
+    // VP-END [gamble-table R135]
     nNpcGameData = 0;
     do {
       nSeedState = D2_SEED_NEXT(*pSeed);
@@ -2191,14 +2195,14 @@ void __fastcall GAMBLE_GenerateGambleInventory(::SGAMEDATA * pGame, D2UnitStrc *
         pPlayerUnit = (D2UnitStrc*)0x5;
       }
 
-      // VP-BEGIN [gamble-cache-fix R128]: was the vanilla data-adjacency read one struct
-      // width past pGambleTable, level-indexed (= nTxtGambleSize+8+4*level) — valid only
-      // where the 100-int cache sat adjacent in the original .data; the regen's separate
-      // statics turned it into an OOB read of unrelated globals (pointer read as a roll
-      // bound → seed%ptr → pTable+idx*4 AV READ — issue #32, every rev since the regen).
-      // The level is the pPlayerUnit slot reused as the clamped 5..99 roll level above.
-      nItemTableIdx = (uint32_t)D2Common::DATATBLS::ItemTbls::GetGambleLevelCache((int)pPlayerUnit);
-      // VP-END [gamble-cache-fix R128]
+      // VP-BEGIN [gamble-table R135]: the per-level cache is in-struct now (retail-exact 0x198,
+      // upstream d6746a33) — this is the vanilla expression again, reading
+      // pGambleTable->anLevelLimit[level]. [gamble-cache-fix R128] needed a bounds-checked
+      // accessor only because the regen had exiled the cache to a separate static (issue #32:
+      // a pointer read as a roll bound → seed%ptr → pTable+idx*4 AV READ). In-bounds by
+      // construction: the pPlayerUnit slot above is clamped 5..99 before this line.
+      nItemTableIdx = pGambleTable->anLevelLimit[(int)pPlayerUnit];
+      // VP-END [gamble-table R135]
       if ((int)nItemTableIdx <= 0) {
         nItemTableIdx = 0;
       } else if (nItemTableIdx & nItemTableIdx - 1) {
@@ -2213,7 +2217,7 @@ void __fastcall GAMBLE_GenerateGambleInventory(::SGAMEDATA * pGame, D2UnitStrc *
         nItemTableIdx = nItemTableIdx - 1 & nSeedState.nSeedLow;
       }
 
-      uRandLow = *(uint32_t*)((int)pGambleTable->pTable + nItemTableIdx * 4);
+      uRandLow = pGambleTable->pTable[nItemTableIdx];
       // VP-BEGIN [gamble-cache-fix R128]: field-verify mark (issue #32) — bound= is the
       // per-level cache value (must be a sane count, 2..total), pick= the rolled item class id.
       D2BOOT_MarkFmt("gamble: roll level=%d bound=%u pick=%u",
@@ -2290,17 +2294,17 @@ void __fastcall GAMBLE_GenerateGambleInventory(::SGAMEDATA * pGame, D2UnitStrc *
     } while (true);
 }
 
-void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pPlayerUnit, int32_t nNpcGameData) {
+void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pPlayerUnit, D2GameNpcStrc * nNpcGameData) {
     int nPlayerGUID = !pPlayerUnit ? -1 : pPlayerUnit->nUnitGUID;
-    int pInteractNode = *(int*)(nNpcGameData + 8);
+    D2NpcProxyInventoryStrc* pInteractNode = nNpcGameData->pProxyInventories;
     if (pInteractNode) {
       bool bAlreadyInteracted = false;
       do {
-        if (*(int*)(pInteractNode + 4) == nPlayerGUID) {
+        if (pInteractNode->nPlayerGUID == nPlayerGUID) {
           bAlreadyInteracted = true;
         }
 
-        pInteractNode = *(int*)(pInteractNode + 8);
+        pInteractNode = pInteractNode->pNext;
       } while (pInteractNode);
 
       if (bAlreadyInteracted) {
@@ -2308,7 +2312,7 @@ void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc 
       }
     }
 
-    GAMBLE_GenerateGambleInventory(pGame, pUnit, pPlayerUnit, nNpcGameData);
+    GAMBLE_GenerateGambleInventory(pGame, pUnit, pPlayerUnit, (int32_t)nNpcGameData);
 }
 
 // Dispatches an NPC interaction for a player. nMode==0: repair/trade path — registers player interaction, repairs items, and initialises inventory for vendor NPCs (Charsi=0x96, Fara=0xC6, Larzuk=0x203, Halbu=0xFC) if not yet done. nMode!=0 with a personal inventory: registers gamble interaction and validates it via SUNITNPC_ValidateNpcInteraction.
@@ -2329,7 +2333,7 @@ void __fastcall SUNITNPC_ProcessNpcAction(::SGAMEDATA * pGame, D2UnitStrc * pUni
       if (pNpcData->flags0x0C) {
         nGambleInteractNode = sunitproxy::SUNITPROXY_AddPlayerInteraction(pGame, pNpcData, pPlayerUnit_lcl);
         *(uint8_t*)&nGambleInteractNode->bGambling = 1;
-        SUNITNPC_ValidateNpcInteraction(pGame, pNpc, pPlayerUnit_lcl, (int32_t)pNpcData);
+        SUNITNPC_ValidateNpcInteraction(pGame, pNpc, pPlayerUnit_lcl, pNpcData);
         return;
       }
     } else {

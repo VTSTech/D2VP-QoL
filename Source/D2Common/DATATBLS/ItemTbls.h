@@ -49,10 +49,18 @@ struct D2BooksTxt {
     /* 0x1C */ char bookspellcode[4]; // d2bs binfields FIELDTYPE_RAW4
 };
 
+// VP-BEGIN [gamble-table R135]: anLevelLimit moves back inside the struct (retail-exact,
+// upstream d6746a33, issue #104): 8 + 400 = 0x198 bytes, one table like the original binary.
+// Supersedes [gamble-cache-fix R128]'s separate static + bounds-checked accessor — loader and
+// gamble generator now share pGambleTable->anLevelLimit directly, and pTable is int* so the
+// row reads lose their address arithmetic. Issue #32 history: the regen had split the cache
+// out of the struct, turning the vanilla adjacency read into an OOB read of unrelated globals.
 struct D2GambleTableStrc {
     /* 0x00 */ int nSize;
-    /* 0x04 */ void * pTable;
+    /* 0x04 */ int * pTable; // rows of the gamble item list (item code per row)
+    /* 0x08 */ int anLevelLimit[100]; // per item level, the number of gamble rows whose level is at most that
 };
+// VP-END [gamble-table R135]
 
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Common)
 struct D2ItemStatCostDescPriorityStrc {
@@ -211,12 +219,12 @@ struct D2LowQualityItemsTxt * __stdcall TXT_LowQualityItems_GetLine(int32_t nInd
 // QualityRatio.txt row lookup. Returns quality upgrade chance ratios for treasure class calculations. Used by ITEM_RollItemQuality to apply TC quality bonuses during quality cascade.
 struct D2ItemRatioTxt * __stdcall TXT_QualityRatio_GetLine(uint32_t nItemClassId, uint32_t dwUnused, uint16_t nQualityTier);
 struct D2GambleTableStrc * __stdcall GetGambleTableSize();
-// [gamble-cache-fix R128] bounds-checked read of the per-level gamble upper-bound cache
-// ([0..99]; 0 outside) — the accessor replacing the vanilla data-adjacency read (issue #32).
-// [tenth sync] declared OUTSIDE the module-private gate below: SUNITNPC's gamble
-// diagnostics (module D2Game) are the one cross-module caller; upstream's refile
-// also made the fork-side duplicate GetGambleTableSize line redundant (declared above).
-int __stdcall GetGambleLevelCache(int32_t nLevel);
+// [gamble-cache-fix R128 → gamble-table R135, 2026-11-08] GetGambleLevelCache retired with
+// its static: the cache lives in-struct now (D2GambleTableStrc::anLevelLimit, upstream
+// d6746a33) and the one game-side roll site is in-bounds by construction (the reused
+// pPlayerUnit slot is clamped 5..99 immediately above the read), so the accessor's bounds
+// check has no remaining untrusted caller. The [tenth sync] note about this line sitting
+// outside the module gate retired with it.
 // @sourcefile .\DATATBLS\ItemTbls.cpp
 void __stdcall ITEMTBLS_CopyRunewordRecord(int32_t nRunewordId, char * pSourceRecord);
 // Module-private: no other module references these
@@ -275,7 +283,7 @@ void __stdcall ITEMTBLS_FreeItemStatCost();
 void __fastcall TXT_AllocTxt_properties(struct D2PoolManagerStrc * pMemory);
 void __stdcall ITEMTBLS_FreeProperties();
 int TXT_Gamble_SortFunction(LPCVOID pEntry1, LPCVOID pEntry2);
-// One-time loader for gamble.txt. Compiles the binary "gamble" table (code field only), resolves each item code to a class id via the items link, then sorts the entries by level and builds two side-tables: GambleTable (sorted class-id array) and gnItemTblsCacheSize (per-level upper-bound cache for [1..99]).
+// One-time loader for gamble.txt. Compiles the binary "gamble" table (code field only), resolves each item code to a class id via the items link, then sorts the entries by level and builds two side-tables: GambleTable (sorted class-id array) and the per-level row counts (anLevelLimit) (per-level upper-bound cache for [1..99]).
 // @sourcefile .\DATATBLS\ItemTbls.cpp
 void __fastcall TXT_AllocTxt_gamble(struct D2PoolManagerStrc * pMemory);
 // @sourcefile .\DATATBLS\ItemTbls.cpp

@@ -457,7 +457,8 @@ PR) so acceptance is frictionless.
   went invisible to their one cross-module caller the moment
   `D2_MODULE_LIBRARIES` got defined; the fix re-homes the DECLARATION outside
   the gate with a dated note (the definition stays beside the state it
-  touches) — never weaken the gate; (2) a private upstream symbol a fork
+  touches) — never weaken the gate; [GetGambleLevelCache retired R135 —
+  the cache moved in-struct, handoff rev 146]; (2) a private upstream symbol a fork
   feature truly needs gets a fork-owned bridge TU inside the owning module
   (`Source/D2Sound/VanillaPlusSound.cpp`, claimed by the D2Sound module where
   the private is visible), never a gate edit; (3) an include-block conflict

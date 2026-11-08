@@ -111,17 +111,11 @@ D2GemsTableStrc nTxtGemsSize = {}; D2_GLOBAL_GUARD(nTxtGemsSize, "D2Common::DATA
 static D2RareAffixTableStrc gsRareAffixTable = {}; D2_STATIC_GUARD(gsRareAffixTable, "gsRareAffixTable");
 static D2RareAffixTableStrc pTxtRareAffixes = {}; D2_STATIC_GUARD(pTxtRareAffixes, "pTxtRareAffixes");
 static D2GambleTableStrc nTxtGambleSize = {}; D2_STATIC_GUARD(nTxtGambleSize, "nTxtGambleSize");
-// VP-BEGIN [gamble-cache-fix R128]: the per-level gamble upper-bound cache moves up here from a
-// TXT_AllocTxt_gamble function-local. In the original binary it sat immediately after
-// nTxtGambleSize in .data, and the only consumer (D2Game GAMBLE_GenerateGambleInventory) read
-// it via vanilla data-adjacency pointer arithmetic — (&pGambleTable[1].nSize)[level], i.e.
-// nTxtGambleSize+8+4*level. As a separate static that address math reads unrelated .bss
-// neighbors instead (nTxtItemRatioSize, the pTxtItemRatio heap pointer, the quality/books
-// table structs below) — a pointer read as a roll bound gives seed%ptr, and pTable+idx*4
-// faults: issue #32, click-Gamble AV READ, on every rev since the regen. Read it via the
-// bounds-checked GetGambleLevelCache accessor now.
-static int gnItemTblsCacheSize[100] = {}; D2_STATIC_GUARD(gnItemTblsCacheSize, "gnItemTblsCacheSize");
-// VP-END [gamble-cache-fix R128]
+// [gamble-cache-fix R128 → gamble-table R135, 2026-11-08] gnItemTblsCacheSize retired: the
+// per-level cache moved back inside the struct as nTxtGambleSize.anLevelLimit[100] (retail-exact
+// 0x198 layout, upstream d6746a33 / issue #104), restoring the original binary's single-table
+// .data adjacency that issue #32 diagnosed. R128's file-scope static + bounds-checked accessor
+// GetGambleLevelCache are superseded; consumers read pGambleTable->anLevelLimit directly.
 static int nTxtItemRatioSize = 0; D2_STATIC_GUARD(nTxtItemRatioSize, "nTxtItemRatioSize");
 static D2ItemRatioTxt * pTxtItemRatio = 0; D2_STATIC_GUARD(pTxtItemRatio, "pTxtItemRatio");
 static D2QualityItemsTableStrc nTxtQualityItemsSize = {}; D2_STATIC_GUARD(nTxtQualityItemsSize, "nTxtQualityItemsSize");
@@ -1771,11 +1765,11 @@ int TXT_Gamble_SortFunction(LPCVOID pEntry1, LPCVOID pEntry2) {
     return -(uint32_t)(*(uint32_t*)((int)pEntry2 + 4) > *(uint32_t*)((int)pEntry1 + 4));
 }
 
-// One-time loader for gamble.txt. Compiles the binary "gamble" table (code field only), resolves each item code to a class id via the items link, then sorts the entries by level and builds two side-tables: GambleTable (sorted class-id array) and gnItemTblsCacheSize (per-level upper-bound cache for [1..99]).
+// One-time loader for gamble.txt. Compiles the binary "gamble" table (code field only), resolves each item code to a class id via the items link, then sorts the entries by level and builds two side-tables: GambleTable (sorted class-id array) and the per-level row counts (anLevelLimit) (per-level upper-bound cache for [1..99]).
 // @sourcefile .\DATATBLS\ItemTbls.cpp
 void __fastcall TXT_AllocTxt_gamble(D2PoolManagerStrc * pMemory) {
-    // [gamble-cache-fix R128] gnItemTblsCacheSize moved to file scope next to nTxtGambleSize —
-    // it was one of the original globals, and the gamble consumer needs it via the accessor.
+    // [gamble-cache-fix R128 → gamble-table R135] the cache is nTxtGambleSize.anLevelLimit now —
+    // written in place, one table in the original sense (upstream d6746a33).
 
     int32_t nItemClassId;
     int nLevelCacheIdx;
@@ -1787,7 +1781,7 @@ void __fastcall TXT_AllocTxt_gamble(D2PoolManagerStrc * pMemory) {
     };
     D2GambleTxt* pTxtGamble = (D2GambleTxt*)DataTbls::CompileTxt(pMemory, "gamble", gamble, &nTxtGambleSize.nSize, 0xc);
     if (nTxtGambleSize.nSize) {
-      nTxtGambleSize.pTable = D2_ALLOC_POOL_AT(nullptr, nTxtGambleSize.nSize * 4, ".\\DATATBLS\\ItemTbls.cpp", 0x7db);
+      nTxtGambleSize.pTable = (int*)D2_ALLOC_POOL_AT(nullptr, nTxtGambleSize.nSize * 4, ".\\DATATBLS\\ItemTbls.cpp", 0x7db);
       nIdx = 0;
       if (nTxtGambleSize.nSize > 0) {
         pGambleEntry = &pTxtGamble->nItemClassId;
@@ -1811,19 +1805,19 @@ void __fastcall TXT_AllocTxt_gamble(D2PoolManagerStrc * pMemory) {
     }
 
     for (nIdx = 0; nIdx < nTxtGambleSize.nSize; nIdx++) {
-      *(int*)((int)nTxtGambleSize.pTable + nIdx * 4) = pTxtGamble[nIdx].nItemClassId;
+      nTxtGambleSize.pTable[nIdx] = pTxtGamble[nIdx].nItemClassId;
     }
 
-    gnItemTblsCacheSize[0] = 2;
+    nTxtGambleSize.anLevelLimit[0] = 2;
     nIdx = 1;
     do {
-      gnItemTblsCacheSize[nIdx] = nTxtGambleSize.nSize;
+      nTxtGambleSize.anLevelLimit[nIdx] = nTxtGambleSize.nSize;
       nLevelCacheIdx = 0;
       if (nTxtGambleSize.nSize > 0) {
         pGambleEntry = &pTxtGamble->nLevel;
         do {
           if (nIdx < *pGambleEntry) {
-            gnItemTblsCacheSize[nIdx] = nLevelCacheIdx;
+            nTxtGambleSize.anLevelLimit[nIdx] = nLevelCacheIdx;
             break;
           }
 
@@ -1855,18 +1849,10 @@ D2GambleTableStrc * __stdcall GetGambleTableSize() {
     return &nTxtGambleSize;
 }
 
-// VP-BEGIN [gamble-cache-fix R128]: bounds-checked accessor for the per-level gamble cache —
-// the replacement for the vanilla data-adjacency read in GAMBLE_GenerateGambleInventory
-// (issue #32). Returns 0 outside [0,99] so a caller bug degrades to an empty roll, never a
-// wild pTable index.
-int __stdcall GetGambleLevelCache(int32_t nLevel) {
-    if (nLevel < 0 || nLevel >= 100) {
-      return 0;
-    }
-
-    return gnItemTblsCacheSize[nLevel];
-}
-// VP-END [gamble-cache-fix R128]
+// [gamble-cache-fix R128 → gamble-table R135, 2026-11-08] GetGambleLevelCache retired with
+// its static: anLevelLimit is in-struct now and the game-side roll site is in-bounds by
+// construction (the reused pPlayerUnit slot is clamped 5..99 immediately above the read);
+// the one remaining unclamped read (the diagnostics mark) carries its own VP clamp 0..99.
 
 // Breadth-first traversal of the itemtypes.txt equiv1/equiv2 parent-type tree to test whether nItemTypeId is a subtype of nTargetTypeId. Returns 1 if nTargetTypeId &lt; 1 (wildcard), 1 if target found in the type hierarchy, 0 if out-of-range or stack depth exceeds 124. Used by item-type membership checks.
 BOOL __fastcall ITEMTBLS_CheckItemTypeRecursive(int32_t nItemTypeId, int32_t nTargetTypeId) {

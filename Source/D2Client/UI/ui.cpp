@@ -10050,13 +10050,11 @@ void __stdcall CHAR_FreePanelAssets_NoOp_Unref_004b3330() {
 void __fastcall UI_HandleNpcInteractionPacket(uint8_t nUpdateType, int32_t nUnitGUID, char * pQuestBuffer, uint8_t nActionType) {
     short int nMessage;
     bool bIsSideNpc;
+    uint16_t nMsgTypeToFind;
     D2GSPacketSrv0x27_TextStrc* pOverheadTextPtr;
     BOOL bMonInteractFlag;
     D2UnitStrc* pPlayerUnit_lcl;
-    uint16_t wMsgType0;
-    uint32_t dwMsgType;
     int32_t nLine;
-    short int wMsgType1;
     if (nUpdateType == 6) {
       D2Common::QuestRecord::ReadQuestRecordFromBuffer(npcmenu::gpNpcMenuBitBuffer, pQuestBuffer, 0x60, 0);
       // VP-BEGIN [quest-gossip-mark]: record-only interact variant — no menu is built, no 0x31 echo can happen
@@ -10102,7 +10100,7 @@ void __fastcall UI_HandleNpcInteractionPacket(uint8_t nUpdateType, int32_t nUnit
       exit(-1);
     }
 
-    dwMsgType = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadTextPtr, 0);
+    nMessage = D2Common::Text::OVERHEAD_GetMessageType0(pOverheadTextPtr, 0);
     nLine = pNpcUnit->nClassId;
     bMonInteractFlag = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetFlagsByBitOffset(nLine, interact);
     if (bMonInteractFlag && nLine != 0x219 && nLine != 0x21a && nLine != 0x21b && nLine != 0x20f) {
@@ -10123,20 +10121,19 @@ void __fastcall UI_HandleNpcInteractionPacket(uint8_t nUpdateType, int32_t nUnit
       return;
     }
 
-    wMsgType0 = (uint16_t)dwMsgType;
     gnNpcMenuScrollMessageHead = 0;
-    // VP-BEGIN [quest-gossip-mark]: the branch decider — 0xffff sends the menu down a no-echo path (issue #13 discriminator)
-    D2BOOT_MarkFmt("npc menu: msgType0=0x%04x (0xffff = no scroll msg)", (unsigned)dwMsgType & 0xffff);
+    // VP-BEGIN [quest-gossip-mark]: the branch decider — 0xffff sends the menu down a no-echo path (issue #13 discriminator); id now arrives 16-bit clean (R135), stale pointer bits gone
+    D2BOOT_MarkFmt("npc menu: msgType0=0x%04x (0xffff = no scroll msg)", (unsigned)(uint16_t)nMessage);
     // VP-END [quest-gossip-mark]
-    if (wMsgType0 != 0xffff) {
+    if (nMessage != -1) {
       UI_CloseActivePanels(0, 0);
-      gnNpcMenuRepairCostGold = wMsgType0;
-      Text::TEXT_ShowNpcDialog(pNpcUnit, wMsgType0, 1);
-      npcmenu::NPCMENU_AddHandledMessageId(wMsgType0);
-      gnNpcMenuTradeActionGold = npcmenu::NPCMENU_FindNextUnhandledMessage(wMsgType0);
-      GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT(0x31, pNpcUnit->nUnitGUID, (uint16_t)dwMsgType);
+      gnNpcMenuRepairCostGold = nMessage;
+      Text::TEXT_ShowNpcDialog(pNpcUnit, nMessage, 1);
+      npcmenu::NPCMENU_AddHandledMessageId(nMessage);
+      gnNpcMenuTradeActionGold = npcmenu::NPCMENU_FindNextUnhandledMessage(nMessage);
+      GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT(0x31, pNpcUnit->nUnitGUID, (uint32_t)(uint16_t)nMessage);
       // VP-BEGIN [quest-gossip-mark]: log the gossip id actually sent (issue #13)
-      D2BOOT_MarkFmt("c2s 0x31 gossip send npc=%08x gossip=0x%04x", (unsigned)pNpcUnit->nUnitGUID, (unsigned)(dwMsgType & 0xffff));
+      D2BOOT_MarkFmt("c2s 0x31 gossip send npc=%08x gossip=0x%04x", (unsigned)pNpcUnit->nUnitGUID, (unsigned)(uint16_t)nMessage);
       // VP-END [quest-gossip-mark]
       npcmenu::gnNpcMenuActiveMode = 1;
       Text::TEXT_SetScrollCompleteCallback((pfnTextScrollComplete)npcmenu::NPCMENU_OnScrollComplete, nullptr);
@@ -10145,7 +10142,7 @@ void __fastcall UI_HandleNpcInteractionPacket(uint8_t nUpdateType, int32_t nUnit
       return;
     }
 
-    dwMsgType = D2Common::Text::OVERHEAD_GetMessageType1(pOverheadTextPtr, 0);
+    nMsgTypeToFind = D2Common::Text::OVERHEAD_GetMessageType1(pOverheadTextPtr, 0);
     if (pNpcUnit->nClassId != 0x20f) {
       UNIT::CUnit::CLIENT_TurnPlayerToFaceUnit(pNpcUnit);
     }
@@ -10153,12 +10150,11 @@ void __fastcall UI_HandleNpcInteractionPacket(uint8_t nUpdateType, int32_t nUnit
       D2Common::PATH::DynamicPath::ZeroPathPointsSize(pNpcUnit->pPath.pDynamicPath);
     }
 
-    wMsgType1 = (short int)dwMsgType;
-    if (wMsgType1 != -1) {
+    if (nMsgTypeToFind != 0xffff) {
       Inv::INV_ResetHoverAndContextState();
       UI_CloseActivePanels(0, 0);
-      gnNpcMenuRepairCostGold = wMsgType1;
-      gnNpcMenuTradeActionGold = npcmenu::NPCMENU_FindNextUnhandledMessage(wMsgType1);
+      gnNpcMenuRepairCostGold = nMsgTypeToFind;
+      gnNpcMenuTradeActionGold = npcmenu::NPCMENU_FindNextUnhandledMessage(nMsgTypeToFind);
       npcmenu::NPCMENU_OpenInteraction(pNpcUnit);
       gnNpcMenuShopMode = 0;
       // VP-BEGIN [quest-gossip-mark]: interaction path — shop/menu opens, no 0x31 echo
