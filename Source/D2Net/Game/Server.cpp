@@ -2,11 +2,33 @@
 
 #include "Source/D2Net/Game/Server.h"
 #include "Source/D2Net/SRC/Client.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Net/in_addr.h"
+#include "Source/Fog/Src/D2Net.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/QServer/QServer.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "Source/D2Hell/D2Hell.h"
 #include "Source/D2Net/D2Net.globals.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/MiniPanel.h"
 #include "Source/D2Net/Game/Server.data.h"
 #include "Source/D2Net/SRC/Client.data.h"
+#include "Source/Fog/D2QServerStrc.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -243,18 +265,18 @@ int32_t __fastcall NET_D2GS_CLIENT_CheckIfPacketSizeIsCorrect(uint8_t * pbPacket
     }
 
     uint8_t byOpcode = *pbPacket;
-    int32_t pPacketEnd = (int32_t)pbPacket;
-    int32_t nPacketSizeResult = NET_D2GS_CLIENT_GetOutgoingPacketSizeFromTableAndVariableSize((char*)pbPacket, nSize, &pPacketEnd);
+    uint8_t* pPacketEnd = pbPacket;
+    int32_t nPacketSizeResult = NET_D2GS_CLIENT_GetOutgoingPacketSizeFromTableAndVariableSize((char*)pbPacket, nSize, (int*)&pPacketEnd);
     if (!nPacketSizeResult) {
       return 3;
     }
-    if (byOpcode >= 0x71 && byOpcode != 0xff || (uint16_t)pPacketEnd > 0x204) {
+    if (byOpcode >= 0x71 && byOpcode != 0xff || (uint16_t)(uintptr_t)pPacketEnd > 0x204) {
       return 4;
     }
-    if ((int)(pPacketEnd & 0xffffU) <= (int)nSize) {
+    if ((int)(uint16_t)(uint32_t)pPacketEnd <= (int)nSize) {
       int nTokenMatch;
       *pnUnknown = 0;
-      *pnPacketSize = pPacketEnd & 0xffffU;
+      *pnPacketSize = (uint16_t)(uint32_t)pPacketEnd;
       if (byOpcode < 0x67) {
         *pnPacketClass = 1;
       } else if (byOpcode < 0x71) {
@@ -463,7 +485,7 @@ void __stdcall NET_WaitForEmptyEvent(DWORD dwTimeout) {
 }
 
 void __stdcall _NullSub() {
-    Fog::Src::_NullSubRet4(pQServer);
+    Fog::Src::_NullSubRet4((uint32_t)pQServer);
 }
 
 // @wasnamed _NullSub - one name on two different functions.
@@ -475,7 +497,7 @@ void __stdcall _NullSubRet8(uint32_t dwParam) {
 
 int32_t __fastcall NET_D2GS_SERVER_Send_0xAF01(D2QServerStrc * pQServer, uint32_t nClientId, char * pszSourceFile, int nLine) {
     uint8_t aPacketFrame[4];
-    *(uint16_t*)((char*)&aPacketFrame + 2) = (uint16_t)((uintptr_t)pQServer >> 0x10);
+    *(uint16_t*)((char*)&aPacketFrame + 2) = (uint16_t)((uint32_t)pQServer >> 0x10);
     aPacketFrame[0] = 0xaf;
     aPacketFrame[1] = 1;
     NET_D2GS_SERVER_SendPacketToClient('\0', nClientId, (char*)aPacketFrame, 2);

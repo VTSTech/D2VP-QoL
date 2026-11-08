@@ -4,14 +4,80 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Common)
 #error "D2Common header included by a module that may not use D2Common (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Common) && !defined(D2_LOADS_D2Common)
-#error "internal D2Common header included from another module; include D2Common's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Common/DATATBLS/MonsterTbls.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/AnimTbls.h"
+#include "Source/D2Common/DATATBLS/DataTbls.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Txt/D2TxtLinkNodeStrc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Fog.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/Excel.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -19,8 +85,6 @@
 
 namespace D2Common::DATATBLS::MonsterTbls {
 
-#ifndef D2_DEFINED_INLINE_00451f80
-#define D2_DEFINED_INLINE_00451f80
 __attribute__((noinline)) inline D2MonStatsTxt * __fastcall TXT_MonStats_GetLine(int32_t nMonStatsId) {
     if (nMonStatsId >= 0 && nMonStatsId < ITEMS::Items::sgptDataTable->nTxtMonStatsSize) {
       return ITEMS::Items::sgptDataTable->pTxtMonStats + nMonStatsId;
@@ -28,7 +92,6 @@ __attribute__((noinline)) inline D2MonStatsTxt * __fastcall TXT_MonStats_GetLine
 
     return nullptr;
 }
-#endif // D2_DEFINED_INLINE_00451f80
 
 __attribute__((noinline)) inline D2MonStats2Txt * __fastcall TXT_MonStats_GetMonStats2(int32_t nClassId) {
     if (nClassId >= 0 && nClassId < ITEMS::Items::sgptDataTable->nTxtMonStatsSize) {
@@ -42,8 +105,6 @@ __attribute__((noinline)) inline D2MonStats2Txt * __fastcall TXT_MonStats_GetMon
     return nullptr;
 }
 
-#ifndef D2_DEFINED_INLINE_00457490
-#define D2_DEFINED_INLINE_00457490
 __attribute__((noinline)) inline BOOL __fastcall TXT_MonStats_GetFlagsByBitOffset(int32_t nMonStatsId, TxtMonStatsField0x0c nBitOffset) {
     D2MonStatsTxt* pMonStatsTxt = nMonStatsId >= 0 && nMonStatsId < ITEMS::Items::sgptDataTable->nTxtMonStatsSize ? ITEMS::Items::sgptDataTable->pTxtMonStats + nMonStatsId : nullptr;
     if (!pMonStatsTxt) {
@@ -52,7 +113,6 @@ __attribute__((noinline)) inline BOOL __fastcall TXT_MonStats_GetFlagsByBitOffse
 
     return (uint32_t)(uint8_t)pMonStatsTxt->Code[((int)nBitOffset >> 3) - 4] & Fog::BitBuffer::gadwBitMasks[nBitOffset & primeevil];
 }
-#endif // D2_DEFINED_INLINE_00457490
 
 __attribute__((noinline)) inline int32_t __fastcall TXT_MonStats_GetBaseId(D2UnitStrc * pUnit) {
     if (!pUnit || pUnit->eUnitType != UNIT_MONSTER) {
@@ -82,8 +142,6 @@ __attribute__((noinline)) inline BOOL __fastcall TXT_MonStats_MonStats2_GetFlags
     return (uint32_t)pMonStatsExTxt->aComponents[((int)nBitOffset >> 3) - 0x11] & Fog::BitBuffer::gadwBitMasks[nBitOffset & corpseSel];
 }
 
-#ifndef D2_DEFINED_INLINE_00463900
-#define D2_DEFINED_INLINE_00463900
 __attribute__((noinline)) inline int32_t __fastcall ValidateClassId(int32_t nClassId) {
     if (!(nClassId < 0 || nClassId >= ITEMS::Items::sgptDataTable->nTxtMonStatsSize)) {
       return nClassId;
@@ -92,7 +150,6 @@ __attribute__((noinline)) inline int32_t __fastcall ValidateClassId(int32_t nCla
     nClassId = -1;
     return nClassId;
 }
-#endif // D2_DEFINED_INLINE_00463900
 
 __attribute__((noinline)) inline uint32_t __fastcall GetSomeMonsterStatFlag(int32_t nMonsterClassId, uint32_t nStatBitIndex) {
     D2MonStats2Txt* pMonStatsExTxt = nullptr;
@@ -107,8 +164,6 @@ __attribute__((noinline)) inline uint32_t __fastcall GetSomeMonsterStatFlag(int3
     return (uint32_t)pMonStatsExTxt->mDT[(int)nStatBitIndex >> 3] & Fog::BitBuffer::gadwBitMasks[nStatBitIndex & 7];
 }
 
-#ifndef D2_DEFINED_INLINE_004e6c50
-#define D2_DEFINED_INLINE_004e6c50
 __attribute__((noinline)) inline int32_t __fastcall CheckMonStatId(int32_t nMonStatsId) {
     if (!(nMonStatsId < 0 || nMonStatsId >= ITEMS::Items::sgptDataTable->nTxtMonStatsSize)) {
       return nMonStatsId;
@@ -117,6 +172,5 @@ __attribute__((noinline)) inline int32_t __fastcall CheckMonStatId(int32_t nMonS
     nMonStatsId = -1;
     return nMonStatsId;
 }
-#endif // D2_DEFINED_INLINE_004e6c50
 
 } // namespace D2Common::DATATBLS::MonsterTbls

@@ -262,7 +262,8 @@
         "D2UnitStrc",
         "SGAMEDATA",
         "eAct",
-        "eD2LevelId"
+        "eD2LevelId",
+        "int32_t"
       ]
     },
     {

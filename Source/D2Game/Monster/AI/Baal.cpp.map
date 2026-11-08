@@ -251,7 +251,6 @@
         "AI_BAAL_HasPowerfulSkill"
       ],
       "usedTypes": [
-        "D2AiGeneralStrc",
         "D2MonsterLevelDataStrc",
         "D2RoomStrc",
         "D2SeedStrc",
@@ -318,7 +317,7 @@
         "AI_BAAL_CountPowerfulSkills"
       ],
       "usedTypes": [
-        "D2UnitStrc"
+        "int32_t"
       ]
     },
     {
@@ -353,7 +352,6 @@
         "SetupUpdateEvent_AttachEventSound"
       ],
       "usedTypes": [
-        "D2AiGeneralStrc",
         "D2DynamicPathStrc",
         "D2RoomStrc",
         "D2SeedStrc",
@@ -397,7 +395,6 @@
         "GetTxtMaxMana"
       ],
       "usedTypes": [
-        "D2AiGeneralStrc",
         "D2MonStatsTxt",
         "D2MonsterAiCmdStrc",
         "D2RoomCoordListStrc",

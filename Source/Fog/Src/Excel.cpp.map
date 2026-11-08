@@ -217,9 +217,6 @@
       "calledFunctions": [
         "FOG_ParseIntField",
         "FOG_GetRecordField"
-      ],
-      "usedTypes": [
-        "D2TxtLinkStrc"
       ]
     },
     {

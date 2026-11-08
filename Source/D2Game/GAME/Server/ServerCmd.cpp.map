@@ -35,10 +35,6 @@
       "calledFunctions": [
         "Unreferenced_0053b140",
         "WriteValueToBitBuffer"
-      ],
-      "usedTypes": [
-        "D2BitBufferStrc",
-        "uint16_t"
       ]
     },
     {
@@ -53,9 +49,6 @@
       "namespace": "D2Game::GAME::Server::ServerCmd",
       "calledFunctions": [
         "Unreferenced_0053b180"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {

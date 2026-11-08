@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -31,7 +28,6 @@ namespace D2Client::Engine {
 // both references (00460568, 00460608) only register the address with MOV ECX,0x460490 / CALL
 // 00451bb0 - neither loads ESI. Here the funcdef was right and the implementation was the outlier.
 uint32_t __stdcall fpGameLoopFunction(uint32_t dwUnused);
-BOOL fpRequiredUserAction();
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Client)
 void __fastcall LOADER_SetConnectionLostFlag_Unref_0045ae50(BOOL bConnectionLost);
@@ -59,15 +55,16 @@ void __stdcall INPUT_CharScreenDualButtonForce(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall INPUT_CharScreenDualButtonCancel(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall LOADER_FreePopupImages();
 void __fastcall LOADER_SetConnectionLostFlag(BOOL bConnectionLost);
+BOOL fpRequiredUserAction();
 // Sets draw function mode, registers event handlers, runs game loop with custom fpGameLoopFunction, then cleans up
 uint32_t __fastcall ENGINE_RunDrawModeGameLoop(int32_t nDrawMode);
 // Alternate draw mode game loop with different event handler table and loop function
 uint32_t ENGINE_RunDrawModeGameLoopAlt(int32_t nDrawMode, uint32_t dwRetVal);
 void __fastcall CLIENT_SetUnitFlag(struct D2UnitStrc * pUnit, uint16_t wFlag, BOOL bSet);
 void __fastcall Unreferenced_00460760(int param_1, int param_2);
-int __fastcall Unreferenced_004607d0(struct D2UnitStrc * param_1);
-int __fastcall Unreferenced_004607f0(struct D2UnitStrc * param_1);
-int __fastcall Unreferenced_00460810(struct D2UnitStrc * param_1);
+int __fastcall Unreferenced_004607d0(int param_1);
+int __fastcall Unreferenced_004607f0(int param_1);
+int __fastcall Unreferenced_00460810(int param_1);
 void __stdcall CLIENT_SetAnimModeAndMoveToCurrentPos(eD2PlayerAnimMode nAnimMode, BOOL bMovePlayerUnit, struct D2UnitStrc * pUnit);
 void __stdcall CLIENT_PreloadMonsterCofsInAdjacentRooms();
 void __fastcall CLIENT_UpdateUnitLightRadius(struct D2UnitStrc * pUnit, int32_t nRadiusBonus);

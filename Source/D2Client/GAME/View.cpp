@@ -2,7 +2,8 @@
 
 #include "Source/D2Client/GAME/View.h"
 #include "Source/D2Client/Core/Archive.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GameViewStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/D2LightMapStrc.h"
@@ -10,24 +11,145 @@
 #include "Source/D2Client/Draw/Weather.h"
 #include "Source/D2Client/GAME/Draw.h"
 #include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Wall2.h"
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/UI/Path.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Game/D2Game.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgStrc.h"
+#include "Source/D2Common/Drlg/Transform.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2DDraw/Renderer/DirectDraw.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/Seed.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/Draw/LightMap.data.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
 #include "Source/D2Client/GAME/View.data.h"
+#include "Source/D2Common/Seed.inline.h"
+#include "Source/D2Game/Seed.inline.h"
 // VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
 #include "Source/D2Client/UI/VanillaPlusCore.h"
-#include "Redivivus/d2_boot.h" // [d2boot] direct include: 11th-sync include refactor broke the transitive path
 // VP-END [resolution site-5]
+#include "Redivivus/d2_boot.h" // [d2boot] issue #26 D3D perspective-toggle triage marks [R96]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -81,7 +203,7 @@ uint8_t * gpViewPalByteTable32x40 = 0; D2_GLOBAL_GUARD(gpViewPalByteTable32x40, 
 } // namespace D2Client::GAME::View
 static DC6 * gpAncientsBgDC6 = 0; D2_STATIC_GUARD(gpAncientsBgDC6, "gpAncientsBgDC6");
 static DC6 * gnDrawBackgroundRenderOffset = 0; D2_STATIC_GUARD(gnDrawBackgroundRenderOffset, "gnDrawBackgroundRenderOffset");
-static uint32_t gnFrameDrawCounter = 0; D2_STATIC_GUARD(gnFrameDrawCounter, "gnFrameDrawCounter");
+uint32_t gnFrameDrawCounter = 0; D2_GLOBAL_GUARD(gnFrameDrawCounter, "gnFrameDrawCounter");
 
 namespace D2Client::GAME::View {
 
@@ -161,12 +283,12 @@ uint8_t * __stdcall VIEW_AllocByteTable(uint32_t nDim, int32_t nSteps) {
     return pTable;
 }
 
-void __fastcall Unreferenced_00475c30(LPVOID param_1) {
+void __fastcall Unreferenced_00475c30(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 // Allocates a (nDim × nDim × (nSteps+1)) pointer table via D2MEM_VirtualAlloc and fills it with pointers into gPaletteTransitionTable for each interpolated palette entry. Used to build lighting/palette blend lookup tables for the game view renderer. Returns the base pointer of the allocated table.
@@ -214,12 +336,12 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable(uint32_t nDim, uint32_t nSte
     return pTable;
 }
 
-void __fastcall Unreferenced_00475d20(LPVOID param_1) {
+void __fastcall Unreferenced_00475d20(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 uint8_t * * __stdcall VIEW_AllocPalettePointerTable2(uint32_t nDim, int32_t nSteps) {
@@ -257,12 +379,12 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable2(uint32_t nDim, int32_t nSte
     return pTable;
 }
 
-void __fastcall Unreferenced_00475de0(LPVOID param_1) {
+void __fastcall Unreferenced_00475de0(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 void __stdcall VIEW_InitLookupTables() {
@@ -733,13 +855,13 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
       nScrollOffset = 0;
       do {
         nCloudSeedVal = D2Common::Seed::UNIT_GetModuloFromSeed(pAncientsCloudSeed, UI::SpellSel::WindowSizeX << 4);
-        *(uint32_t*)((char*)gaAncientsCloudXPos + nScrollOffset) = nCloudSeedVal;
+        *(uint32_t*)((int)gaAncientsCloudXPos + nScrollOffset) = nCloudSeedVal;
         ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
         *pAncientsCloudSeed = ullSeedValue;
-        *(uint32_t*)((char*)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 0xfa;
+        *(uint32_t*)((int)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 0xfa;
         ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
         *pAncientsCloudSeed = ullSeedValue;
-        *(uint32_t*)((char*)gaAncientsCloudVelocities + nScrollOffset) = (ullSeedValue.nSeedLow & 0xf) + 8;
+        *(uint32_t*)((int)gaAncientsCloudVelocities + nScrollOffset) = (ullSeedValue.nSeedLow & 0xf) + 8;
         nScrollOffset += 4;
       } while (nScrollOffset < 0x28);
 
@@ -749,12 +871,12 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
     nScrollOffset = 0;
     do {
       nCloudIdx = UI::SpellSel::WindowSizeX;
-      *(int*)((char*)gaAncientsCloudXPos + nScrollOffset) += *(int*)((char*)gaAncientsCloudVelocities + nScrollOffset);
-      if (*(int*)((char*)gaAncientsCloudXPos + nScrollOffset) > (nCloudIdx + 0x170) * 0x10) {
-        *(uint32_t*)((char*)gaAncientsCloudXPos + nScrollOffset) = -5888;
+      *(int*)((int)gaAncientsCloudXPos + nScrollOffset) += *(int*)((int)gaAncientsCloudVelocities + nScrollOffset);
+      if (*(int*)((int)gaAncientsCloudXPos + nScrollOffset) > (nCloudIdx + 0x170) * 0x10) {
+        *(uint32_t*)((int)gaAncientsCloudXPos + nScrollOffset) = -5888;
         ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
         *pAncientsCloudSeed = ullSeedValue;
-        *(uint32_t*)((char*)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 300;
+        *(uint32_t*)((int)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 300;
       }
 
       nScrollOffset += 4;
@@ -762,18 +884,14 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
 
     nScrollOffset = 0;
     do {
-      nCloudIdx = *(int*)((char*)gaAncientsCloudXPos + nScrollOffset) / 16;
+      nCloudIdx = *(int*)((int)gaAncientsCloudXPos + nScrollOffset) / 16;
       sGfxData.pDC6 = gnDrawBackgroundRenderOffset;
       sGfxData.nFrameNumber = 0;
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx, *(int32_t*)((char*)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx, *(int32_t*)((int)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
       sGfxData.nFrameNumber = 1;
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx + 0x100, *(int32_t*)((char*)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx + 0x100, *(int32_t*)((int)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
       nScrollOffset += 4;
     } while (nScrollOffset < 0x28);
-}
-
-void __stdcall RENDERER_TogglePerspective_Unref_004769b0() {
-    gnFrameDrawCounter = (uint32_t)!gnFrameDrawCounter;
 }
 
 // Adjusts the looping screen-shake rumble sound (SOUND_BABOONDEMON_HIT_4) to match the current shake intensity. Converts nShakeIntensity (0–20) to a 0–255 target volume, starts the channel if not already playing, stops it if volume reaches 0, otherwise ramps the current volume toward the target by ±6 per call via SOUND_SetChannelPriority.

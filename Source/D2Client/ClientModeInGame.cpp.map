@@ -399,6 +399,9 @@
       "namespace": "D2Client::ClientModeInGame",
       "calledFunctions": [
         "D2IniData_Getter_Unref_0044b890"
+      ],
+      "usedTypes": [
+        "D2IniConfigStrc"
       ]
     },
     {

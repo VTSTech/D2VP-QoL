@@ -7,14 +7,13 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_Storm)
 #error "Storm header included by a module that may not use Storm (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_Storm) && !defined(D2_LOADS_Storm)
-#error "internal Storm header included from another module; include Storm's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "3rdparty/Storm/Storm.h"
 
 // Forward declarations
-struct StormLinkedListStrc;
+struct D2StormListHead;
 
-extern StormLinkedListStrc gStormCmdListHeadBackslash;
-extern StormLinkedListStrc gStormCmdListHeadSlash;
+extern D2StormListHead gStormCmdListHeadBackslash;
+extern D2StormListHead gStormCmdListHeadSlash;

@@ -70,7 +70,8 @@
         "D2QuestDataA3Q6Strc",
         "D2QuestDataStrc",
         "D2UnitStrc",
-        "SGAMEDATA"
+        "SGAMEDATA",
+        "uint32_t"
       ]
     },
     {
@@ -91,10 +92,10 @@
         "DRLGPRESET_TransferMapAI"
       ],
       "usedTypes": [
-        "D2MapAIStrc",
         "D2MapAIStrc *",
         "D2QuestDataA3Q6Strc",
-        "D2QuestDataStrc"
+        "D2QuestDataStrc",
+        "int32_t"
       ]
     },
     {

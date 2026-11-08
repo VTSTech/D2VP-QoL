@@ -170,8 +170,7 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "GlFloorCacheStrc",
-        "uint32_t"
+        "GlFloorCacheStrc"
       ]
     },
     {

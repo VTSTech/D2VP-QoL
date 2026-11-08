@@ -93,9 +93,6 @@
       "namespace": "Bnclient::_net_sid",
       "calledFunctions": [
         "Unreferenced_00520680"
-      ],
-      "usedTypes": [
-        "D2XSHA1Strc"
       ]
     },
     {
@@ -647,6 +644,7 @@
         "BNDOWNLOAD_InitiateFileDownload"
       ],
       "usedTypes": [
+        "D2BnetDownloadStateStrc",
         "uint32_t"
       ]
     },
@@ -1362,6 +1360,7 @@
         "NET_SID_CLIENT_ExtractCDKeyNibble"
       ],
       "usedTypes": [
+        "int32_t",
         "int8_t",
         "uint32_t"
       ]
@@ -1380,6 +1379,7 @@
         "NET_SID_CLIENT_SetCDKeyNibble"
       ],
       "usedTypes": [
+        "int32_t",
         "int8_t",
         "uint32_t",
         "uint8_t"
@@ -1397,9 +1397,6 @@
       "namespace": "Bnclient::_net_sid",
       "calledFunctions": [
         "Unreferenced_00522570"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -1416,6 +1413,7 @@
         "NET_SID_CLIENT_SetCDKeyBit"
       ],
       "usedTypes": [
+        "int32_t",
         "uint32_t",
         "uint8_t"
       ]
@@ -1455,6 +1453,7 @@
         "NET_SID_CLIENT_ExpandCdKeyToBase5"
       ],
       "usedTypes": [
+        "int32_t",
         "uint32_t",
         "uint8_t"
       ]
@@ -1473,6 +1472,7 @@
         "NET_SID_CLIENT_PermuteBitsLFSR"
       ],
       "usedTypes": [
+        "int32_t",
         "uint32_t",
         "uint8_t"
       ]
@@ -1491,6 +1491,7 @@
         "NET_SID_CLIENT_SubstitutionBoxShuffle"
       ],
       "usedTypes": [
+        "int32_t",
         "int8_t",
         "uint32_t"
       ]

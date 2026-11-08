@@ -137,7 +137,6 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "D2UntranslatedStringCacheNodeStrc",
         "WCHAR",
         "int32_t",
         "uint32_t",
@@ -228,9 +227,6 @@
         "STRINGTABLE_FreeStringTables",
         "FreeClientMemory",
         "UNICODE_FreeKamapTables"
-      ],
-      "usedTypes": [
-        "D2UntranslatedStringCacheNodeStrc"
       ]
     },
     {
@@ -277,9 +273,6 @@
       "namespace": "D2Lang::StrTable::strtable",
       "calledFunctions": [
         "Unreferenced_00525010"
-      ],
-      "usedTypes": [
-        "uint16_t"
       ]
     },
     {

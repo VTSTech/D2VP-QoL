@@ -441,8 +441,7 @@
       ],
       "usedTypes": [
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -491,9 +490,7 @@
         "CELCMP_GetDirectionFrameTableIndex"
       ],
       "usedTypes": [
-        "CELLIST",
         "DC6",
-        "TCELENTRY",
         "int32_t",
         "uint32_t",
         "uint8_t"

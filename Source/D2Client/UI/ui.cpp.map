@@ -228,6 +228,20 @@
       ]
     },
     {
+      "name": "UI_ClearCursorAnimationState_Unref_00436ac0",
+      "address": "00436ac0",
+      "lines": [
+        {
+          "line": 1,
+          "address": "00436ac0"
+        }
+      ],
+      "namespace": "D2Client::UI::ui",
+      "calledFunctions": [
+        "UI_ClearCursorAnimationState_Unref_00436ac0"
+      ]
+    },
+    {
       "name": "UI_GoldInputCallback_ReturnZero_Unref_00437d10",
       "address": "00437d10",
       "lines": [
@@ -1413,7 +1427,7 @@
       "usedTypes": [
         "D2TextLineStrc",
         "D2UnitStrc",
-        "UI_ShowGoldTransactionDialog_Slotm",
+        "EditBoxWrapper",
         "WCHAR",
         "eD2UnitStat",
         "int32_t",
@@ -1716,9 +1730,6 @@
       "namespace": "D2Client::UI::ui",
       "calledFunctions": [
         "Unreferenced_004549d0"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -4016,10 +4027,10 @@
         "TEXT_CalcTextDimensions"
       ],
       "usedTypes": [
+        "D2CharStatsTxt",
         "D2DifficultyLevelsTxt",
         "D2GfxDataStrc",
         "D2UnitStrc",
-        "DRAW_UI_StatWindow_I_Slotm",
         "WCHAR",
         "eD2UnitStat",
         "int32_t",
@@ -4091,6 +4102,8 @@
         "D2GSPacketSrv0x27_TextStrc",
         "D2UnitStrc",
         "int32_t",
+        "uint16_t",
+        "uint32_t",
         "uint8_t"
       ]
     },
@@ -4481,9 +4494,6 @@
       "calledFunctions": [
         "thunk_NPCSHOP_IsRepairTabActive_Unref_004c16c0",
         "ITEM_RecalcAllEquippedItems_EBX"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -4499,9 +4509,6 @@
       "calledFunctions": [
         "thunk_NPCSHOP_IsRepairTabActive_Unref_004c1be0",
         "ITEM_RecalcAllEquippedItems_EBX"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {

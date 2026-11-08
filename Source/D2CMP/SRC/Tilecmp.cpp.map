@@ -177,10 +177,8 @@
         "TILECMP_ValidateTilePixels"
       ],
       "usedTypes": [
-        "D2TileCmpTileSetStrc",
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -206,7 +204,6 @@
       ],
       "usedTypes": [
         "D2TileCmpTileNodeStrc",
-        "D2TileCmpTileSetStrc",
         "int32_t",
         "uint32_t"
       ]
@@ -250,10 +247,8 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "D2TileCmpTileNodeStrc",
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -275,7 +270,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2TileCmpTileNodeStrc",
         "D2TileCmpTileSetStrc",
         "int32_t",
         "uint32_t"
@@ -351,8 +345,6 @@
       "usedTypes": [
         "D2TileCmpTileSetListStrc",
         "D2TileCmpTileSetStrc",
-        "D2TileLibraryEntryStrc",
-        "D2TileLibraryHeaderStrc",
         "D2TileLibraryHeaderStrc *"
       ]
     },
@@ -398,7 +390,7 @@
       "usedTypes": [
         "D2TileLibraryHeaderStrc",
         "int32_t",
-        "uint16_t"
+        "uint32_t"
       ]
     },
     {
@@ -417,8 +409,7 @@
       ],
       "usedTypes": [
         "D2TileLibraryEntryStrc",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -443,9 +434,7 @@
         "exit"
       ],
       "usedTypes": [
-        "D2TileLibraryHeaderStrc",
         "int32_t",
-        "uint8_t",
         "void *"
       ]
     },
@@ -468,8 +457,7 @@
       "usedTypes": [
         "D2TileLibraryHeaderStrc",
         "D2TileLibraryHeaderStrc *",
-        "int32_t",
-        "uint8_t"
+        "int32_t"
       ]
     },
     {
@@ -594,8 +582,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2TileLibraryEntryStrc",
-        "D2TileLibraryHeaderStrc",
         "int32_t"
       ]
     },
@@ -620,11 +606,9 @@
         "exit"
       ],
       "usedTypes": [
-        "D2GroundSubTileStrc",
         "int32_t",
         "pfnRGBToPaletteIndex",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -673,7 +657,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2TileLibraryHeaderStrc",
         "int32_t",
         "void *"
       ]

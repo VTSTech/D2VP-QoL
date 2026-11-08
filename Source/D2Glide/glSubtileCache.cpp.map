@@ -168,9 +168,7 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "GlSubtileCacheNodeStrc",
-        "GlSubtileCacheStrc",
-        "uint32_t"
+        "GlSubtileCacheStrc"
       ]
     },
     {

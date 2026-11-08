@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Common)
 #error "D2Common header included by a module that may not use D2Common (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Common) && !defined(D2_LOADS_D2Common)
-#error "internal D2Common header included from another module; include D2Common's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -29,8 +26,6 @@ struct D2RoomCoordListStrc;
 struct D2RoomStrc;
 
 // Data types
-#ifndef D2_DEFINED_D2DrlgCoordListStrc
-#define D2_DEFINED_D2DrlgCoordListStrc
 struct __attribute__((packed)) D2DrlgCoordListStrc {
     /* 0x00 */ int eFlags; // Bit 0: simple/single coord, Bit 1: has grids allocated
     /* 0x04 */ int nListSize; // Number of D2RoomCoordListStrc entries
@@ -39,9 +34,6 @@ struct __attribute__((packed)) D2DrlgCoordListStrc {
     /* 0x30 */ struct D2RoomCoordListStrc * pCoord; // Array of room coord list entries (size = nListSize)
 };
 
-#endif // D2_DEFINED_D2DrlgCoordListStrc
-#ifndef D2_DEFINED_D2DrlgRoomExDataUnion
-#define D2_DEFINED_D2DrlgRoomExDataUnion
 union D2DrlgRoomExDataUnion {
     operator uint32_t() const { return *reinterpret_cast<const uint32_t*>(this); }
 
@@ -49,9 +41,6 @@ union D2DrlgRoomExDataUnion {
     /* 0x00 */ struct D2DrlgPresetRoomStrc * pRoomExDataPreset; // DRLG Type = PresetArea
 };
 
-#endif // D2_DEFINED_D2DrlgRoomExDataUnion
-#ifndef D2_DEFINED_D2RoomExStrc
-#define D2_DEFINED_D2RoomExStrc
 #pragma pack(push, 1)
 struct D2RoomExStrc {
     /* 0x00 */ struct D2DrlgOrthStrc * pOrth; // struct D2DrlgOrthStrc* - linked list of orthogonal room connections
@@ -82,5 +71,3 @@ struct D2RoomExStrc {
     /* 0xE8 */ struct D2RoomExStrc * pStatusPrev; // Backward link in activation priority doubly-linked list
 };
 #pragma pack(pop)
-
-#endif // D2_DEFINED_D2RoomExStrc

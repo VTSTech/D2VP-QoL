@@ -4,22 +4,103 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Common)
 #error "D2Common header included by a module that may not use D2Common (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Common) && !defined(D2_LOADS_D2Common)
-#error "internal D2Common header included from another module; include D2Common's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Common/DATATBLS/DataTbls.h"
-#include "Source/D2Common/D2CharStatsTxt.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Common/D2BinFieldExcelStrc.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
+#include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/AnimTbls.h"
+#include "Source/D2Common/DATATBLS/ArenaTbls.h"
+#include "Source/D2Common/DATATBLS/BeltsTbls.h"
+#include "Source/D2Common/DATATBLS/FieldTbls.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/LvlTbls.h"
+#include "Source/D2Common/DATATBLS/MissileTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DATATBLS/ObjectTbls.h"
+#include "Source/D2Common/DATATBLS/OverlayTbls.h"
+#include "Source/D2Common/DATATBLS/TokTbls.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Cube.h"
+#include "Source/D2Common/Txt/D2TxtLinkNodeStrc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Skills.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/Excel.h"
+#include "3rdparty/Storm/D2ArchiveStrc.h"
+#include "3rdparty/Storm/D2MPQFileStrc.h"
+#include "3rdparty/Storm/Source/SFile.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
 
 namespace D2Common::DATATBLS::DataTbls {
 
-#ifndef D2_DEFINED_INLINE_00452040
-#define D2_DEFINED_INLINE_00452040
 __attribute__((noinline)) inline D2StatesTxt * __fastcall TXT_States_GetLine(eD2States eState) {
     if ((int)eState >= 0 && (int)eState < ITEMS::Items::sgptDataTable->nTxtStatesSize) {
       return ITEMS::Items::sgptDataTable->pTxtStates + eState;
@@ -27,10 +108,7 @@ __attribute__((noinline)) inline D2StatesTxt * __fastcall TXT_States_GetLine(eD2
 
     return nullptr;
 }
-#endif // D2_DEFINED_INLINE_00452040
 
-#ifndef D2_DEFINED_INLINE_00483360
-#define D2_DEFINED_INLINE_00483360
 __attribute__((noinline)) inline int32_t __fastcall D2ApplyPercent(int32_t nValue, int32_t nPercent, uint32_t n100Percent) {
     if (!n100Percent) {
       return 0;
@@ -51,7 +129,6 @@ __attribute__((noinline)) inline int32_t __fastcall D2ApplyPercent(int32_t nValu
     int64_t qwResult = (int64_t)nValue * (int64_t)nPercent / (int)n100Percent;
     return (int32_t)qwResult;
 }
-#endif // D2_DEFINED_INLINE_00483360
 
 __attribute__((noinline)) inline D2CharStatsTxt * __fastcall INV_GetCharStatsTxtLine(int32_t nClassId) {
     if (nClassId >= 0 && nClassId < ITEMS::Items::sgptDataTable->nTxtCharStatsSize) {
@@ -61,8 +138,6 @@ __attribute__((noinline)) inline D2CharStatsTxt * __fastcall INV_GetCharStatsTxt
     return nullptr;
 }
 
-#ifndef D2_DEFINED_INLINE_004e6c70
-#define D2_DEFINED_INLINE_004e6c70
 __attribute__((noinline)) inline int32_t __fastcall GetSkillParam4(eD2Skills eSkill) {
     D2SkillsTxt* pSkillsTxt = (int)eSkill >= 0 && (int)eSkill < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + eSkill : nullptr;
     if (!pSkillsTxt) {
@@ -71,6 +146,5 @@ __attribute__((noinline)) inline int32_t __fastcall GetSkillParam4(eD2Skills eSk
 
     return pSkillsTxt->Param[4];
 }
-#endif // D2_DEFINED_INLINE_004e6c70
 
 } // namespace D2Common::DATATBLS::DataTbls

@@ -38,6 +38,7 @@
       "usedTypes": [
         "D2ItemCalcContextStrc",
         "D2UnitStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -3428,6 +3429,7 @@
         "ITEM_GetSocketsCount"
       ],
       "usedTypes": [
+        "D2UnitDataItemStrc",
         "D2UnitStrc",
         "eD2ItemQuality",
         "int32_t",

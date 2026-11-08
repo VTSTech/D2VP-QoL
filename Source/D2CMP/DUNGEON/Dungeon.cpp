@@ -2,9 +2,31 @@
 
 #include "Source/D2CMP/DUNGEON/Dungeon.h"
 #include "Source/D2CMP/SRC/FindTiles.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2CMP/SRC/SubTile.h"
 #include "Source/D2CMP/SRC/TileProjects.h"
 #include "Source/D2Common/D2TileLibraryEntryStrc.h"
-#include "Source/Fog/Fog.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -44,7 +66,7 @@ int * __stdcall TILEPROJECT_AllocSlot(void * pTileProject, char * szFilename) {
     exit(-1);
 }
 
-void __stdcall TILEPROJECT_FreeSlot(int32_t * pnProjectIds, int32_t pProject) {
+void __stdcall TILEPROJECT_FreeSlot(int32_t pnProjectIds, int32_t pProject) {
     if (!pProject) {
       return;
     }
@@ -55,7 +77,7 @@ void __stdcall TILEPROJECT_FreeSlot(int32_t * pnProjectIds, int32_t pProject) {
     }
 
     int nSlotIndex = 0;
-    while (pnProjectIds[nSlotIndex] != nProjectId) {
+    while (*(int*)(pnProjectIds + nSlotIndex * 4) != nProjectId) {
       nSlotIndex++;
       if (nSlotIndex < 0x20) {
         continue;
@@ -64,7 +86,7 @@ void __stdcall TILEPROJECT_FreeSlot(int32_t * pnProjectIds, int32_t pProject) {
       return;
     }
 
-    pnProjectIds[nSlotIndex] = 0;
+    *(uint32_t*)(pnProjectIds + nSlotIndex * 4) = 0;
 }
 
 uint32_t __stdcall TILEPROJECT_LookupTilesInAllProjects(void * * ppProjects, int32_t nTileType, int32_t nTileSubType, int32_t nSubIndex, D2TileLibraryEntryStrc * * pnFoundTiles, uint32_t nMaxTiles) {
@@ -82,7 +104,7 @@ uint32_t __stdcall TILEPROJECT_LookupTilesInAllProjects(void * * ppProjects, int
         break;
       }
 
-      nTotalFound = SRC::FindTiles::FINDTILE_Lookup((D2TileLibraryHashStrc*)ppProjects[iProjectIdx], pnFoundTiles + nFoundInProjectAccum, nRemaining, nTileType, nTileSubType, nSubIndex);
+      nTotalFound = SRC::FindTiles::FINDTILE_Lookup((int**)ppProjects[iProjectIdx], pnFoundTiles + nFoundInProjectAccum, nRemaining, nTileType, nTileSubType, nSubIndex);
       nRemaining -= nTotalFound;
       nFoundInProjectAccum += nTotalFound;
       if (!nRemaining) {

@@ -156,10 +156,6 @@
       "namespace": "D2Game::PLAYER::PlayerIntro",
       "calledFunctions": [
         "PLAYERINTRO_CopyIntroData8Bytes"
-      ],
-      "usedTypes": [
-        "D2UnitDataPlayerInteractedNPCStrc",
-        "uint8_t"
       ]
     },
     {
@@ -176,7 +172,7 @@
         "PLAYERINTRO_CopyIntroDataIndirect"
       ],
       "usedTypes": [
-        "D2UnitDataPlayerInteractedNPCStrc",
+        "int32_t",
         "uint32_t"
       ]
     },

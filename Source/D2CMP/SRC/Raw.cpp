@@ -2,11 +2,26 @@
 
 #include "Source/D2CMP/SRC/Raw.h"
 #include "Source/D2CMP/SRC/CelCmp.h"
-#include "Source/D2CMP/SRC/CelCmp/CELLIST.h"
-#include "Source/D2CMP/SRC/CelCmp/TCELENTRY.h"
-#include "Source/D2Win/DC6.h"
-#include "Source/D2Win/DC6Block.h"
-#include "Source/Fog/Fog.h"
+#include "Source/Fog/Memory.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -18,28 +33,28 @@
 
 namespace D2CMP::SRC::Raw {
 
-uint32_t __fastcall RAW_CreateCelFrames(::CELLIST * pRawFile, DC6 * pCelFile) {
+uint32_t __fastcall RAW_CreateCelFrames(int32_t pRawFile, int32_t pCelFile) {
     uint32_t nDirAngle;
     uint32_t nDirIndex;
-    ::TCELENTRY* nDirCount;
+    uint32_t nDirCount;
     size_t nFrameDataSize;
-    uint32_t nFramesPerDir = pRawFile->nFrameCount / pRawFile->nDirections;
+    uint32_t nFramesPerDir = *(uint32_t*)(pRawFile + 0x24) / *(uint32_t*)(pRawFile + 0x28);
     uint32_t iFrame = 0;
-    uint32_t pDirNode = pRawFile->m_frames.m_terminator.m_next;
-    for (nDirCount = (::TCELENTRY*)((int)pDirNode <= 0 ? 0 : pDirNode); 0 < (intptr_t)nDirCount; nDirCount = (::TCELENTRY*)nDirCount->m_link.m_next) {
-      DC6Block* pNewFrame;
-      nFrameDataSize = nDirCount->nWidth * nDirCount->nHeight * 3;
-      pNewFrame = (DC6Block*)D2_ALLOC_AT(nFrameDataSize + 0x23, ".\\SRC\\Raw.cpp", 0x22);
-      pNewFrame->nFlip = nDirCount->dwArg7;
-      pNewFrame->nWidth = nDirCount->nWidth;
-      pNewFrame->nHeight = nDirCount->nHeight;
-      pNewFrame->nOffsetX = nDirCount->nOffsetX;
-      pNewFrame->nOffsetY = nDirCount->nOffsetY;
-      pNewFrame->nAllocSize = 0;
-      pNewFrame->nNextBlock = 0;
-      pNewFrame->nLength = nFrameDataSize;
-      memcpy(pNewFrame + 1, nDirCount->pPixels, nFrameDataSize);
-      pDirNode = pRawFile->nDirections;
+    uint32_t pDirNode = *(uint32_t*)(pRawFile + 0x34);
+    for (nDirCount = (int)pDirNode <= 0 ? 0 : pDirNode; 0 < (int)nDirCount; nDirCount = *(uint32_t*)(nDirCount + 4)) {
+      uint32_t* pNewFrame;
+      nFrameDataSize = *(int*)(nDirCount + 0xc) * *(int*)(nDirCount + 0x10) * 3;
+      pNewFrame = (uint32_t*)D2_ALLOC_AT(nFrameDataSize + 0x23, ".\\SRC\\Raw.cpp", 0x22);
+      *pNewFrame = *(uint32_t*)(nDirCount + 8);
+      pNewFrame[1] = *(uint32_t*)(nDirCount + 0xc);
+      pNewFrame[2] = *(uint32_t*)(nDirCount + 0x10);
+      pNewFrame[3] = *(uint32_t*)(nDirCount + 0x18);
+      pNewFrame[4] = *(uint32_t*)(nDirCount + 0x1c);
+      pNewFrame[5] = 0;
+      pNewFrame[6] = 0;
+      pNewFrame[7] = nFrameDataSize;
+      memcpy(pNewFrame + 8, *(void**)(nDirCount + 0x20), nFrameDataSize);
+      pDirNode = *(uint32_t*)(pRawFile + 0x28);
       if (pDirNode > 1) {
         nDirAngle = (iFrame / nFramesPerDir << 6) / pDirNode;
       } else {
@@ -50,7 +65,7 @@ uint32_t __fastcall RAW_CreateCelFrames(::CELLIST * pRawFile, DC6 * pCelFile) {
       pDirNode = iFrame / nFramesPerDir;
       nDirAngle = iFrame % nFramesPerDir;
       iFrame++;
-      *(DC6Block**)(pCelFile[1].nTerm + (nDirIndex * nFramesPerDir + nDirAngle) * 4 - 0xc) = (DC6Block*)pNewFrame;
+      *(uint32_t**)(pCelFile + 0x18 + (nDirIndex * nFramesPerDir + nDirAngle) * 4) = (uint32_t*)pNewFrame;
     }
 
     return pDirNode;

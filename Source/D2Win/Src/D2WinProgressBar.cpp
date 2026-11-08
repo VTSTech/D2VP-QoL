@@ -3,8 +3,36 @@
 #include "Source/D2Win/Src/D2WinProgressBar.h"
 #include "Source/D2Win/Src/D2WinMain.h"
 #include "Source/D2Win/Src/D2WinPalette.h"
-#include "Source/D2gfx/D2gfx.public.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Win/Src/D2WinTextBox.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/D2ControlStrc.h"
 #include "Source/D2Win/D2WinProgressBar.h"
@@ -50,7 +78,7 @@ BOOL __fastcall Draw(::D2WinProgressBar * pProgressBar) {
       bVar2 = D2WinPalette::D2GFX_GetColorFromCurrentPallete(0xff, 0, 0);
       nYStart = pProgressBar->sControl.dwPosY;
       nXStart = pProgressBar->sControl.dwPosX;
-      dwColor = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pProgressBar >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)bVar2);
+      dwColor = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pProgressBar >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)bVar2);
       D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nXStart, nYStart, (int)((float)pProgressBar->sControl.dwSizeX * pProgressBar->fCurrentProgress) + nXStart, pProgressBar->sControl.dwSizeY + nYStart, dwColor, DRAW_SOLID);
       return 1;
     }

@@ -668,7 +668,7 @@
       ],
       "usedTypes": [
         "D2BitBufferStrc",
-        "D2QuestDataStrc",
+        "int32_t",
         "uint32_t"
       ]
     },

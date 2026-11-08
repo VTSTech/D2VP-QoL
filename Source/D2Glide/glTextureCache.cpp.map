@@ -19,7 +19,6 @@
         "memset"
       ],
       "usedTypes": [
-        "GlTextureCacheNodeStrc",
         "GlTextureCacheStrc",
         "uint32_t"
       ]
@@ -77,9 +76,9 @@
         "exit"
       ],
       "usedTypes": [
-        "GlTextureCacheNodeStrc",
         "GlTextureCacheStrc",
-        "int32_t"
+        "int32_t",
+        "uint8_t"
       ]
     },
     {
@@ -119,7 +118,6 @@
         "GLTEXCACHE_EvictLRU"
       ],
       "usedTypes": [
-        "GlTextureCacheNodeStrc",
         "GlTextureCacheStrc"
       ]
     },
@@ -158,8 +156,8 @@
         "GLTEXCACHE_AllocateNode"
       ],
       "usedTypes": [
-        "GlTextureCacheNodeStrc",
-        "GlTextureCacheStrc"
+        "GlTextureCacheStrc",
+        "uint8_t"
       ]
     }
   ]

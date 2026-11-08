@@ -4,6 +4,22 @@
 #include "Source/Fog/D2DataArrayStrc.h"
 #include "Source/Fog/Memory.h"
 #include "Source/Fog/Src/ErrorManager.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -27,7 +43,7 @@ D2DataArrayStrc * __fastcall FOG_CreateDataArray(char * pszName, int numObjects,
       strncpy(local_EAX_31->szName, pszName, 0x100);
       local_EAX_31->nObjectSize = nObjectSize;
       local_EAX_31->numObjects = numObjects;
-      local_EAX_31->pData = (uint8_t*)(local_EAX_31 + 1);
+      local_EAX_31->pData = local_EAX_31 + 1;
       local_EAX_31->bInitialized = 0;
     }
 
@@ -41,7 +57,6 @@ void __fastcall FreeWeatherPointer(void * pDataArray) {
 }
 
 void __fastcall FOG_InitDataArray(D2DataArrayStrc * pDataArray) {
-    int nObjectIndex;
     int nObjectOffset;
     if (!pDataArray->bInitialized) {
       ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0x68);
@@ -49,7 +64,7 @@ void __fastcall FOG_InitDataArray(D2DataArrayStrc * pDataArray) {
     }
 
     {
-      uint8_t* puVar1;
+      int nObjectIndex;
       nObjectIndex = 0;
       pDataArray->nHighestUsedIndex = -1;
       pDataArray->nUsedCount = 0;
@@ -60,11 +75,9 @@ void __fastcall FOG_InitDataArray(D2DataArrayStrc * pDataArray) {
       }
 
       do {
-        puVar1 = pDataArray->pData;
         nObjectOffset = pDataArray->nObjectSize * nObjectIndex;
         nObjectIndex++;
-        (puVar1 + nObjectOffset)[0] = '\0';
-        (puVar1 + nObjectOffset)[1] = '\0';
+        *(uint16_t*)(nObjectOffset + (int)pDataArray->pData) = 0;
       } while (nObjectIndex < pDataArray->numObjects);
 
       return;
@@ -80,14 +93,14 @@ uint32_t __fastcall FOG_GetMissileField(D2DataArrayStrc * pMissilesTxt) {
 
     size_t nSlotStride = pMissilesTxt->nObjectSize;
     int nSlotIndex = pMissilesTxt->nNextFreeIndex;
-    uint16_t* pSlotEntry = (uint16_t*)(pMissilesTxt->pData + nSlotStride * nSlotIndex);
+    uint16_t* pSlotEntry = (uint16_t*)(nSlotStride * nSlotIndex + (int)pMissilesTxt->pData);
     if (nSlotIndex >= pMissilesTxt->numObjects) {
       return nMissileSlot;
     }
 
     while (*pSlotEntry) {
       nSlotIndex++;
-      pSlotEntry = (uint16_t*)((char*)pSlotEntry + nSlotStride);
+      pSlotEntry = (uint16_t*)((int)pSlotEntry + nSlotStride);
       if (nSlotIndex >= pMissilesTxt->numObjects) {
         return nMissileSlot;
       }
@@ -114,6 +127,7 @@ uint32_t __fastcall FOG_GetMissileField(D2DataArrayStrc * pMissilesTxt) {
 // Provenance: asm 006bcc10..006bcc83 (+0x100 numObjects, +0x108 bInitialized, pData + index * nObjectSize); the argument is a D2DataArrayStrc.
 short * __fastcall FOG_GetDataArrayEntry(D2DataArrayStrc * pDataArray, int nHandle) {
     int nHighWord;
+    short int nSlotId;
     if (nHandle == -1) {
       return nullptr;
     }
@@ -121,18 +135,19 @@ short * __fastcall FOG_GetDataArrayEntry(D2DataArrayStrc * pDataArray, int nHand
       ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0xdb);
       exit(-1);
     } else {
-      short int nSlotId;
+      short int* pEntry;
       if (!pDataArray->bInitialized) {
         ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0xde);
         exit(-1);
       }
 
-      nSlotId = *(short int*)(pDataArray->pData + pDataArray->nObjectSize * nHighWord);
+      pEntry = (short int*)(pDataArray->nObjectSize * nHighWord + (int)pDataArray->pData);
+      nSlotId = *pEntry;
       if (!nSlotId) {
         return nullptr;
       }
       if (!((short int)nHandle && nSlotId != (short int)nHandle)) {
-        return (short int*)(pDataArray->pData + pDataArray->nObjectSize * nHighWord);
+        return pEntry;
       }
 
       return nullptr;
@@ -171,7 +186,7 @@ void __fastcall FOG_ArrayFreeAtIndex(D2DataArrayStrc * pDataArray, int nHandle) 
     }
     if (nSlotIndex == pDataArray->nHighestUsedIndex) {
       do {
-        pArrayEntry = (short int*)((char*)pArrayEntry - pDataArray->nObjectSize);
+        pArrayEntry = (short int*)((int)pArrayEntry - pDataArray->nObjectSize);
         piHighWaterMark = &pDataArray->nHighestUsedIndex;
         (*piHighWaterMark)--;
         if (*piHighWaterMark < 0) {
@@ -183,8 +198,8 @@ void __fastcall FOG_ArrayFreeAtIndex(D2DataArrayStrc * pDataArray, int nHandle) 
     pDataArray->nUsedCount--;
 }
 
-void __fastcall FOG_FillArrayWithRandomInts(int nArrayOffset, uint32_t * pArrayData, double fParam, int nElementSize, int nCount, int nMaxValue) {
-    uint8_t* pByteOut;
+void __fastcall FOG_FillArrayWithRandomInts(int nArrayOffset, uint32_t * pArrayData, double fParam, uint32_t * nElementSize, int nCount, int nMaxValue) {
+    uint32_t* pByteOut;
     long double fParamF10;
     long double fHundredF10;
     long double fCountMinus1;
@@ -193,8 +208,8 @@ void __fastcall FOG_FillArrayWithRandomInts(int nArrayOffset, uint32_t * pArrayD
     long double fTmp;
     double fTmp1;
     double dCountMinus1;
-    int pElemSize = nElementSize;
-    if (!(nElementSize == 1 || nElementSize == 2 || nElementSize == 4)) {
+    uint32_t* pElemSize = nElementSize;
+    if (!(nElementSize == (uint32_t*)0x1 || nElementSize == (uint32_t*)0x2 || nElementSize == (uint32_t*)0x4)) {
       ErrorManager::ERROR_UnrecoverableInternalError_Halt("", ErrorManager::GetInstructionPointer(), 0xe);
       exit(-1);
     }
@@ -212,8 +227,8 @@ void __fastcall FOG_FillArrayWithRandomInts(int nArrayOffset, uint32_t * pArrayD
           if (fParamF10 <= fHundredF10) {
             fCountMinus1 = (long double)nCount - (long double)1.0;
             dCountMinus1 = (double)fCountMinus1;
-            pByteOut = (uint8_t*)pArrayData;
-            nElementSize = (int)pArrayData;
+            pByteOut = pArrayData;
+            nElementSize = pArrayData;
             if (fTmp < fCountMinus1 == (fTmp == fCountMinus1)) {
               return;
             }
@@ -228,25 +243,19 @@ void __fastcall FOG_FillArrayWithRandomInts(int nArrayOffset, uint32_t * pArrayD
 
               fTmp = pow((double)(fTmp / fCountMinus1), (double)(fHundredF10 / (long double)nArrayOffset));
               nOutValue = (int)(((long double)(double)fLinearClamped * (long double)fParam + fTmp * (long double)nMaxValue * (long double)(double)(fHundredF10 - fParamF10)) / (long double)100.0);
-              switch (pElemSize) {
-                case 1:
-                  {
-                    *pByteOut = (uint8_t)nOutValue;
-                    pByteOut++;
-                    break;
+              if (pElemSize != (uint32_t*)0x1) {
+                if (pElemSize != (uint32_t*)0x2) {
+                  if (pElemSize == (uint32_t*)0x4) {
+                    *nElementSize = nOutValue;
+                    nElementSize++;
                   }
-                case 2:
-                  {
-                    *(short int*)pArrayData = (short int)nOutValue;
-                    pArrayData = (uint32_t*)((char*)pArrayData + 2);
-                    break;
-                  }
-                case 4:
-                  {
-                    *(int*)nElementSize = nOutValue;
-                    nElementSize += 4;
-                    break;
-                  }
+                } else {
+                  *(short int*)pArrayData = (short int)nOutValue;
+                  pArrayData = (uint32_t*)((int)pArrayData + 2);
+                }
+              } else {
+                *(char*)pByteOut = (char)nOutValue;
+                pByteOut = (uint32_t*)((int)pByteOut + 1);
               }
 
               fTmp = (long double)fTmp1 + (long double)1.0;

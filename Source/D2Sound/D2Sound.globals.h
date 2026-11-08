@@ -7,9 +7,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Sound)
 #error "D2Sound header included by a module that may not use D2Sound (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Sound) && !defined(D2_LOADS_D2Sound)
-#error "internal D2Sound header included from another module; include D2Sound's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -42,4 +39,7 @@ extern D2SoundSmpStrc * gpMusicStreamBuffer;
 extern uint32_t gnAmbientSoundLanguageCode;
 extern uint32_t gbAmbientSoundLangInitialized;
 } // namespace D2Sound::Src::D2SoundFast
+namespace D2Sound::Src::D2SoundSmp {
+extern float FLOAT_006da6b8;
+} // namespace D2Sound::Src::D2SoundSmp
 #endif // D2_MODULE_D2Sound

@@ -362,7 +362,6 @@
         "RANDOM_RandomNumberSelector"
       ],
       "usedTypes": [
-        "D2SkillCalcContextStrc",
         "int32_t",
         "uint32_t"
       ]
@@ -382,7 +381,7 @@
         "GetSpecialParamValue"
       ],
       "usedTypes": [
-        "D2SkillCalcContextStrc",
+        "D2UnitStrc *",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -464,7 +463,6 @@
         "SKILLS_GetSkillsTxtField0x14"
       ],
       "usedTypes": [
-        "D2SkillStrc",
         "int32_t"
       ]
     },
@@ -2660,7 +2658,7 @@
         "SKILLDESC_EvalDescCalcValue"
       ],
       "usedTypes": [
-        "D2SkillCalcContextStrc",
+        "D2UnitStrc *",
         "eD2Skills",
         "uint32_t",
         "uint8_t"

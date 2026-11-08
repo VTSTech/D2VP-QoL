@@ -149,7 +149,8 @@
         "DEBUG_LoadDbgHelp64Apis"
       ],
       "usedTypes": [
-        "pfnEHHandlerRoutine"
+        "pfnEHHandlerRoutine",
+        "uint32_t"
       ]
     },
     {
@@ -248,7 +249,8 @@
         "InitializeDebugSymbols"
       ],
       "usedTypes": [
-        "pfnEHHandlerRoutine"
+        "pfnEHHandlerRoutine",
+        "uint32_t"
       ]
     },
     {
@@ -265,9 +267,7 @@
         "WriteCrashDumpViaThread"
       ],
       "usedTypes": [
-        "D2CrashDumpRequestStrc",
         "MINIDUMP_EXCEPTION_INFORMATION",
-        "_EXCEPTION_POINTERS *",
         "pfnEHHandlerRoutine",
         "uint32_t"
       ]
@@ -447,10 +447,6 @@
       "namespace": "Fog::Debug",
       "calledFunctions": [
         "Unreferenced_00402c30"
-      ],
-      "usedTypes": [
-        "D2FogDebugModuleEntryStrc",
-        "D2FogDebugModuleTableStrc"
       ]
     },
     {
@@ -489,7 +485,6 @@
         "__security_check_cookie"
       ],
       "usedTypes": [
-        "D2CrashFrameStrc",
         "uint32_t"
       ]
     },
@@ -807,7 +802,8 @@
         "SStrCopy"
       ],
       "usedTypes": [
-        "uint32_t"
+        "uint32_t",
+        "void *"
       ]
     },
     {
@@ -969,7 +965,8 @@
         "SMemCmp"
       ],
       "usedTypes": [
-        "D2CrashDumpRecordStrc",
+        "D2CharSelCompFlags",
+        "D2CharSelCompStrc",
         "FILE",
         "uint32_t",
         "uint8_t"

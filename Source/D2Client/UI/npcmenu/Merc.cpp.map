@@ -82,9 +82,6 @@
       "namespace": "D2Client::UI::npcmenu::Merc",
       "calledFunctions": [
         "NPCMENU_MercItemFoundCb"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {

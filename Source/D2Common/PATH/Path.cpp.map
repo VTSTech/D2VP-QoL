@@ -576,10 +576,6 @@
       "calledFunctions": [
         "Unreferenced_00650800",
         "PATH_ResetPathState"
-      ],
-      "usedTypes": [
-        "D2DynamicPathStrc",
-        "D2UnitStrc"
       ]
     },
     {
@@ -730,8 +726,8 @@
       "usedTypes": [
         "D2DynamicPathStrc",
         "D2RoomStrc",
-        "D2UnitStrc",
-        "uint16_t"
+        "uint16_t",
+        "uint32_t"
       ]
     },
     {

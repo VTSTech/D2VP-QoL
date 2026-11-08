@@ -162,7 +162,6 @@
         "SEVT_FindTypeHashEntry"
       ],
       "usedTypes": [
-        "D2SevtTypeEntryStrc",
         "uint32_t"
       ]
     },
@@ -183,7 +182,6 @@
       ],
       "usedTypes": [
         "D2SevtHandlerTableStrc",
-        "D2SevtTypeEntryStrc",
         "uint32_t"
       ]
     },
@@ -204,7 +202,6 @@
       ],
       "usedTypes": [
         "D2SevtHandlerTableStrc",
-        "D2SevtTypeEntryStrc",
         "uint32_t"
       ]
     },
@@ -226,11 +223,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "D2SevtHandlerNodeStrc",
-        "D2SevtHandlerNodeStrc *",
-        "D2SevtHandlerNodeStrc * *",
-        "D2SevtTypeEntryStrc",
-        "D2SevtTypeEntryStrc *",
         "pfnSEvtHandler",
         "uint32_t"
       ]
@@ -251,9 +243,6 @@
       ],
       "usedTypes": [
         "D2SevtHandlerNodeStrc",
-        "D2SevtHandlerNodeStrc *",
-        "D2SevtHandlerTableStrc",
-        "D2SevtTypeEntryStrc",
         "pfnSEvtHandler",
         "uint32_t"
       ]
@@ -275,8 +264,6 @@
       ],
       "usedTypes": [
         "D2SevtHandlerTableStrc",
-        "D2SevtTypeEntryStrc",
-        "D2SevtTypeEntryStrc *",
         "uint32_t"
       ]
     },
@@ -311,7 +298,6 @@
         "LINKEDLIST_GetNodeOffset"
       ],
       "usedTypes": [
-        "StormLinkStrc",
         "uint32_t"
       ]
     },
@@ -329,7 +315,6 @@
         "LINKEDLIST_UnlinkSelf"
       ],
       "usedTypes": [
-        "StormLinkStrc",
         "uint32_t"
       ]
     },
@@ -345,9 +330,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "Unreferenced_004269a0"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -366,9 +348,7 @@
         "SEVT_DeleteIdHashTable"
       ],
       "usedTypes": [
-        "D2SevtHandlerTableStrc",
-        "D2SevtTypeEntryStrc",
-        "uint32_t"
+        "D2SevtHandlerTableStrc"
       ]
     },
     {
@@ -438,8 +418,7 @@
         "LINKEDLIST_GetCountMasked"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -457,8 +436,7 @@
         "LINKEDLIST_GetHead"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -490,9 +468,7 @@
         "LINKEDLIST_GetValueAtIndex"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
-        "intptr_t"
+        "int32_t"
       ]
     },
     {
@@ -528,8 +504,8 @@
         "UnlinkAll"
       ],
       "usedTypes": [
+        "D2StormListHead",
         "StormLinkStrc",
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -545,9 +521,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "Unreferenced_00426d70"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -586,7 +559,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "StormLinkStrc",
         "uint32_t",
         "uint8_t"
       ]
@@ -626,9 +598,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "BREAKCMD",
-        "StormLinkStrc",
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -651,7 +620,6 @@
       ],
       "usedTypes": [
         "D2SevtHandlerNodeStrc",
-        "D2SevtTypeEntryStrc",
         "pfnSEvtHandler",
         "uint32_t"
       ]
@@ -668,9 +636,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0044de90"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -685,9 +650,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0044ecc0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -719,9 +681,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0045b9f0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -736,9 +695,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0045ba30"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -753,9 +709,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_00601bf0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -770,9 +723,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_00601d60"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -804,9 +754,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_00601f60"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -838,9 +785,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_006024a0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -855,9 +799,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0060e3b0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -906,9 +847,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0060e690"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -923,9 +861,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_0060e760"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -940,9 +875,6 @@
       "namespace": "Storm::Source::SEVT",
       "calledFunctions": [
         "LINKEDLIST_UnlinkSelf_Unref_006c4070"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {

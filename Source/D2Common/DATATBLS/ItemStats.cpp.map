@@ -139,7 +139,7 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
-        "uint32_t"
+        "int32_t"
       ]
     },
     {
@@ -221,7 +221,7 @@
       "usedTypes": [
         "D2StatesDataTbls",
         "D2UnitStrc",
-        "uint32_t"
+        "int32_t"
       ]
     },
     {

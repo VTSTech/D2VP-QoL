@@ -332,7 +332,6 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
-        "eD2UnitType",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -657,7 +656,6 @@
       ],
       "usedTypes": [
         "D2DynamicPathStrc",
-        "int32_t",
         "uint16_t",
         "uint32_t"
       ]
@@ -680,6 +678,7 @@
         "D2DynamicPathStrc",
         "D2PathPointStrc",
         "D2SeedStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -804,7 +803,7 @@
         "DRLGPATH_IsPositionInBounds"
       ],
       "usedTypes": [
-        "D2DrlgAStarContextStrc",
+        "int32_t",
         "uint16_t",
         "uint32_t"
       ]
@@ -890,9 +889,6 @@
         "memcpy"
       ],
       "usedTypes": [
-        "D2DrlgRoomAStarNodeStrc",
-        "D2PathPointStrc",
-        "D2PathTypeArg",
         "int32_t",
         "uint32_t"
       ]
@@ -1104,7 +1100,6 @@
       ],
       "usedTypes": [
         "D2DrlgPathNodeStrc",
-        "D2DrlgPathSearchCtxStrc",
         "int32_t",
         "uint32_t"
       ]
@@ -1125,7 +1120,6 @@
         "DRLGPATH_TryExpandNeighborNode"
       ],
       "usedTypes": [
-        "D2DrlgPathSearchCtxStrc",
         "D2PathTypeArg",
         "D2RoomStrc",
         "eCollisionFlags",
@@ -1276,10 +1270,8 @@
         "exit"
       ],
       "usedTypes": [
-        "D2DrlgPathScannerStrc",
         "D2PathTypeArg",
         "D2RoomStrc",
-        "D2UnitStrc",
         "int32_t",
         "uint16_t"
       ]
@@ -1300,8 +1292,6 @@
         "memcpy"
       ],
       "usedTypes": [
-        "D2DrlgPathScannerStrc",
-        "D2PathPointStrc",
         "int32_t"
       ]
     },

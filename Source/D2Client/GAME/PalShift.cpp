@@ -5,10 +5,129 @@
 #include "Source/D2Client/GAME/SCmd.h"
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Monster.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/Fog/Fog.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/D2ArchiveStrc.h"
+#include "3rdparty/Storm/D2MPQFileStrc.h"
+#include "3rdparty/Storm/Source/SFile.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
 
@@ -28,11 +147,9 @@ static_assert(sizeof(void*) != 4 || sizeof(::D2GamePalShiftGreenBloodStrc) == 0x
 #define D2_FREE_AT(p, szFile, nLine) Fog::Memory::FreeClientMemory((p), (szFile), (nLine), 0)
 #endif
 
-static_assert(sizeof(void*) != 4 || sizeof(::D2PalShiftEntryStrc) == 0x1008, "D2_NEW_AT(D2PalShiftEntryStrc): the 32-bit layout must be the 0x1008 bytes 1.14d allocates");
 
-
-static D2MonsterPalShiftSlotStrc * gpMonsterPalShiftList = 0; D2_STATIC_GUARD(gpMonsterPalShiftList, "gpMonsterPalShiftList");
-static D2PalShiftEntryStrc * gpPalShiftEntryListHead = 0; D2_STATIC_GUARD(gpPalShiftEntryListHead, "gpPalShiftEntryListHead");
+static void * gpMonsterPalShiftList = 0; D2_STATIC_GUARD(gpMonsterPalShiftList, "gpMonsterPalShiftList");
+static void * gpPalShiftEntryListHead = 0; D2_STATIC_GUARD(gpPalShiftEntryListHead, "gpPalShiftEntryListHead");
 static uint8_t PalShift_RandTransform[7680] = {}; D2_STATIC_GUARD(PalShift_RandTransform, "PalShift_RandTransform");
 static int gbPalShiftRandTransformLoaded = 0; D2_STATIC_GUARD(gbPalShiftRandTransformLoaded, "gbPalShiftRandTransformLoaded");
 static D2GamePalShiftGreenBloodStrc * PalShift_GreenBlood = 0; D2_STATIC_GUARD(PalShift_GreenBlood, "PalShift_GreenBlood");
@@ -62,12 +179,12 @@ void __stdcall InitPal() {
     D2MPQFileStrc* pGreenBloodFile;
     D2MPQFileStrc* pRandTransformFile;
     size_t nAllocSize = D2Common::ITEMS::Items::sgptDataTable->nTxtMonStatsSize * 8;
-    D2MonsterPalShiftSlotStrc* pPalShiftList = (D2MonsterPalShiftSlotStrc*)D2_ALLOC_AT(nAllocSize, ".\\GAME\\PalShift.cpp", 99);
+    void* pPalShiftList = D2_ALLOC_AT(nAllocSize, ".\\GAME\\PalShift.cpp", 99);
     gpMonsterPalShiftList = pPalShiftList;
     memset(pPalShiftList, 0, nAllocSize);
     int nMonStatsCount = D2Common::ITEMS::Items::sgptDataTable->nTxtMonStatsSize;
     for (i = 0; i < nMonStatsCount; i++) {
-      pPalShiftList[i].nMonsterId = i;
+      *(int*)((int)pPalShiftList + i * 8) = i;
     }
 
     gpPalShiftEntryListHead = 0;
@@ -93,7 +210,7 @@ void __stdcall InitPal() {
 // @sourcefile .\GAME\PalShift.cpp
 void __stdcall FreeGamePalShift() {
     while (gpPalShiftEntryListHead) {
-      D2PalShiftEntryStrc* pNextEntry = gpPalShiftEntryListHead->pNext;
+      void* pNextEntry = *(void**)((int)gpPalShiftEntryListHead + 0x1004);
       D2_FREE_AT(gpPalShiftEntryListHead, ".\\GAME\\PalShift.cpp", 0x84);
       gpPalShiftEntryListHead = pNextEntry;
     }
@@ -110,21 +227,20 @@ void __stdcall FreeGamePalShift() {
     PalShift_GreenBlood = 0;
 }
 
-D2PalShiftEntryStrc * __fastcall PALSHIFT_FindPalShiftByToken(int32_t nToken) {
-    D2PalShiftEntryStrc* pEntry;
-    D2PalShiftEntryStrc* pDVar1 = gpPalShiftEntryListHead;
+int * __fastcall PALSHIFT_FindPalShiftByToken(int32_t nToken) {
+    int* pEntry = (int*)gpPalShiftEntryListHead;
     while (true) {
-      if (!pDVar1) {
+      if (!pEntry) {
         return nullptr;
       }
-      if (pDVar1->nMonsterId == nToken) {
+      if (*pEntry == nToken) {
         break;
       }
 
-      pDVar1 = pDVar1->pNext;
+      pEntry = (int*)pEntry[0x401];
     }
 
-    return pDVar1;
+    return pEntry;
 }
 
 // Remaps the blood-color entries in a monster's palette table to green if the monster uses local blood (MonStats2.byLocalBlood == 2). Copies the base 512-byte palette block to an offset within pPaletteData, then applies the PalShift_GreenBlood lookup table across 8 rows of 256 entries, replacing non-zero mapped indices. No-ops for monsters outside the valid MonStats/MonStatsEx range or without local blood.
@@ -187,7 +303,7 @@ void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId) {
       return;
     }
 
-    D2PalShiftEntryStrc* pExisting = PALSHIFT_FindPalShiftByToken(nMonsterId);
+    int* pExisting = PALSHIFT_FindPalShiftByToken(nMonsterId);
     if (pExisting) {
       return;
     }
@@ -208,7 +324,7 @@ void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId) {
     szMonsterCode[1] = cCode1;
     szMonsterCode[0] = cCode0;
     strcat(szFilePath, szMonsterCode);
-    char* pSrc = (char*)((intptr_t)&szFilePath - 1);
+    char* pSrc = (char*)((uintptr_t)&szFilePath - 1);
     do {
       pPathEnd2 = pSrc;
       pSrc = pPathEnd2 + 1;
@@ -220,13 +336,13 @@ void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId) {
       return;
     }
 
-    D2PalShiftEntryStrc* pPalShiftEntry = D2_NEW_AT(D2PalShiftEntryStrc, ".\\GAME\\PalShift.cpp", 0xf4);
+    int* pPalShiftEntry = (int*)D2_ALLOC_AT(0x1008, ".\\GAME\\PalShift.cpp", 0xf4);
     memset(pPalShiftEntry, 0, 0x1008);
-    D2Hell::D2FILE_ReadFile(nullptr, pFileHandle, pPalShiftEntry->aPalShifts, 0x800);
+    D2Hell::D2FILE_ReadFile(nullptr, pFileHandle, pPalShiftEntry + 1, 0x800);
     D2Hell::D2FILE_CloseFile(nullptr, pFileHandle);
     PALSHIFT_ApplyGreenBloodPalette((uint8_t*)pPalShiftEntry, nMonsterId);
-    pPalShiftEntry->nMonsterId = nMonsterId;
-    pPalShiftEntry->pNext = gpPalShiftEntryListHead;
+    *pPalShiftEntry = nMonsterId;
+    pPalShiftEntry[0x401] = (int)gpPalShiftEntryListHead;
     gpPalShiftEntryListHead = pPalShiftEntry;
     iMonIdx = 0;
     while (true) {
@@ -235,8 +351,8 @@ void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId) {
       if (iMonIdx >= nMonStatsCount) {
         break;
       }
-      if (pPalShiftEntry->nMonsterId == iMonIdx) {
-        gpMonsterPalShiftList[iMonIdx].pPalShift = pPalShiftEntry;
+      if (*pPalShiftEntry == iMonIdx) {
+        *(int**)((int)gpMonsterPalShiftList + iMonIdx * 8 + 4) = (int*)pPalShiftEntry;
       }
 
       iMonIdx++;
@@ -246,22 +362,22 @@ void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId) {
 // @sourcefile .\GAME\PalShift.cpp
 void __stdcall PALSHIFT_InitPalShiftTable() {
     int i;
+    void* pPalShiftList;
     while (gpPalShiftEntryListHead) {
-      D2PalShiftEntryStrc* pDVar1;
-      pDVar1 = gpPalShiftEntryListHead->pNext;
+      pPalShiftList = *(void**)((int)gpPalShiftEntryListHead + 0x1004);
       D2_FREE_AT(gpPalShiftEntryListHead, ".\\GAME\\PalShift.cpp", 0x117);
-      gpPalShiftEntryListHead = pDVar1;
+      gpPalShiftEntryListHead = pPalShiftList;
     }
 
     int nTxtMonStatsCount = D2Common::ITEMS::Items::sgptDataTable->nTxtMonStatsSize;
     if (!gpMonsterPalShiftList) {
-      gpMonsterPalShiftList = (D2MonsterPalShiftSlotStrc*)D2_ALLOC_AT(nTxtMonStatsCount * 8, ".\\GAME\\PalShift.cpp", 0x11f);
+      gpMonsterPalShiftList = D2_ALLOC_AT(nTxtMonStatsCount * 8, ".\\GAME\\PalShift.cpp", 0x11f);
     }
 
-    D2MonsterPalShiftSlotStrc* pPalShiftList = gpMonsterPalShiftList;
+    pPalShiftList = gpMonsterPalShiftList;
     memset(gpMonsterPalShiftList, 0, nTxtMonStatsCount * 8);
     for (i = 0; i < nTxtMonStatsCount; i++) {
-      pPalShiftList[i].nMonsterId = i;
+      *(int*)((int)pPalShiftList + i * 8) = i;
     }
 
     PALSHIFT_LoadMonsterPalShift(0x16b);
@@ -278,13 +394,11 @@ D2GamePalShiftRandTransformStrc * * __fastcall PALSHIFT_GetMonsterTransform(D2Un
       return nullptr;
     }
 
-    D2PalShiftEntryStrc* pPalShiftEntryPtr = gpMonsterPalShiftList[pUnit->nClassId].pPalShift;
-    // [R49, re-applied 11th sync] no early entry-out here: RandTransforms.dat is a GLOBAL
-    // table (indices 8-0x25) and must resolve for monsters without a per-monster
-    // palshift.dat — the entry pointer is consumed only by the index 0-7 sub-table paths
-    // below, which carry the guard themselves. The unconditional entry-out made every
-    // rolled unique/champion tint (the issue #9 "no unique colors") unreachable.
-    // Upstream's 11th-sync regen restored the retail early-out spelling; NOT taken.
+    int pPalShiftEntryPtr = *(int*)((int)gpMonsterPalShiftList + pUnit->nClassId * 8 + 4);
+    // [R49] no early entry-out here: RandTransforms.dat is a GLOBAL table (indices 8-0x25) and must
+    // resolve for monsters without a per-monster palshift.dat — the entry pointer is consumed only by
+    // the index 0-7 sub-table paths below, which carry the guard themselves. The unconditional
+    // entry-out made every rolled unique/champion tint (the issue #9 "no unique colors") unreachable.
 
     int32_t nPalShiftIndex = UNIT::CUnit::GetPalShiftIndex(pUnit);
     switch (nPalShiftIndex) {
@@ -326,12 +440,12 @@ D2GamePalShiftRandTransformStrc * * __fastcall PALSHIFT_GetMonsterTransform(D2Un
       if (nBloodFlag) {
         pMonStats2 = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetMonStats2(pUnit->nClassId);
         if (pMonStats2 && pMonStats2->byLocalBlood == 2) {
-          return (D2GamePalShiftRandTransformStrc**)(pPalShiftEntryPtr->aPalShifts + nPalShiftIndex * 0x100 + 0x800);
+          return (D2GamePalShiftRandTransformStrc**)(nPalShiftIndex * 0x100 + 0x804 + pPalShiftEntryPtr);
         }
       }
     }
 
-    return (D2GamePalShiftRandTransformStrc**)(pPalShiftEntryPtr->aPalShifts + nPalShiftIndex * 0x100);
+    return (D2GamePalShiftRandTransformStrc**)(nPalShiftIndex * 0x100 + 4 + pPalShiftEntryPtr);
 }
 
 int32_t __fastcall PALSHIFT_GenerateShiftDuration(D2UnitStrc * pUnitSeedBase, uint16_t nSeedInput) {

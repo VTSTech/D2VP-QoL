@@ -981,7 +981,7 @@
         "CLIENT_RegisterActiveUnitInSlot"
       ],
       "usedTypes": [
-        "D2UnitStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -999,7 +999,7 @@
         "CLIENT_UnregisterActiveUnitFromSlot"
       ],
       "usedTypes": [
-        "D2UnitStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -1530,9 +1530,6 @@
       "namespace": "D2Client::Source::ClientEngine",
       "calledFunctions": [
         "Unreferenced_0046d9c0"
-      ],
-      "usedTypes": [
-        "D2OverlayTxt"
       ]
     },
     {

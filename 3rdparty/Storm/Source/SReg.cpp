@@ -3,6 +3,14 @@
 #include "3rdparty/Storm/Source/SReg.h"
 #include "3rdparty/Storm/Source/SErr.h"
 #include "3rdparty/Storm/Source/SSTR.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
@@ -153,24 +161,24 @@ static BOOL __stdcall SREG_InternalLoadEntry(LPDWORD pdwType, LPBYTE pbData, cha
 // Storm module with its own nine exported symbols; nothing in this family belongs to the string module.
 // The SReg block occupies 00414930-0041513f, contiguous, between SStr and SFile.
 // @blizzard InternalSaveEntry (SREG.CPP)
-static int __stdcall SREG_InternalSaveEntry(char * pszSubKey, LPCSTR szValueName, uint32_t dwType, uint8_t * pbData, uint32_t dwDataLen, uint32_t dwFlags) {
+static int __stdcall SREG_InternalSaveEntry(char * pszSubKey, LPCSTR szValueName, uint32_t dwType, uint8_t * pbData, uint32_t dwDataLen, uint8_t byFlags) {
     DWORD dwDisposition;
     HKEY hKey;
     char szKeyPath[260];
     uint8_t* pbDataLocal;
     pbDataLocal = pbData;
     szKeyPath[0] = '\0';
-    if (!(dwFlags & 0x10)) {
-      SRegGetBaseKey((uint8_t)dwFlags, szKeyPath, 0x104);
+    if (!(byFlags & 0x10)) {
+      SRegGetBaseKey(byFlags, szKeyPath, 0x104);
     }
 
     SSTR::SStrPack(szKeyPath, pszSubKey, 0x104);
     DWORD dwErrCode;
-    dwErrCode = RegCreateKeyExA((HKEY)((dwFlags & 4) != 0 ? 0x80000002 : 0x80000001), szKeyPath, 0, (LPSTR)0x0, 0, 0x20006, (LPSECURITY_ATTRIBUTES)0x0, &hKey, &dwDisposition);
+    dwErrCode = RegCreateKeyExA((HKEY)((byFlags & 4) != 0 ? 0x80000002 : 0x80000001), szKeyPath, 0, (LPSTR)0x0, 0, 0x20006, (LPSECURITY_ATTRIBUTES)0x0, &hKey, &dwDisposition);
     if (!dwErrCode) {
       /* DWORD cbData for RegSetValueExA */ /* BYTE * lpData for RegSetValueExA */ /* DWORD dwType for RegSetValueExA */ /* DWORD Reserved for RegSetValueExA */ /* LPCSTR lpValueName for RegSetValueExA */ /* HKEY hKey for RegSetValueExA */ dwErrCode = RegSetValueExA(hKey, szValueName, 0, dwType, pbDataLocal, dwDataLen);
       if (!dwErrCode) {
-        if (dwFlags & 8) {
+        if (byFlags & 8) {
           /* HKEY hKey for RegFlushKey */ dwErrCode = RegFlushKey(hKey);
           if (dwErrCode) {
             goto close_key_and_fail;
@@ -235,7 +243,7 @@ int32_t __stdcall SRegLoadData(uint32_t * pszSubKey, char * szValueName, int32_t
 // Storm module with its own nine exported symbols; nothing in this family belongs to the string module.
 // The SReg block occupies 00414930-0041513f, contiguous, between SStr and SFile.
 int32_t __stdcall SRegLoadString(char * szSubKey, char * szValueName, int32_t nFlags, LPSTR szOutBuf, DWORD dwOutBufSize) {
-    DWORD pTermPos;
+    char* pTermPos;
     if (*szSubKey == '\0' || !szSubKey || !szValueName || *szValueName == '\0' || !szOutBuf || !dwOutBufSize) {
       SErr::SErrSetLastError(0x57);
     } else {
@@ -248,12 +256,12 @@ int32_t __stdcall SRegLoadString(char * szSubKey, char * szValueName, int32_t nF
             return 1;
           }
         } else {
-          pTermPos = dwOutBufSize - 1;
-          if (pTermPos >= (uintptr_t)szValueName) {
-            pTermPos = (DWORD)szValueName;
+          pTermPos = (char*)(dwOutBufSize - 1);
+          if ((char*)(dwOutBufSize - 1) >= szValueName) {
+            pTermPos = szValueName;
           }
 
-          szOutBuf[pTermPos] = '\0';
+          pTermPos[(int)szOutBuf] = '\0';
         }
 
         return 1;
@@ -325,7 +333,7 @@ int32_t __stdcall SRegSaveData(char * pszSubKey, LPCSTR szValueName, uint32_t nF
       pbData = (uint8_t*)"";
     }
 
-    int nResult = SREG_InternalSaveEntry(pszSubKey, szValueName, (nFlags & 0x80 | 0x60) >> 5, pbData, dwDataLen, nFlags);
+    int nResult = SREG_InternalSaveEntry(pszSubKey, szValueName, (nFlags & 0x80 | 0x60) >> 5, pbData, dwDataLen, (uint8_t)nFlags);
     return nResult;
 }
 
@@ -343,7 +351,7 @@ int32_t __stdcall SRegSaveString(char * pszSubKey, LPCSTR szValueName, int32_t n
 
     uint32_t pStrEnd = SSTR::SStrLen(pszValue);
     pStrEnd += 1;
-    int nResult = SREG_InternalSaveEntry(pszSubKey, szValueName, 1, (uint8_t*)pszValue, pStrEnd, nFlags);
+    int nResult = SREG_InternalSaveEntry(pszSubKey, szValueName, 1, (uint8_t*)pszValue, pStrEnd, (uint8_t)nFlags);
     return nResult;
 }
 
@@ -359,7 +367,7 @@ BOOL __stdcall SRegSaveValue(char * szRegistry, LPCSTR szRegistryKey, int32_t nF
       return 0;
     }
 
-    int nResult = SREG_InternalSaveEntry(szRegistry, szRegistryKey, 4, (uint8_t*)&nValue, 4, nFlags);
+    int nResult = SREG_InternalSaveEntry(szRegistry, szRegistryKey, 4, (uint8_t*)&nValue, 4, (uint8_t)nFlags);
     return nResult;
 }
 

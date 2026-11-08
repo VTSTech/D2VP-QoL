@@ -1304,7 +1304,6 @@
         "SCMD_DetectPositionDesync"
       ],
       "usedTypes": [
-        "D2PartyDataStrc",
         "int32_t"
       ]
     },

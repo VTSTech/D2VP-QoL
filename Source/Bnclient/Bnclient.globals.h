@@ -7,13 +7,11 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_Bnclient)
 #error "Bnclient header included by a module that may not use Bnclient (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_Bnclient) && !defined(D2_LOADS_Bnclient)
-#error "internal Bnclient header included from another module; include Bnclient's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 
 // Forward declarations
 struct D2BNetGatewayAccessStr;
@@ -38,6 +36,7 @@ extern char * KeyExpansion;
 extern char * KeyOwner;
 } // namespace Bnclient::_net_sid
 namespace Bnclient::BnDownload {
+extern char gaCDKeyAuthData[4];
 extern unsigned int gnNetworkSendState;
 extern char gbBnetFtpFileTransferActive[256];
 extern char gszBNetChatInputBuffer[260];

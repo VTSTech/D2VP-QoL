@@ -293,7 +293,6 @@
         "DRLGGRID_IsGridValid"
       ],
       "usedTypes": [
-        "D2DrlgCoordIndexCtxStrc",
         "D2DrlgCoordsStrc",
         "uint32_t"
       ]
@@ -504,7 +503,6 @@
       ],
       "usedTypes": [
         "D2DrlgGridStrc",
-        "eD2GridCellFlags",
         "int32_t",
         "uint32_t"
       ]
@@ -633,9 +631,6 @@
       "calledFunctions": [
         "Unreferenced_0067cb60",
         "memcpy"
-      ],
-      "usedTypes": [
-        "D2DrlgGridStrc"
       ]
     },
     {

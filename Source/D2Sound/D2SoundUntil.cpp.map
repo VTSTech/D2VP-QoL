@@ -33,9 +33,8 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "D2SoundListNodeStrc",
-        "D2SoundListNodeStrc *",
-        "intptr_t"
+        "int *",
+        "int32_t"
       ]
     },
     {
@@ -52,7 +51,6 @@
         "SOUNDUTIL_FindInLinkedList"
       ],
       "usedTypes": [
-        "D2SoundListNodeStrc",
         "int32_t"
       ]
     },
@@ -68,9 +66,6 @@
       "namespace": "D2Sound::D2SoundUntil",
       "calledFunctions": [
         "Unreferenced_005169f0"
-      ],
-      "usedTypes": [
-        "D2SoundListNodeStrc"
       ]
     },
     {
@@ -88,8 +83,7 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "D2SoundListNodeStrc",
-        "D2SoundListNodeStrc *"
+        "int *"
       ]
     },
     {
@@ -107,9 +101,7 @@
         "AllocClientMemory"
       ],
       "usedTypes": [
-        "D2SoundListNodeStrc",
-        "D2SoundListNodeStrc *",
-        "intptr_t"
+        "void *"
       ]
     },
     {
@@ -185,7 +177,6 @@
         "FreeClientMemory"
       ],
       "usedTypes": [
-        "VS_FIXEDFILEINFO",
         "uint32_t"
       ]
     }

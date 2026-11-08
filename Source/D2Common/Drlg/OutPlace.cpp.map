@@ -153,7 +153,6 @@
         "AllocDrlgOrth"
       ],
       "usedTypes": [
-        "D2DrlgLevelDataWildernessLevel",
         "D2DrlgLevelStrc",
         "D2DrlgStrc",
         "eD2LevelId",
@@ -257,7 +256,8 @@
         "D2DrlgLevelStrc",
         "D2DrlgStrc",
         "D2LevelDefsTxt",
-        "eD2LevelId"
+        "eD2LevelId",
+        "int32_t"
       ]
     },
     {

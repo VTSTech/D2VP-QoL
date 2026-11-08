@@ -227,7 +227,6 @@
       ],
       "usedTypes": [
         "fd_set",
-        "int32_t",
         "timeval",
         "uint32_t",
         "uint8_t"

@@ -37,7 +37,6 @@
         "inflateResetKeep"
       ],
       "usedTypes": [
-        "inflate_state",
         "z_stream"
       ]
     },
@@ -181,7 +180,6 @@
       ],
       "usedTypes": [
         "gz_header",
-        "inflate_code",
         "inflate_state",
         "int32_t",
         "uint16_t",
@@ -223,7 +221,6 @@
       ],
       "usedTypes": [
         "inflate_state",
-        "uint8_t",
         "z_stream"
       ]
     },
@@ -264,7 +261,6 @@
       ],
       "usedTypes": [
         "gz_header",
-        "inflate_state",
         "z_stream"
       ]
     },
@@ -302,7 +298,6 @@
         "inflateResetKeep"
       ],
       "usedTypes": [
-        "inflateSync_Slotm",
         "inflate_state",
         "uint32_t",
         "z_stream"

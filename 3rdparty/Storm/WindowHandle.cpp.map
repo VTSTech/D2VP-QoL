@@ -29,9 +29,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "WND_GetActiveWindow_Unref_0041c2b0"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -94,6 +91,9 @@
       "calledFunctions": [
         "SMsgPushRegisterState",
         "SEvtPushState"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -122,9 +122,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_004203c0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -156,9 +153,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_00420470"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -173,9 +167,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_004204f0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -227,8 +218,7 @@
         "WND_GetNodeMaskedOffset"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -246,8 +236,7 @@
         "WND_UnlinkListNode"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -263,9 +252,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_004206a0"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -282,9 +268,7 @@
         "WND_GetNodeData"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
-        "intptr_t"
+        "int32_t"
       ]
     },
     {
@@ -320,8 +304,8 @@
         "UnlinkAll"
       ],
       "usedTypes": [
+        "D2StormListHead",
         "StormLinkStrc",
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -337,9 +321,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_004207d0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -418,7 +399,6 @@
       ],
       "usedTypes": [
         "StormLinkStrc",
-        "StormLinkedListStrc",
         "StormWndRecStrc",
         "uint32_t"
       ]
@@ -437,7 +417,8 @@
         "SMSG_FindWindow"
       ],
       "usedTypes": [
-        "StormWndRecStrc"
+        "int32_t",
+        "uint32_t"
       ]
     },
     {
@@ -457,7 +438,8 @@
         "WND_RemoveAndFreeRecord"
       ],
       "usedTypes": [
-        "StormWndRecStrc"
+        "StormWndRecStrc",
+        "uint32_t"
       ]
     },
     {
@@ -478,7 +460,6 @@
         "SEvtRegisterHandler"
       ],
       "usedTypes": [
-        "StormWndRecStrc",
         "int32_t",
         "uint32_t"
       ]
@@ -500,7 +481,6 @@
         "SEvtUnregisterHandler"
       ],
       "usedTypes": [
-        "StormWndRecStrc",
         "uint32_t"
       ]
     },
@@ -643,6 +623,9 @@
       "calledFunctions": [
         "SMsgUnregisterKeyDown",
         "SMSG_InternalUnregister"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -658,6 +641,9 @@
       "calledFunctions": [
         "SMsgUnregisterKeyUp",
         "SMSG_InternalUnregister"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -673,6 +659,9 @@
       "calledFunctions": [
         "SMsgUnregisterMessage",
         "SMSG_InternalUnregister"
+      ],
+      "usedTypes": [
+        "uint32_t"
       ]
     },
     {
@@ -723,9 +712,6 @@
       "namespace": "Storm::WindowHandle",
       "calledFunctions": [
         "Unreferenced_00420d80"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -757,8 +743,7 @@
       ],
       "usedTypes": [
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {

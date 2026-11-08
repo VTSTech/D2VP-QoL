@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -137,8 +134,6 @@ struct SpinnerImplementationVtable;
 struct SpinnerWrapperVtable;
 
 // Data types
-#ifndef D2_DEFINED_SpinnerImplementation
-#define D2_DEFINED_SpinnerImplementation
 struct SpinnerImplementation {
     /* 0x00 */ struct SpinnerImplementationVtable * pVtable; // virtual function table
     /* 0x04 */ int (__fastcall *pfnCharFilter)(::UIWidget *, struct D2UIMouseMsgStrc *);
@@ -163,18 +158,12 @@ struct SpinnerImplementation {
     /* 0x50 */ struct DC6 * pDC6; // image handed to D2GFX_DrawImage as sGfxData.pDC6 by SPINNER_Draw
 };
 
-#endif // D2_DEFINED_SpinnerImplementation
-#ifndef D2_DEFINED_SpinnerWrapper
-#define D2_DEFINED_SpinnerWrapper
 struct SpinnerWrapper {
     /* 0x00 */ struct SpinnerWrapperVtable * pVtable; // virtual function table
     /* 0x04 */ uint32_t nUnused04;
     /* 0x08 */ struct SpinnerImplementation * pImplementation;
 };
 
-#endif // D2_DEFINED_SpinnerWrapper
-#ifndef D2_DEFINED_SpinnerImplementationVtable
-#define D2_DEFINED_SpinnerImplementationVtable
 struct SpinnerImplementationVtable {
     /* 0x00 */ ::SpinnerImplementation * (__thiscall *ScalarDeletingDestructor)(::SpinnerImplementation *, uint32_t);
     /* 0x04 */ void (__thiscall *Draw)(::SpinnerImplementation *);
@@ -191,9 +180,6 @@ struct SpinnerImplementationVtable {
     /* 0x30 */ int (__thiscall *GetRepeatDelta)(::SpinnerImplementation *);
 };
 
-#endif // D2_DEFINED_SpinnerImplementationVtable
-#ifndef D2_DEFINED_SpinnerWrapperVtable
-#define D2_DEFINED_SpinnerWrapperVtable
 struct SpinnerWrapperVtable {
     /* 0x00 */ ::SpinnerWrapper * (__thiscall *ScalarDeletingDestructor)(::SpinnerWrapper *, uint32_t);
     /* 0x04 */ void (__thiscall *Draw)(::SpinnerWrapper *);
@@ -210,7 +196,6 @@ struct SpinnerWrapperVtable {
     /* 0x30 */ int (__thiscall *GetRepeatDelta)(::SpinnerWrapper *, int);
 };
 
-#endif // D2_DEFINED_SpinnerWrapperVtable
 namespace D2Client::UI::Spinner::SpinnerWrapper {
 
 // Function declarations

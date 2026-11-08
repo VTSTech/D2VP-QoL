@@ -136,6 +136,7 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
+        "D2WaypointStrc *",
         "WCHAR",
         "int32_t",
         "uint16_t",
@@ -263,9 +264,6 @@
       "namespace": "D2Client::UNIT::Monster",
       "calledFunctions": [
         "Unreferenced_004ae190"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -738,7 +736,6 @@
         "MONSTER_IsAndarielNormal"
       ],
       "usedTypes": [
-        "D2ClientMonAnimModeEntryStrc",
         "D2MonStats2Txt",
         "D2UnitStrc",
         "eD2MonsterAnimMode"
@@ -1081,9 +1078,6 @@
       "calledFunctions": [
         "Unreferenced_004b1030",
         "UNITS_FindClientSideUnit"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -1098,9 +1092,6 @@
       "namespace": "D2Client::UNIT::Monster",
       "calledFunctions": [
         "NPCMENU_ParseSpeechData"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -1175,8 +1166,8 @@
         "UNITS_FindClientSideUnit"
       ],
       "usedTypes": [
-        "D2GSPacketSrv0x98",
         "D2UnitStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -1197,9 +1188,9 @@
         "AdvanceAnimFrame"
       ],
       "usedTypes": [
-        "D2ClientMonAnimModeEntryStrc",
+        "D2DynamicPathStrc",
         "D2ServerMessageHandleStrc",
-        "D2UnitStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -1248,7 +1239,6 @@
         "PlayUnitFootstepSound"
       ],
       "usedTypes": [
-        "D2ClientMonAnimModeEntryStrc",
         "D2DynamicPathStrc",
         "D2MonStatsTxt",
         "D2UnitStrc",

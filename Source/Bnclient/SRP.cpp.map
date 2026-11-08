@@ -107,7 +107,6 @@
       ],
       "usedTypes": [
         "BigData",
-        "BigData *",
         "D2Srp",
         "uint32_t",
         "uint8_t"
@@ -129,7 +128,7 @@
       ],
       "usedTypes": [
         "BigData *",
-        "D2Srp"
+        "int32_t"
       ]
     },
     {
@@ -183,7 +182,6 @@
       "usedTypes": [
         "BigData",
         "BigData *",
-        "D2Srp",
         "int32_t",
         "uint32_t"
       ]
@@ -237,7 +235,7 @@
         "__security_check_cookie"
       ],
       "usedTypes": [
-        "D2Srp",
+        "int32_t",
         "uint32_t",
         "uint8_t"
       ]
@@ -528,7 +526,7 @@
       ],
       "usedTypes": [
         "BigData",
-        "uint8_t"
+        "int32_t"
       ]
     },
     {
@@ -575,37 +573,6 @@
       "usedTypes": [
         "D2Srp *",
         "int32_t"
-      ]
-    },
-    {
-      "name": "SRP_GlobalInit",
-      "address": "006caef0",
-      "lines": [
-        {
-          "line": 1,
-          "address": "006caef0"
-        }
-      ],
-      "namespace": "Bnclient::SRP",
-      "calledFunctions": [
-        "SRP_GlobalInit",
-        "SRP_CreateContext",
-        "atexit"
-      ]
-    },
-    {
-      "name": "SRP_AtexitCleanup",
-      "address": "006cb480",
-      "lines": [
-        {
-          "line": 1,
-          "address": "006cb480"
-        }
-      ],
-      "namespace": "Bnclient::SRP",
-      "calledFunctions": [
-        "SRP_AtexitCleanup",
-        "SRP_DestroyContext"
       ]
     }
   ]

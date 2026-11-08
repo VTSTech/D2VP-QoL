@@ -919,7 +919,6 @@
         "D2BinFieldInputStrc",
         "D2ItemStatCostDescPriorityStrc",
         "D2PoolManagerStrc",
-        "TXT_AllocTxt_itemstatcost_Slotm",
         "int32_t",
         "uint16_t",
         "uint32_t",

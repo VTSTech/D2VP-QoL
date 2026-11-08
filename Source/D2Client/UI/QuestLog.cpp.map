@@ -527,9 +527,6 @@
       "namespace": "D2Client::UI::QuestLog",
       "calledFunctions": [
         "QUESTLOG_ClearMissileFlagCb_Missile527"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -728,9 +725,6 @@
       "namespace": "D2Client::UI::QuestLog",
       "calledFunctions": [
         "Unreferenced_004a3200"
-      ],
-      "usedTypes": [
-        "uint8_t"
       ]
     },
     {

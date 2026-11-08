@@ -4,23 +4,106 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Common)
 #error "D2Common header included by a module that may not use D2Common (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Common) && !defined(D2_LOADS_D2Common)
-#error "internal D2Common header included from another module; include D2Common's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Common/Txt/Skills.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Client/D2ClientStrc.h"
+#include "Source/D2Client/D2LightMapStrc.h"
+#include "Source/D2Client/GAME/Game/SGAMEDATA.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/Collision.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SkillStrc.h"
 #include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatInfoStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/DataTbls.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MissileTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/PATH/DynamicPath.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/D2TxtLinkNodeStrc.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Common/Units/Missile.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/PLAYER/Player.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Skills.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/SKILLS/SkillSor.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
 
 namespace D2Common::Skills {
 
-#ifndef D2_DEFINED_INLINE_0045c4b0
-#define D2_DEFINED_INLINE_0045c4b0
 __attribute__((noinline)) inline D2SkillsTxt * __fastcall TXT_Skills_GetLine(eD2Skills eSkill) {
     if ((int)eSkill >= 0 && (int)eSkill < ITEMS::Items::sgptDataTable->nTxtSkillsCount) {
       return ITEMS::Items::sgptDataTable->pTxtSkills + eSkill;
@@ -28,7 +111,6 @@ __attribute__((noinline)) inline D2SkillsTxt * __fastcall TXT_Skills_GetLine(eD2
 
     return nullptr;
 }
-#endif // D2_DEFINED_INLINE_0045c4b0
 
 __attribute__((noinline)) inline void __fastcall StoreLastSkillHit(eSkillEType pSkill, D2UnitStrc * pUnit, eD2UnitType nUnitType, uint32_t nUid) {
     if (!(pUnit && pUnit->eUnitType == UNIT_PLAYER && pUnit->pUnitData.pUnitDataPlayer)) {
@@ -41,8 +123,6 @@ __attribute__((noinline)) inline void __fastcall StoreLastSkillHit(eSkillEType p
     pUnit->pUnitData.pUnitDataPlayer->nTargetUnitGUID = nUid;
 }
 
-#ifndef D2_DEFINED_INLINE_004a89d0
-#define D2_DEFINED_INLINE_004a89d0
 __attribute__((noinline)) inline D2SkillDescTxt * __fastcall GetSkillDescription(eD2Skills eSkillId) {
     D2SkillsTxt* pSkillsTxt = (int)eSkillId >= 0 && (int)eSkillId < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + eSkillId : nullptr;
     if (pSkillsTxt) {
@@ -55,10 +135,7 @@ __attribute__((noinline)) inline D2SkillDescTxt * __fastcall GetSkillDescription
 
     return nullptr;
 }
-#endif // D2_DEFINED_INLINE_004a89d0
 
-#ifndef D2_DEFINED_INLINE_004aa8b0
-#define D2_DEFINED_INLINE_004aa8b0
 __attribute__((noinline)) inline int32_t __fastcall SKILL_GetMaxLevelForSkill(int32_t skillId) {
     int32_t nMaxLevel;
     if (!(skillId < 0 || skillId >= ITEMS::Items::sgptDataTable->nTxtSkillsCount || (nMaxLevel = (int32_t)ITEMS::Items::sgptDataTable->pTxtSkills[skillId].maxlvl , nMaxLevel <= 0))) {
@@ -68,10 +145,7 @@ __attribute__((noinline)) inline int32_t __fastcall SKILL_GetMaxLevelForSkill(in
     nMaxLevel = 0x14;
     return nMaxLevel;
 }
-#endif // D2_DEFINED_INLINE_004aa8b0
 
-#ifndef D2_DEFINED_INLINE_004c9460
-#define D2_DEFINED_INLINE_004c9460
 __attribute__((noinline)) inline int32_t __fastcall SKILLS_GetManaCostMultiplier(int32_t nSkillId) {
     D2SkillsTxt* pSkillsTxt = nSkillId >= 0 && nSkillId < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + nSkillId : nullptr;
     if (!pSkillsTxt) {
@@ -80,10 +154,7 @@ __attribute__((noinline)) inline int32_t __fastcall SKILLS_GetManaCostMultiplier
 
     return pSkillsTxt->Param[0];
 }
-#endif // D2_DEFINED_INLINE_004c9460
 
-#ifndef D2_DEFINED_INLINE_004cc7c0
-#define D2_DEFINED_INLINE_004cc7c0
 __attribute__((noinline)) inline int32_t __fastcall MISSILE_GetBoltSpeed(int32_t nSkillId, int32_t nSkillLevel) {
     if (nSkillId < 0) {
       return 0;
@@ -102,10 +173,7 @@ __attribute__((noinline)) inline int32_t __fastcall MISSILE_GetBoltSpeed(int32_t
 
     return (nSkillLevel - 1) * pSkillsTxtLine->Param[3] + pSkillsTxtLine->Param[2];
 }
-#endif // D2_DEFINED_INLINE_004cc7c0
 
-#ifndef D2_DEFINED_INLINE_004e6ca0
-#define D2_DEFINED_INLINE_004e6ca0
 __attribute__((noinline)) inline int32_t __fastcall TXT_Skills_GetSkillRange(eD2Skills eSkill, int32_t pnSkillLevel) {
     if ((int)eSkill < 0) {
       return 0;
@@ -124,10 +192,7 @@ __attribute__((noinline)) inline int32_t __fastcall TXT_Skills_GetSkillRange(eD2
 
     return (pnSkillLevel - 1) * pSkillsTxtLine->Param[1] + pSkillsTxtLine->Param[0];
 }
-#endif // D2_DEFINED_INLINE_004e6ca0
 
-#ifndef D2_DEFINED_INLINE_004efc20
-#define D2_DEFINED_INLINE_004efc20
 __attribute__((noinline)) inline int32_t __fastcall GetSkilParam1(eD2Skills eSkill) {
     D2SkillsTxt* pSkillsTxt = (int)eSkill >= 0 && (int)eSkill < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + eSkill : nullptr;
     if (!pSkillsTxt) {
@@ -136,10 +201,7 @@ __attribute__((noinline)) inline int32_t __fastcall GetSkilParam1(eD2Skills eSki
 
     return pSkillsTxt->Param[1];
 }
-#endif // D2_DEFINED_INLINE_004efc20
 
-#ifndef D2_DEFINED_INLINE_004efc50
-#define D2_DEFINED_INLINE_004efc50
 __attribute__((noinline)) inline int32_t __fastcall GetSkilParam2(eD2Skills eSkill) {
     D2SkillsTxt* pSkillsTxt = (int)eSkill >= 0 && (int)eSkill < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + eSkill : nullptr;
     if (!pSkillsTxt) {
@@ -148,10 +210,7 @@ __attribute__((noinline)) inline int32_t __fastcall GetSkilParam2(eD2Skills eSki
 
     return pSkillsTxt->Param[2];
 }
-#endif // D2_DEFINED_INLINE_004efc50
 
-#ifndef D2_DEFINED_INLINE_004efc80
-#define D2_DEFINED_INLINE_004efc80
 __attribute__((noinline)) inline int32_t __fastcall GetSkilParam3(eD2Skills eSkill) {
     D2SkillsTxt* pSkillsTxt = (int)eSkill >= 0 && (int)eSkill < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + eSkill : nullptr;
     if (!pSkillsTxt) {
@@ -160,10 +219,7 @@ __attribute__((noinline)) inline int32_t __fastcall GetSkilParam3(eD2Skills eSki
 
     return pSkillsTxt->Param[3];
 }
-#endif // D2_DEFINED_INLINE_004efc80
 
-#ifndef D2_DEFINED_INLINE_004efcb0
-#define D2_DEFINED_INLINE_004efcb0
 __attribute__((noinline)) inline int32_t __fastcall GetSkillParam4(int32_t nSkillId, int32_t nSkillLevel) {
     if (nSkillId < 0) {
       return 0;
@@ -182,10 +238,7 @@ __attribute__((noinline)) inline int32_t __fastcall GetSkillParam4(int32_t nSkil
 
     return (nSkillLevel - 1) * pSkillsTxt->Param[5] + pSkillsTxt->Param[4];
 }
-#endif // D2_DEFINED_INLINE_004efcb0
 
-#ifndef D2_DEFINED_INLINE_004f4110
-#define D2_DEFINED_INLINE_004f4110
 __attribute__((noinline)) inline int32_t __fastcall GetTxtSkillParam5(int32_t nSkillId) {
     D2SkillsTxt* pSkillsTxt = nSkillId >= 0 && nSkillId < ITEMS::Items::sgptDataTable->nTxtSkillsCount ? ITEMS::Items::sgptDataTable->pTxtSkills + nSkillId : nullptr;
     if (!pSkillsTxt) {
@@ -194,6 +247,5 @@ __attribute__((noinline)) inline int32_t __fastcall GetTxtSkillParam5(int32_t nS
 
     return pSkillsTxt->Param[5];
 }
-#endif // D2_DEFINED_INLINE_004f4110
 
 } // namespace D2Common::Skills

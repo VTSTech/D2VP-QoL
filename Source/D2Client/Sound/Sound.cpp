@@ -5,17 +5,138 @@
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Sound.h"
 #include "Source/D2Client/Sound/SoundHdr.h"
+#include "Source/D2Client/UI/EscMenu.h"
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
 #include "Source/D2Client/Utils.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
+#include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgStrc.h"
+#include "Source/D2Common/Environment.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Common/Units.h"
 #include "Source/D2Direct3D/Renderer/Direct3D.h"
-#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Lang/StrTable/strtable.h"
 #include "Source/D2Sound/D2Sound.h"
+#include "Source/D2Sound/D2SoundUntil.h"
+#include "Source/D2Sound/Src/D2SoundFast.h"
+#include "Source/D2Sound/Src/D2SoundSmp.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/D2ArchiveStrc.h"
+#include "3rdparty/Storm/D2MPQFileStrc.h"
+#include "3rdparty/Storm/Source/SFile.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Direct3D/Renderer/Direct3D.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/Sound/Sound.data.h"
+#include "Source/D2Client/UI/MiniPanel.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -26,7 +147,7 @@ static uint32_t gnSoundChannelCount = 0; D2_STATIC_GUARD(gnSoundChannelCount, "g
 static uint32_t gpSoundChannelsArray = 0; D2_STATIC_GUARD(gpSoundChannelsArray, "gpSoundChannelsArray");
 static uint32_t gbSoundChaosEnabled = 0; D2_STATIC_GUARD(gbSoundChaosEnabled, "gbSoundChaosEnabled");
 static LONG * lpAddend_007c8a74 = 0; D2_STATIC_GUARD(lpAddend_007c8a74, "lpAddend_007c8a74");
-static int pAudioDeviceContext = 0; D2_STATIC_GUARD(pAudioDeviceContext, "pAudioDeviceContext");
+static void * pAudioDeviceContext = 0; D2_STATIC_GUARD(pAudioDeviceContext, "pAudioDeviceContext");
 static uint32_t gnSoundChannelIndex = 0; D2_STATIC_GUARD(gnSoundChannelIndex, "gnSoundChannelIndex");
 static uint32_t gnSoundChannelPlaybackState = 0; D2_STATIC_GUARD(gnSoundChannelPlaybackState, "gnSoundChannelPlaybackState");
 static int32_t int32_t_007c8c90 = 0; D2_STATIC_GUARD(int32_t_007c8c90, "int32_t_007c8c90");
@@ -123,24 +244,24 @@ D2SoundChannelStrc * __stdcall SOUND_GetChannelArray() {
       }
 
       pChannel++;
-    } while ((intptr_t)pChannel < (intptr_t)((char*)&gaSoundChannelPool + sizeof(gaSoundChannelPool)));
+    } while ((int)pChannel < (intptr_t)((char*)&gaSoundChannelPool + sizeof(gaSoundChannelPool)));
 
     return nullptr;
 }
 
-D2SoundChannelStrc * __fastcall Unreferenced_004b9440(int param_1) {
+int __fastcall Unreferenced_004b9440(int param_1) {
     D2SoundChannelNodeStrc* pDVar1 = gpActiveSoundChannelsHead;
     if (!param_1) {
-      return nullptr;
+      return 0;
     }
 
     for (; pDVar1; pDVar1 = pDVar1->pNext) {
       if (pDVar1->pChannel->nChannelHandle == param_1) {
-        return pDVar1->pChannel;
+        return (int)pDVar1->pChannel;
       }
     }
 
-    return nullptr;
+    return 0;
 }
 
 // pSoundInst in ESI: when +0x30 is 1, calls SOUND_StopAndDetach on the channel at +0x2c; then halts (SoundInst.cpp line 147, !ptInst->hChannel) if the channel is still set.
@@ -159,17 +280,16 @@ void __stdcall SOUNDINST_StopChannel(int * pSoundInst) {
 
 static void SOUND_ReleaseChannel(D2SoundChannelStrc * pChannel) {
     D2SoundChannelStrc* pChanNode;
-    D2SoundListNodeStrc* pSfxNode;
     if (!pChannel) {
       return;
     }
 
-    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free((D2SoundListNodeStrc**)&gpActiveSoundChannelsHead, (intptr_t)pChannel);
-    for (pSfxNode = pChannel->pUnitList; pSfxNode; pSfxNode = pSfxNode->pNext) {
-      UNIT::UnitSnd::FreeSfxData((D2UnitStrc*)pSfxNode->nItemKey, pChannel->nChannelHandle);
+    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free((int**)&gpActiveSoundChannelsHead, (int32_t)pChannel);
+    for (pChanNode = (D2SoundChannelStrc*)pChannel->pGlobal3Ref; pChanNode; pChanNode = (D2SoundChannelStrc*)pChanNode->nSoundId) {
+      UNIT::UnitSnd::FreeSfxData((D2UnitStrc*)pChanNode->pListNode, pChannel->nChannelHandle);
     }
 
-    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList(&pChannel->pUnitList);
+    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList(&pChannel->pGlobal3Ref);
     if (pChannel->nPlayMode == 1) {
       GAME::Sound::SOUND_StopAndDetach(pChannel->pClientChannel);
     }
@@ -285,7 +405,7 @@ D2SoundChannelStrc * __stdcall SOUND_SetChannelProperties(int32_t nSoundGroup, i
       D2SoundsTxt* pSoundsTxt;
       nChannelData = pDVar1->pChannel;
       pSoundsTxt = SoundHdr::TXT_sounds_GetLineBySoundId(nChannelData->nSoundId);
-      if (pSoundsTxt->nGroupStartIndex == nSoundGroup && nChannelData != nExcludeChannel && nChannelData->nPlayMode == 1 && (!pListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pUnitList, pListKey) , bInList != 0)) && (!nBestChannel || nChannelData->nScheduledTime < nBestChannel->nScheduledTime)) {
+      if (pSoundsTxt->nGroupStartIndex == nSoundGroup && nChannelData != nExcludeChannel && nChannelData->nPlayMode == 1 && (!pListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pGlobal3Ref, pListKey) , bInList != 0)) && (!nBestChannel || nChannelData->nScheduledTime < nBestChannel->nScheduledTime)) {
         nBestChannel = nChannelData;
       }
     }
@@ -305,7 +425,7 @@ static D2SoundChannelStrc * __stdcall SOUND_FindActiveStreamChannel(D2SoundChann
       }
 
       nChannelData = pDVar1->pChannel;
-      if (nChannelData != pExcludeChannel && nChannelData->nPlayMode == 1 && (!nListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pUnitList, nListKey) , bInList != 0)) && nChannelData->nSoundId >= 0xb76 && nChannelData->nSoundId <= 0x1230) {
+      if (nChannelData != pExcludeChannel && nChannelData->nPlayMode == 1 && (!nListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pGlobal3Ref, nListKey) , bInList != 0)) && nChannelData->nSoundId >= 0xb76 && nChannelData->nSoundId <= 0x1230) {
         break;
       }
 
@@ -315,26 +435,26 @@ static D2SoundChannelStrc * __stdcall SOUND_FindActiveStreamChannel(D2SoundChann
     return nChannelData;
 }
 
-D2SoundChannelStrc * __thiscall SOUND_CalculateDistance(int32_t pThis, D2SoundChannelStrc * nExcludeChannel) {
+int32_t __thiscall SOUND_CalculateDistance(int32_t pThis, int32_t nExcludeChannel) {
     D2SoundChannelStrc* nChannelData;
     D2SoundsTxt* pSoundsTxt = SoundHdr::TXT_sounds_GetLineBySoundId(pThis);
     D2SoundChannelNodeStrc* pDVar1 = gpActiveSoundChannelsHead;
     while (true) {
       int nGroupId;
       if (!pDVar1) {
-        return nullptr;
+        return 0;
       }
 
       nChannelData = pDVar1->pChannel;
       nGroupId = SoundHdr::SOUNDHDR_GetSoundField0x60(nChannelData->nSoundId);
-      if (nGroupId == pSoundsTxt->nGroupStartIndex && nChannelData != nExcludeChannel && !nChannelData->bStopFlag && (pSoundsTxt->Compound < 0 || (nGroupId = SoundHdr::SOUNDHDR_GetGlobal3() , nGroupId - nChannelData->nScheduledTime <= (uint32_t)(int)pSoundsTxt->Compound))) {
+      if (nGroupId == pSoundsTxt->nGroupStartIndex && nChannelData != (D2SoundChannelStrc*)nExcludeChannel && !nChannelData->bStopFlag && (pSoundsTxt->Compound < 0 || (nGroupId = SoundHdr::SOUNDHDR_GetGlobal3() , nGroupId - nChannelData->nScheduledTime <= (uint32_t)(int)pSoundsTxt->Compound))) {
         break;
       }
 
       pDVar1 = pDVar1->pNext;
     }
 
-    return nChannelData;
+    return (int32_t)nChannelData;
 }
 
 static void __stdcall SOUND_CalculateUnitDirection(D2UnitStrc * pUnit, int32_t nSoundId, float * pfDirection) {
@@ -454,7 +574,7 @@ int __fastcall SOUND_PlaySound(eD2Sounds nSoundId, D2UnitStrc * pUnit, int32_t n
       return 0;
     }
     if (pSoundsTxt->Compound) {
-      pChannel = SOUND_CalculateDistance(nSoundId, nullptr);
+      pChannel = (D2SoundChannelStrc*)SOUND_CalculateDistance(nSoundId, 0);
       if (pChannel) {
         goto finalize_channel;
       }
@@ -490,7 +610,7 @@ int __fastcall SOUND_PlaySound(eD2Sounds nSoundId, D2UnitStrc * pUnit, int32_t n
       pChannel->nPriorityByte += 0x50;
     }
     if (pUnit) {
-      D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Alloc(&pChannel->pUnitList, pUnit);
+      D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Alloc(&pChannel->pGlobal3Ref, pUnit);
       UNIT::UnitSnd::AllocUnitSfxData(pUnit, pChannel->nChannelHandle);
     }
 
@@ -533,16 +653,16 @@ void __fastcall SOUND_SetChannelPriority(int32_t nSoundId, int32_t nPriority) {
     pChannel->pChannel->nPriority = nPriority;
 }
 
-void __fastcall SOUND_PlayItemSound(D2SoundChannelStrc * nChannelData, int pItemData, int32_t nStartTick, int32_t nDuration) {
-    nChannelData->nFadeInitialVolume = nChannelData->nPriority;
-    nChannelData->nFadeDir = pItemData;
-    nChannelData->nFadeStartTime = nStartTick;
-    nChannelData->nFadeEndTime = nStartTick + nDuration;
-    nChannelData->bFadeActive = 1;
+void __fastcall SOUND_PlayItemSound(int32_t nChannelData, D2UnitDataItemStrc * pItemData, int32_t nStartTick, int32_t nDuration) {
+    *(uint32_t*)(nChannelData + 0x49) = *(uint32_t*)(nChannelData + 0x1c);
+    *(D2UnitDataItemStrc**)(nChannelData + 0x4d) = (D2UnitDataItemStrc*)pItemData;
+    *(int32_t*)(nChannelData + 0x51) = nStartTick;
+    *(int32_t*)(nChannelData + 0x55) = nStartTick + nDuration;
+    *(uint32_t*)(nChannelData + 0x45) = 1;
 }
 
 int __fastcall SOUND_GetSoundChannel(int32_t nSoundId) {
-    D2SoundListNodeStrc* pSmpData;
+    int* pSmpData;
     D2SoundChannelNodeStrc* pDVar1 = gpActiveSoundChannelsHead;
     if (!nSoundId) {
       return 0;
@@ -550,11 +670,11 @@ int __fastcall SOUND_GetSoundChannel(int32_t nSoundId) {
 
     for (; pDVar1; pDVar1 = pDVar1->pNext) {
       if (pDVar1->pChannel->nChannelHandle == nSoundId) {
-        pSmpData = pDVar1->pChannel->pUnitList;
+        pSmpData = pDVar1->pChannel->pGlobal3Ref;
         if (!pSmpData) {
           return 0;
         }
-        if (!pSmpData->pNext) {
+        if (!pSmpData[1]) {
           return 0;
         }
 
@@ -616,25 +736,28 @@ int __fastcall SOUND_StopChannelById(int32_t nSoundId) {
     return 0;
 }
 
-void __fastcall Unreferenced_004b9cd0(int nChannelHandle, uint8_t nPriority) {
-    if (!nChannelHandle) {
-      return;
-    }
-    if (!gpActiveSoundChannelsHead) {
-      return;
+int __fastcall Unreferenced_004b9cd0(int param_1, int param_2) {
+    D2SoundChannelNodeStrc* in_EAX;
+    if (!param_1) {
+      return (int)in_EAX;
     }
 
-    D2SoundChannelNodeStrc* pDVar2 = gpActiveSoundChannelsHead;
-    while (pDVar2->pChannel->nChannelHandle != nChannelHandle) {
+    in_EAX = gpActiveSoundChannelsHead;
+    if (!gpActiveSoundChannelsHead) {
+      return (int)in_EAX;
+    }
+
+    while (in_EAX->pChannel->nChannelHandle != param_1) {
       D2SoundChannelNodeStrc** ppDVar1;
-      ppDVar1 = &pDVar2->pNext;
-      pDVar2 = *ppDVar1;
+      ppDVar1 = &in_EAX->pNext;
+      in_EAX = *ppDVar1;
       if (!*ppDVar1) {
-        return;
+        return 0;
       }
     }
 
-    pDVar2->pChannel->nPriorityByte = nPriority;
+    in_EAX->pChannel->nPriorityByte = (uint8_t)param_2;
+    return (int)in_EAX;
 }
 
 void __stdcall SOUND_PauseAll() {
@@ -707,8 +830,8 @@ BOOL __fastcall SOUND_IsChannelAvailable(D2SoundChannelStrc * pChanA, D2SoundCha
     return (uint32_t)(pChanB < pChanA);
 }
 
-uint32_t __fastcall SOUND_FindChannelForSound(D2UnitStrc * nSoundId) {
-    D2SoundChannelStrc* pChannel = SOUND_FindActiveStreamChannel(nullptr, (int32_t)nSoundId);
+uint32_t __fastcall SOUND_FindChannelForSound(int32_t nSoundId) {
+    D2SoundChannelStrc* pChannel = SOUND_FindActiveStreamChannel(nullptr, nSoundId);
     return (uint32_t)(pChannel != 0);
 }
 
@@ -729,7 +852,7 @@ void __fastcall SOUND_StopChannelGracefully(int32_t nSoundId, int32_t nFadeTarge
     int pSmpData;
     uint8_t byFadeVal;
     D2SoundChannelStrc* nChannelData;
-    D2SoundListNodeStrc* pGlobal3Ref;
+    int* pGlobal3Ref;
     D2SoundChannelNodeStrc** pNextNode;
     if (!nSoundId) {
       return;
@@ -757,8 +880,8 @@ void __fastcall SOUND_StopChannelGracefully(int32_t nSoundId, int32_t nFadeTarge
 
     do {
       if (pChannelNode->pChannel->nChannelHandle == nSoundId) {
-        pGlobal3Ref = pChannelNode->pChannel->pUnitList;
-        if (pGlobal3Ref && pGlobal3Ref->pNext) {
+        pGlobal3Ref = pChannelNode->pChannel->pGlobal3Ref;
+        if (pGlobal3Ref && pGlobal3Ref[1]) {
           return;
         }
 
@@ -839,22 +962,21 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
       uint32_t bVolumeEnabled;
       int nUnitCount;
       float fIndoorsSum;
-      D2SoundListNodeStrc* pUnitListLocal;
+      int* pUnitListLocal;
       float fUnitDistSmooth;
       uint32_t pFrameTime;
-      D2SoundListNodeStrc* pFreeChannelList;
+      int* pFreeChannelList;
       D2SoundsTxt* pSoundsTxtLocal;
     };
     static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 64, "frame group __frame0_t must reproduce the Ghidra frame layout");
     __frame0_t __frame0;
     D2SoundChannelNodeStrc* pDVar1;
     D2UnitStrc* pUnit_00;
-    D2SoundListNodeStrc* pDVar2;
     uint32_t nGlobal3OrSortA;
     eD2Sounds nSoundId;
     D2SoundsTxt* pSoundsTxt;
     int nFadeVolStart;
-    uint32_t uVar3;
+    uint32_t uVar2;
     D2SoundEnvironTxt* pSoundEnvTxt;
     D2UnitStrc* pUnit;
     D2ClientSoundChannelStrc* ppStreamHandle;
@@ -867,6 +989,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
     float fIndoorsSmoothed;
     bool bMenuPaused;
     D2SoundChannelStrc* nSortDataB;
+    int* pFreeList;
     if (!gnSoundChannelCount) {
       return;
     }
@@ -958,7 +1081,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
           pChanEntry->nPlayMode = 0;
         }
       } else {
-        if (GAME::Game::ServerLoadingComplete && __frame0.pSoundsTxtLocal->Tracking && pChanEntry->pUnitList) {
+        if (GAME::Game::ServerLoadingComplete && __frame0.pSoundsTxtLocal->Tracking && pChanEntry->pGlobal3Ref) {
           __frame0.fDir1 = 0.0;
           __frame0.pClosestUnit = 0;
           __frame0.fDirX2 = 0.0;
@@ -969,9 +1092,9 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
           afSoundDir[2] = 0.0;
           __frame0.fClosestDist.fValue = -1.0;
           __frame0.fIndoorsSum = 0.0;
-          __frame0.pUnitListLocal = pChanEntry->pUnitList;
+          __frame0.pUnitListLocal = pChanEntry->pGlobal3Ref;
           do {
-            pUnit_00 = (D2UnitStrc*)__frame0.pUnitListLocal->nItemKey;
+            pUnit_00 = (D2UnitStrc*)*__frame0.pUnitListLocal;
             if (!pUnit_00) {
               Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x36c);
               exit(-1);
@@ -996,8 +1119,8 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
                   goto occlusion_by_collision;
                 }
 
-                uVar3 = SoundHdr::GetSoundEnv();
-                pSoundEnvTxt = SoundHdr::GetSoundEnvironLine(uVar3);
+                uVar2 = SoundHdr::GetSoundEnv();
+                pSoundEnvTxt = SoundHdr::GetSoundEnvironLine(uVar2);
                 if (!pSoundEnvTxt || (char)pSoundEnvTxt->Indoors == '\0') {
                   __frame0.fUnitDistSmooth = 0.0;
                 } else {
@@ -1015,7 +1138,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
               }
             }
 
-            __frame0.pUnitListLocal = __frame0.pUnitListLocal->pNext;
+            __frame0.pUnitListLocal = (int*)__frame0.pUnitListLocal[1];
             __frame0.fIndoorsSum = __frame0.fUnitDistSmooth + __frame0.fIndoorsSum;
             __frame0.nUnitCount++;
           } while (__frame0.pUnitListLocal);
@@ -1036,7 +1159,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
           pChanEntry->fUnitDistance = (float)d2_bits_to_float(__frame0.fClosestDist);
         }
 
-        uVar3 = __frame0.pFrameTime;
+        uVar2 = __frame0.pFrameTime;
         if (pChanEntry->bFadeActive) {
           if (__frame0.pFrameTime > pChanEntry->nFadeEndTime) {
             nFadeVolStart = pChanEntry->nFadeDir;
@@ -1058,18 +1181,18 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
         __frame0.fClosestDist.fValue = SoundHdr::SOUNDHDR_GetFalloffMax(pChanEntry->nSoundId);
         pSoundsTxt = __frame0.pSoundsTxtLocal;
         __frame0.pClosestUnit = (D2UnitStrc*)d2_bits_of(__frame0.fClosestDist.fValue * __frame0.fClosestDist.fValue);
-        if (!pChanEntry->nPlayMode && uVar3 >= pChanEntry->nScheduledTime && pChanEntry->nPriority) {
+        if (!pChanEntry->nPlayMode && uVar2 >= pChanEntry->nScheduledTime && pChanEntry->nPriority) {
           if (__frame0.bVolumeEnabled && pChanEntry->fPanResult <= (float)d2_bits_to_float(__frame0.pClosestUnit)) {
             if (pChanEntry->pClientChannel) {
               Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x3a1);
               exit(-1);
             }
 
-            pDVar2 = pChanEntry->pUnitList;
+            pFreeList = pChanEntry->pGlobal3Ref;
             pTrackedUnit = 0;
             nStreamListKey = 0;
-            if (pDVar2 && !pDVar2->pNext) {
-              nStreamListKey = pDVar2->nItemKey;
+            if (pFreeList && !pFreeList[1]) {
+              nStreamListKey = *pFreeList;
             }
             if (pChanEntry->fPosX == 0.0 && pChanEntry->fPosY == 0.0 && pChanEntry->fPosZ == 0.0) {
               __frame0.fClosestDist.fValue = 0.0;
@@ -1084,7 +1207,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
               pChanEntry = __frame0.pChanEntrySave;
               pSoundsTxt = __frame0.pSoundsTxtLocal;
             }
-            if ((!pSoundsTxt->Defer_Inst || pChanEntry->pUnitList || !__frame0.fClosestDist.nValue) && pTrackedUnit) {
+            if ((!pSoundsTxt->Defer_Inst || pChanEntry->pGlobal3Ref || !__frame0.fClosestDist.nValue) && pTrackedUnit) {
               if (!pSoundsTxt->Stop_Inst) {
                 pChanEntry->bStopFlag = 1;
                 D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Alloc(&__frame0.pFreeChannelList, pChanEntry);
@@ -1149,7 +1272,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
               exit(-1);
             }
           } else {
-            GAME::Sound::SOUND_UpdateChannelParams(ppStreamHandle);
+            GAME::Sound::SOUND_UpdateChannelParams((int*)ppStreamHandle);
             if (pSoundsTxt->nLoadState == 2) {
               SoundHdr::SOUNDHDR_UpdateLRUTimestamp(pChanEntry->nSoundId);
             }
@@ -1159,8 +1282,8 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
     }
 
     __frame0.pSortedFlag = 0;
-    for (pDVar2 = __frame0.pFreeChannelList; pDVar2; pDVar2 = pDVar2->pNext) {
-      SOUND_ReleaseChannel((D2SoundChannelStrc*)pDVar2->nItemKey);
+    for (pFreeList = __frame0.pFreeChannelList; pFreeList; pFreeList = (int*)pFreeList[1]) {
+      SOUND_ReleaseChannel((D2SoundChannelStrc*)*pFreeList);
     }
 
     D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList(&__frame0.pFreeChannelList);
@@ -1255,13 +1378,13 @@ void __fastcall SOUND_StopUnitSoundByIndex(int32_t nChannelHandle, D2UnitStrc * 
     }
 
     D2SoundsTxt* pSoundsTxtLine = SoundHdr::TXT_sounds_GetLineBySoundId(nChanDataPtr->nSoundId);
-    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free(&nChanDataPtr->pUnitList, (intptr_t)pUnit);
+    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free(&nChanDataPtr->pGlobal3Ref, (int32_t)pUnit);
     if (!pSoundsTxtLine->Loop || nChanDataPtr->bFadeActive && !nChanDataPtr->nFadeDir) {
       bForceStopNeeded = true;
     } else {
       bForceStopNeeded = false;
     }
-    if (nChanDataPtr->pUnitList) {
+    if (nChanDataPtr->pGlobal3Ref) {
       return;
     }
     if (!bForceStop && bForceStopNeeded) {
@@ -1417,7 +1540,7 @@ void __stdcall SOUND_ShutdownSystem() {
     uint8_t byFadeOut;
     D2SoundChannelNodeStrc** pChanListNode;
     D2SoundChannelNodeStrc* pChanSearchNode;
-    D2SoundListNodeStrc* pGlobal3Ref;
+    int* pGlobal3Ref;
     D2SoundChannelStrc* pStopChannel;
     D2SoundChannelNodeStrc* pChanNode;
     pChanNode = gpActiveSoundChannelsHead;
@@ -1448,8 +1571,8 @@ void __stdcall SOUND_ShutdownSystem() {
       fade_out_channel:
       while (true) {
         if (pInnerChanNode->pChannel->nChannelHandle == nChanHandle) {
-          pGlobal3Ref = pInnerChanNode->pChannel->pUnitList;
-          if (pGlobal3Ref && pGlobal3Ref->pNext) {
+          pGlobal3Ref = pInnerChanNode->pChannel->pGlobal3Ref;
+          if (pGlobal3Ref && pGlobal3Ref[1]) {
             goto next_channel;
           }
 
@@ -1595,22 +1718,26 @@ int Unreferenced_004e41e0() {
     return (uint32_t)(2 < iVar1 - 1U);
 }
 
-float __stdcall Unreferenced_004e4200() {
+int Unreferenced_004e4200() {
+    int extraout_EAX;
     uint32_t uVar1 = Draw::Weather::WEATHER_CanHaveRain();
     if (!uVar1) {
-      return 0.0;
+      return 0;
     }
 
-    float fVar2 = Draw::Weather::WEATHER_FloatPassthrough();
-    return fVar2;
+    Draw::Weather::WEATHER_FloatPassthrough();
+    return extraout_EAX;
 }
 
-void __stdcall Unreferenced_004e4220() {
+int Unreferenced_004e4220() {
+    int extraout_EAX;
     eD2Sounds eSound = SOUND_ALKOR_ACT3_Q5_EARLY_VA;
     do {
       SoundHdr::SOUNDHDR_ClearReferenceCounts(eSound);
       eSound += SOUND_CURSOR_BUTTON_CLICK;
     } while ((int)eSound < 0xb3d);
+
+    return extraout_EAX;
 }
 
 static void SOUND_SetVolumeForChannel(int32_t nChannelIndex) {
@@ -1636,7 +1763,7 @@ void __stdcall SOUND_TogglePauseAll() {
 
     gnSoundChannelIndex = 0;
     if (pAudioDeviceContext) {
-      SOUND_StopById(pAudioDeviceContext);
+      SOUND_StopById((int32_t)pAudioDeviceContext);
       pAudioDeviceContext = 0;
     }
 
@@ -1742,7 +1869,7 @@ void __fastcall SOUND_UpdateEnvironmentAmbience(int32_t nTick) {
 
     gnSoundChannelIndex = eSoundChannelCurrent;
     if (!nRainVolumeClamped) {
-      SOUND_StopById(pAudioDeviceContext);
+      SOUND_StopById((int32_t)pAudioDeviceContext);
       pAudioDeviceContext = 0;
       gnSoundChannelPlaybackState = 0;
       nRainVolumeClamped = gnSoundChannelPlaybackState;
@@ -1754,17 +1881,17 @@ void __fastcall SOUND_UpdateEnvironmentAmbience(int32_t nTick) {
         goto update_eax_and_events;
       }
     } else if (!pAudioDeviceContext) {
-      pAudioDeviceContext = SOUND_PlaySound(gnSoundChannelPlaybackState, nullptr, 0, 0, 0);
+      pAudioDeviceContext = (void*)SOUND_PlaySound(gnSoundChannelPlaybackState, nullptr, 0, 0, 0);
       if (!pAudioDeviceContext) {
         goto update_eax_and_events;
       }
 
-      SOUND_SetChannelPriority(pAudioDeviceContext, nRainVolume);
+      SOUND_SetChannelPriority((int32_t)pAudioDeviceContext, nRainVolume);
       goto fade_weather_sound;
     }
 
     int nVolume;
-    nVolume = Sound::SOUND_SetMasterVolume(pAudioDeviceContext);
+    nVolume = Sound::SOUND_SetMasterVolume((int32_t)pAudioDeviceContext);
     if (nRainVolume > nVolume) {
       nVolume += 6;
       if (nRainVolume < nVolume) {
@@ -1777,9 +1904,9 @@ void __fastcall SOUND_UpdateEnvironmentAmbience(int32_t nTick) {
       }
     }
     if (nVolume) {
-      SOUND_SetChannelPriority(pAudioDeviceContext, nVolume);
+      SOUND_SetChannelPriority((int32_t)pAudioDeviceContext, nVolume);
     } else {
-      SOUND_StopById(pAudioDeviceContext);
+      SOUND_StopById((int32_t)pAudioDeviceContext);
       pAudioDeviceContext = 0;
     }
 

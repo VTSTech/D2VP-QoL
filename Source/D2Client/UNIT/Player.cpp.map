@@ -512,7 +512,7 @@
       ],
       "usedTypes": [
         "D2UnderMouseStrc",
-        "D2UnitStrc"
+        "int32_t"
       ]
     },
     {
@@ -1300,9 +1300,6 @@
       "namespace": "D2Client::UNIT::Player",
       "calledFunctions": [
         "Unreferenced_004637f0"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -1319,8 +1316,7 @@
         "PLAYER_GetMonsterOwnerId"
       ],
       "usedTypes": [
-        "D2UnitStrc",
-        "WCHAR"
+        "D2UnitStrc"
       ]
     },
     {
@@ -1531,7 +1527,6 @@
         "CUNIT_IterateHashTableWithCallback"
       ],
       "usedTypes": [
-        "D2UnitStrc",
         "D2UnitStrc *",
         "fnUnitIterCallback"
       ]

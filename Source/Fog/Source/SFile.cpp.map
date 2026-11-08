@@ -418,9 +418,6 @@
       "namespace": "Fog::Source::SFile",
       "calledFunctions": [
         "Unreferenced_00407260"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -512,7 +509,7 @@
         "SFILE_GetGlobalPointer"
       ],
       "usedTypes": [
-        "D2SystemInfoStrc"
+        "uint32_t"
       ]
     },
     {

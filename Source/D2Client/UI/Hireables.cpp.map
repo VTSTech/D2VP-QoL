@@ -276,9 +276,6 @@
         "Unreferenced_004934b0",
         "GetPlayerUnit_UI",
         "INVENTORY_GetHandItem"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {

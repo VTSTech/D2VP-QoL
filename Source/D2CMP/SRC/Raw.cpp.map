@@ -20,10 +20,7 @@
         "CELCMP_GetDirectionFrameTableIndex"
       ],
       "usedTypes": [
-        "CELLIST",
-        "DC6",
-        "DC6Block",
-        "TCELENTRY",
+        "int32_t",
         "uint32_t"
       ]
     }

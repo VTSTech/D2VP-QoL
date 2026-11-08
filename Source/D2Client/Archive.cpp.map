@@ -47,9 +47,6 @@
       "namespace": "D2Client::Archive",
       "calledFunctions": [
         "Unreferenced_0045b9d0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -64,9 +61,6 @@
       "namespace": "D2Client::Archive",
       "calledFunctions": [
         "Unreferenced_0045ba80"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -81,9 +75,6 @@
       "namespace": "D2Client::Archive",
       "calledFunctions": [
         "Unreferenced_0045baa0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -117,8 +108,7 @@
         "ARCHIVE_GetNodeValue"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -136,8 +126,7 @@
         "ARCHIVE_UnlinkNode"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -173,9 +162,7 @@
         "ARCHIVE_GetNodeSize"
       ],
       "usedTypes": [
-        "StormLinkStrc",
-        "StormLinkedListStrc",
-        "intptr_t"
+        "int32_t"
       ]
     },
     {
@@ -206,7 +193,7 @@
         "ARCHIVE_ClearList"
       ],
       "usedTypes": [
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -241,9 +228,6 @@
       "namespace": "D2Client::Archive",
       "calledFunctions": [
         "Unreferenced_0045bd80"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -301,7 +285,7 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "StormLinkedListStrc",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -328,12 +312,11 @@
       "usedTypes": [
         "SMemBlockDetailsStrc",
         "SMemHeapDetailsStrc",
-        "StormLinkedListStrc",
-        "TALLOCREC",
-        "int *",
-        "int32_t",
+        "int * *",
+        "int * * *",
         "uint16_t",
-        "uint16_t *"
+        "uint16_t *",
+        "uint32_t"
       ]
     },
     {

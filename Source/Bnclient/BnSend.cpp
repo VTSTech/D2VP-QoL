@@ -7,15 +7,74 @@
 #include "Source/Bnclient/Bnet.h"
 #include "Source/Bnclient/Cache.h"
 #include "Source/Bnclient/Debug.h"
+#include "Source/Bnclient/net_sid.h"
 #include "Source/D2Client/D2BNetGatewayAccessStr.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/Chat/Ignorelist.h"
 #include "Source/D2Common/Chat/Ignorelist/IgnoreList.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Net/Game/Server.h"
+#include "Source/D2Net/sockaddr.h"
+#include "Source/Fog/D2QSSocketStrc.h"
+#include "Source/Fog/Debug.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/Safesock.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "3rdparty/Storm/Source/SSignature.h"
 #include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
 #include "Source/Bnclient/Bnclient.globals.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/Bnclient/BnSend.data.h"
 #include "Source/Bnclient/net_sid.data.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Game/Objects/ObjectsRgn.h"
+#include "Source/D2Net/in_addr.h"
+#include "Source/Fog/Fog.h"
+#include "3rdparty/Storm/Source/SSignature.inline.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -72,11 +131,11 @@ char s___AUItem_NewsTable___0072ff8c[24] = {
 } // namespace Bnclient::BnSend
 static uint32_t g_nBNetServerToken = 0; D2_STATIC_GUARD(g_nBNetServerToken, "g_nBNetServerToken");
 static uint32_t g_nBNetClientToken = 0; D2_STATIC_GUARD(g_nBNetClientToken, "g_nBNetClientToken");
-static char * g_pBNetChannelListData = 0; D2_STATIC_GUARD(g_pBNetChannelListData, "g_pBNetChannelListData");
+static void * g_pBNetChannelListData = 0; D2_STATIC_GUARD(g_pBNetChannelListData, "g_pBNetChannelListData");
 static void * gpRealmQueryData = 0; D2_STATIC_GUARD(gpRealmQueryData, "gpRealmQueryData");
 void * g_pBNetGameListData = 0; D2_GLOBAL_GUARD(g_pBNetGameListData, "g_pBNetGameListData");
 void * gpBNetWriteUserData = 0; D2_GLOBAL_GUARD(gpBNetWriteUserData, "gpBNetWriteUserData");
-static D2BnReadUserDataStrc * g_pBNetReadUserData = 0; D2_STATIC_GUARD(g_pBNetReadUserData, "g_pBNetReadUserData");
+static void * g_pBNetReadUserData = 0; D2_STATIC_GUARD(g_pBNetReadUserData, "g_pBNetReadUserData");
 static void * g_pBNetCDKeyHashData = 0; D2_STATIC_GUARD(g_pBNetCDKeyHashData, "g_pBNetCDKeyHashData");
 static uint32_t g_nBNetConnectionState = 0; D2_STATIC_GUARD(g_nBNetConnectionState, "g_nBNetConnectionState");
 static LONG * g_pBNetSocketData = 0; D2_STATIC_GUARD(g_pBNetSocketData, "g_pBNetSocketData");
@@ -242,7 +301,7 @@ void __fastcall NET_SID_CLIENT_Send_0x07_ReportVersion(uint32_t dwExeHash, uint3
     Storm::Source::SSTR::SStrCopy(sPacket.szExeInfo, szExeInfoStr, 0x100);
     char* szFilenameCursor = sPacket.szExeInfo;
     szFilenameCursor = szFilenameCursor + strlen(szFilenameCursor) + 1;
-    NET_SID_CLIENT_Send(7, (char*)&sPacket, (size_t)(szFilenameCursor + (0x15 - (intptr_t)(sPacket.szExeInfo + 1))));
+    NET_SID_CLIENT_Send(7, (char*)&sPacket, (size_t)(szFilenameCursor + (0x15 - (int)(sPacket.szExeInfo + 1))));
 }
 
 void __fastcall NET_SID_CLIENT_Send_0x06_StartVersioning() {
@@ -327,20 +386,20 @@ void BNSEND_FreeRealmQueryData() {
     gpRealmQueryData = 0;
 }
 
-char * __fastcall NET_SID_CLIENT_Send_0x41_QueryAdURL(uint32_t dwAdId) {
+int32_t __fastcall NET_SID_CLIENT_Send_0x41_QueryAdURL(uint32_t dwAdId) {
     uint32_t dwAdType = dwAdId;
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(0x41);
     int32_t nSendResult = NET_SID_CLIENT_Send(0x41, (char*)&dwAdType, 4);
     if (nSendResult < 0) {
-      return nullptr;
+      return 0;
     }
 
     _net_sid::NET_SID_CLIENT_WaitForPacketId(0x41);
     if (!g_pBNetCDKeyHashData) {
-      return nullptr;
+      return 0;
     }
 
-    return (char*)((char*)g_pBNetCDKeyHashData + 4);
+    return (int)g_pBNetCDKeyHashData + 4;
 }
 
 // SID_QUERYREALMS2 (0x40) client request sender. Queries available Battle.net realms. Packet format: empty (no payload). Sends request, waits for 0x40 response containing realm list with names and descriptions. Returns gpRealmQueryData on success, 0 on send failure.
@@ -364,7 +423,7 @@ void __stdcall BNSEND_FreeChannelListData() {
     g_pBNetChannelListData = 0;
 }
 
-char * __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList(int32_t bIsExpansionChar) {
+int __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList(int32_t bIsExpansionChar) {
     uint32_t dwChannelFlags = 0;
     BOOL bIsExpansion = BnSend::D2CheckExpansionGame();
     if (bIsExpansion && !bIsExpansionChar) {
@@ -374,7 +433,7 @@ char * __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList(int32_t bIsExpansionCh
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(0xb);
     NET_SID_CLIENT_Send(0xb, (char*)&dwChannelFlags, 4);
     _net_sid::NET_SID_CLIENT_WaitForPacketId(0xb);
-    return g_pBNetChannelListData;
+    return (int)g_pBNetChannelListData;
 }
 
 void __fastcall NET_SID_CLIENT_Send_0x0C_JoinChannel(char * szText, int32_t bForceJoin, int32_t nJoinType) {
@@ -451,7 +510,7 @@ uint32_t __fastcall BNSEND_EncodePacketEscape(char * szText, uint32_t nByteCount
     return 1;
 }
 
-void __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList_0x0A_EnterChat(char * szText1, char * szText2, char * dwProductCode) {
+void __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList_0x0A_EnterChat(char * szText1, char * szText2, uint32_t dwProductCode) {
     // Frame slots -524..-8 are ONE object: &dwProductVersion is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
@@ -475,9 +534,9 @@ void __fastcall NET_SID_CLIENT_Send_0x0B_GetChannelList_0x0A_EnterChat(char * sz
     pszCursor = pszText2End + 1;
     pszCursor = __frame0.szPacketBuf;
     pszCursor = pszCursor + strlen(pszCursor) + 1;
-    char* pszScanEnd = __frame0.szPacketBuf + 1 + (int)(pszCursor + (0x207 - (intptr_t)((uint8_t*)&__frame0.szPacketBuf + 520)));
+    char* pszScanEnd = __frame0.szPacketBuf + 1 + (int)(pszCursor + (0x207 - (uintptr_t)((uint8_t*)&__frame0.szPacketBuf + 520)));
     pszScanEnd = pszScanEnd + strlen(pszScanEnd) + 1;
-    NET_SID_CLIENT_Send(10, __frame0.szPacketBuf, (size_t)(pszScanEnd + ((intptr_t)((uint8_t*)&__frame0.szPacketBuf + 520) * -2 - (intptr_t)(pszCursor + (0x207 - (intptr_t)((uint8_t*)&__frame0.szPacketBuf + 520)))) + (intptr_t)(pszText2End + 0x410)));
+    NET_SID_CLIENT_Send(10, __frame0.szPacketBuf, (size_t)(pszScanEnd + ((uintptr_t)((uint8_t*)&__frame0.szPacketBuf + 520) * -2 - (int)(pszCursor + (0x207 - (uintptr_t)((uint8_t*)&__frame0.szPacketBuf + 520)))) + (int)(pszText2End + 0x410)));
 }
 
 uint32_t __fastcall NET_SID_CLIENT_Send_0x10_LeaveChat() {
@@ -565,7 +624,7 @@ void __fastcall NET_SID_CLIENT_Send_0x1C_StartAdVex3(char * szGameName, char * s
     uint32_t nGameNameLen = Storm::Source::SSTR::SStrCopy(adwHeader.szStrings, szGameName, 0x100);
     uint32_t nPasswordLen = Storm::Source::SSTR::SStrCopy(adwHeader.szStrings + nGameNameLen + 1, szGamePassword, 0x100);
     uint32_t nDescLen = Storm::Source::SSTR::SStrCopy(adwHeader.szStrings + nPasswordLen + nGameNameLen + 2, szGameDescription, 0x100);
-    NET_SID_CLIENT_Send(0x1c, (char*)&adwHeader, (size_t)(adwHeader.szStrings + nPasswordLen + nGameNameLen + 2 + (nDescLen + 0x15 - (intptr_t)adwHeader.szStrings)));
+    NET_SID_CLIENT_Send(0x1c, (char*)&adwHeader, (size_t)(adwHeader.szStrings + nPasswordLen + nGameNameLen + 2 + (nDescLen + 0x15 - (int)adwHeader.szStrings)));
 }
 
 DWORD __stdcall BNCLIENT_SendKeepAlive() {
@@ -621,7 +680,7 @@ void * __fastcall NET_SID_CLIENT_Send_0x09_GetAdvListEx(char * szText1, char * s
     uint32_t nPasswordLen = Storm::Source::SSTR::SStrCopy((char*)(aPacketBuf + nGameNameLen + 0x11), szText2, 0x100);
     uint32_t nDescLen = Storm::Source::SSTR::SStrCopy((char*)(aPacketBuf + nPasswordLen + nGameNameLen + 0x12), "", 0x100);
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(9);
-    NET_SID_CLIENT_Send(9, (char*)aPacketBuf, (size_t)(aPacketBuf + nPasswordLen + nGameNameLen + 0x12 + (nDescLen + 0x11 - (intptr_t)(aPacketBuf + 0x10))));
+    NET_SID_CLIENT_Send(9, (char*)aPacketBuf, (size_t)(aPacketBuf + nPasswordLen + nGameNameLen + 0x12 + (nDescLen + 0x11 - (int)(aPacketBuf + 0x10))));
     _net_sid::NET_SID_CLIENT_WaitForPacketId(9);
     void* pGameList = g_pBNetGameListData;
     return pGameList;
@@ -643,7 +702,7 @@ void __fastcall NET_SID_CLIENT_Send_0x22_NotifyJoin(char * szText1, char * szTex
     adwHeader[1] = 0xe;
     uint32_t nGameNameLen = Storm::Source::SSTR::SStrCopy(&__frame0.cGameNameFirst, szText1, 0x100);
     uint32_t nPasswordLen = Storm::Source::SSTR::SStrCopy(__frame0.aPacketBufMid + nGameNameLen, szText2, 0x100);
-    NET_SID_CLIENT_Send(0x22, (char*)adwHeader, (size_t)(__frame0.aPacketBufMid + nGameNameLen + (nPasswordLen + 9 - (intptr_t)&__frame0.cGameNameFirst)));
+    NET_SID_CLIENT_Send(0x22, (char*)adwHeader, (size_t)(__frame0.aPacketBufMid + nGameNameLen + (nPasswordLen + 9 - (uintptr_t)&__frame0.cGameNameFirst)));
 }
 
 // @sourcefile .\BnSend.cpp
@@ -655,13 +714,13 @@ void __fastcall BNSEND_StoreUserProfileData(uint8_t * pbProfileData, size_t nDat
     gpBNetWriteUserData = 0;
     gpBNetWriteUserData = D2_ALLOC_AT(nDataSize + 4, ".\\BnSend.cpp", 0x3bb);
     *(size_t*)gpBNetWriteUserData = nDataSize;
-    memcpy((void*)((char*)gpBNetWriteUserData + 4), pbProfileData, nDataSize);
+    memcpy((void*)((int)gpBNetWriteUserData + 4), pbProfileData, nDataSize);
     if (!(nDataSize != 8 && nDataSize >= 0x48)) {
       return;
     }
 
-    uint32_t* pHostShortField = (uint32_t*)((char*)gpBNetWriteUserData + 0x18);
-    u_short wNetShort = htons(*(u_short*)((char*)gpBNetWriteUserData + 0x18));
+    uint32_t* pHostShortField = (uint32_t*)((int)gpBNetWriteUserData + 0x18);
+    u_short wNetShort = htons(*(u_short*)((int)gpBNetWriteUserData + 0x18));
     *pHostShortField = (uint32_t)wNetShort;
 }
 
@@ -727,7 +786,7 @@ void __stdcall NET_SID_CLIENT_Send_0x12_LocaleInfo() {
     pszLocaleCursor = pszLocaleCursor + strlen(pszLocaleCursor) + 1;
     /* int cchData for GetLocaleInfoA */ /* LPSTR lpLCData for GetLocaleInfoA */ /* LCTYPE LCType for GetLocaleInfoA */ /* LCID Locale for GetLocaleInfoA */ GetLocaleInfoA(0x400, 0x1002, pszLocaleCursor, 0x40);
     pszLocaleCursor = pszLocaleCursor + strlen(pszLocaleCursor) + 1;
-    NET_SID_CLIENT_Send(0x12, (char*)&ftSystemTime, (size_t)(pszLocaleCursor + (0x20 - (intptr_t)ftSystemTime.szStrings)));
+    NET_SID_CLIENT_Send(0x12, (char*)&ftSystemTime, (size_t)(pszLocaleCursor + (0x20 - (int)ftSystemTime.szStrings)));
 }
 
 int __fastcall NET_SID_CLIENT_Send_0x16_ClickAd(uint32_t dwAdId, int32_t bRequestType) {
@@ -749,7 +808,7 @@ uint32_t __fastcall NET_SID_CLIENT_Send_0x27_WriteUserData(char * szAccount, uin
       ppszValueScan = pszValues;
       nIdx = nCount;
       do {
-        nLen = Storm::Source::SSTR::SStrLen(*(char**)((intptr_t)pszKeys - (intptr_t)pszValues + (char*)ppszValueScan));
+        nLen = Storm::Source::SSTR::SStrLen(*(char**)((int)pszKeys - (int)pszValues + (int)ppszValueScan));
         nValueLen = Storm::Source::SSTR::SStrLen(*ppszValueScan);
         ppszValueScan++;
         nIdx--;
@@ -776,7 +835,7 @@ uint32_t __fastcall NET_SID_CLIENT_Send_0x27_WriteUserData(char * szAccount, uin
     }
 
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(0x27);
-    int32_t nSendResult = NET_SID_CLIENT_Send(0x27, pPacketBuf, (intptr_t)szBufferOutput - (intptr_t)pPacketBuf);
+    int32_t nSendResult = NET_SID_CLIENT_Send(0x27, pPacketBuf, (int)szBufferOutput - (int)pPacketBuf);
     D2_FREE_AT(pPacketBuf, ".\\BnSend.cpp", 0x4e0);
     return (uint32_t)(nSendResult >= 0);
 }
@@ -787,7 +846,7 @@ void __fastcall BNSEND_StoreReadUserData(uint8_t * pbReadData, size_t nSize) {
       D2_FREE_AT(g_pBNetReadUserData, ".\\BnSend.cpp", 0x4ec);
     }
 
-    g_pBNetReadUserData = (D2BnReadUserDataStrc*)D2_ALLOC_AT(nSize, ".\\BnSend.cpp", 0x4ed);
+    g_pBNetReadUserData = D2_ALLOC_AT(nSize, ".\\BnSend.cpp", 0x4ed);
     memcpy(g_pBNetReadUserData, pbReadData, nSize);
 }
 
@@ -816,42 +875,42 @@ uint32_t __fastcall NET_SID_CLIENT_Send_0x26_ReadUserData(char * szAccount, uint
     }
 
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(0x26);
-    int32_t nSendResult = NET_SID_CLIENT_Send(0x26, pPacketBuf, (intptr_t)szBufferOutput - (intptr_t)pPacketBuf);
+    int32_t nSendResult = NET_SID_CLIENT_Send(0x26, pPacketBuf, (int)szBufferOutput - (int)pPacketBuf);
     D2_FREE_AT(pPacketBuf, ".\\BnSend.cpp", 0x521);
     return (uint32_t)(nSendResult >= 0);
 }
 
 // Retrieves stored user data from previous SID_READUSERDATA (0x26) response. Copies string array data into output buffers.
-int __fastcall BNSEND_GetStoredReadUserData(int32_t nKeyCount, int32_t nRequestId, char * * ppszOutBufs, int * pnMaxLens) {
+int __fastcall BNSEND_GetStoredReadUserData(int32_t nKeyCount, int32_t nRequestId, char * * ppszOutBufs, int32_t pnMaxLens) {
     int nMaxLensOffset;
     char** ppszOutBuf;
-    D2BnReadUserDataStrc* pszSrcData;
+    char* pszSrcData;
     BOOL bHasAnswer = _net_sid::NET_SID_CLIENT_GetRequiredAnswer(0x26);
     if (!bHasAnswer) {
       return 0;
     }
-    if (g_pBNetReadUserData && g_pBNetReadUserData->nAccountCount == 1 && g_pBNetReadUserData->nKeyCount == nKeyCount && g_pBNetReadUserData->nRequestId == nRequestId) {
+    if (g_pBNetReadUserData && *(int*)g_pBNetReadUserData == 1 && *(int*)((int)g_pBNetReadUserData + 4) == nKeyCount && *(int*)((int)g_pBNetReadUserData + 8) == nRequestId) {
       uint32_t pNextSrc;
-      pszSrcData = g_pBNetReadUserData + 1;
+      pszSrcData = (char*)((int)g_pBNetReadUserData + 0xc);
       if ((uint32_t)nKeyCount <= 0) {
         return 1;
       }
 
-      nMaxLensOffset = (intptr_t)pnMaxLens - (intptr_t)ppszOutBufs;
+      nMaxLensOffset = pnMaxLens - (int)ppszOutBufs;
       ppszOutBuf = ppszOutBufs;
       ppszOutBufs = (char**)nKeyCount;
       do {
-        if ((char)pszSrcData->nAccountCount != '\0') {
-          strncpy(*ppszOutBuf, (char*)pszSrcData, *(size_t*)(nMaxLensOffset + (char*)ppszOutBuf));
-          (*ppszOutBuf)[*(int*)(nMaxLensOffset + (char*)ppszOutBuf)] = '\0';
+        if (*pszSrcData != '\0') {
+          strncpy(*ppszOutBuf, pszSrcData, *(size_t*)(nMaxLensOffset + (int)ppszOutBuf));
+          (*ppszOutBuf)[*(int*)(nMaxLensOffset + (int)ppszOutBuf)] = '\0';
         } else {
           **ppszOutBuf = '\0';
         }
 
-        pNextSrc = Storm::Source::SSTR::SStrLen((char*)pszSrcData);
+        pNextSrc = Storm::Source::SSTR::SStrLen(pszSrcData);
         ppszOutBuf++;
-        ppszOutBufs = (char**)((char*)ppszOutBufs - 1);
-        pszSrcData = (D2BnReadUserDataStrc*)((intptr_t)&pszSrcData->nAccountCount + pNextSrc + 1);
+        ppszOutBufs = (char**)((int)ppszOutBufs - 1);
+        pszSrcData = pszSrcData + pNextSrc + 1;
       } while (ppszOutBufs);
 
       return 1;
@@ -999,7 +1058,7 @@ void __fastcall BNSEND_StoreChannelListData(uint8_t * pbChannelData, size_t nSiz
     }
 
     g_pBNetChannelListData = 0;
-    g_pBNetChannelListData = (char*)D2_ALLOC_AT(nSize, ".\\BnSend.cpp", 0x1e6);
+    g_pBNetChannelListData = D2_ALLOC_AT(nSize, ".\\BnSend.cpp", 0x1e6);
     memcpy(g_pBNetChannelListData, pbChannelData, nSize);
 }
 
@@ -1028,9 +1087,11 @@ BOOL __stdcall D2CheckExpansionGame() {
     return ::Fog::D2CheckExpansionGame();
 }
 
-void __fastcall Unreferenced_0051bed0(int nConnectionState) {
-    g_nBNetConnectionState = nConnectionState;
+int __fastcall Unreferenced_0051bed0(int param_1) {
+    int extraout_EAX;
+    g_nBNetConnectionState = param_1;
     Sleep(10);
+    return extraout_EAX;
 }
 
 // lpStartAddress parameter of CreateThread
@@ -1049,7 +1110,7 @@ DWORD __stdcall GetDnsResults(void * lpThreadParam) {
     uint32_t dwAddrSwapTmp;
     int32_t nErrorAddress;
     char* szOutBuf = *(char**)lpThreadParam;
-    char* szWriteCursor = *(char**)((char*)lpThreadParam + 4);
+    char* szWriteCursor = *(char**)((int)lpThreadParam + 4);
     int nAddrCount = isdigit((int)*szWriteCursor);
     /* char * cp for inet_addr */ if (nAddrCount) {
       uint32_t dwInetAddr;
@@ -1339,7 +1400,7 @@ BOOL __fastcall BNCLIENT_WaitForChangePasswordResponse(uint32_t * pOutResponseCo
 int __fastcall BNCLIENT_EnterChatAndJoinChannel(char * szUsername, char * szStatstring, char * szAccountName, char * szChannelName, uint32_t dwFlags) {
     BNNEWS_SetNewsChannel(dwFlags & 1);
     _net_sid::NET_SID_CLIENT_ResetRequireResponse(10);
-    NET_SID_CLIENT_Send_0x0B_GetChannelList_0x0A_EnterChat(szUsername, szStatstring, szAccountName);
+    NET_SID_CLIENT_Send_0x0B_GetChannelList_0x0A_EnterChat(szUsername, szStatstring, (uint32_t)szAccountName);
     if (dwFlags & 2) {
       NET_SID_CLIENT_Send_0x0C_JoinChannel(szChannelName, 1, dwFlags & 1);
     }
@@ -1415,11 +1476,12 @@ BOOL __stdcall BNSEND_Disconnect() {
     return 1;
 }
 
-int __fastcall Unreferenced_0051c570(char * param_1) {
+int __fastcall Unreferenced_0051c570(int param_1) {
     char cVar1;
     D2NetDataStrc* pNetData = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
-    int nLen = (int)strlen(param_1);
-    Fog::Src::Safesock::WSASocket2_Send(pNetData, param_1, nLen);
+    char* pcVar2 = (char*)param_1;
+    pcVar2 = pcVar2 + strlen(pcVar2) + 1;
+    Fog::Src::Safesock::WSASocket2_Send(pNetData, (char*)param_1, (int)pcVar2 - (param_1 + 1));
     Fog::Src::Safesock::WSASocket2_Send(pNetData, "\n", 1);
     return 1;
 }
@@ -1456,8 +1518,8 @@ int32_t __fastcall NET_SID_CLIENT_Send(uint8_t nPacketId, char * pBytes, size_t 
     return 0;
 }
 
-void __fastcall Unreferenced_0051c6b0(char * param_1) {
-    BNMESSQUEUE_EnqueueString(1, param_1);
+void __fastcall Unreferenced_0051c6b0(int param_1) {
+    BNMESSQUEUE_EnqueueString(1, (char*)param_1);
 }
 
 void __fastcall BNCLIENT_ParseAndEnqueueChatMessages(char * szMessageText) {
@@ -1465,7 +1527,7 @@ void __fastcall BNCLIENT_ParseAndEnqueueChatMessages(char * szMessageText) {
     char szChunk[288];
     char* pCrPos = strchr(szMessageText, 0xd);
     while (pCrPos) {
-      nChunkLen = (intptr_t)pCrPos - (intptr_t)szMessageText;
+      nChunkLen = (int)pCrPos - (int)szMessageText;
       if ((int)nChunkLen >= 0x11f) {
         nChunkLen = 0x11f;
       }
@@ -1484,13 +1546,13 @@ void __fastcall BNCLIENT_ParseAndEnqueueChatMessages(char * szMessageText) {
 
 // BATTLE.NET PACKET DISPATCH LOOP
 // Iterates over received network buffer, scanning for 0xFF packet start markers and dispatching complete packets to NET_SID_CLIENT_IncomingPacketHandler. For each packet: validates 4-byte header (0xFF, ID, size_lo, size_hi), checks if buffer contains full packet based on 2-byte little-endian size field, dispatches packet data (excluding 4-byte header) to handler, advances buffer pointer by packet size. Returns pointer to remaining unparsed buffer data for next iteration.
-size_t __fastcall NET_SID_CLIENT_IncomingPacketHandlerLoop(char * pBytes, size_t nSize) {
+char * __fastcall NET_SID_CLIENT_IncomingPacketHandlerLoop(char * pBytes, size_t nSize) {
     int nBytesProcessed;
     char* pScanPtr = pBytes;
     do {
       uint32_t wPacketSize;
       if (*pScanPtr != -1) {
-        nBytesProcessed = (intptr_t)pScanPtr - (intptr_t)pBytes;
+        nBytesProcessed = (int)pScanPtr - (int)pBytes;
         do {
           if (nBytesProcessed >= (int)nSize) {
             break;
@@ -1500,9 +1562,9 @@ size_t __fastcall NET_SID_CLIENT_IncomingPacketHandlerLoop(char * pBytes, size_t
           nBytesProcessed++;
         } while (*pScanPtr != -1);
       }
-      if (pBytes + (nSize - (intptr_t)pScanPtr) < (char*)0x4 || (wPacketSize = (uint32_t)*(uint16_t*)(pScanPtr + 2) , (intptr_t)(pBytes + (nSize - (intptr_t)pScanPtr)) < (int)wPacketSize)) {
-        memcpy(pBytes, pScanPtr, (size_t)(pBytes + (nSize - (intptr_t)pScanPtr)));
-        return (size_t)(pBytes + (nSize - (intptr_t)pScanPtr));
+      if (pBytes + (nSize - (int)pScanPtr) < (char*)0x4 || (wPacketSize = (uint32_t)*(uint16_t*)(pScanPtr + 2) , (int)(pBytes + (nSize - (int)pScanPtr)) < (int)wPacketSize)) {
+        memcpy(pBytes, pScanPtr, (size_t)(pBytes + (nSize - (int)pScanPtr)));
+        return pBytes + (nSize - (int)pScanPtr);
       }
 
       _net_sid::NET_SID_CLIENT_IncomingPacketHandler(pScanPtr[1], pScanPtr + 4, wPacketSize - 4);
@@ -1527,7 +1589,7 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
     }
 
     DWORD dwLastKeepaliveTick = GetTickCount();
-    size_t pBufPos = 0;
+    char* pBufPos = 0;
     D2NetDataStrc* pSafesock = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
     do {
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (!pSafesock) {
@@ -1556,13 +1618,13 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
         break;
       }
       if (nPollResult) {
-        nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + pBufPos, 0x2000 - pBufPos);
+        nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + (int)pBufPos, 0x2000 - (int)pBufPos);
         if (nBytesRead <= 0) {
           _net_sid::SID_SetReadyFlag();
           break;
         }
 
-        pBufPos = NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, nBytesRead + pBufPos);
+        pBufPos = NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, (size_t)(pBufPos + nBytesRead));
       }
 
       dwCurrentTick = GetTickCount();
@@ -2041,23 +2103,23 @@ DWORD __stdcall BNNEWS_RoundUpToMultiple(DWORD dwValue, DWORD dwMultiple) {
     return dwValue;
 }
 
-void __fastcall Unreferenced_0051d350(uint32_t * param_1, uint32_t * param_2) {
+void __fastcall Unreferenced_0051d350(int param_1, int param_2) {
     int iVar1;
     if (!param_1) {
       return;
     }
 
     for (iVar1 = 0x102; iVar1; iVar1--) {
-      *param_1 = *param_2;
-      param_2++;
-      param_1++;
+      *(uint32_t*)param_1 = *(uint32_t*)param_2;
+      param_2 = (int)(param_2 + 4);
+      param_1 = (int)(param_1 + 4);
     }
 }
 
 // @sourcefile .\BNNews.cpp
 void __stdcall BNNEWS_SaveToCache() {
+    void* nErrorAddr;
     char* pStrScan;
-    uint32_t nEntryIndex;
     char* pEntryText;
     int nEntryDiff;
     _SYSTEMTIME stSystemTime;
@@ -2076,17 +2138,18 @@ void __stdcall BNNEWS_SaveToCache() {
     size_t nTotalSize = 8;
     size_t nAccumSize = 8;
     if (g_nFirstUnreadNewsIndex < g_nNewsMaxCacheSize.nCount) {
-      pEntryText = g_nNewsMaxCacheSize.pEntries[g_nFirstUnreadNewsIndex].szText;
+      uint32_t nEntryIndex;
+      pEntryText = (char*)(g_nFirstUnreadNewsIndex * 0x408 + 8 + (int)g_nNewsMaxCacheSize.pEntries);
       nEntryIndex = g_nFirstUnreadNewsIndex;
       do {
         pStrScanEnd = pEntryText + 1;
         pStrScan = pEntryText;
         pStrScan = pStrScan + strlen(pStrScan) + 1;
-        if ((intptr_t)pStrScan - (intptr_t)pStrScanEnd >= 0x400) {
+        if ((int)pStrScan - (int)pStrScanEnd >= 0x400) {
           return;
         }
 
-        nTotalSize = nTotalSize + 5 + ((intptr_t)pStrScan - (intptr_t)pStrScanEnd);
+        nTotalSize = nTotalSize + 5 + ((int)pStrScan - (int)pStrScanEnd);
         nEntryIndex++;
         pEntryText += 0x408;
         nAccumSize = nTotalSize;
@@ -2103,26 +2166,25 @@ void __stdcall BNNEWS_SaveToCache() {
     pMemoryToFree[1] = ftWriteTime.dwHighDateTime;
     uint32_t* pWritePtr = pMemoryToFree + 2;
     if (g_nFirstUnreadNewsIndex < nUnreadCount) {
-      D2BnNewsEntryStrc* pDVar1;
       nEntryDiff = g_nFirstUnreadNewsIndex * 0x408;
       pStrScanEnd = (char*)(nUnreadCount - g_nFirstUnreadNewsIndex);
       do {
-        pDVar1 = g_nNewsMaxCacheSize.pEntries;
-        pEntryText = g_nNewsMaxCacheSize.pEntries->szText + nEntryDiff;
-        *pWritePtr = *(uint32_t*)(g_nNewsMaxCacheSize.pEntries->szText + nEntryDiff - 4);
+        nErrorAddr = g_nNewsMaxCacheSize.pEntries;
+        pEntryText = (char*)((int)g_nNewsMaxCacheSize.pEntries + nEntryDiff + 8);
+        *pWritePtr = *(uint32_t*)((int)g_nNewsMaxCacheSize.pEntries + nEntryDiff + 4);
         pStrScan = pEntryText;
         pStrScan = pStrScan + strlen(pStrScan) + 1;
-        nTextLen = (intptr_t)pStrScan - (intptr_t)(pDVar1->szText + nEntryDiff + 1);
+        nTextLen = (int)pStrScan - ((int)nErrorAddr + nEntryDiff + 9);
         nDestOffset = 4 - (int)pEntryText;
         do {
           cStrChar = *pEntryText;
-          pEntryText[(intptr_t)pWritePtr + nDestOffset] = cStrChar;
+          pEntryText[(int)pWritePtr + nDestOffset] = cStrChar;
           pEntryText++;
         } while (cStrChar != '\0');
 
         nEntryDiff += 0x408;
-        pStrScanEnd = (char*)((char*)pStrScanEnd - 1);
-        pWritePtr = (uint32_t*)((char*)pWritePtr + nTextLen + 5);
+        pStrScanEnd = (char*)((int)pStrScanEnd - 1);
+        pWritePtr = (uint32_t*)((int)pWritePtr + nTextLen + 5);
       } while (pStrScanEnd);
 
       pStrScanEnd = 0;
@@ -2152,23 +2214,23 @@ void __stdcall BNNEWS_InvokeCallbacks() {
 
     int nEntryByteOffset = g_nNewsMaxCacheSize.nCount * 0x408;
     do {
-      (*g_pfnMotdCallback)(*(uint32_t*)(nEntryByteOffset - 0x404 + (char*)g_nNewsMaxCacheSize.pEntries), (char*)(nEntryByteOffset - 0x400 + (char*)g_nNewsMaxCacheSize.pEntries));
+      (*g_pfnMotdCallback)(*(uint32_t*)(nEntryByteOffset - 0x404 + (int)g_nNewsMaxCacheSize.pEntries), (char*)(nEntryByteOffset - 0x400 + (int)g_nNewsMaxCacheSize.pEntries));
       nEntryByteOffset += -0x408;
       nUnreadCount--;
     } while (nUnreadCount);
 }
 
 void __fastcall TSFixedArray_Ui_Destructor_Unref_0051d570(void * pArray) {
-    if (!*(void**)((char*)pArray + 8)) {
+    if (!*(void**)((int)pArray + 8)) {
       return;
     }
 
-    Storm::Source::SMem::SMemFree(*(void**)((char*)pArray + 8), s___AUItem_NewsTable___0072ff8c, -2, 0);
+    Storm::Source::SMem::SMemFree(*(void**)((int)pArray + 8), s___AUItem_NewsTable___0072ff8c, -2, 0);
 }
 
-void * __thiscall BNNEWS_DestroyNewsTable(D2BnNewsTableStrc * pNewsTable, uint8_t bFreeMemory) {
-    if (pNewsTable->pEntries) {
-      Storm::Source::SMem::SMemFree(pNewsTable->pEntries, s___AUItem_NewsTable___0072ff8c, -2, 0);
+void * __thiscall BNNEWS_DestroyNewsTable(void * pNewsTable, uint8_t bFreeMemory) {
+    if (*(void**)((int)pNewsTable + 8)) {
+      Storm::Source::SMem::SMemFree(*(void**)((int)pNewsTable + 8), s___AUItem_NewsTable___0072ff8c, -2, 0);
     }
     if (bFreeMemory & 1) {
       Storm::Source::SMem::SMemFree(pNewsTable, "delete", -1, 0);
@@ -2181,17 +2243,17 @@ void __thiscall BNNEWS_ReallocateNewsTable(D2BnNewsTableStrc * pNewsTable, uint3
     int nByteOffset;
     int* pSrc;
     int* pDst;
-    D2BnNewsEntryStrc* pBlock = pNewsTable->pEntries;
+    uint32_t* pObject = (uint32_t*)pNewsTable->pEntries;
     pNewsTable->nCapacity = dwNewCapacity;
-    D2BnNewsEntryStrc* pFallbackAlloc = (D2BnNewsEntryStrc*)Storm::Source::SMem::SMemReAlloc(&pBlock->dwFlags, dwNewCapacity * 0x408, s___AUItem_NewsTable___0072ff8c, -2, 0x10);
-    pNewsTable->pEntries = pFallbackAlloc;
-    if (pFallbackAlloc) {
+    uint32_t* pRealloc = Storm::Source::SMem::SMemReAlloc(pObject, dwNewCapacity * 0x408, s___AUItem_NewsTable___0072ff8c, -2, 0x10);
+    pNewsTable->pEntries = pRealloc;
+    if (pRealloc) {
       return;
     }
 
-    pFallbackAlloc = (D2BnNewsEntryStrc*)Storm::Source::SMem::SMemAlloc(dwNewCapacity * 0x408, s___AUItem_NewsTable___0072ff8c, -2, 0);
+    void* pFallbackAlloc = Storm::Source::SMem::SMemAlloc(dwNewCapacity * 0x408, s___AUItem_NewsTable___0072ff8c, -2, 0);
     pNewsTable->pEntries = pFallbackAlloc;
-    if (!pBlock) {
+    if (!pObject) {
       return;
     }
 
@@ -2204,9 +2266,9 @@ void __thiscall BNNEWS_ReallocateNewsTable(D2BnNewsTableStrc * pNewsTable, uint3
       nByteOffset = 0;
       dwNewCapacity = nCopyCount;
       do {
-        pDst = (int*)&pNewsTable->pEntries[nByteOffset].dwFlags;
+        pDst = (int*)((int)pNewsTable->pEntries + nByteOffset);
         if (pDst) {
-          pSrc = (int*)&pBlock[nByteOffset].dwFlags;
+          pSrc = (int*)(nByteOffset + (int)pObject);
           for (nDwordsLeft = 0x102; nDwordsLeft; nDwordsLeft--) {
             *pDst = *pSrc;
             pSrc++;
@@ -2214,38 +2276,38 @@ void __thiscall BNNEWS_ReallocateNewsTable(D2BnNewsTableStrc * pNewsTable, uint3
           }
         }
 
-        nByteOffset++;
+        nByteOffset += 0x408;
         dwNewCapacity--;
       } while (dwNewCapacity);
     }
 
-    Storm::Source::SMem::SMemFree(pBlock, s___AUItem_NewsTable___0072ff8c, -2, 0);
+    Storm::Source::SMem::SMemFree(pObject, s___AUItem_NewsTable___0072ff8c, -2, 0);
 }
 
 void __fastcall TSFixedArray_Ui_Destructor_Unref_0051d670(void * pArray) {
-    if (!*(void**)((char*)pArray + 8)) {
+    if (!*(void**)((int)pArray + 8)) {
       return;
     }
 
-    Storm::Source::SMem::SMemFree(*(void**)((char*)pArray + 8), s___AUItem_NewsTable___0072ff8c, -2, 0);
+    Storm::Source::SMem::SMemFree(*(void**)((int)pArray + 8), s___AUItem_NewsTable___0072ff8c, -2, 0);
 }
 
-uint32_t * __fastcall Unreferenced_0051d690(uint32_t * param_1) {
-    *param_1 = 0;
-    param_1[1] = 0;
-    param_1[2] = 0;
-    param_1[3] = 0;
+int __fastcall Unreferenced_0051d690(int param_1) {
+    *(uint32_t*)param_1 = 0;
+    *(uint32_t*)(param_1 + 4) = 0;
+    *(uint32_t*)(param_1 + 8) = 0;
+    *(uint32_t*)(param_1 + 0xc) = 0;
     return param_1;
 }
 
-void __fastcall BNNEWS_ClearNewsTable(D2BnNewsTableStrc * pNewsTable) {
-    if (pNewsTable->pEntries) {
-      Storm::Source::SMem::SMemFree(pNewsTable->pEntries, s___AUItem_NewsTable___0072ff8c, -2, 0);
+void __fastcall BNNEWS_ClearNewsTable(uint32_t * pNewsTable) {
+    if ((void*)pNewsTable[2]) {
+      Storm::Source::SMem::SMemFree((void*)pNewsTable[2], s___AUItem_NewsTable___0072ff8c, -2, 0);
     }
 
-    pNewsTable->nCapacity = 0;
-    pNewsTable->nCount = 0;
-    pNewsTable->pEntries = 0;
+    *pNewsTable = 0;
+    pNewsTable[1] = 0;
+    pNewsTable[2] = 0;
 }
 
 void __thiscall BNNEWS_EnsureCapacityWithGrowth(uint32_t * pNewsTable, int dwAdditionalCount, int bGrow) {
@@ -2267,11 +2329,11 @@ void __thiscall BNNEWS_EnsureCapacityWithGrowth(uint32_t * pNewsTable, int dwAdd
     BNNEWS_ReallocateNewsTable((D2BnNewsTableStrc*)pNewsTable, nNewCount);
 }
 
-uint32_t * __fastcall Unreferenced_0051d720(uint32_t * param_1) {
-    *param_1 = 0;
-    param_1[1] = 0;
-    param_1[2] = 0;
-    param_1[3] = 0;
+int __fastcall Unreferenced_0051d720(int param_1) {
+    *(uint32_t*)param_1 = 0;
+    *(uint32_t*)(param_1 + 4) = 0;
+    *(uint32_t*)(param_1 + 8) = 0;
+    *(uint32_t*)(param_1 + 0xc) = 0;
     return param_1;
 }
 
@@ -2341,16 +2403,14 @@ void __thiscall BNNEWS_SetNewsEntryCount(D2BnNewsTableStrc * pNewsTable, uint32_
 // BATTLE.NET NEWS PARSER (SID_NEWS_INFO 0x46)
 // Parses news entries from Battle.net packet containing: count(1), unknown(4), motd_timestamp(4), timestamp(4), then array of entries. Each entry: entry_id(4), message(null-terminated). Maintains sorted cache (up to 256 entries) in gpBNetNewsCache, each 0x408 bytes with entry_id at +4 and message at +8. Special case: entry_id=0 triggers callback g_pfnMotdCallback for MOTD. Sorts by entry_id descending, calculates first unread index (g_nFirstUnreadNewsIndex) based on motd_timestamp, saves to disk cache, and invokes UI callbacks.
 BOOL __fastcall NET_SID_CLIENT_Incoming0x46(char * pBytes, size_t nSize) {
-    int iVar1;
-    uint32_t* puVar2;
     int nCacheByteOffset;
     uint32_t dwCachedEntryId;
-    int iVar3;
+    int iVar1;
     int nCopyCount;
     uint32_t nInsertIndex;
     uint32_t* pSrcEntry;
     uint32_t* pMessageText;
-    char* pDstEntry;
+    uint32_t* pDstEntry;
     uint32_t dwEntryId;
     uint32_t nEntryCount;
     nEntryCount = (uint32_t)*pBytes;
@@ -2371,26 +2431,26 @@ BOOL __fastcall NET_SID_CLIENT_Incoming0x46(char * pBytes, size_t nSize) {
       pEntryData = pMessageText;
       do {
         nInsertIndex = *pEntryData;
-        pEntryData = (uint32_t*)((char*)pEntryData + 1);
+        pEntryData = (uint32_t*)((int)pEntryData + 1);
       } while ((char)nInsertIndex != '\0');
 
       if (dwEntryId) {
         if (g_nNewsMaxCacheSize.nCount) {
-          puVar2 = &g_nNewsMaxCacheSize.pEntries[g_nNewsMaxCacheSize.nCount].dwTimestamp;
+          nCacheByteOffset = g_nNewsMaxCacheSize.nCount * 0x408 + 4 + (int)g_nNewsMaxCacheSize.pEntries;
           nInsertIndex = g_nNewsMaxCacheSize.nCount;
           do {
-            dwCachedEntryId = puVar2[-0x102];
+            dwCachedEntryId = *(uint32_t*)(nCacheByteOffset - 0x408);
             nInsertIndex--;
             if (dwCachedEntryId <= dwEntryId && dwEntryId != dwCachedEntryId) {
               goto insert_news_entry;
             }
             if (dwEntryId == dwCachedEntryId) {
-              puVar2[-0x103] = 0;
-              strncpy((char*)(puVar2 - 0x101), (char*)pMessageText, 0x400);
+              *(uint32_t*)(nCacheByteOffset - 0x40c) = 0;
+              strncpy((char*)(nCacheByteOffset - 0x404), (char*)pMessageText, 0x400);
               goto next_news_entry;
             }
 
-            puVar2 += -0x102;
+            nCacheByteOffset += -0x408;
           } while (nInsertIndex);
         }
 
@@ -2401,24 +2461,24 @@ BOOL __fastcall NET_SID_CLIENT_Incoming0x46(char * pBytes, size_t nSize) {
         dwCachedEntryId = g_nNewsMaxCacheSize.nCount - 1;
         if (dwCachedEntryId > nInsertIndex) {
           nCacheByteOffset = dwCachedEntryId * 0x408;
-          iVar3 = dwCachedEntryId - nInsertIndex;
+          iVar1 = dwCachedEntryId - nInsertIndex;
           do {
-            iVar1 = nCacheByteOffset - 8;
+            pDstEntry = (uint32_t*)(nCacheByteOffset + (int)g_nNewsMaxCacheSize.pEntries);
             nCacheByteOffset += -0x408;
-            iVar3--;
-            pSrcEntry = (uint32_t*)(g_nNewsMaxCacheSize.pEntries->szText + iVar1 - 0x408);
-            pDstEntry = g_nNewsMaxCacheSize.pEntries->szText + iVar1;
+            iVar1--;
+            pSrcEntry = pDstEntry - 0x102;
             for (nCopyCount = 0x102; nCopyCount; nCopyCount--) {
-              *(uint32_t*)pDstEntry = *pSrcEntry;
+              *pDstEntry = *pSrcEntry;
               pSrcEntry++;
-              pDstEntry += 4;
+              pDstEntry++;
             }
-          } while (iVar3);
+          } while (iVar1);
         }
 
-        g_nNewsMaxCacheSize.pEntries[nInsertIndex].dwFlags = 0;
-        g_nNewsMaxCacheSize.pEntries[nInsertIndex].dwTimestamp = dwEntryId;
-        strncpy(g_nNewsMaxCacheSize.pEntries[nInsertIndex].szText, (char*)pMessageText, 0x400);
+        nCacheByteOffset = nInsertIndex * 0x408;
+        *(uint32_t*)(nCacheByteOffset + (int)g_nNewsMaxCacheSize.pEntries) = 0;
+        *(uint32_t*)(nCacheByteOffset + 4 + (int)g_nNewsMaxCacheSize.pEntries) = dwEntryId;
+        strncpy((char*)(nCacheByteOffset + 8 + (int)g_nNewsMaxCacheSize.pEntries), (char*)pMessageText, 0x400);
       } else {
         if (g_pfnMotdCallback) {
           (*g_pfnMotdCallback)(0, (char*)pMessageText);
@@ -2431,14 +2491,14 @@ BOOL __fastcall NET_SID_CLIENT_Incoming0x46(char * pBytes, size_t nSize) {
 
     g_nFirstUnreadNewsIndex = 0;
     if (g_nNewsMaxCacheSize.nCount > 0) {
-      puVar2 = &g_nNewsMaxCacheSize.pEntries->dwTimestamp;
+      pEntryData = (uint32_t*)((int)g_nNewsMaxCacheSize.pEntries + 4);
       do {
-        if (*puVar2 >= dwMotdTimestamp) {
+        if (*pEntryData >= dwMotdTimestamp) {
           break;
         }
 
         g_nFirstUnreadNewsIndex++;
-        puVar2 += 0x102;
+        pEntryData += 0x102;
       } while (g_nFirstUnreadNewsIndex < g_nNewsMaxCacheSize.nCount);
     }
 
@@ -2462,8 +2522,7 @@ BOOL __stdcall BNNEWS_LoadCachedNews() {
     };
     static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 24, "frame group __frame0_t must reproduce the Ghidra frame layout");
     __frame0_t __frame0;
-    uint32_t nPageSize;
-    D2BnNewsEntryStrc* pNewEntry;
+    uint32_t* pNewEntry;
     uint32_t* pStrEnd;
     int nStrLen;
     uint32_t* pMsgText;
@@ -2476,7 +2535,7 @@ BOOL __stdcall BNNEWS_LoadCachedNews() {
     BOOL bCacheReadOk;
     bCacheReadOk = Cache::CACHE_ReadData(szBnNewsChannelName, adwCacheHeader, &__frame0.pCacheData, &__frame0.dwCacheDataSize);
     if (bCacheReadOk) {
-      uint32_t uVar1;
+      uint32_t nPageSize;
       g_dwNewsTimestamp = *__frame0.pCacheData;
       nEntryCount = __frame0.pCacheData[1];
       pEntryData = __frame0.pCacheData + 2;
@@ -2505,16 +2564,16 @@ BOOL __stdcall BNNEWS_LoadCachedNews() {
               BNNEWS_ReallocateNewsTable(&g_nNewsMaxCacheSize, nEntryCount);
             }
 
-            pNewEntry = g_nNewsMaxCacheSize.pEntries + g_nNewsMaxCacheSize.nCount;
+            pNewEntry = (uint32_t*)(g_nNewsMaxCacheSize.nCount * 0x408 + (int)g_nNewsMaxCacheSize.pEntries);
             g_nNewsMaxCacheSize.nCount++;
-            pNewEntry->dwFlags = 0;
+            *pNewEntry = 0;
             pMsgText = pEntryData + 1;
-            pNewEntry->dwTimestamp = *pEntryData;
+            pNewEntry[1] = *pEntryData;
             pStrEnd = pMsgText;
             do {
-              uVar1 = *pStrEnd;
-              pStrEnd = (uint32_t*)((char*)pStrEnd + 1);
-            } while ((char)uVar1 != '\0');
+              nEntryCount = *pStrEnd;
+              pStrEnd = (uint32_t*)((int)pStrEnd + 1);
+            } while ((char)nEntryCount != '\0');
 
             nStrLen = (int)pStrEnd - ((int)pEntryData + 5);
             if (nStrLen >= 0x400) {
@@ -2523,13 +2582,13 @@ BOOL __stdcall BNNEWS_LoadCachedNews() {
 
             nCopyOffset = 8 - (int)pMsgText;
             do {
-              uVar1 = *pMsgText;
-              *(char*)((intptr_t)pNewEntry + nCopyOffset + (intptr_t)pMsgText) = (char)uVar1;
-              pMsgText = (uint32_t*)((char*)pMsgText + 1);
-            } while ((char)uVar1 != '\0');
+              nEntryCount = *pMsgText;
+              *(char*)((int)pNewEntry + nCopyOffset + (int)pMsgText) = (char)nEntryCount;
+              pMsgText = (uint32_t*)((int)pMsgText + 1);
+            } while ((char)nEntryCount != '\0');
 
-            nPageSize = pNewEntry->dwTimestamp;
-            pEntryData = (uint32_t*)((char*)pEntryData + nStrLen + 5);
+            nPageSize = pNewEntry[1];
+            pEntryData = (uint32_t*)((int)pEntryData + nStrLen + 5);
             nEntryCount = __frame0.nTotalEntries;
           } while (__frame0.nLastEntryId <= nPageSize && (__frame0.nEntriesRead++ , __frame0.nLastEntryId = nPageSize , __frame0.nEntriesRead < __frame0.nTotalEntries));
         }
@@ -2967,7 +3026,7 @@ int __fastcall BNSEND_DecodeCDKeyString(uint32_t * pOutProduct, uint32_t * pOutP
     do {
       bSwapChar = __frame1.abWorkBuf[nLoopIdx];
       pCurByte = __frame1.abWorkBuf + nLoopIdx;
-      nChecksumAccum = (uintptr_t)(pCurByte + (0x16 - (int)(__frame1.abWorkBuf + 0xf))) & 0xf;
+      nChecksumAccum = (uint32_t)(pCurByte + (0x16 - (int)(__frame1.abWorkBuf + 0xf))) & 0xf;
       nLoopIdx--;
       *pCurByte = __frame1.abWorkBuf[nChecksumAccum];
       __frame1.abWorkBuf[nChecksumAccum] = bSwapChar;
@@ -3210,7 +3269,7 @@ BOOL __fastcall NET_SID_CLIENT_Send_0x33_GetFileTime(char * szText, uint32_t dwR
     dwFileTimeParam.dwRequestId = dwRequestId;
     dwFileTimeParam.dwUnknown = 0;
     uint32_t nTextLen = Storm::Source::SSTR::SStrCopy(dwFileTimeParam.szFilename, szText, 0x104);
-    NET_SID_CLIENT_Send(0x33, (char*)&dwFileTimeParam, (intptr_t)&dwFileTimeParam + (nTextLen - (intptr_t)&dwFileTimeParam) + 9);
+    NET_SID_CLIENT_Send(0x33, (char*)&dwFileTimeParam, (uintptr_t)&dwFileTimeParam + (nTextLen - (uintptr_t)&dwFileTimeParam) + 9);
     return 1;
 }
 

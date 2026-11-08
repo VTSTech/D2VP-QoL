@@ -7,21 +7,15 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_crashy)
 #error "crashy header included by a module that may not use crashy (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_crashy) && !defined(D2_LOADS_crashy)
-#error "internal crashy header included from another module; include crashy's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
 
 namespace Fog::_3rdparty::crashy {
-extern uint32_t dwCurrentThreadId;
-} // namespace Fog::_3rdparty::crashy
-
-#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_crashy)
-namespace Fog::_3rdparty::crashy {
+// meta pointer for crashy::Report::vftable
+extern void* vftable_meta_ptr;
 // const crashy::Report::vftable
 extern void * vftable[1];
+extern uint32_t dwCurrentThreadId;
 } // namespace Fog::_3rdparty::crashy
-#endif // D2_MODULE_crashy

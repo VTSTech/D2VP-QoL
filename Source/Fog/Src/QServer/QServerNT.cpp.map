@@ -96,7 +96,7 @@
       "usedTypes": [
         "D2QServerStrc",
         "LPCRITICAL_SECTION",
-        "SOCKET",
+        "int32_t",
         "sockaddr",
         "u_long"
       ]
@@ -165,7 +165,6 @@
       ],
       "usedTypes": [
         "D2QServerWorkerTelemetryStrc",
-        "D2QServerWorkerThreadContextStrc",
         "LARGE_INTEGER",
         "fd_set",
         "sockaddr",
@@ -252,9 +251,6 @@
         "GetInstructionPointer",
         "ERROR_UnrecoverableInternalError_Halt",
         "exit"
-      ],
-      "usedTypes": [
-        "D2QServerWorkerThreadContextStrc"
       ]
     },
     {

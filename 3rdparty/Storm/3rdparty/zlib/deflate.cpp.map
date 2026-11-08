@@ -39,7 +39,6 @@
         "deflateSetHeader"
       ],
       "usedTypes": [
-        "deflate_state",
         "gz_header",
         "z_stream"
       ]

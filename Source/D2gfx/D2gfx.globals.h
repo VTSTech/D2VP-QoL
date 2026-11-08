@@ -7,20 +7,12 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2gfx)
 #error "D2gfx header included by a module that may not use D2gfx (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2gfx) && !defined(D2_LOADS_D2gfx)
-#error "internal D2gfx header included from another module; include D2gfx's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2gfx/D2GFX.h"
 
-// Forward declarations
-struct D2GfxHelperStrc;
-
-extern int RENDERER_nWindowWidth;
-extern int RENDERER_nWindowHeight;
-extern ::D2GfxHelperStrc * D2GfxRendereInitFunctionsStrc;
 namespace D2gfx::D2GFX {
 extern eD2RendererMode eRendererMode;
 } // namespace D2gfx::D2GFX
@@ -42,6 +34,7 @@ extern int gnTileClipRight;
 extern BYTE * * gpPaletteBlendLookupTable;
 } // namespace D2gfx
 namespace D2gfx::D2GFX {
+extern uint64_t gaIntensityTableConstant;
 extern int gaGroundTileRowOffsets[15];
 extern int gaGroundTileRowWidths[15];
 extern int gaGroundTileSrcPointers[15];

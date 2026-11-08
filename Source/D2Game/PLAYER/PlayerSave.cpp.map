@@ -90,7 +90,6 @@
       "usedTypes": [
         "D2InventoryStrc",
         "D2UnitStrc",
-        "D2UnitStrc *",
         "SGAMEDATA",
         "eD2BodyLoc",
         "eD2ItemAnimMode",
@@ -276,6 +275,7 @@
         "SAVE_SerializeInventoryItems"
       ],
       "usedTypes": [
+        "D2InventoryStrc",
         "D2UnitStrc",
         "SGAMEDATA",
         "int32_t"
@@ -720,8 +720,7 @@
         "SGAMEDATA",
         "eD2UnitStat",
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -827,8 +826,7 @@
         "SGAMEDATA",
         "int32_t",
         "uint16_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -861,8 +859,7 @@
         "eD2ItemFlag",
         "int32_t",
         "short *",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -914,9 +911,9 @@
         "NET_D2GS_SERVER_Send_0x8E_CorpseAssign_Sender"
       ],
       "usedTypes": [
+        "D2ClientStrc",
         "D2UnitStrc",
         "SGAMEDATA",
-        "_oldSaveGameLoadingPart7_part1_Slotm",
         "int32_t",
         "uint32_t",
         "uint8_t"
@@ -1043,8 +1040,7 @@
         "SGAMEDATA",
         "int32_t",
         "uint32_t",
-        "uint32_t *",
-        "uint8_t"
+        "uint32_t *"
       ]
     },
     {
@@ -1109,7 +1105,6 @@
       ],
       "usedTypes": [
         "D2ClientStrc",
-        "D2RoomStrc",
         "D2SaveFileHeaderStrc",
         "D2UnitDataPlayerStrc",
         "D2UnitStrc",
@@ -1272,6 +1267,27 @@
       "usedTypes": [
         "D2UnitStrc",
         "SGAMEDATA"
+      ]
+    },
+    {
+      "name": "CRC32_Calculate",
+      "address": "006c99f6",
+      "lines": [
+        {
+          "line": 1,
+          "address": "006c99f6"
+        }
+      ],
+      "namespace": "D2Game::PLAYER::PlayerSave",
+      "calledFunctions": [
+        "CRC32_Calculate",
+        "GetInstructionPointer",
+        "ERROR_UnrecoverableInternalError_Halt",
+        "exit"
+      ],
+      "usedTypes": [
+        "uint32_t",
+        "uint8_t"
       ]
     }
   ]

@@ -184,9 +184,6 @@
       "namespace": "Fog::Src::Safesock",
       "calledFunctions": [
         "LeaveCriticalSection_Safesock"
-      ],
-      "usedTypes": [
-        "D2NetDataStrc"
       ]
     },
     {

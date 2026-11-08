@@ -7,9 +7,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Headers/d2_platform.h"
 
@@ -21,7 +18,7 @@ extern int nAutoMapCenters;
 extern int nAutoMapParty;
 extern uint32_t AutoMapPartyNames;
 extern uint32_t MiniMapType;
-extern uint16_t * pClientAutomapCellActual;
+extern void * pClientAutomapCellActual;
 extern size_t nAutomapCellListSize;
 extern DC6 * pAutoMapDC6[4];
 extern int nAutoMapDC6FrameCount[4];

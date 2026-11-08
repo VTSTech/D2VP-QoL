@@ -2,19 +2,126 @@
 
 #include "Source/D2Client/GAME/Msg.h"
 #include "Source/D2Client/ClientModeInGame.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
 #include "Source/D2Client/D2IniConfigStrc.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/SCmd.h"
 #include "Source/D2Client/UI/Chat.h"
 #include "Source/D2Client/UI/Draw.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Net/D2Net.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Launch/CharSel.h"
+#include "Source/D2Net/SRC/Client.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/Fog.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2Game.globals.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
-#include "Redivivus/d2_boot.h" // [d2boot] direct include: 11th-sync include refactor broke the transitive path
+#include "Source/D2Client/UI/Inv.h"
+#include "Redivivus/d2_boot.h" // [d2boot] loading-screen freeze diagnostics
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -120,15 +227,14 @@ void __stdcall NET_D2GS_CLIENT_Send_0x6D_PING() {
     HANDLE hProcess;
     BOOL bReadOk;
     uint32_t nWardenChecksum;
-    LPCVOID pvVar1;
     D2GSPacketClt0x6D packet;
     char szModuleName[9];
     uint16_t wReadWord1[2];
     uint16_t wReadWord2[2];
-    uint8_t* pReadAddr;
     SIZE_T nBytesToRead;
     LPCVOID pBaseAddr;
     SIZE_T* pBytesRead;
+    LPCVOID pReadAddr;
     uint16_t* pReadBuffer;
     *(uint32_t*)(char*)&szModuleName = Game::gClientGameData.gnWardenChecksumModuleName * 0x470e31c1;
     *(uint32_t*)((char*)&szModuleName + 4) = Game::gClientGameData.gnWardenChecksumAddr2 * 0x470e31c1;
@@ -140,17 +246,17 @@ void __stdcall NET_D2GS_CLIENT_Send_0x6D_PING() {
       hModule = GetModuleHandleA(szModuleName);
       if (hModule) {
         /* SIZE_T * lpNumberOfBytesRead for ReadProcessMemory */ pBytesRead = 0;
-        pvVar1 = (LPCVOID)(nModuleOffset + (char*)hModule);
+        pReadAddr = (LPCVOID)(nModuleOffset + (int)hModule);
         /* SIZE_T nSize for ReadProcessMemory */ nBytesToRead = 2;
         pReadBuffer = wReadWord1;
-        pBaseAddr = pvVar1;
+        pBaseAddr = pReadAddr;
         /* LPVOID lpBuffer for ReadProcessMemory */ /* LPCVOID lpBaseAddress for ReadProcessMemory */ hProcess = GetCurrentProcess();
         /* HANDLE hProcess for ReadProcessMemory */ bReadOk = ReadProcessMemory(hProcess, pBaseAddr, pReadBuffer, nBytesToRead, pBytesRead);
         if (bReadOk) {
           /* SIZE_T * lpNumberOfBytesRead for ReadProcessMemory */ pBytesRead = 0;
           /* SIZE_T nSize for ReadProcessMemory */ nBytesToRead = 2;
           pReadBuffer = wReadWord2;
-          /* LPVOID lpBuffer for ReadProcessMemory */ pReadAddr = (uint8_t*)((char*)pvVar1 + 0x20);
+          /* LPVOID lpBuffer for ReadProcessMemory */ pReadAddr = (LPCVOID)((int)pReadAddr + 0x20);
           /* LPCVOID lpBaseAddress for ReadProcessMemory */ hProcess = GetCurrentProcess();
           /* HANDLE hProcess for ReadProcessMemory */ bReadOk = ReadProcessMemory(hProcess, pReadAddr, pReadBuffer, nBytesToRead, pBytesRead);
           if (bReadOk) {
@@ -251,7 +357,7 @@ void __stdcall NET_D2GS_CLIENT_Send_0x6A() {
 // @sourcefile .\GAME\Msg.cpp
 static uint8_t * MSG_ReadSaveFileToBuffer(size_t * pnFileSize) {
     size_t nFileSize;
-    uint8_t* pBuffer;
+    D2CharSelCompStrc* pBuffer;
     char szFilePath[1024];
     char szFullPath[500];
     if (D2Game::Save::szSaveCharacterName[0] == '\0') {
@@ -275,10 +381,10 @@ static uint8_t * MSG_ReadSaveFileToBuffer(size_t * pnFileSize) {
     nFileSize = ftell(pFile);
     *pnFileSize = nFileSize;
     fseek(pFile, 0, 0);
-    pBuffer = (uint8_t*)D2_ALLOC_AT(*pnFileSize, ".\\GAME\\Msg.cpp", 0x1ff);
+    pBuffer = (D2CharSelCompStrc*)D2_ALLOC_AT(*pnFileSize, ".\\GAME\\Msg.cpp", 0x1ff);
     fread(pBuffer, *pnFileSize, 1, pFile);
     fclose(pFile);
-    return pBuffer;
+    return (uint8_t*)pBuffer;
 }
 
 void __fastcall LOADING_SetProgressRatio(int32_t nProgress, int32_t nTotal) {
@@ -659,7 +765,7 @@ void __fastcall NET_D2GS_CLIENT_Send_Chat(D2ChatPacketBuildStrc * pChatPacket) {
     }
 
     *pTerminator = '\0';
-    NET_D2GS_CLIENT_Send(&sPacket.nCmd, (int32_t)(pTerminator + (1 - (intptr_t)&sPacket)));
+    NET_D2GS_CLIENT_Send(&sPacket.nCmd, (int32_t)(pTerminator + (1 - (uintptr_t)&sPacket)));
 }
 
 void __fastcall NET_D2GS_CLIENT_Send_0x66(void * pData, uint32_t nLen) {

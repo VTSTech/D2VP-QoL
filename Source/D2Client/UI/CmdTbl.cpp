@@ -13,20 +13,129 @@
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitMode.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/Src/D2WinArchive.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Fog.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
+#include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2Game.globals.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
 #include "Source/D2Hell/D2Hell.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
-#include "Source/Fog/Fog.h"
-#include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Client/UI/Panel.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/CmdTbl.data.h"
 #include "Source/D2Client/UI/Hireables.h"
+#include "Source/D2Client/UI/Panel.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Launch/MainMenus.h"
+#include "Source/D2Win/Src/D2WinMain.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -925,11 +1034,11 @@ int32_t SORT_CompareInts(int * pA, int * pB) {
     if (*pB < *pA) {
       return 1;
     }
-    if (*(int*)((char*)pA + 6)) {
-      return (*(int*)((char*)pB + 6) != 0) - 1;
+    if (*(int*)((int)pA + 6)) {
+      return (*(int*)((int)pB + 6) != 0) - 1;
     }
 
-    return (uint32_t)(*(int*)((char*)pB + 6) != 0);
+    return (uint32_t)(*(int*)((int)pB + 6) != 0);
 }
 
 // Rebuilds derived mouse button bindings (0x100-0x104) from command table. Scans all key bindings and populates gKeyBindingTable slots for left/right/middle/scroll/forward mouse buttons. Invalidates bindings (sets 0xFFFF) if command has no handler or conflicts with mouse-specific restrictions.
@@ -991,7 +1100,7 @@ void __stdcall CMD_RebuildDerivedBindings() {
       }
 
       pBinding++;
-      if ((intptr_t)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
+      if ((int)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
         return;
       }
     } while (true);
@@ -1158,7 +1267,7 @@ void __fastcall CMD_ResetKeyBindingsToDefaults(DWORD bUseInstallDir) {
     do {
       *pWKeyCode = 0xffff;
       pWKeyCode += 5;
-    } while ((intptr_t)pWKeyCode < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 4));
+    } while ((int)pWKeyCode < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 4));
 
     int* pSrcDefault = gaKeyBindingsDefault;
     D2KeyBindStrc* pDstBinding = g_KeyBindingsTable;
@@ -1175,9 +1284,9 @@ uint16_t __fastcall CMD_GetKeyForCommand(int32_t nCmdIndex, int32_t nSlot) {
     int nIndex = 0;
     PD2KeyBindSlot pBinding = &g_KeyBindingsTable[0].nSlot;
     while (((D2KeyBindStrc*)((char*)pBinding - 0x6))->nCmdIndex != nCmdIndex || ((D2KeyBindStrc*)((char*)pBinding - 0x6))->nSlot != nSlot) {
-      pBinding = (PD2KeyBindSlot)((char*)pBinding + 10);
+      pBinding = (PD2KeyBindSlot)((int)pBinding + 10);
       nIndex++;
-      if ((intptr_t)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
+      if ((int)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
         return 0xffff;
       }
     }
@@ -1426,14 +1535,14 @@ BOOL __fastcall CMD_SetKeyBinding(int32_t nCmdIndex, int32_t nSlot, uint32_t nKe
           }
 
           nIndex++;
-        } while ((intptr_t)&g_KeyBindingsTable[nIndex].wKeyCode < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 4));
+        } while ((int)&g_KeyBindingsTable[nIndex].wKeyCode < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 4));
 
         nIndex = 0;
         pBinding2 = &g_KeyBindingsTable[0].nSlot;
         while (((D2KeyBindStrc*)((char*)pBinding2 - 0x6))->nCmdIndex != nCmdIndex || ((D2KeyBindStrc*)((char*)pBinding2 - 0x6))->nSlot != nSlot) {
-          pBinding2 = (PD2KeyBindSlot)((char*)pBinding2 + 10);
+          pBinding2 = (PD2KeyBindSlot)((int)pBinding2 + 10);
           nIndex++;
-          if ((intptr_t)pBinding2 >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
+          if ((int)pBinding2 >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
             if (nClearedIndex == 0x72) {
               return 0;
             }
@@ -1487,17 +1596,17 @@ void __fastcall CMD_UnbindCommand(int32_t nCmdIndex, int32_t nSlot) {
         ((D2KeyBindStrc*)((char*)pBinding - 0x6))->wKeyCode = 0xffff;
       }
 
-      pBinding = (PD2KeyBindSlot)((char*)pBinding + 10);
-    } while ((intptr_t)pBinding < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6));
+      pBinding = (PD2KeyBindSlot)((int)pBinding + 10);
+    } while ((int)pBinding < (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6));
 }
 
 uint32_t __fastcall CMD_IsCommandBound(int32_t nCmdIndex, int32_t nSlot) {
     int nIndex = 0;
     PD2KeyBindSlot pBinding = &g_KeyBindingsTable[0].nSlot;
     while (((D2KeyBindStrc*)((char*)pBinding - 0x6))->nCmdIndex != nCmdIndex || ((D2KeyBindStrc*)((char*)pBinding - 0x6))->nSlot != nSlot) {
-      pBinding = (PD2KeyBindSlot)((char*)pBinding + 10);
+      pBinding = (PD2KeyBindSlot)((int)pBinding + 10);
       nIndex++;
-      if ((intptr_t)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
+      if ((int)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
         return 0;
       }
     }
@@ -1510,9 +1619,9 @@ uint16_t * __fastcall CMD_GetKeyNameForCommand(int32_t nCmdIndex, int32_t nSlot)
     int nIndex = 0;
     PD2KeyBindSlot pBinding = &g_KeyBindingsTable[0].nSlot;
     while (((D2KeyBindStrc*)((char*)pBinding - 0x6))->nCmdIndex != nCmdIndex || ((D2KeyBindStrc*)((char*)pBinding - 0x6))->nSlot != nSlot) {
-      pBinding = (PD2KeyBindSlot)((char*)pBinding + 10);
+      pBinding = (PD2KeyBindSlot)((int)pBinding + 10);
       nIndex++;
-      if ((intptr_t)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
+      if ((int)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
         pName = D2Lang::StrTable::strtable::GetLocaleString(0xeb2);
         return pName;
       }
@@ -1844,9 +1953,9 @@ uint16_t * __fastcall CMD_GetKeyDescForCommand(int32_t nCmdIndex, int32_t nSlot)
     PD2KeyBindSlot pBinding;
     pBinding = &g_KeyBindingsTable[0].nSlot;
     while (((D2KeyBindStrc*)((char*)pBinding - 0x6))->nCmdIndex != nCmdIndex || ((D2KeyBindStrc*)((char*)pBinding - 0x6))->nSlot != nSlot) {
-      pBinding = (PD2KeyBindSlot)((char*)pBinding + 10);
+      pBinding = (PD2KeyBindSlot)((int)pBinding + 10);
       nIndex++;
-      if ((intptr_t)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
+      if ((int)pBinding >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable) + 6)) {
         wKeyCode = 0xffff;
         describe_key:
         {
@@ -1965,7 +2074,7 @@ void __stdcall WindowsKeyPressedEvent(D2UIMouseMsgStrc * pMsg) {
     int nIndex = 0;
     while ((uint32_t)g_KeyBindingsTable[nIndex].wKeyCode != pMsg->nWParam || (nCmdIndex = g_KeyBindingsTable[nIndex].nCmdIndex , nCmdIndex == 0xffff) || nCmdIndex >= 0x39 || nCmdIndex > 0xdf || !gaCmdBindings[nCmdIndex].pfnHandler) {
       nIndex++;
-      if ((intptr_t)&g_KeyBindingsTable[nIndex] >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
+      if ((int)&g_KeyBindingsTable[nIndex] >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
         return;
       }
     }
@@ -1992,7 +2101,7 @@ void __stdcall INPUT_DispatchKeyCommand(D2UIMouseMsgStrc * pMsg) {
     int nBindingIndex = 0;
     while ((uint32_t)g_KeyBindingsTable[nBindingIndex].wKeyCode != pMsg->nWParam || (nCmdIndex = g_KeyBindingsTable[nBindingIndex].nCmdIndex , nCmdIndex == 0xffff) || nCmdIndex >= 0x39 || nCmdIndex > 0xdf || !gaCmdBindings[nCmdIndex].pfnAltHandler) {
       nBindingIndex++;
-      if ((intptr_t)&g_KeyBindingsTable[nBindingIndex] >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
+      if ((int)&g_KeyBindingsTable[nBindingIndex] >= (intptr_t)((char*)&g_KeyBindingsTable + sizeof(g_KeyBindingsTable))) {
         return;
       }
     }
@@ -2119,7 +2228,7 @@ void __stdcall CMD_LoadUserKeyBindings() {
                 do {
                   *pDstTable = 0xffff;
                   pDstTable += 5;
-                } while ((intptr_t)pDstTable < (intptr_t)&g_KeyBindingsTable + 1144);
+                } while ((int)pDstTable < (intptr_t)&g_KeyBindingsTable + 1144);
 
                 pBindingRow = wFileMagic.aBindings;
                 pDstCopy = g_KeyBindingsTable;
@@ -2144,7 +2253,7 @@ void __stdcall CMD_LoadUserKeyBindings() {
     do {
       *pDstTable = 0xffff;
       pDstTable += 5;
-    } while ((intptr_t)pDstTable < (intptr_t)&g_KeyBindingsTable + 1144);
+    } while ((int)pDstTable < (intptr_t)&g_KeyBindingsTable + 1144);
 
     int* pDefaultSrc = gaKeyBindingsDefault;
     pBindingRow = g_KeyBindingsTable;

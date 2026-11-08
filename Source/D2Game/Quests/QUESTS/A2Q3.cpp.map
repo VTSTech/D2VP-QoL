@@ -493,8 +493,7 @@
         "GetQuestDataByQuestNoInternal"
       ],
       "usedTypes": [
-        "D2QuestDataA2Q3Strc",
-        "D2QuestDataStrc",
+        "D2QuestDataA3Q2Strc",
         "SGAMEDATA"
       ]
     },
@@ -566,10 +565,6 @@
         "GetQuestControlSeed",
         "SEED_RollRange",
         "AddQuestTimer"
-      ],
-      "usedTypes": [
-        "D2QuestDataA2Q3Strc",
-        "D2QuestDataStrc"
       ]
     },
     {

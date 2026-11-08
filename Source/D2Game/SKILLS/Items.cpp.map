@@ -17,8 +17,6 @@
         "SKILLITEMS_SetDispatchTableEntry"
       ],
       "usedTypes": [
-        "D2MagicAffixCandidateStrc",
-        "D2MagicAffixTxt",
         "int32_t"
       ]
     },
@@ -170,8 +168,8 @@
         "ApplyRuneAndGemStats"
       ],
       "usedTypes": [
-        "D2MagicAffixCandidateStrc",
         "D2MagicAffixTableStrc",
+        "D2MagicAffixTxt",
         "D2SeedStrc",
         "D2UnitStrc",
         "int32_t",
@@ -230,7 +228,6 @@
       ],
       "usedTypes": [
         "D2ItemsTxt",
-        "D2MagicAffixCandidateStrc",
         "D2MagicAffixTableStrc",
         "D2MagicAffixTxt",
         "D2SeedStrc",
@@ -306,7 +303,6 @@
         "RollBetweenMinAndMax"
       ],
       "usedTypes": [
-        "D2RareAffixCandidateStrc",
         "D2RareAffixTableStrc",
         "D2RareAffixTxt",
         "D2SeedStrc",
@@ -333,7 +329,6 @@
         "RollBetweenMinAndMax"
       ],
       "usedTypes": [
-        "D2RareAffixCandidateStrc",
         "D2RareAffixTableStrc",
         "D2RareAffixTxt",
         "D2SeedStrc",

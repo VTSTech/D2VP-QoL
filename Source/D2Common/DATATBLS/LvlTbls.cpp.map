@@ -157,7 +157,6 @@
       ],
       "usedTypes": [
         "D2LevelDefsTxt",
-        "eD2LevelId",
         "uint32_t"
       ]
     },
@@ -591,9 +590,6 @@
         "DRLGMAZE_FreeRoomPresetData",
         "UnloadBin",
         "FreeServerMemory"
-      ],
-      "usedTypes": [
-        "D2DrlgFileStrc *"
       ]
     },
     {

@@ -143,9 +143,6 @@
       "namespace": "TSExplicitList<SGAMEDATA, -572662307>",
       "calledFunctions": [
         "Unreferenced_0044ed40"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -160,9 +157,6 @@
       "namespace": "TSExplicitList<SGAMEDATA, -572662307>",
       "calledFunctions": [
         "Unreferenced_0044ed90"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {

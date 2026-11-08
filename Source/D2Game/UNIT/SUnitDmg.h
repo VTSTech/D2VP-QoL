@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Game)
 #error "D2Game header included by a module that may not use D2Game (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Game) && !defined(D2_LOADS_D2Game)
-#error "internal D2Game header included from another module; include D2Game's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -56,8 +53,6 @@ struct D2DamageContext {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2DifficultyLevelsTxt
-#define D2_DEFINED_D2DifficultyLevelsTxt
 struct D2DifficultyLevelsTxt {
     /* 0x00 */ int ResistPenalty;
     /* 0x04 */ int DeathExpPenalty;
@@ -83,7 +78,6 @@ struct D2DifficultyLevelsTxt {
     /* 0x54 */ int GambleUltra;
 };
 
-#endif // D2_DEFINED_D2DifficultyLevelsTxt
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct D2PartyExperienceStrc {
     /* 0x00 */ struct D2UnitStrc * pVictim;
@@ -94,8 +88,6 @@ struct D2PartyExperienceStrc {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2ResistTableEntry
-#define D2_DEFINED_D2ResistTableEntry
 struct __attribute__((packed)) D2ResistTableEntry {
     /* 0x00 */ int nDamageFieldOffset; // byte offset of dmg field in D2DamageStrc
     /* 0x04 */ eD2UnitStat eResistStat; // resistance stat
@@ -110,7 +102,6 @@ struct __attribute__((packed)) D2ResistTableEntry {
     /* 0x28 */ int field_28; // byte flag (low byte used)
 };
 
-#endif // D2_DEFINED_D2ResistTableEntry
 namespace D2Game::UNIT::SUnitDmg {
 
 // Function declarations

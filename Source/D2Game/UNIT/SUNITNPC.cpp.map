@@ -25,8 +25,6 @@
         "UNIT_GetModuloFromSeed"
       ],
       "usedTypes": [
-        "D2GameNpcStrc",
-        "D2MercForHire",
         "D2SeedStrc",
         "SGAMEDATA",
         "int32_t",
@@ -521,9 +519,7 @@
         "exit"
       ],
       "usedTypes": [
-        "D2GameNpcStrc",
         "D2HirelingTxt",
-        "D2MercForHire",
         "SGAMEDATA",
         "int32_t",
         "uint32_t"
@@ -1039,7 +1035,6 @@
       "usedTypes": [
         "D2DifficultyLevelsTxt",
         "D2GambleTableStrc",
-        "D2GameNpcStrc",
         "D2InventoryStrc",
         "D2ItemsTxt",
         "D2SeedStrc",
@@ -1066,10 +1061,9 @@
         "GAMBLE_GenerateGambleInventory"
       ],
       "usedTypes": [
-        "D2GameNpcStrc",
-        "D2NpcProxyInventoryStrc",
         "D2UnitStrc",
-        "SGAMEDATA"
+        "SGAMEDATA",
+        "int32_t"
       ]
     },
     {
@@ -1335,7 +1329,6 @@
         "D2GSPacketSrv0x",
         "D2GameNpcStrc",
         "D2HirelingTxt",
-        "D2MercForHire",
         "D2UnitStrc",
         "SGAMEDATA",
         "int32_t"
@@ -1465,7 +1458,6 @@
         "D2GameNpcStrc",
         "D2InventoryStrc",
         "D2LowQualityItemsTxt",
-        "D2NpcPlayerInteractionStrc",
         "D2UnitStrc",
         "SGAMEDATA",
         "eD2BodyLoc",

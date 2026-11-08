@@ -263,12 +263,11 @@
         "D2WINFONT_GetCurrentFontHeight"
       ],
       "usedTypes": [
-        "D2TextBoxStrc",
-        "D2TextLineStrc",
         "RECT",
-        "TEXT_DrawScrollingTextBox_Slotm",
         "int32_t",
-        "uint32_t"
+        "uint32_t",
+        "wchar_t",
+        "wchar_t *"
       ]
     },
     {
@@ -392,9 +391,6 @@
       "namespace": "D2Client::UI::Text",
       "calledFunctions": [
         "Unreferenced_0049dac0"
-      ],
-      "usedTypes": [
-        "uint8_t"
       ]
     },
     {
@@ -409,9 +405,6 @@
       "namespace": "D2Client::UI::Text",
       "calledFunctions": [
         "Unreferenced_0049dae0"
-      ],
-      "usedTypes": [
-        "D2CoordStrc"
       ]
     },
     {
@@ -433,6 +426,7 @@
       "usedTypes": [
         "ScreenMessage_t",
         "WCHAR",
+        "WCHAR *",
         "int32_t"
       ]
     },
@@ -452,7 +446,8 @@
         "TEXT_FreeScreenMessage"
       ],
       "usedTypes": [
-        "ScreenMessage_t"
+        "ScreenMessage_t",
+        "WCHAR *"
       ]
     },
     {
@@ -529,7 +524,6 @@
       ],
       "usedTypes": [
         "RECT",
-        "TEXT_FindNonOverlappingRect_Slotmc",
         "int32_t",
         "tagRECT",
         "uint32_t",
@@ -783,7 +777,7 @@
         "TEXT_GetOverheadGlobalPointer_Unref_0049e8a0"
       ],
       "usedTypes": [
-        "uint32_t"
+        "D2GSPacketSrv0x27_TextStrc"
       ]
     },
     {
@@ -829,7 +823,6 @@
         "GetFlag"
       ],
       "usedTypes": [
-        "D2Packet0x5aEventStructure",
         "D2RosterStrc",
         "D2UnitStrc",
         "WCHAR",
@@ -1478,7 +1471,6 @@
         "MESSAGE_UnregisterEventHandlerBatch"
       ],
       "usedTypes": [
-        "D2TextBoxStrc",
         "int32_t"
       ]
     },

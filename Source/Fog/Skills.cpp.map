@@ -75,7 +75,6 @@
       "usedTypes": [
         "CalcGetKeyWordToNumber_t",
         "CalcGetLinkerIndex_t",
-        "D2SkillCalcOperandStackStrc",
         "uint32_t",
         "uint8_t"
       ]
@@ -179,7 +178,6 @@
         "CalcGetFunctionParameterCount_t",
         "CalcGetKeyWordToNumber_t",
         "CalcGetLinkerIndex_t",
-        "D2SkillCalcOperandStackStrc",
         "eD2SkillCalcOp",
         "uint32_t",
         "uint8_t"

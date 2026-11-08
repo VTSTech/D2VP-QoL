@@ -26,6 +26,7 @@
         "D2DamageStrc",
         "D2UnitStrc",
         "SGAMEDATA",
+        "int32_t",
         "uint32_t"
       ]
     },
@@ -842,9 +843,6 @@
         "GetStatsByState",
         "STATLIST_RemoveAndRecalc",
         "FreeStatList"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {

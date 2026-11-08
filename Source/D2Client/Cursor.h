@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -23,8 +20,6 @@ typedef void (__stdcall *fpD2CursorDraw)();
 #endif
 
 // Data types
-#ifndef D2_DEFINED_D2CursorDataStrc
-#define D2_DEFINED_D2CursorDataStrc
 struct D2CursorDataStrc {
     /* 0x00 */ int bAnimated;
     /* 0x04 */ int nFrameOffset;
@@ -35,7 +30,6 @@ struct D2CursorDataStrc {
     /* 0x18 */ char * szCursorname;
 };
 
-#endif // D2_DEFINED_D2CursorDataStrc
 namespace D2Client::Cursor {
 
 // Function declarations
@@ -45,7 +39,7 @@ void __stdcall UI_HandleCursorMouseDown(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall UI_HandleCursorMouseMove(struct D2UIMouseMsgStrc * pMsgEvent);
 void __stdcall UI_HandleCursorMouseUp(struct D2UIMouseMsgStrc * pMsg);
 void __fastcall CURSOR_SetCursorItem(struct D2UnitStrc * pUnit, int32_t nAnimFrame);
-int32_t __stdcall GetCursorItem_Unref_00468030();
+struct D2UnitStrc * __stdcall GetCursorItem_Unref_00468030();
 void __fastcall UI_SetCursorToSpecialIcon(int32_t nAnimFrame, int32_t bAltIcon);
 void __fastcall ITEM_SetItemOnHand(struct D2UnitStrc * pUnit);
 struct D2UnitStrc * __stdcall GetCursorItem();

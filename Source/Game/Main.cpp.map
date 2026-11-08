@@ -336,6 +336,7 @@
       ],
       "usedTypes": [
         "HKEY",
+        "LPDWORD",
         "LSTATUS"
       ]
     },
@@ -431,9 +432,6 @@
       "namespace": "Game::Main",
       "calledFunctions": [
         "Unreferenced_00406470"
-      ],
-      "usedTypes": [
-        "SC_HANDLE"
       ]
     },
     {

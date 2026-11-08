@@ -4,16 +4,13 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Game)
 #error "D2Game header included by a module that may not use D2Game (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Game) && !defined(D2_LOADS_D2Game)
-#error "internal D2Game header included from another module; include D2Game's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
 #include <cstdarg>
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2WaypointStrc.h"
 
 // Forward declarations
 struct D2BitBufferStrc;
@@ -27,7 +24,6 @@ struct D2GSPacketSrv0x5D;
 struct D2GSPacketSrv0x73;
 struct D2GSPacketSrv0x91;
 struct D2Packet0x5aEventStructure;
-struct D2PartyDataStrc;
 struct D2UnitStrc;
 struct SGAMEDATA;
 typedef uint32_t eD2LevelId;
@@ -50,8 +46,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x1F {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2GSPacketSrv0x22_0x23
-#define D2_DEFINED_D2GSPacketSrv0x22_0x23
 struct __attribute__((packed)) D2GSPacketSrv0x22_0x23 {
     /* 0x00 */ uint8_t packetId;
     /* 0x01 */ uint8_t unitType;
@@ -63,9 +57,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x22_0x23 {
     /* 0x0B */ uint8_t bBody;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x22_0x23
-#ifndef D2_DEFINED_D2GSPacketSrv0x2C
-#define D2_DEFINED_D2GSPacketSrv0x2C
 struct __attribute__((packed)) D2GSPacketSrv0x2C {
     D2GSPacketSrv0x2C() = default;
     D2GSPacketSrv0x2C(uint64_t v) { *reinterpret_cast<uint64_t*>(this) = v; }
@@ -78,9 +69,14 @@ struct __attribute__((packed)) D2GSPacketSrv0x2C {
     /* 0x06 */ uint16_t nSoundId; // word [pUnit+0x6e]
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x2C
-#ifndef D2_DEFINED_D2GSPacketSrv0x4C
-#define D2_DEFINED_D2GSPacketSrv0x4C
+#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
+struct __attribute__((packed)) D2GSPacketSrv0x42 {
+    /* 0x00 */ uint8_t nPacketId;
+    /* 0x01 */ uint8_t nUnitType;
+    /* 0x02 */ uint32_t dwUnitGUID;
+};
+
+#endif // D2_MODULE_D2Game
 struct __attribute__((packed)) D2GSPacketSrv0x4C {
     /* 0x00 */ uint8_t nPacketId;
     /* 0x01 */ uint8_t nUnitType;
@@ -92,9 +88,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x4C {
     /* 0x0E */ uint16_t wUnused;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x4C
-#ifndef D2_DEFINED_D2GSPacketSrv0x4D
-#define D2_DEFINED_D2GSPacketSrv0x4D
 struct __attribute__((packed)) D2GSPacketSrv0x4D {
     /* 0x00 */ uint8_t nPacketId;
     /* 0x01 */ uint8_t nUnitType;
@@ -106,9 +99,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x4D {
     /* 0x0F */ uint16_t wUnused;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x4D
-#ifndef D2_DEFINED_D2GSPacketSrv0x53
-#define D2_DEFINED_D2GSPacketSrv0x53
 struct __attribute__((packed)) D2GSPacketSrv0x53 {
     /* 0x00 */ uint8_t nHeader; // 0x53
     /* 0x01 */ int32_t nCycleIndex; // day/night time index, 0-5
@@ -116,7 +106,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x53 {
     /* 0x09 */ uint8_t bEclipse; // eclipse flag
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x53
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct __attribute__((packed)) D2GSPacketSrv0x58 {
     /* 0x00 */ uint8_t nPacketId; // 0x58
@@ -162,8 +151,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x63 {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2GSPacketSrv0x67
-#define D2_DEFINED_D2GSPacketSrv0x67
 struct __attribute__((packed)) D2GSPacketSrv0x67 {
     /* 0x00 */ uint8_t nPacketId;
     /* 0x01 */ uint32_t dwMonsterGUID;
@@ -177,9 +164,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x67 {
     /* 0x0F */ uint8_t nParam4;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x67
-#ifndef D2_DEFINED_D2GSPacketSrv0x68
-#define D2_DEFINED_D2GSPacketSrv0x68
 struct __attribute__((packed)) D2GSPacketSrv0x68 {
     /* 0x00 */ uint8_t nPacketId;
     /* 0x01 */ uint32_t dwMonsterGUID;
@@ -195,7 +179,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x68 {
     /* 0x14 */ uint8_t nParam3;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x68
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct __attribute__((packed)) D2GSPacketSrv0x6A {
     /* 0x00 */ uint8_t nPacketId;
@@ -215,8 +198,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x78 {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2GSPacketSrv0x7F
-#define D2_DEFINED_D2GSPacketSrv0x7F
 struct __attribute__((packed)) D2GSPacketSrv0x7F {
     /* 0x00 */ uint8_t nPacketId;
     /* 0x01 */ uint8_t nUnitType;
@@ -225,7 +206,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x7F {
     /* 0x08 */ short nAreaID;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x7F
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct D2GSPacketSrv0x84 {
     /* 0x00 */ uint8_t nPacketId; // 0x84
@@ -234,17 +214,12 @@ struct D2GSPacketSrv0x84 {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2GSPacketSrv0x8A
-#define D2_DEFINED_D2GSPacketSrv0x8A
 struct __attribute__((packed)) D2GSPacketSrv0x8A {
     /* 0x00 */ uint8_t nPacketId; // 0x8A
     /* 0x01 */ uint8_t nUnitType; // 1
     /* 0x02 */ uint32_t nUnitGUID; // unaligned
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x8A
-#ifndef D2_DEFINED_D2GSPacketSrv0x8C
-#define D2_DEFINED_D2GSPacketSrv0x8C
 struct __attribute__((packed)) D2GSPacketSrv0x8C {
     /* 0x00 */ uint8_t nPacketId; // Packet opcode (0x8C)
     /* 0x01 */ uint32_t nUnitGUID; // GUID of the player whose relationship list entry this is
@@ -252,16 +227,12 @@ struct __attribute__((packed)) D2GSPacketSrv0x8C {
     /* 0x09 */ uint16_t wRelationFlags; // D2UnitPlayerListStrc.nRelationshipFlags (low word)
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x8C
-#ifndef D2_DEFINED_D2GSPacketSrv0x8D
-#define D2_DEFINED_D2GSPacketSrv0x8D
 struct __attribute__((packed)) D2GSPacketSrv0x8D {
     /* 0x00 */ uint8_t nPacketId; // 0x8D
     /* 0x01 */ int32_t nUnitGUID; // [pUnit+0xc] or -1
     /* 0x05 */ int16_t nPartyId;
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x8D
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct __attribute__((packed)) D2GSPacketSrv0x8F {
     /* 0x00 */ uint8_t nPacketId;
@@ -269,8 +240,6 @@ struct __attribute__((packed)) D2GSPacketSrv0x8F {
 };
 
 #endif // D2_MODULE_D2Game
-#ifndef D2_DEFINED_D2GSPacketSrv0x90
-#define D2_DEFINED_D2GSPacketSrv0x90
 struct __attribute__((packed)) D2GSPacketSrv0x90 {
     /* 0x00 */ uint8_t nPacketId; // Packet opcode (0x90)
     /* 0x01 */ uint32_t nPlayerGUID; // GUID of player whose roster position changed
@@ -278,7 +247,14 @@ struct __attribute__((packed)) D2GSPacketSrv0x90 {
     /* 0x09 */ int32_t nPlayerY; // Y-coordinate sent by server for roster update
 };
 
-#endif // D2_DEFINED_D2GSPacketSrv0x90
+#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
+struct __attribute__((packed)) D2GSPacketSrv0x98 {
+    /* 0x00 */ uint8_t nPacketId;
+    /* 0x01 */ uint32_t nUnitGUID;
+    /* 0x05 */ uint16_t wValue;
+};
+
+#endif // D2_MODULE_D2Game
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 struct D2GSPacketSrv0x9C {
     /* 0x00 */ uint8_t nPacketId;

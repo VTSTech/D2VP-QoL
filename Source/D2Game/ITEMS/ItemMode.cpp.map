@@ -221,9 +221,6 @@
       "calledFunctions": [
         "Unreferenced_0055bfe0",
         "SERVER_ITEM_SendStackableUsagePackets"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -394,7 +391,6 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
-        "SGAMEDATA",
         "int32_t"
       ]
     },
@@ -1107,10 +1103,6 @@
         "Unreferenced_0055db80",
         "SUNIT_GetClient",
         "GetOwnerUnit"
-      ],
-      "usedTypes": [
-        "D2ClientStrc",
-        "D2UnitStrc"
       ]
     },
     {
@@ -1471,9 +1463,6 @@
       "namespace": "D2Game::ITEMS::ItemMode",
       "calledFunctions": [
         "RemoveStackItem"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -2296,7 +2285,7 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
-        "SGAMEDATA"
+        "int32_t"
       ]
     },
     {
@@ -3216,7 +3205,7 @@
       "usedTypes": [
         "D2InventoryStrc",
         "D2UnitStrc",
-        "SGAMEDATA",
+        "D2UnitStrc *",
         "eD2BodyLoc",
         "eInventoryPage",
         "int32_t",

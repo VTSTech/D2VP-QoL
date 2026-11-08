@@ -341,10 +341,6 @@
       "namespace": "Storm::Source::SSignature",
       "calledFunctions": [
         "Unreferenced_00425830"
-      ],
-      "usedTypes": [
-        "uint32_t",
-        "uint8_t"
       ]
     },
     {
@@ -432,9 +428,6 @@
       "namespace": "Storm::Source::SSignature",
       "calledFunctions": [
         "Unreferenced_00425ee0"
-      ],
-      "usedTypes": [
-        "uint8_t"
       ]
     },
     {
@@ -493,8 +486,7 @@
       ],
       "usedTypes": [
         "BigData *",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -559,8 +551,7 @@
         "BigData",
         "BigData *",
         "pfnEHHandlerRoutine",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -578,7 +569,7 @@
         "SLogClose"
       ],
       "usedTypes": [
-        "uint32_t"
+        "void *"
       ]
     },
     {

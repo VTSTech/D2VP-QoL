@@ -88,7 +88,7 @@
         }
       ],
       "exceptions": [],
-      "strict": true
+      "strict": false
     },
     "Storm": {
       "kind": "3rdparty",
@@ -310,7 +310,6 @@
         "D2gfx"
       ],
       "dir": "Source/D2gfx",
-      "publicHeader": "D2gfx.public.h",
       "linkOrder": 8,
       "dependencies": [
         {
@@ -562,7 +561,7 @@
         }
       ],
       "exceptions": [],
-      "strict": true
+      "strict": false
     },
     "D2Net": {
       "kind": "dll-module",
@@ -584,7 +583,7 @@
         }
       ],
       "exceptions": [],
-      "strict": true
+      "strict": false
     },
     "D2Game": {
       "kind": "dll-module",
@@ -766,7 +765,7 @@
         }
       ],
       "exceptions": [],
-      "strict": true,
+      "strict": false,
       "description": "The 1.14 crash-report library (Fog::_3rdparty::crashy)."
     },
     "D2Headers": {

@@ -398,10 +398,6 @@
       "calledFunctions": [
         "Unreferenced_00599bf0",
         "HasQuestItem"
-      ],
-      "usedTypes": [
-        "D2UnitStrc",
-        "SGAMEDATA"
       ]
     },
     {

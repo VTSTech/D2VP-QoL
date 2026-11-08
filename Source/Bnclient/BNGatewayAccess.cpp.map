@@ -211,7 +211,7 @@
         "GetGatewayList"
       ],
       "usedTypes": [
-        "D2BNetGatewayAccessStr"
+        "int32_t"
       ]
     },
     {
@@ -232,7 +232,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2BNetGatewayAccessStr",
         "int32_t"
       ]
     },
@@ -443,7 +442,6 @@
       ],
       "usedTypes": [
         "D2BNetGatewayAccessStr",
-        "UpdateGatewaysFromIni_Slotm1c",
         "int32_t",
         "uint32_t"
       ]

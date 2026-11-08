@@ -365,9 +365,6 @@
       "calledFunctions": [
         "Unreferenced_00642770",
         "TXT_LevelDefs_GetLine"
-      ],
-      "usedTypes": [
-        "eD2LevelId"
       ]
     },
     {
@@ -1553,7 +1550,6 @@
       ],
       "usedTypes": [
         "D2DrlgGridStrc",
-        "D2DrlgVertexStrc",
         "int32_t"
       ]
     },
@@ -2092,8 +2088,7 @@
         "DRLGOUTROOM_AdvancePathDirection"
       ],
       "usedTypes": [
-        "D2DrlgOutRoomPathNodeStrc",
-        "D2DrlgOutRoomPathPoolStrc"
+        "int32_t"
       ]
     },
     {
@@ -2114,7 +2109,6 @@
       "usedTypes": [
         "D2DrlgLevelDataWildernessLevel",
         "D2DrlgLevelStrc",
-        "D2DrlgOutRoomPathNodeStrc",
         "uint32_t"
       ]
     },
@@ -2136,10 +2130,8 @@
       ],
       "usedTypes": [
         "D2DrlgLevelStrc",
-        "D2DrlgOutRoomPathNodeStrc",
-        "D2DrlgOutRoomPathPoolStrc",
-        "int32_t",
-        "uint8_t"
+        "int *",
+        "int32_t"
       ]
     },
     {
@@ -2161,8 +2153,6 @@
       "usedTypes": [
         "D2DrlgLevelDataWildernessLevel",
         "D2DrlgLevelStrc",
-        "D2DrlgOutRoomPathNodeStrc",
-        "D2DrlgOutRoomPathPoolStrc",
         "D2DrlgVertexStrc",
         "int32_t"
       ]

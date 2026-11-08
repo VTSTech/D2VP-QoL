@@ -170,8 +170,7 @@
         "int16_t",
         "int32_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint8_t"
       ]
     },
     {
@@ -198,8 +197,7 @@
         "SGAMEDATA",
         "char[96]",
         "int32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint16_t"
       ]
     },
     {
@@ -226,9 +224,7 @@
         "D2WaypointStrc *",
         "SGAMEDATA",
         "int32_t",
-        "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint32_t"
       ]
     },
     {
@@ -256,8 +252,6 @@
         "SGAMEDATA",
         "int32_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *",
         "uint8_t[8]"
       ]
     },
@@ -288,8 +282,7 @@
         "int32_t",
         "uint16_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint8_t"
       ]
     },
     {
@@ -318,9 +311,7 @@
         "SGAMEDATA",
         "eD2Skills",
         "int32_t",
-        "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint32_t"
       ]
     },
     {
@@ -338,12 +329,11 @@
         "GetCopyInventory"
       ],
       "usedTypes": [
+        "D2InventoryStrc",
         "D2UnitStrc",
         "SGAMEDATA",
-        "int32_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint8_t"
       ]
     },
     {
@@ -382,8 +372,7 @@
         "int32_t",
         "uint16_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint8_t"
       ]
     },
     {
@@ -402,11 +391,10 @@
         "GetCopyInventory"
       ],
       "usedTypes": [
+        "D2InventoryStrc",
         "D2UnitStrc",
         "SGAMEDATA",
-        "int32_t",
-        "uint8_t",
-        "uint8_t *"
+        "int32_t"
       ]
     },
     {
@@ -433,8 +421,7 @@
         "SGAMEDATA",
         "char *",
         "int32_t",
-        "uint32_t",
-        "uint8_t"
+        "uint32_t"
       ]
     },
     {
@@ -816,11 +803,11 @@
       ],
       "usedTypes": [
         "D2UnitStrc",
+        "D2UnitStrc *",
         "SGAMEDATA",
         "int32_t",
         "uint32_t",
-        "uint8_t",
-        "uint8_t *"
+        "uint8_t"
       ]
     },
     {
@@ -948,7 +935,6 @@
         "ITEM_RemoveItemFromCurrentLocation"
       ],
       "usedTypes": [
-        "CreateItemIronGolemItem_Slotm",
         "D2RuneTableStrc",
         "D2UnitDataItemDetailsStrc",
         "D2UnitStrc",

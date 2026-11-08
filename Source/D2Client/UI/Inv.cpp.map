@@ -80,7 +80,6 @@
         "D2GFX_DrawSolidRectExBySize"
       ],
       "usedTypes": [
-        "D2InventoryEntryStrc",
         "int32_t"
       ]
     },
@@ -1096,9 +1095,6 @@
       "namespace": "D2Client::UI::Inv",
       "calledFunctions": [
         "Unreferenced_00486ad0"
-      ],
-      "usedTypes": [
-        "uint8_t"
       ]
     },
     {
@@ -3198,7 +3194,6 @@
       "usedTypes": [
         "D2DifficultyLevelsTxt",
         "D2UnitStrc",
-        "INV_DrawHirelingStats_Slotm",
         "eD2UnitStat",
         "int16_t",
         "int32_t",
@@ -3328,9 +3323,6 @@
         "GetRosterPetGUID",
         "UNITS_FindClientSideUnit",
         "SetUIFlag"
-      ],
-      "usedTypes": [
-        "D2UnitStrc"
       ]
     },
     {
@@ -3559,8 +3551,7 @@
       ],
       "usedTypes": [
         "WCHAR",
-        "WCHAR *",
-        "uint16_t"
+        "WCHAR *"
       ]
     },
     {
@@ -3760,9 +3751,9 @@
         "D2InventoryStrc",
         "D2ItemsTxt",
         "D2SetItemsTxt",
+        "D2SetItemsTxt *",
         "D2SetsTxt",
         "D2UnitStrc",
-        "ITEM_BuildSetItemTooltip_Slotm",
         "WCHAR",
         "int32_t",
         "uint32_t",
@@ -4341,7 +4332,6 @@
       "usedTypes": [
         "D2UIMouseMsgStrc",
         "D2UnitStrc",
-        "INPUT_InventoryLeftClick_Slotm",
         "WCHAR",
         "int32_t",
         "uint8_t"

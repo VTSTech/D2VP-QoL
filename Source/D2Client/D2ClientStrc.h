@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -22,8 +19,6 @@ struct D2UnitStrc;
 struct SGAMEDATA;
 
 // Data types
-#ifndef D2_DEFINED_D2ClientHotKeyStrc
-#define D2_DEFINED_D2ClientHotKeyStrc
 struct D2ClientHotKeyStrc {
     operator uint64_t() const { return *reinterpret_cast<const uint64_t*>(this); }
 
@@ -33,9 +28,6 @@ struct D2ClientHotKeyStrc {
     /* 0x04 */ int nItemGUID;
 };
 
-#endif // D2_DEFINED_D2ClientHotKeyStrc
-#ifndef D2_DEFINED_D2ClientVisibilityEntryStrc
-#define D2_DEFINED_D2ClientVisibilityEntryStrc
 struct __attribute__((packed)) D2ClientVisibilityEntryStrc {
     /* 0x00 */ uint8_t nUnitType;
     /* 0x01 */ uint32_t nUnitGUID;
@@ -43,9 +35,6 @@ struct __attribute__((packed)) D2ClientVisibilityEntryStrc {
     /* 0x07 */ uint16_t nY;
 };
 
-#endif // D2_DEFINED_D2ClientVisibilityEntryStrc
-#ifndef D2_DEFINED_D2PlayerBasicsData
-#define D2_DEFINED_D2PlayerBasicsData
 struct D2PlayerBasicsData {
     /* 0x00 */ int SkipTick;
     /* 0x04 */ uint16_t health;
@@ -61,9 +50,6 @@ struct D2PlayerBasicsData {
     /* 0x18 */ uint32_t experience;
 };
 
-#endif // D2_DEFINED_D2PlayerBasicsData
-#ifndef D2_DEFINED_D2QServerClientStrcExt
-#define D2_DEFINED_D2QServerClientStrcExt
 struct __attribute__((packed)) D2QServerClientStrcExt {
     /* 0x00 */ uint32_t dwPingSamples[16]; // Ring buffer of recent ping RTT ticks (up to 16 samples)
     /* 0x40 */ uint32_t dwReserved0x40; // Not referenced yet
@@ -72,9 +58,6 @@ struct __attribute__((packed)) D2QServerClientStrcExt {
     /* 0x50 */ int nForceTimeoutDisconnect; // Set by CCmd case 0x70 when client should be force-disconnected by timeout loop
 };
 
-#endif // D2_DEFINED_D2QServerClientStrcExt
-#ifndef D2_DEFINED_D2ClientVisibilityBufferStrc
-#define D2_DEFINED_D2ClientVisibilityBufferStrc
 struct __attribute__((packed)) D2ClientVisibilityBufferStrc {
     /* 0x000 */ uint8_t abHeader[4];
     /* 0x004 */ D2ClientVisibilityEntryStrc aEntries[55];
@@ -82,9 +65,6 @@ struct __attribute__((packed)) D2ClientVisibilityBufferStrc {
     /* 0x1F4 */ uint32_t nCount;
 };
 
-#endif // D2_DEFINED_D2ClientVisibilityBufferStrc
-#ifndef D2_DEFINED_D2ClientStrc
-#define D2_DEFINED_D2ClientStrc
 struct __attribute__((packed)) D2ClientStrc {
     /* 0x000 */ int nClientNo; // Unique client identifier
     /* 0x004 */ int ConnectionState; // 0=init,3=loading,4=inGame,5=actChange
@@ -97,7 +77,7 @@ struct __attribute__((packed)) D2ClientStrc {
     /* 0x05D */ uint8_t nPad5D[3];
     /* 0x060 */ void * pClientContainer; // Opaque BNet connection handle
     /* 0x064 */ int unk0x64;
-    /* 0x068 */ uint32_t pRealm;
+    /* 0x068 */ void * pRealm;
     /* 0x06C */ int nStartSkill; // First field of save appearance buffer
     /* 0x070 */ int unk0x70;
     /* 0x074 */ int unk0x74;
@@ -111,7 +91,7 @@ struct __attribute__((packed)) D2ClientStrc {
     /* 0x180 */ int nSaveOpenSize; // Bytes received so far
     /* 0x184 */ int nSaveCurrentSize;
     /* 0x188 */ int nFileSize;
-    /* 0x18C */ int32_t pSavePacketList;
+    /* 0x18C */ void * pSavePacketList;
     /* 0x190 */ FILETIME ftFileTime;
     /* 0x198 */ int nAttachedUnitType;
     /* 0x19C */ int dwAttachedUnitGUID;
@@ -162,5 +142,3 @@ struct __attribute__((packed)) D2ClientStrc {
     /* 0x510 */ int unk0x510;
     /* 0x514 */ int unk0x514;
 };
-
-#endif // D2_DEFINED_D2ClientStrc

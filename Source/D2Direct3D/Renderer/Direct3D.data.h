@@ -7,11 +7,10 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Direct3D)
 #error "D2Direct3D header included by a module that may not use D2Direct3D (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Direct3D) && !defined(D2_LOADS_D2Direct3D)
-#error "internal D2Direct3D header included from another module; include D2Direct3D's public header (see module-gates.tsv)"
-#endif
 
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Direct3D/d3dFloorCache.h"
+#include "Source/D2Direct3D/d3dSubtileCache.h"
 
 // Forward declarations
 struct D3DFloorCacheNodeStrc;
@@ -26,9 +25,11 @@ extern uint16_t g_Palette16Bit[256];
 extern D3DSubtileCacheStrc gD3DSubtileTextureCache;
 extern D3DFloorCacheStrc gD3DFloorTextureCache;
 extern int gnD3DTextureCacheCount;
+extern uint32_t g_Palette32Bit[256];
 extern IDirectDrawSurface7 * g_pD3DSurfaceBackbuffer;
 extern IDirect3DDevice * g_pD3DDevice;
 extern unsigned int g_nBytesPerPixel;
+extern unsigned int g_bPerspectiveMode;
 extern uint8_t g_aLightingTable[65536];
 extern uint32_t g_aPerspectiveZDivisionTable[8192];
 

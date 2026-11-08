@@ -3,12 +3,14 @@
 #include "Source/D2Client/UI/Inv.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/Engine/GfxUtil.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Msg.h"
+#include "Source/D2Client/GAME/PalShift.h"
 #include "Source/D2Client/GAME/Roster.h"
 #include "Source/D2Client/GAME/RosterPets.h"
 #include "Source/D2Client/SkillHelpers.h"
@@ -25,24 +27,180 @@
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitMode.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/D2Common.h"
-#include "Source/D2Common/D2CharStatsTxt.h"
+#include "Source/D2Common/D2BitBufferStrc.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SkillStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Game/D2Game.h"
+#include "Source/D2Common/DATATBLS/DataTbls.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DATATBLS/TokTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/Environment.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Monsters/MONSTERS.h"
+#include "Source/D2Common/PATH/DynamicPath.h"
+#include "Source/D2Common/QuestRecord.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Common/Units/Missile.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/GAME/Server.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/File.h"
+#include "Source/Fog/Fog.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/Help.data.h"
 #include "Source/D2Client/UI/Inv.data.h"
+#include "Source/D2Client/UI/MiniPanel.h"
 #include "Source/D2Client/UI/Panel.data.h"
+#include "Source/D2Client/UI/QuestLog.h"
 #include "Source/D2Client/UI/npcmenu.data.h"
+#include "Source/D2Common/DATATBLS/DataTbls.inline.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.inline.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
+#include "Source/D2Common/Unit.h"
 #include "Source/D2Common/Units.inline.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Launch/MainMenus.h"
 // VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
 #include "Source/D2Client/UI/VanillaPlusCore.h"
 // VP-END [resolution site-5]
@@ -434,18 +592,18 @@ static void __stdcall DrawItemSolidBackground(uint8_t nGridX, uint8_t nGridY, in
     } while (nCellY < nEndCol);
 }
 
-static void INV_DrawBodySlotHighlight(D2InventoryEntryStrc * pSlotRect, int32_t nColorIndex) {
+static void INV_DrawBodySlotHighlight(int * pSlotRect, int32_t nColorIndex) {
     if (nColorIndex == 2) {
       return;
     }
 
-    int nStartX = pSlotRect->nLeft;
-    int nStartY = pSlotRect->nTop;
+    int nStartX = *pSlotRect;
+    int nStartY = pSlotRect[2];
     if (!(nStartX >= 0 && nStartX < SpellSel::WindowSizeX && nStartY >= 0 && nStartY < ui::WindowSizeY)) {
       return;
     }
 
-    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nStartX, nStartY, (uint32_t)pSlotRect->nWidth, (uint32_t)pSlotRect->nHeight, (uint32_t)gaInvHighlightColors[nColorIndex], DRAW_VERYTRANSPARENT);
+    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nStartX, nStartY, (uint32_t)*(uint8_t*)(pSlotRect + 4), (uint32_t)*(uint8_t*)((int)pSlotRect + 0x11), (uint32_t)gaInvHighlightColors[nColorIndex], DRAW_VERYTRANSPARENT);
 }
 
 BOOL __fastcall IsInInventoryScreenRange(int32_t nX, int32_t nY) {
@@ -566,13 +724,13 @@ static void __stdcall INV_DrawGridPlacementHighlight(D2InventoryStrc * pInventor
       return;
     }
 
-    BVar1 = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory, pUnit, gpInventoryContextUi, gaInventorySelectState, nGridIndex, &pCollidedItem, byColor, 1);
+    BVar1 = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory, pUnit, gpInventoryContextUi, gaInventorySelectState, nGridIndex, (int*)&pCollidedItem, byColor, 1);
     if (!BVar1 && (!pCollidedItem || (pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(pCollidedItem->nClassId) , pItemsTxt->dwCode != 0x20786f62))) {
       DrawItemSolidBackground(nItemHeight, nItemWidth, gpInventoryContextUi, 0, gaInventorySelectState, pGridCoords);
       return;
     }
 
-    D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCollidedItem, (char*)&nCollidedWidth, (char*)((intptr_t)&pInventory + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+    D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCollidedItem, (char*)&nCollidedWidth, (char*)((uintptr_t)&pInventory + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
     int32_t nColorIndex = 3;
     int32_t nGridCol = D2Common::Units::GetYPosFromDynamicPathUnit(pCollidedItem);
     int32_t nGridRow = D2Common::Units::GetXPosFromDynamicPathUnit(pCollidedItem);
@@ -1128,7 +1286,7 @@ void __stdcall INV_DrawSocketedItems(D2UnitStrc * pUnit, D2GridScreenCoordinates
     do {
       int nPositionY;
       nPositionX = (int)((gaSocketOffsets[nSocketLayout * 6 + nSocketIndex].nX - 1) * (uint32_t)pGridCoords->nCellWidth) / 2 + nBaseX;
-      nPositionY = (int)((*(int*)(nSocketLayout * 0x30 + (char*)((char*)&gaSocketOffsets + 4) + nSocketIndex * 8) + 1) * (uint32_t)pGridCoords->nCellHeight) / 2 + nBaseY;
+      nPositionY = (int)((*(int*)(nSocketLayout * 0x30 + (int)((char*)&gaSocketOffsets + 4) + nSocketIndex * 8) + 1) * (uint32_t)pGridCoords->nCellHeight) / 2 + nBaseY;
       memset(&sGfxData, 0, 0x48);
       sGfxData.pDC6 = Panel::GemSocket;
       sGfxData.nDirection = 0;
@@ -1385,7 +1543,7 @@ void __stdcall DRAW_UI_InventoryContent(D2UnitStrc * pUnit) {
     }
 
     draw_placement_highlight:
-    INV_DrawGridPlacementHighlight(pInventory, pPlayerUnit_lcl, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCoords >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage), nGridIndex, pCoords);
+    INV_DrawGridPlacementHighlight(pInventory, pPlayerUnit_lcl, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCoords >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage), nGridIndex, pCoords);
 }
 
 static uint32_t __fastcall ITEM_CanTheseBeSocketed(D2UnitStrc * pUnit, D2UnitStrc * pTargetItem) {
@@ -1490,7 +1648,7 @@ static void INV_DrawBodySlotCursorHighlight(D2InventoryStrc * pInventory) {
 
     bHighlightValid = 1;
     draw_highlight:
-    INV_DrawBodySlotHighlight(gaPlayerBodySlotScreenCoords + gnInvBodySlotUnderCursor, bHighlightValid);
+    INV_DrawBodySlotHighlight(&gaPlayerBodySlotScreenCoords[gnInvBodySlotUnderCursor].nLeft, bHighlightValid);
 }
 
 void __fastcall InitInventory() {
@@ -2068,7 +2226,7 @@ void __stdcall szPrintfBuffer(D2UnitStrc * pUnit, uint16_t * wszText) {
       switch (bColorCode) {
         case 5:
           nUnit = (int)(void*)0x2;
-        nElemDuration = D2Common::Units::Missile::GetElementalLength(nullptr, pPlayerUnit_lcl, nMinDamage, 1);
+        nElemDuration = D2Common::Units::Missile::GetElementalLength(0, pPlayerUnit_lcl, nMinDamage, 1);
         iDurationFrames = nElemDuration / 0x19;
         if (iDurationFrames <= 0) {
           iDurationFrames = 1;
@@ -2577,7 +2735,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
         /* .wStringId = */ 0xfed
     }
 }; D2_STATIC_GUARD(gnAttackSpeedBoostDisplayValue, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnAttackSpeedBoostDisplayValue");
-    static int gnInventoryCursorX[104] = {
+    static int gnInventoryCursorX[90] = {
     0x1,
     0x1,
     0x1,
@@ -2667,7 +2825,9 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
     0x5,
     0x5,
     0x5,
-    0x5,
+    0x5
+}; D2_STATIC_GUARD(gnInventoryCursorX, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorX");
+    static int gnInventoryCursorY[14] = {
     0x0,
     0x2,
     0x1,
@@ -2682,7 +2842,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
     0x4,
     0x0,
     0x3
-}; D2_STATIC_GUARD(gnInventoryCursorX, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorX");
+}; D2_STATIC_GUARD(gnInventoryCursorY, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorY");
 
     uint32_t bIsType;
     int bIsRanged;
@@ -2719,7 +2879,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
           nClassId = pPlayer->nClassId;
         }
 
-        nSpeedClass = gnInventoryCursorX[nWeaponSpeed * 5 - 0x32 + gnInventoryCursorX[bIsRanged + nClassId * 2 + 0x5a]];
+        nSpeedClass = gnInventoryCursorX[nWeaponSpeed * 5 - 0x32 + gnInventoryCursorY[bIsRanged + nClassId * 2]];
       }
     }
 
@@ -2740,7 +2900,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
       }
 
       nWeaponSpeed++;
-    } while ((intptr_t)&gnAttackSpeedBoostDisplayValue[nWeaponSpeed] < (intptr_t)((char*)&gnAttackSpeedBoostDisplayValue + sizeof(gnAttackSpeedBoostDisplayValue)));
+    } while ((int)&gnAttackSpeedBoostDisplayValue[nWeaponSpeed] < (intptr_t)((char*)&gnAttackSpeedBoostDisplayValue + sizeof(gnAttackSpeedBoostDisplayValue)));
 
     for (nWeaponSpeed = 0; nWeaponSpeed < 0x100; nWeaponSpeed++) {
       wszSpeedLabel[nWeaponSpeed] = L'\0';
@@ -2790,7 +2950,7 @@ static void __stdcall INV_FormatItemSpellDescText(uint32_t nValue, D2ItemsTxt * 
       return;
       case 2:
         Fog::File::CONTAINER_InitializeBuffer(wszValueBuf, 2, 10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
-      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, (D2UnitStrc*)nValue, pItemsTxt->dwCalc1);
+      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       switch (pItemsTxt->wStat1) {
         case 6:
 
@@ -2808,12 +2968,12 @@ static void __stdcall INV_FormatItemSpellDescText(uint32_t nValue, D2ItemsTxt * 
       break;
       case 3:
         Fog::File::CONTAINER_InitializeBuffer(wszValueBuf, 2, 10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
-      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, (D2UnitStrc*)nValue, pItemsTxt->dwCalc1);
+      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       pwszLabel = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wSpellDescStr);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, pwszLabel);
       break;
       case 4:
-        pnQuantity = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, (D2UnitStrc*)nValue, pItemsTxt->dwCalc1);
+        pnQuantity = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       Fog::File::CONTAINER_InitializeBuffer(aWStack_42c, 2, 0x200, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
       D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x200, aWStack_42c, D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wSpellDescStr), pnQuantity);
       pwszLabel = aWStack_42c;
@@ -3054,12 +3214,13 @@ void __stdcall INV_FreeBodySlotImages() {
     gpInvGoldCoinImage = 0;
 }
 
-uint8_t Unreferenced_00486ad0() {
+int Unreferenced_00486ad0() {
     // Static local variables (originally global data)
     static uint8_t gbInvImageLoadToggle; D2_STATIC_GUARD_BSS(gbInvImageLoadToggle, "D2Client::UI::Inv::Unreferenced_00486ad0::gbInvImageLoadToggle");
 
+    uint32_t in_EAX;
     gbInvImageLoadToggle = gbInvImageLoadToggle == '\0';
-    return (bool)gbInvImageLoadToggle;
+    return (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)in_EAX >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)gbInvImageLoadToggle);
 }
 
 int32_t __stdcall INV_GetGoldButtonX() {
@@ -3300,11 +3461,11 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
     uint32_t nCol = (nMouseX - pGridLayout->nPixelLeft) / (uint32_t)pGridLayout->nCellWidth;
     uint32_t nRow = (uint32_t)(nMouseY - pGridLayout->nTop) / (uint32_t)pGridLayout->nCellHeight;
     if (pCursorItem) {
-      D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCursorItem, (char*)((intptr_t)&nPage + 3), (char*)((intptr_t)&pUnit + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+      D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCursorItem, (char*)((uintptr_t)&nPage + 3), (char*)((uintptr_t)&pUnit + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
       Engine::GfxUtil::GFXUTIL_GetOverlayDimensions(pCursorItem, 0, 0, (uint32_t*)&pInventory, &nOverlayHeight);
       bool bCentered = !(nPage & 0x1000000);
       if (bCentered) {
-        nCol = (((uintptr_t)pInventory >> 2) - pGridLayout->nPixelLeft + nMouseX) / (uint32_t)pGridLayout->nCellWidth;
+        nCol = (((uint32_t)pInventory >> 2) - pGridLayout->nPixelLeft + nMouseX) / (uint32_t)pGridLayout->nCellWidth;
       }
 
       uint8_t byGridWidth = pGridLayout->nGridCols;
@@ -3312,7 +3473,7 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
         nCol = (uint32_t)(byGridWidth >> 1);
       }
 
-      bCentered = !((uintptr_t)pUnit & 0x1000000);
+      bCentered = !((uint32_t)pUnit & 0x1000000);
       if (bCentered) {
         nRow = ((nOverlayHeight >> 2) - pGridLayout->nTop + nMouseY) / (uint32_t)pGridLayout->nCellHeight;
       }
@@ -3353,10 +3514,10 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
     if (pItemAtCell) {
       gpInvItemUnderCursor = 1;
       if (pItemAtCell != gpInvHoveredItem) {
-        D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItemAtCell, (char*)((intptr_t)&pCursorItem + 3), (char*)((intptr_t)&nMouseX + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+        D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItemAtCell, (char*)((uintptr_t)&pCursorItem + 3), (char*)((uintptr_t)&nMouseX + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
         nMouseY = D2Common::Units::GetXPosFromDynamicPathUnit(pItemAtCell);
         nYPos = D2Common::Units::GetYPosFromDynamicPathUnit(pItemAtCell);
-        gaInventoryItemSlots = ((uintptr_t)pCursorItem >> 0x18) * (uint32_t)pGridLayout->nCellWidth / 2 + (uint32_t)pGridLayout->nCellWidth * nMouseY + pGridLayout->nPixelLeft;
+        gaInventoryItemSlots = ((uint32_t)pCursorItem >> 0x18) * (uint32_t)pGridLayout->nCellWidth / 2 + (uint32_t)pGridLayout->nCellWidth * nMouseY + pGridLayout->nPixelLeft;
         nInventoryContextMode = gaInventoryItemSlots;
         pItemToDescribe = pItemAtCell;
         gpInvHoveredItem = pItemAtCell;
@@ -3486,7 +3647,7 @@ void __stdcall INV_HandleMouseMove(D2UIMouseMsgStrc * pMsg) {
 
         while ((int)nMouseX < (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nLeft || (int)nMouseX > (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nRight || nMouseY < (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nTop || nMouseY > (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nBottom) {
           nBodyLoc++;
-          if ((intptr_t)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodyLoc].nRight >= (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4)) {
+          if ((int)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodyLoc].nRight >= (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4)) {
             gnInvBodySlotUnderCursor = 0;
             pMsg->bHandled = 0;
             gnItemDescTitleMaxWidth = 1;
@@ -3800,7 +3961,7 @@ void __stdcall INV_SetShopPageFromNpc(uint8_t byPage) {
         pTabState[-1] = 0;
         nTabIdx++;
         *pTabState = (uint32_t)(nCount != 0);
-        pTabState = (uint32_t*)((char*)pTabState + 0x12);
+        pTabState = (uint32_t*)((int)pTabState + 0x12);
       } while (nTabIdx < nTabCount);
     }
     if (!anPageItemCount[byPage]) {
@@ -4305,7 +4466,7 @@ void __stdcall DRAW_UI_Inventory_DrawShop() {
 
         nTabX += 0x50;
         nTabIdx++;
-        pTabState = (PD2NpcShopTabHasItems)((char*)pTabState + 0x12);
+        pTabState = (PD2NpcShopTabHasItems)((int)pTabState + 0x12);
       } while (nTabIdx < AmountOfNPCTabs);
     }
 
@@ -5131,9 +5292,11 @@ static BOOL INV_IsMouseOverStashGoldBtn(int32_t nMouseY, int32_t nMouseX) {
     return 0;
 }
 
-void Unreferenced_00489a10() {
+int Unreferenced_00489a10() {
+    int extraout_EAX;
     ui::SetUIFlag(UI_STASH, UI_RESET, 0);
     GAME::Msg::NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT(0x4f, 0x12, 0, 0);
+    return extraout_EAX;
 }
 
 void __stdcall INV_HandleStashMouseMove(D2UIMouseMsgStrc * pMsg) {
@@ -5941,11 +6104,11 @@ void __stdcall INV_DrawHirelingStatLabels() {
         wszLabel[bHasColorCode] = L'\0';
       }
 
-      D2Lang::Unicode::UNISYS::WSTRING_PutWideCharIntoBuffer(wszLabel, D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)((intptr_t)&gaHirelingStatLabelX[0].wStrId + nFieldOffset)), 99);
-      nY = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nY + nFieldOffset) - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+      D2Lang::Unicode::UNISYS::WSTRING_PutWideCharIntoBuffer(wszLabel, D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)((uintptr_t)&gaHirelingStatLabelX[0].wStrId + nFieldOffset)), 99);
+      nY = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nY + nFieldOffset) - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
       wszLabel[99] = L'\0';
-      nX = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nX + nFieldOffset) + gnPanelOffsetX;
-      nCenterWidth = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nCenterWidth + nFieldOffset) + gnPanelOffsetX;
+      nX = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nX + nFieldOffset) + gnPanelOffsetX;
+      nCenterWidth = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nCenterWidth + nFieldOffset) + gnPanelOffsetX;
       bHasColorCode = ui::UI_AppendColorCodeToString(wszLabel, &__frame0.pwColorCodePart);
       if (bHasColorCode) {
         ui::UI_DrawTextCentered(nX, nY - 4, nCenterWidth, wszLabel, 0);
@@ -6051,7 +6214,7 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
     D2DifficultyLevelsTxt* pDiffLevelsTxt;
     int iDmgTypeLoopCount;
     int iStatBonusPct;
-    INV_DrawHirelingStats_Slotm10 uSlot10;
+    eD2UnitStat* pDmgTypeStatArray;
     int iStatValue;
     eD2UnitStat nColorCode;
     eD2UnitStat eStatId;
@@ -6131,18 +6294,18 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
           pRightArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pUnit->pInventory, 4);
         }
 
-        uSlot10.nMaxDamage = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_maxdamage, 0);
+        pDmgTypeStatArray = (eD2UnitStat*)D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_maxdamage, 0);
         if (pRightArmItem) {
           bResult = D2Common::ITEMS::Items::IsTwoHanded(pRightArmItem);
           if (bResult) {
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pRightArmItem, UNITSTAT_mindamage, 0);
             iStatValue -= iDamageValue;
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pRightArmItem, UNITSTAT_maxdamage, 0);
-            uSlot10.nMaxDamage -= iDamageValue;
+            pDmgTypeStatArray = (eD2UnitStat*)((int)pDmgTypeStatArray - iDamageValue);
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_secondary_mindamage, 0);
             iStatValue += iDamageValue;
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_secondary_maxdamage, 0);
-            uSlot10.nMaxDamage += iDamageValue;
+            pDmgTypeStatArray = (eD2UnitStat*)((int)pDmgTypeStatArray + iDamageValue);
           }
 
           wBonus = D2Common::ITEMS::Items::ITEM_GetItemsTxt_wStrBonus(pRightArmItem);
@@ -6179,8 +6342,8 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
         }
 
         iDamageValue = (iDmgTypeLoopCount + 100 + iStatRaw) * iStatValue / 100 + iStatBonusPct;
-        iStatRaw = ((intptr_t)&pDiffLevelsTxt[1].UberCodeOddsGood + iStatRaw) * uSlot10.nMaxDamage / 100 + iStatBonusPct;
-        uSlot10.pDmgTypeStatArray = nPropertyArray1 + 1;
+        iStatRaw = ((uintptr_t)&pDiffLevelsTxt[1].UberCodeOddsGood + iStatRaw) * (int)pDmgTypeStatArray / 100 + iStatBonusPct;
+        pDmgTypeStatArray = nPropertyArray1 + 1;
         nPropertyArray1[0] = UNITSTAT_firemindam;
         nPropertyArray1[1] = UNITSTAT_firemaxdam;
         nPropertyArray1[2] = UNITSTAT_energy;
@@ -6195,14 +6358,14 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
         nPropertyArray1[0xb] = UNITSTAT_vitality;
         iDmgTypeLoopCount = 4;
         do {
-          iStatValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, uSlot10.pDmgTypeStatArray[-1], 0);
-          iStatCheck = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, *uSlot10.pDmgTypeStatArray, 0);
+          iStatValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, pDmgTypeStatArray[-1], 0);
+          iStatCheck = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, *pDmgTypeStatArray, 0);
           if (iStatValue || iStatCheck) {
-            nColorCode = uSlot10.pDmgTypeStatArray[1];
+            nColorCode = pDmgTypeStatArray[1];
           }
 
           iDamageValue += iStatValue;
-          uSlot10.pDmgTypeStatArray += 3;
+          pDmgTypeStatArray += 3;
           iStatRaw += iStatCheck;
           iDmgTypeLoopCount--;
         } while (iDmgTypeLoopCount);
@@ -6353,15 +6516,15 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
       iLoopCounter = 0;
       D2Win::Src::D2WinFont::TEXT_CalcTextDimensions(wszStatText, &iTextWidth, &iLoopCounter);
       iDamageValue = iStatTableOffset;
-      iStatRaw = *(int*)((char*)gaHirelingStatRows + iStatTableOffset + 0xc);
+      iStatRaw = *(int*)((int)gaHirelingStatRows + iStatTableOffset + 0xc);
       iStatCheck = iYCoord;
       if (iStatRaw && iTextWidth > iStatRaw) {
         D2Win::Src::D2WinFont::SetAndReturnLastFont(6);
         iStatCheck = iYCoord + 1;
       }
-      if (!*(int*)((char*)gaHirelingStatRows + iDamageValue)) {
+      if (!*(int*)((int)gaHirelingStatRows + iDamageValue)) {
         D2Win::Src::D2WinFont::DRAW_text(wszStatText, iLeftX - D2Win::Src::D2WinFont::DRAW_text0(wszStatText), iStatCheck, nColorCode, 0);
-      } else if (!*(int*)((char*)gaHirelingStatRows + iDamageValue + 4)) {
+      } else if (!*(int*)((int)gaHirelingStatRows + iDamageValue + 4)) {
         D2Win::Src::D2WinFont::DRAW_text(wszStatText, iRightX, iStatCheck, nColorCode, 0);
       } else {
         ui::UI_DrawTextCentered(iRightX, iStatCheck, iLeftX, wszStatText, nColorCode);
@@ -6623,7 +6786,7 @@ void __fastcall INV_DrawHirelingCursorHighlight(D2UnitStrc * pUnit) {
       }
 
       nBodySlotIdx++;
-    } while ((intptr_t)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nHeight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 17));
+    } while ((int)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nHeight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 17));
 }
 
 static void INV_DrawHirelingEquippedItems(D2UnitStrc * pMercUnit) {
@@ -6663,21 +6826,21 @@ static void INV_DrawHirelingEquippedItems(D2UnitStrc * pMercUnit) {
       }
 
       nGridOffset++;
-    } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nGridOffset].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
+    } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nGridOffset].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
 }
 
-D2UnitStrc * Unreferenced_0048b640() {
+int Unreferenced_0048b640() {
     int32_t iVar2 = GAME::RosterPets::GetRosterPetGUID(UNIT::Player::GetPlayerUnit_UI(), 7, 0);
     if (iVar2 != -1) {
       D2UnitStrc* pDVar1;
       pDVar1 = UNIT::Player::UNITS_FindClientSideUnit(iVar2, UNIT_MONSTER);
       if (pDVar1) {
-        return pDVar1;
+        return (int)pDVar1;
       }
     }
 
     ui::SetUIFlag(UI_MERCINV, UI_TOGGLE, 0);
-    return nullptr;
+    return 0;
 }
 
 void __stdcall INV_HandleMercInvLeftDown(D2UIMouseMsgStrc * pMsg) {
@@ -6825,7 +6988,7 @@ void __stdcall INV_HandleMercInvLeftClick(D2UIMouseMsgStrc * pMsg) {
           }
 
           nBodySlotIdx++;
-        } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 4));
+        } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 4));
 
         GAME::Game::GAMEDATA_ClearQueuedClicks();
         consume_click:
@@ -6899,7 +7062,7 @@ void __stdcall INV_HandleMercInvMouseMove(D2UIMouseMsgStrc * pMsg) {
           }
 
           nMouseX++;
-        } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nMouseX].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
+        } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nMouseX].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
 
         return;
       }
@@ -6998,7 +7161,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     uint32_t _wszTokenBuf;
     va_list __va;
     va_start(__va, wszFormat);
-    uint16_t* pwTokenPtr;
+    short int* pwTokenPtr;
     int nArgIdxA;
     uint16_t* pwArgDest;
     uint16_t* pwArgSrc;
@@ -7006,7 +7169,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     uint16_t awszArgs[2000];
     uint16_t wszContainerA[6];
     uint16_t wszMsToken[6];
-    uint16_t* pwColonSaved;
+    short int* pwColonSaved;
     if (!wszFormat) {
       return;
     }
@@ -7035,8 +7198,8 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     }
 
     nTotalArgs = nArgIdxA;
-    pwColonSaved = (uint16_t*)(uint32_t)((uint32_t)(uint16_t)*(uint16_t*)((char*)&pwColonSaved + 2) << 16 | (uint32_t)(uint16_t)0x3a);
-    uint16_t* pwColonPtr;
+    pwColonSaved = (short int*)(uint32_t)((uint32_t)(uint16_t)*(uint16_t*)((char*)&pwColonSaved + 2) << 16 | (uint32_t)(uint16_t)0x3a);
+    short int* pwColonPtr;
     pwColonPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x3a);
     pwColonSaved = pwColonPtr;
     if (pwColonPtr) {
@@ -7045,14 +7208,14 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
       nArgIdxA = -1;
       pwTokenPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x61);
       if (pwTokenPtr && pwTokenPtr < pwColonPtr) {
-        nArgIdxA = pwTokenPtr[1] - 0x30;
+        nArgIdxA = (uint16_t)pwTokenPtr[1] - 0x30;
       }
 
       _wszTokenBuf = (uint32_t)(uint32_t)(uint16_t)0x6e;
       nArgIdxN = -1;
       pwTokenPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x6e);
       if (pwTokenPtr && pwTokenPtr < pwColonPtr) {
-        nArgIdxN = pwTokenPtr[1] - 0x30;
+        nArgIdxN = (uint16_t)pwTokenPtr[1] - 0x30;
       }
       if (nArgIdxA != -1) {
         if (nArgIdxN == -1) {
@@ -7347,7 +7510,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)(pPrefixAffix2->name + 0xc));
               D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszPrefix, pwLocaleStr);
             } else {
-              pwLocaleStr2 = (char*)((intptr_t)&pPrefixAffix->mod[0].code + 2);
+              pwLocaleStr2 = (char*)((uintptr_t)&pPrefixAffix->mod[0].code + 2);
               __frame0.szUtf8Buf[0] = 0x28;
               __frame0.szUtf8Buf[1] = 0;
               strcat((char*)__frame0.szUtf8Buf, pwLocaleStr2);
@@ -7401,7 +7564,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
 
           pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wNameStr);
           nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-          if ((intptr_t)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
+          if ((int)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
             Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x822);
             exit(-1);
           }
@@ -7541,7 +7704,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
                 pwLocaleStr2++;
               } while (*pcNameSrc != '\0');
 
-              nCopyLen = (uint32_t)((intptr_t)pAffixNameTail - (intptr_t)pPrefixAffix) >> 2;
+              nCopyLen = (uint32_t)((int)pAffixNameTail - (int)pPrefixAffix) >> 2;
               pAffixCopyPtr = pPrefixAffix->name;
               for (; nCopyLen; nCopyLen--) {
                 *(uint32_t*)pwLocaleStr2 = *(uint32_t*)((D2MagicAffixTxt*)pAffixCopyPtr)->name;
@@ -7549,7 +7712,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
                 pwLocaleStr2 += 4;
               }
 
-              for (nCopyLen = (intptr_t)pAffixNameTail - (intptr_t)pPrefixAffix & 3; nCopyLen; nCopyLen--) {
+              for (nCopyLen = (int)pAffixNameTail - (int)pPrefixAffix & 3; nCopyLen; nCopyLen--) {
                 *pwLocaleStr2 = *pAffixCopyPtr;
                 pAffixCopyPtr++;
                 pwLocaleStr2++;
@@ -7558,7 +7721,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
               pbyUtf8Scan = __frame0.szUtf8Buf;
               strcat((char*)__frame0.szUtf8Buf, ")");
               pbyUtf8Scan = pbyUtf8Scan + strlen((char*)pbyUtf8Scan) + 1;
-              pcNameDst = pbyUtf8Scan + ((intptr_t)pcNameDst - (int)(__frame0.szUtf8Buf + 1));
+              pcNameDst = pbyUtf8Scan + ((int)pcNameDst - (int)(__frame0.szUtf8Buf + 1));
               D2Lang::UTF8_ConvertToWideChar(wszScratch, (char*)__frame0.szUtf8Buf, 0x200);
               D2Lang::Unicode::UNISYS::AppendToBuffer(wszSuffix, wszScratch);
               pUnit = pUnitSaved;
@@ -7570,7 +7733,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize
           pItemsTxt = pItemsTxtSaved;
           pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxtSaved->wNameStr);
           nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-          if ((intptr_t)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
+          if ((int)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
             Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x8c5);
             exit(-1);
           }
@@ -7777,10 +7940,9 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     int nReqDexFailColor;
     int anReqFailColors;
     int nAdjReqDex;
+    D2SetItemsTxt** ppSetItemsTxtEntry;
     int32_t nAdjReqStr;
     D2ItemsTxt* pItemsTxtCopy;
-    ITEM_BuildSetItemTooltip_Slotm8 uSlot8 = {0};
-    uSlot8.nAdjReqDexValue = 0x48d1dd;
     for (nSetItemLoopIdx = 0; nSetItemLoopIdx < 0x400; nSetItemLoopIdx++) {
       wszWorkBuf[nSetItemLoopIdx] = L'\0';
     }
@@ -7931,18 +8093,18 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     nIsOfType = D2Common::ITEMS::Items::ITEMS_IsA(pItemToDescribe, ITEMTYPE_Weapon);
     if (nIsOfType || (nIsOfType = D2Common::ITEMS::Items::ITEMS_IsA(pItemToDescribe, ITEMTYPE_AnyArmor) , nIsOfType != 0)) {
       nReqAdjust = 0;
-      memset(&uSlot8, 0, sizeof(uSlot8));
+      ppSetItemsTxtEntry = 0;
       nAdjReqStr = D2Common::Stats::StatsEx::ITEM_GetMinimalStatValueShifted(pItemToDescribe, UNITSTAT_item_req_percent, 0);
       if (nAdjReqStr) {
         nReqAdjust = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->nReqStr, nAdjReqStr, 100);
-        uSlot8.nAdjReqDexValue = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->wReqDex, nAdjReqStr, 100);
+        ppSetItemsTxtEntry = (D2SetItemsTxt**)D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->wReqDex, nAdjReqStr, 100);
       }
 
       bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_ETHEREAL, 0xd88, ".\\UI\\inv.cpp");
       pItemsTxtCopy = pItemsTxt;
       if (bFlagCheck) {
         nReqAdjust += -10;
-        uSlot8.nAdjReqDexValue += -10;
+        ppSetItemsTxtEntry = (D2SetItemsTxt**)((int)ppSetItemsTxtEntry - 10);
       }
       if ((uint16_t)pItemsTxt->nReqStr > 0) {
         if (!nAdjReqDex) {
@@ -7956,7 +8118,7 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
           nReqDexColor = 1;
         }
 
-        INV_FormatReqDexText(pItemsTxtCopy, uSlot8.nAdjReqDexValue, wszReqDex);
+        INV_FormatReqDexText(pItemsTxtCopy, (int32_t)ppSetItemsTxtEntry, wszReqDex);
       }
     }
 
@@ -8049,31 +8211,25 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
       SkillDesc::SKILLDESC_AppendSetBonusTextByStateValue(pOwnerUnit, pItemToDescribe, wszItemBuffsAlt, 0x200);
     }
 
-    nSetItemLoopIdx = 0;
-    if (pSetsTxt->nTxtSetItemsCount > 0) {
-      uSlot8.ppSetItemsTxtEntry = pSetsTxt->pTxtSetItems;
-      do {
-        pSetItemsTxt = *uSlot8.ppSetItemsTxtEntry;
-        if (!pSetItemsTxt) {
-          break;
-        }
+    for (nSetItemLoopIdx = 0; nSetItemLoopIdx < pSetsTxt->nTxtSetItemsCount; nSetItemLoopIdx++) {
+      pSetItemsTxt = pSetsTxt->pTxtSetItems[nSetItemLoopIdx];
+      if (!pSetItemsTxt) {
+        break;
+      }
 
-        pOwnerUnit = GetSetItem((int)pSetItemsTxt->nId, pUnitInventory);
-        if (pSetItemsTxt->stringId) {
-          wsprintf(wszWorkBuf, D2Lang::StrTable::strtable::GetLocaleString(0x2769), D2Lang::StrTable::strtable::GetLocaleString(pSetItemsTxt->stringId), 0);
-          D2Lang::Unicode::UNISYS::AppendToBuffer(wszWorkBuf, pwSeparator);
-        }
+      pOwnerUnit = GetSetItem((int)pSetItemsTxt->nId, pUnitInventory);
+      if (pSetItemsTxt->stringId) {
+        wsprintf(wszWorkBuf, D2Lang::StrTable::strtable::GetLocaleString(0x2769), D2Lang::StrTable::strtable::GetLocaleString(pSetItemsTxt->stringId), 0);
+        D2Lang::Unicode::UNISYS::AppendToBuffer(wszWorkBuf, pwSeparator);
+      }
 
-        nColor = 2;
-        if (!pOwnerUnit) {
-          nColor = 1;
-        }
+      nColor = 2;
+      if (!pOwnerUnit) {
+        nColor = 1;
+      }
 
-        ui::AppendAsWideChar(wszWorkBuf, nColor);
-        D2Lang::Unicode::UNISYS::AppendToBuffer(wszSetBonusList, wszWorkBuf);
-        uSlot8.ppSetItemsTxtEntry++;
-        nSetItemLoopIdx++;
-      } while (nSetItemLoopIdx < pSetsTxt->nTxtSetItemsCount);
+      ui::AppendAsWideChar(wszWorkBuf, nColor);
+      D2Lang::Unicode::UNISYS::AppendToBuffer(wszSetBonusList, wszWorkBuf);
     }
 
     pwLocaleStr = ui::AppendAsWideChar(wszSetBonusList, 2);
@@ -9574,7 +9730,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
           }
         }
       } else {
-        if ((uintptr_t)targetItem & 4) {
+        if ((uint32_t)targetItem & 4) {
           nTxCost = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_beltable(pCursorItem_lcl);
           if (nTxCost) {
             ePage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
@@ -9598,12 +9754,12 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
     }
 
     D2Common::INVENTORY::Inventory::INVENTORY_CheckGridCollisions(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, &targetItem, (int*)&nCollisionCount, nPage);
-    D2UnitStrc* nOccupancyItemPtr;
+    int nOccupancyItemPtr;
     nOccupancyItemPtr = 0;
     nGridCellY = 1;
     if (nCollisionCount >= 2) {
       nGridCellX = 0;
-      D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, (D2UnitStrc**)&nGridCellX, nPage, 1);
+      D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, (int*)&nGridCellX, nPage, 1);
       if (!nGridCellX || (pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(*(uint32_t*)(nGridCellX + 4)) , pItemsTxt->dwCode != 0x20786f62)) {
         goto place_or_use_on_item;
       }
@@ -9660,7 +9816,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
       if (!nOccupancyItemPtr) {
         pInvWork = (D2InventoryStrc*)-1;
       } else {
-        pInvWork = (D2InventoryStrc*)nOccupancyItemPtr->nUnitGUID;
+        pInvWork = *(D2InventoryStrc**)(nOccupancyItemPtr + 0xc);
       }
 
       /* 1f [DWORD cursor item id] [DWORD buffer item id] [DWORD xpos] [DWORD ypos] */ nPacketId = 0x1f;
@@ -10586,7 +10742,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           }
 
           nBodySlotIdx++;
-        } while ((intptr_t)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4));
+        } while ((int)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4));
 
         nClickResult = 0;
         bResult = GAME::Game::CLIENT_CheckExpansion();
@@ -10600,7 +10756,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           }
         }
       } else {
-        nClickResult = ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, (D2UnitStrc*)pMsg->nWParam, (D2InventoryLayout*)&pInventoryGridScreenCoordinated, (uintptr_t)pInventory & -256);
+        nClickResult = ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, (D2UnitStrc*)pMsg->nWParam, (D2InventoryLayout*)&pInventoryGridScreenCoordinated, (uint32_t)pInventory & -256);
         bHandled = true;
       }
 
@@ -10633,7 +10789,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           if (g_nCurrentInventoryPage == 0xe && nMouseX >= pTransmogrifyBoxGridScreenCoordinates.nPixelLeft && nMouseX <= pTransmogrifyBoxGridScreenCoordinates.nRight && nMouseY >= pTransmogrifyBoxGridScreenCoordinates.nTop && nMouseY <= pTransmogrifyBoxGridScreenCoordinates.nBottom) {
             pCursorItem_lcl = (D2UnitStrc*)pMsg->nWParam;
             pInvLayout = &pTransmogrifyBoxGridScreenCoordinates;
-            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)3);
+            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)3);
             click_storage_grid:
             ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, pCursorItem_lcl, (D2InventoryLayout*)pInvLayout, nPage);
             pMsg->dwResult = 0;
@@ -10667,7 +10823,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
               pInvLayout = &pBankPageGridScreenCoordinates;
             }
 
-            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4);
+            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4);
             goto click_storage_grid;
           }
         }
@@ -10739,7 +10895,7 @@ void __stdcall INPUT_InventoryRightClick(D2UIMouseMsgStrc * pMsg) {
       pMsg->bHandled = 0;
     } else {
       int32_t iVar1;
-      iVar1 = ClickItemRight(nMouseY, nMouseX, (uintptr_t)pPlayerUnit_lcl & -256, pPlayerUnit_lcl, pInventory);
+      iVar1 = ClickItemRight(nMouseY, nMouseX, (uint32_t)pPlayerUnit_lcl & -256, pPlayerUnit_lcl, pInventory);
       if (iVar1) {
         goto resume_shop_and_consume;
       }
@@ -10795,7 +10951,7 @@ void __stdcall SelectDefaultTabForNPC() {
       do {
         pTabState[-1] = 0;
         *pTabState = 0;
-        pTabState = (uint32_t*)((char*)pTabState + 0x12);
+        pTabState = (uint32_t*)((int)pTabState + 0x12);
         nTabCount--;
       } while (nTabCount);
     }
@@ -10952,7 +11108,7 @@ void __stdcall INV_HandleRightClick(D2UIMouseMsgStrc * pMsg) {
 
           bResult = IsInBankPageScreenRange(nMouseX, nMouseY);
           if (bResult) {
-            ClickItemRight(nMouseY, nMouseX, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pMyUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4), pMyUnit, pMyUnit->pInventory);
+            ClickItemRight(nMouseY, nMouseX, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pMyUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4), pMyUnit, pMyUnit->pInventory);
             goto consume_click;
           }
         }
@@ -11005,7 +11161,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
       int nNpcTopY;
-      INPUT_InventoryLeftClick_Slotm8 uSlot8;
+      int32_t nSelectedShopTab;
     };
     static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 8, "frame group __frame0_t must reproduce the Ghidra frame layout");
     __frame0_t __frame0;
@@ -11083,8 +11239,8 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             return;
           }
 
-          __frame0.uSlot8.pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
-          if (!__frame0.uSlot8.pNpcUnit) {
+          __frame0.nSelectedShopTab = (int32_t)UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
+          if (!(D2UnitStrc*)__frame0.nSelectedShopTab) {
             return;
           }
 
@@ -11103,7 +11259,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             return;
           }
 
-          nCallResult = npcmenu::ShopAction(__frame0.uSlot8.pNpcUnit, pCursorItem_lcl, 1, x, y, dwMode, 1, 0);
+          nCallResult = npcmenu::ShopAction((D2UnitStrc*)__frame0.nSelectedShopTab, pCursorItem_lcl, 1, x, y, dwMode, 1, 0);
           if (!nCallResult) {
             return;
           }
@@ -11133,7 +11289,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
         if (y >= __frame0.nNpcTopY && y <= pNpcInventoryScreenCoordinates.nBottom) {
           nShopButtonIdx = 0;
           bHasSelectedTab = 0;
-          __frame0.uSlot8.nSelectedShopTab = 0;
+          __frame0.nSelectedShopTab = 0;
           pMsg = (D2UIMouseMsgStrc*)-1;
           if (gaNpcShopButtonTable[0] > 0) {
             pnButtonState = &gaNpcShopButtons[0].nDrawCallback;
@@ -11141,30 +11297,30 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             do {
               if (*pnButtonState == 1) {
                 bHasSelectedTab = 1;
-                __frame0.uSlot8.nSelectedShopTab = nShopButtonIdx;
+                __frame0.nSelectedShopTab = nShopButtonIdx;
               }
               if (gnInvMouseX > *pnButtonXOffsets + gnPanelOffsetX && gnInvMouseX < *pnButtonXOffsets + gnPanelOffsetX + 0x2d && gpInvCursorItem > __frame0.nNpcTopY && gpInvCursorItem < gnPanelOffsetY - 0x41 + ScreenSizeY) {
                 pMsg = (D2UIMouseMsgStrc*)nShopButtonIdx;
               }
 
               pClickedButton = pMsg;
-              nShopButtonIdx = (intptr_t)&((D2UIMouseMsgStrc*)nShopButtonIdx)->hWnd + 1;
+              nShopButtonIdx = (uintptr_t)&((D2UIMouseMsgStrc*)nShopButtonIdx)->hWnd + 1;
               pnButtonXOffsets++;
               pnButtonState += 5;
             } while (nShopButtonIdx < gaNpcShopButtonTable[0]);
 
             if (pMsg != (D2UIMouseMsgStrc*)-1) {
-              if (gaNpcShopButtons[(intptr_t)pMsg].nSelectedState == 1) {
+              if (gaNpcShopButtons[(int)pMsg].nSelectedState == 1) {
                 Sound::SOUND_PlaySound(SOUND_CURSOR_PASS, nullptr, 0, 0, 0);
                 if (bHasSelectedTab == 1) {
-                  if (pMsg != (D2UIMouseMsgStrc*)__frame0.uSlot8.nSelectedShopTab) {
-                    gaNpcShopButtons[(intptr_t)pClickedButton].nDrawCallback = 1;
-                    gaNpcShopButtons[__frame0.uSlot8.nSelectedShopTab].nDrawCallback = 0;
+                  if (pMsg != (D2UIMouseMsgStrc*)__frame0.nSelectedShopTab) {
+                    gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 1;
+                    gaNpcShopButtons[__frame0.nSelectedShopTab].nDrawCallback = 0;
                     gShopTradeUIState = 1;
                     goto consume_shop_button_click;
                   }
 
-                  gaNpcShopButtons[(intptr_t)pClickedButton].nDrawCallback = 0;
+                  gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 0;
                   g_nCurrentInventoryPage = 1;
                   pCursorItem_lcl = UNIT::Player::GetPlayerUnit_UI();
                   if (pCursorItem_lcl) {
@@ -11179,7 +11335,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
                     }
                   }
                 } else {
-                  gaNpcShopButtons[(intptr_t)pClickedButton].nDrawCallback = 1;
+                  gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 1;
                 }
 
                 gShopTradeUIState = 1;
@@ -11202,7 +11358,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             if (bHasNpcGuid) {
               pCursorItem_lcl = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
               if (pCursorItem_lcl) {
-                ClickItemLeft(pCursorItem_lcl, pCursorItem_lcl->pInventory, x, y, (D2UnitStrc*)pUnderMouse2->nWParam, (D2InventoryLayout*)&pNpcInventoryGridScreenCoordinates, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage));
+                ClickItemLeft(pCursorItem_lcl, pCursorItem_lcl->pInventory, x, y, (D2UnitStrc*)pUnderMouse2->nWParam, (D2InventoryLayout*)&pNpcInventoryGridScreenCoordinates, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage));
               }
             }
           }

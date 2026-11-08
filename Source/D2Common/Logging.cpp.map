@@ -164,7 +164,6 @@
         "STATLIST_BinarySearchStatById"
       ],
       "usedTypes": [
-        "D2StatInfoStrc",
         "int32_t"
       ]
     }

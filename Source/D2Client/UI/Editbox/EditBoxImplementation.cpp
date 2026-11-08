@@ -3,16 +3,127 @@
 #include "Source/D2Client/UI/Editbox/EditBoxImplementation.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/UI/Button/ButtonImplementation.h"
 #include "Source/D2Client/UI/Editbox/EditBoxWrapper.h"
 #include "Source/D2Client/UI/EscMenu.h"
 #include "Source/D2Client/UI/Text.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinTextBox.h"
+#include "3rdparty/crashy/Report.h"
+#include "Source/Fog/Memory.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Dialog.h"
 #include "Source/D2Client/UI/Editbox.h"
 #include "Source/D2Client/UI/UIWidget.h"
+#include "Source/D2Launch/MainMenus.h"
+#include "Source/Fog/Debug.h"
+#include "Source/Fog/Engine/Application.data.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -295,20 +406,20 @@ int __thiscall OnChar(::EditBoxImplementation * pThis, D2UIMouseMsgStrc * pMsg) 
     if (!pThis->bAllowKeyRepeat && pMsg->uLParam.nLParam & 0x40000000U) {
       return 1;
     }
-    if (pMsg->nWParam > 0x7f) {
+    if ((uint32_t)pMsg->nWParam > 0x7f) {
       pMsg->bHandled = 1;
       pMsg->dwResult = 0;
       Storm::SMsgBreakHandlerChain(pMsg);
       return 1;
     }
 
-    uint8_t nCharCode;
-    nCharCode = (uint8_t)pMsg->nWParam;
+    uint8_t byChar;
+    byChar = *(uint8_t*)&pMsg->nWParam;
     if (pThis->pfnCharFilter) {
       uint16_t* pWVar1;
       bIsValidChar = pThis->pfnCharFilter((::UIWidget*)pThis, pMsg);
       apply_char:
-      if (nCharCode == 8) {
+      if (byChar == 8) {
         if (pThis->nTextLength > 0) {
           bIsValidChar = pThis->nCursorPos;
           if (bIsValidChar != pThis->nTextLength && bIsValidChar) {
@@ -337,7 +448,7 @@ int __thiscall OnChar(::EditBoxImplementation * pThis, D2UIMouseMsgStrc * pMsg) 
         pMsg->dwResult = 0;
         goto consume_char;
       }
-      if (nCharCode == 0x2e) {
+      if (byChar == 0x2e) {
         if (pThis->nTextLength > 0) {
           bIsValidChar = pThis->nCursorPos;
           if (bIsValidChar != pThis->nTextLength) {
@@ -368,7 +479,7 @@ int __thiscall OnChar(::EditBoxImplementation * pThis, D2UIMouseMsgStrc * pMsg) 
         if ((int)nLimit < (int)(nTextLen - 1)) {
           nInsertPos = pThis->nCursorPos;
           if (nInsertPos == nLimit) {
-            pThis->wszString[nInsertPos] = (short int)(char)nCharCode;
+            pThis->wszString[nInsertPos] = (short int)(char)byChar;
             pThis->nCursorPos++;
             pThis->wszString[pThis->nCursorPos] = L'\0';
             pThis->nTextLength++;
@@ -389,7 +500,7 @@ int __thiscall OnChar(::EditBoxImplementation * pThis, D2UIMouseMsgStrc * pMsg) 
             }
 
             pThis->wszString[pThis->nTextLength] = L'\0';
-            pThis->wszString[pThis->nCursorPos] = (short int)(char)nCharCode;
+            pThis->wszString[pThis->nCursorPos] = (short int)(char)byChar;
           }
         }
         if (pThis->nTextLength) {
@@ -430,18 +541,18 @@ int __thiscall OnChar(::EditBoxImplementation * pThis, D2UIMouseMsgStrc * pMsg) 
           }
         }
       } else {
-        if (nCharCode == 0x20 || nCharCode == 0x1b || nCharCode == 0xd) {
+        if (byChar == 0x20 || byChar == 0x1b || byChar == 0xd) {
           return 0;
         }
       }
     } else {
       if (pThis->bNumericOnly) {
-        bIsValidChar = isdigit((int)(char)nCharCode);
+        bIsValidChar = isdigit((int)(char)byChar);
         goto apply_char;
       }
 
-      bIsValidChar = D2Win::Src::D2WinFont::D2WINFONT_IsFontCharacterValid(nCharCode);
-      if (nCharCode != 0xd && nCharCode != 0x1b) {
+      bIsValidChar = D2Win::Src::D2WinFont::D2WINFONT_IsFontCharacterValid(byChar);
+      if (byChar != 0xd && byChar != 0x1b) {
         goto apply_char;
       }
 

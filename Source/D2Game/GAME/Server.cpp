@@ -4,8 +4,34 @@
 #include "Source/D2Client/D2BattleNetEventCallbackTable.h"
 #include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/GAME/Game/SGAMEDATA.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UNIT/CUnit.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/ObjectTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/Environment.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
 #include "Source/D2Game/GAME/Arena.h"
 #include "Source/D2Game/GAME/CCmd.h"
 #include "Source/D2Game/GAME/Clients.h"
@@ -13,6 +39,7 @@
 #include "Source/D2Game/GAME/Level.h"
 #include "Source/D2Game/GAME/SCmd.h"
 #include "Source/D2Game/GAME/Server/ServerCmd.h"
+#include "Source/D2Game/GAME/Targets.h"
 #include "Source/D2Game/GAME/Task.h"
 #include "Source/D2Game/ITEMS/ItemMode.h"
 #include "Source/D2Game/ITEMS/Items/Drop.h"
@@ -26,17 +53,89 @@
 #include "Source/D2Game/UNIT/Party.h"
 #include "Source/D2Game/UNIT/PlayerList.h"
 #include "Source/D2Game/UNIT/SUnit.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
 #include "Source/D2Game/UNIT/SUnitInactive.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Game/UNIT/sunitproxy.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Net/D2Net.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Net/Game/Server.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "Source/Fog/Src/QServer/QServer.h"
+#include "3rdparty/Storm/H/CCritSect.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Source/SSTR.h"
 #include "Source/globals/globals.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/Bnclient/BNGatewayAccess.h"
+#include "Source/D2Client/UI/Help.data.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
 #include "Source/D2Common/Units.inline.h"
-#include "Source/D2Game/D2GameRoot.h"
+#include "Source/D2Game/D2Game.h"
 #include "Source/D2Game/GAME/Server.data.h"
-#include "Redivivus/d2_boot.h" // [d2boot] direct include: 11th-sync include refactor broke the transitive path
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Launch/CharSel.h"
+#include "Source/D2Net/Game/Server.data.h"
+#include "Redivivus/d2_boot.h" // [d2boot] loading-screen freeze diagnostics
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -57,8 +156,6 @@
 #endif
 
 static_assert(sizeof(void*) != 4 || sizeof(::D2Game_Line0x13af) == 0x90, "D2_NEW_AT(D2Game_Line0x13af): the 32-bit layout must be the 0x90 bytes 1.14d allocates");
-
-static_assert(sizeof(void*) != 4 || sizeof(::D2PlayerMessageThreadArgsStrc) == 0x108, "D2_NEW_AT(D2PlayerMessageThreadArgsStrc): the 32-bit layout must be the 0x108 bytes 1.14d allocates");
 
 #ifndef D2_NEW_AT
 #define D2_NEW_AT(T, szFile, nLine) ((T*)D2_ALLOC_AT(sizeof(T), (szFile), (nLine)))
@@ -139,16 +236,21 @@ uint32_t __stdcall GAME_GetUnusedServerConstant_Unref_0052bdc0() {
     return gnQServerListenSocket;
 }
 
-bool __stdcall Unreferenced_0052bdd0(int nUnused) {
-    return true;
+int __stdcall Unreferenced_0052bdd0(int param_1) {
+    uint32_t in_EAX;
+    return (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)in_EAX >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)1);
 }
 
-void __thiscall Unreferenced_0052bde0(LPCRITICAL_SECTION pCriticalSection, int nUnused) {
-    EnterCriticalSection(pCriticalSection);
+int __fastcall Unreferenced_0052bde0(int param_1, int param_2, int param_3) {
+    int extraout_EAX;
+    EnterCriticalSection((LPCRITICAL_SECTION)param_1);
+    return extraout_EAX;
 }
 
-void __thiscall Unreferenced_0052bdf0(LPCRITICAL_SECTION pCriticalSection, int nUnused) {
-    LeaveCriticalSection(pCriticalSection);
+int __fastcall Unreferenced_0052bdf0(int param_1, int param_2, int param_3) {
+    int extraout_EAX;
+    LeaveCriticalSection((LPCRITICAL_SECTION)param_1);
+    return extraout_EAX;
 }
 
 int __fastcall Unreferenced_0052be00(int param_1) {
@@ -295,7 +397,7 @@ int Unreferenced_0052bfe0() {
       }
 
       ppSVar2 += 4;
-    } while ((intptr_t)ppSVar2 < (intptr_t)&gaQServerGameByToken + 4104);
+    } while ((int)ppSVar2 < (intptr_t)&gaQServerGameByToken + 4104);
 
     return iVar1;
 }
@@ -708,7 +810,7 @@ static uint32_t STRING_CheckIfPlayerNameDoNotContainForbidenChars(char * szText,
 }
 
 // Validates an incoming client join request before admitting them to a game. Checks: player name length ≤16 and language < 14, existing client name matches pPlayerName, token is valid, char class < 7, name contains no forbidden chars, then calls BattleNetServerService->fpFindPlayerToken to verify the BNet token. Calls GuardStack(1) on success, GuardStack(0) on any failure — callers treat the stack-cookie result as the admit/reject signal.
-BOOL __fastcall NET_D2GS_SERVER_IsValidChecks(int32_t nClientID, uint16_t nGameToken, uint8_t charClass, char * pPlayerName, uint32_t gameHash, char * byRef1, uint32_t * byRef2, uint8_t language, uint32_t * byRef3, uint32_t * byRef4, uint32_t * byRef5, uint32_t * byRef6, uint32_t dwParam) {
+BOOL __fastcall NET_D2GS_SERVER_IsValidChecks(int32_t nClientID, uint16_t nGameToken, uint8_t charClass, char * pPlayerName, uint32_t gameHash, uint32_t byRef1, uint32_t byRef2, uint8_t language, uint32_t byRef3, uint32_t byRef4, uint32_t byRef5, uint32_t byRef6, uint32_t dwParam) {
     int32_t nCheckResult2;
     uint32_t bNameValid;
     int nFindTokenResult;
@@ -730,7 +832,7 @@ BOOL __fastcall NET_D2GS_SERVER_IsValidChecks(int32_t nClientID, uint16_t nGameT
                   exit(-1);
                 }
 
-                /* Here is the bnetserver server asked how to see/find the players token */ nFindTokenResult = BattleNetServerService->fpFindPlayerToken((int)nGameToken, byRef1, (uint8_t*)byRef2, (uint8_t*)byRef3, (uint8_t*)byRef4, (uint8_t*)byRef5, (uint8_t*)byRef6);
+                /* Here is the bnetserver server asked how to see/find the players token */ nFindTokenResult = BattleNetServerService->fpFindPlayerToken((int)nGameToken, (void*)byRef1, (void*)byRef2, (void*)byRef3, (void*)byRef4, (void*)byRef5, (void*)byRef6);
                 if (!nFindTokenResult) {
                   return 0;
                 }
@@ -757,10 +859,10 @@ void __fastcall GAME_DestroyGame(int32_t nGameToken, ::SGAMEDATA * pGame) {
       }
 
       pnTokenEntry++;
-    } while ((intptr_t)pnTokenEntry < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
+    } while ((int)pnTokenEntry < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
 
     /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&gQServerGameListCs);
-    Monster::MonsterRegion::FreeMonsterRegion(pGame->pMemoryPool, pGame->pMonsterRegion);
+    Monster::MonsterRegion::FreeMonsterRegion(pGame->pMemoryPool, (int32_t)pGame->pMonsterRegion);
     Objects::ObjectsRgn::FreeObjectControl(pGame);
     Quests::QUESTS::FreeQuestControl(pGame);
     UNIT::sunitproxy::FreeNpcControl(pGame);
@@ -942,7 +1044,7 @@ void __fastcall KillConnection(int32_t nClientId) {
 //   0xFC: IP address query response
 void __fastcall NET_D2GS_SERVER_ProcessClientMessage_System(uint8_t * pBytes, int32_t iSize) {
     // Static local variables (originally global data)
-    static long lpAddend_00883d64; D2_STATIC_GUARD_BSS(lpAddend_00883d64, "D2Game::GAME::Server::NET_D2GS_SERVER_ProcessClientMessage_System::lpAddend_00883d64");
+    static LONG * lpAddend_00883d64; D2_STATIC_GUARD_BSS(lpAddend_00883d64, "D2Game::GAME::Server::NET_D2GS_SERVER_ProcessClientMessage_System::lpAddend_00883d64");
 
     int nCopyCount;
     int32_t* pSrcInts;
@@ -960,7 +1062,7 @@ void __fastcall NET_D2GS_SERVER_ProcessClientMessage_System(uint8_t * pBytes, in
         switch (pBytes[5]) {
           case 0xfa:
             D2Net::Game::Server::NET_QServer_FindIpAddressByClientIdForQServer(nClientId, szSendBuffer + 0x10, 0x10);
-          /* LONG * lpAddend for InterlockedIncrement */ InterlockedIncrement(&lpAddend_00883d64);
+          /* LONG * lpAddend for InterlockedIncrement */ InterlockedIncrement((LONG*)&lpAddend_00883d64);
           nSize = 0x10;
           pSendBuffer = szSendBuffer;
           szSendBuffer[0] = -6;
@@ -971,7 +1073,7 @@ void __fastcall NET_D2GS_SERVER_ProcessClientMessage_System(uint8_t * pBytes, in
           szSendBuffer[0] = -5;
           D2Net::Game::Server::NET_D2GS_SERVER_SendPacketToClient('\x02', nClientId, szSendBuffer, 0x10);
           D2Net::Game::Server::QSERVER_KillConnection(nClientId);
-          /* LONG * lpAddend for InterlockedDecrement */ InterlockedDecrement(&lpAddend_00883d64);
+          /* LONG * lpAddend for InterlockedDecrement */ InterlockedDecrement((LONG*)&lpAddend_00883d64);
           return;
           case 0xfc:
             D2Net::Game::Server::NET_QServer_FindIpAddressByClientIdForQServer(nClientId, szSendBuffer + 0x10, 0x10);
@@ -997,7 +1099,7 @@ void __fastcall NET_D2GS_SERVER_ProcessClientMessage_System(uint8_t * pBytes, in
               *(uint32_t*)((char*)&sPacketFF01.sHead + 25) = sSystemInfo.adwHeader[6];
               *(uint32_t*)((char*)&sPacketFF01.sHead + 37) = sSystemInfo.adwHeader[9];
               Storm::Source::SSTR::SStrCopy(sPacketFF01.sHead.szCompilationData, sSystemInfo.szCompilationData, 0x80);
-              sPacketFF01.field31_0x113 = sSystemInfo.dw0xB8 - lpAddend_00883d64;
+              sPacketFF01.field31_0x113 = sSystemInfo.dw0xB8 - (int)lpAddend_00883d64;
               *(uint32_t*)((char*)&sPacketFF01.sHead + 169) = sSystemInfo.dw0xA8;
               *(uint32_t*)((char*)&sPacketFF01 + 271) = sSystemInfo.dw0xB0;
               sPacketFF01.sHead.field46_0xad = sSystemInfo.dw0xB0 + sSystemInfo.dw0xAC;
@@ -1777,10 +1879,10 @@ void __fastcall ObjectIdToName(char * szText, int32_t nId) {
     D2ObjectsTxt* pDVar1 = D2Common::DATATBLS::ObjectTbls::TXT_Objects_GetLine(nId);
     if (pDVar1) {
       int nDstOffset;
-      nDstOffset = (intptr_t)szText - (intptr_t)pDVar1;
+      nDstOffset = (int)szText - (int)pDVar1;
       do {
         cChar = pDVar1->Name[0];
-        *(char*)(nDstOffset + (char*)pDVar1) = cChar;
+        *(char*)(nDstOffset + (int)pDVar1) = cChar;
         pDVar1 = (D2ObjectsTxt*)(pDVar1->Name + 1);
       } while (cChar != '\0');
 
@@ -2169,7 +2271,7 @@ void __stdcall RequestHostedGames(int32_t nClientId) {
       }
 
       pTokenCursor++;
-    } while ((intptr_t)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
+    } while ((int)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
 
     ServerCmd::SERVERCMD_SendBufferToClient(nClientId, 0xffff, 0, "");
 }
@@ -2226,7 +2328,7 @@ void __stdcall QSERVER_ShutdownAllGames() {
       }
 
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return;
       }
     } while (true);
@@ -2254,7 +2356,7 @@ int32_t __stdcall QSERVER_CountExpansionGames() {
       }
 
       pTokenEntry++;
-      if ((intptr_t)pTokenEntry >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenEntry >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return nCount;
       }
     } while (true);
@@ -2287,7 +2389,7 @@ void __stdcall QSERVER_GetGameListByPlayerCount(short * pHistogramOut, int32_t n
       }
 
       pTokenCursor++;
-    } while ((intptr_t)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
+    } while ((int)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
 }
 
 // Generates histogram of active games by age (in minutes). Iterates global game tokens, locks each game, reads dwGameFrame (frame counter), converts to minutes via division by 0x1d4c (7500 frames = 5 min), increments histogram bucket. Caps at nMaxMinutes-1.
@@ -2318,7 +2420,7 @@ void __stdcall QSERVER_GetGameListByAge(short * pHistogramOut, int32_t nMaxMinut
       }
 
       pTokenCursor++;
-    } while ((intptr_t)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
+    } while ((int)pTokenCursor < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
 }
 
 uint32_t __stdcall QSERVER_GetClientCountByServerId(uint16_t nServerId) {
@@ -2442,7 +2544,7 @@ int32_t __stdcall QSERVER_FillServerTokenArray(uint16_t * pOutArray, int32_t nMa
       }
 
       pTokenSlot++;
-    } while ((intptr_t)pTokenSlot < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
+    } while ((int)pTokenSlot < (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken)));
 
     return nCount;
 }
@@ -2472,7 +2574,7 @@ int32_t __stdcall GetUnitCountByServerId(uint16_t nServerId) {
 }
 
 // Exports up to nMaxCount unit type+mode records into pOutBuffer from the game currently assigned to nServerId. Looks up the game token via DATA_LastGameServer[nServerId] under the global hash lock, locks the game, then iterates all 128 player-unit buckets calling GetTypeAndMode for each unit (output stride 0x34 bytes). Returns the number of units exported. Used by external server-management queries.
-int32_t __stdcall QSERVER_ExportUnitListByServerId(uint32_t nServerId, D2QServerUnitRecordStrc * pOutBuffer, int32_t nMaxCount) {
+int32_t __stdcall QSERVER_ExportUnitListByServerId(uint32_t nServerId, void * pOutBuffer, int32_t nMaxCount) {
     D2QServerUnitRecordStrc* pOutCursor;
     int nBucketIdx;
     int32_t nExported = 0;
@@ -2496,7 +2598,7 @@ int32_t __stdcall QSERVER_ExportUnitListByServerId(uint32_t nServerId, D2QServer
 
         pUnit = *(D2UnitStrc**)nServerId;
         if (pUnit) {
-          pOutCursor = pOutBuffer + nExported;
+          pOutCursor = (D2QServerUnitRecordStrc*)(nExported * 0x34 + (int)pOutBuffer);
           do {
             if (nExported >= nMaxCount) {
               break;
@@ -2525,11 +2627,11 @@ int32_t __stdcall QSERVER_ExportUnitListByServerId(uint32_t nServerId, D2QServer
 }
 
 // Dead/unused server-side helper that resolves a game token from a global server table, locks the game, selects one of the five unit-type hash-bucket arrays (player/monster/object/missile/item) by nUnitId, iterates all 128 buckets tracking statistics via GAME_TrackGameStatistics, then invokes a per-unit-type callback from PFN_UnitTypeToName_ARRAY. Not reachable in shipping 1.14d; retained for reference.
-void __stdcall Unused_GetUnitList(D2UnitStrc * * ppUnitArray, D2Game_Line0x13af * pStatRoot, int32_t nUnitId, int * pGameStats, int32_t nGameId) {
+void __stdcall Unused_GetUnitList(D2UnitStrc * * ppUnitArray, int32_t pStatRoot, int32_t nUnitId, int * pGameStats, int32_t nGameId) {
     D2UnitStrc* pUnit;
-    D2Game_Line0x13af* nListCursor;
+    int32_t* nListCursor;
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&gQServerGameListCs);
-    ::SGAMEDATA* pGame = gaQServerGameByToken[(uintptr_t)ppUnitArray & 0xffff];
+    ::SGAMEDATA* pGame = gaQServerGameByToken[(uint32_t)ppUnitArray & 0xffff];
     ::SGAMEDATA* nToken = 0;
     if (pGame && pGame != (::SGAMEDATA*)-1) {
       nToken = pGame;
@@ -2562,7 +2664,7 @@ void __stdcall Unused_GetUnitList(D2UnitStrc * * ppUnitArray, D2Game_Line0x13af 
     int nBucketIdx = 0;
     do {
       for (pUnit = ppUnitArray[nBucketIdx]; pUnit; pUnit = UNIT::SUnit::GetNextUnit(pUnit)) {
-        GAME_TrackGameStatistics(pStatRoot, 1, pUnit->nClassId);
+        GAME_TrackGameStatistics((D2Game_Line0x13af*)pStatRoot, 1, pUnit->nClassId);
       }
 
       nBucketIdx++;
@@ -2580,8 +2682,8 @@ void __stdcall Unused_GetUnitList(D2UnitStrc * * ppUnitArray, D2Game_Line0x13af 
         exit(-1);
       }
 
-      for (nListCursor = pStatRoot->pNext; nListCursor; nListCursor = nListCursor->pNext) {
-        (*PFN_UnitTypeCallbackTable[nUnitId])((char*)nListCursor->pad, nListCursor->nValue);
+      for (nListCursor = *(int32_t**)(pStatRoot + 0x8c); nListCursor; nListCursor = (int32_t*)nListCursor[0x23]) {
+        (*PFN_UnitTypeCallbackTable[nUnitId])((char*)(nListCursor + 3), *nListCursor);
       }
 
       return;
@@ -2589,7 +2691,7 @@ void __stdcall Unused_GetUnitList(D2UnitStrc * * ppUnitArray, D2Game_Line0x13af 
 }
 
 // Searches the game on nServerId for nCount specific units identified by (pClassIds[i], pOutBuffer[i]) pairs and exports their type+mode into pUnitTypes (stride 0xd). Uses FindUnitFromTable for each entry; non-player hits additionally call a PFN_UnitTypeToName_ARRAY dispatch. Returns the count of units found. Counterpart to QSERVER_ExportUnitListByServerId for targeted rather than bulk export.
-int32_t __stdcall QSERVER_FindUnitsAndExportByServerId(uint16_t nServerId, int32_t nCount, D2QServerUnitRecordStrc * pUnitTypes, uint32_t * pClassIds, void * pOutBuffer) {
+int32_t __stdcall QSERVER_FindUnitsAndExportByServerId(uint16_t nServerId, int32_t nCount, eD2UnitType * pUnitTypes, uint32_t * pClassIds, void * pOutBuffer) {
     int _nServerId;
     BOOL bBadCodePtr;
     int nSearchIdx;
@@ -2614,7 +2716,7 @@ int32_t __stdcall QSERVER_FindUnitsAndExportByServerId(uint16_t nServerId, int32
       pUnit = UNIT::SUnit::FindUnitFromTable(pGame, pClassIds[nSearchIdx], nUnitGUID);
       if (pUnit) {
         nUnitGUID = 0x52f34f;
-        UNIT::SUnit::GetTypeAndMode(pUnit, pUnitTypes);
+        UNIT::SUnit::GetTypeAndMode(pUnit, (D2QServerUnitRecordStrc*)pUnitTypes);
         if (pClassIds[nSearchIdx] != UNIT_PLAYER) {
           /* FARPROC lpfn for IsBadCodePtr */ bBadCodePtr = IsBadCodePtr((FARPROC)PFN_UnitTypeCallbackTable[pClassIds[nSearchIdx]]);
           if (bBadCodePtr) {
@@ -2623,11 +2725,11 @@ int32_t __stdcall QSERVER_FindUnitsAndExportByServerId(uint16_t nServerId, int32
           }
 
           nUnitGUID = 0x52f378;
-          (*PFN_UnitTypeCallbackTable[pClassIds[nSearchIdx]])(pUnitTypes->szCharName, pUnit->nClassId);
+          (*PFN_UnitTypeCallbackTable[pClassIds[nSearchIdx]])(((D2QServerUnitRecordStrc*)pUnitTypes)->szCharName, pUnit->nClassId);
         }
 
         _nServerId++;
-        pUnitTypes++;
+        pUnitTypes = (eD2UnitType*)((int)pUnitTypes + 0x34);
       }
     }
 
@@ -2668,7 +2770,7 @@ void __stdcall QSERVER_CountObjectsAndPlayersAllGames(int32_t * pBucketCountdown
             }
 
             ppUnitBucketCursor++;
-            pBucketCountdown = (int32_t*)((char*)pBucketCountdown - 1);
+            pBucketCountdown = (int32_t*)((int)pBucketCountdown - 1);
           } while (pBucketCountdown);
 
           if (!pGame->lpCriticalSection) {
@@ -2682,7 +2784,7 @@ void __stdcall QSERVER_CountObjectsAndPlayersAllGames(int32_t * pBucketCountdown
       }
 
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return;
       }
     } while (true);
@@ -2742,7 +2844,7 @@ void __stdcall QSERVER_BroadcastPlayerMessage(int32_t nMsgType, uint32_t dwEvent
       }
 
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return;
       }
     } while (true);
@@ -2793,8 +2895,8 @@ void __stdcall QSERVER_BroadcastChatByServerId(uint16_t nServerId, char * pMessa
 }
 
 // lpStartAddress parameter of CreateThread
-DWORD __stdcall QSERVER_PlayerMessageThread(D2PlayerMessageThreadArgsStrc * lpThreadParam) {
-    QSERVER_BroadcastPlayerMessage(lpThreadParam->nGameToken, lpThreadParam->nClientId, lpThreadParam->szMessage);
+DWORD __stdcall QSERVER_PlayerMessageThread(void * lpThreadParam) {
+    QSERVER_BroadcastPlayerMessage(*(int32_t*)lpThreadParam, *(uint32_t*)((int)lpThreadParam + 4), (char*)((int)lpThreadParam + 8));
     return 1;
 }
 
@@ -2802,15 +2904,15 @@ DWORD __stdcall QSERVER_PlayerMessageThread(D2PlayerMessageThreadArgsStrc * lpTh
 // @sourcefile .\GAME\Game.cpp
 void __fastcall GAME_CreatePlayerMessageThread(int32_t nGameToken, int32_t nClientId, char * szMessageBuffer) {
     DWORD dwThreadId = nGameToken;
-    D2PlayerMessageThreadArgsStrc* lpParameter = D2_NEW_POOL_AT(nullptr, D2PlayerMessageThreadArgsStrc, ".\\GAME\\Game.cpp", 0x1621);
+    int32_t* lpParameter = (int32_t*)D2_ALLOC_POOL_AT(nullptr, 0x108, ".\\GAME\\Game.cpp", 0x1621);
     if (!lpParameter) {
       return;
     }
 
-    lpParameter->nGameToken = nGameToken;
-    lpParameter->nClientId = nClientId;
-    strncpy(lpParameter->szMessage, szMessageBuffer, 0xff);
-    /* LPDWORD lpThreadId for CreateThread */ /* DWORD dwCreationFlags for CreateThread */ /* LPVOID lpParameter for CreateThread */ /* LPTHREAD_START_ROUTINE lpStartAddress for CreateThread */ /* SIZE_T dwStackSize for CreateThread */ /* LPSECURITY_ATTRIBUTES lpThreadAttributes for CreateThread */ lpParameter->szMessage[0xff] = '\0';
+    *lpParameter = nGameToken;
+    lpParameter[1] = nClientId;
+    strncpy((char*)(lpParameter + 2), szMessageBuffer, 0xff);
+    /* LPDWORD lpThreadId for CreateThread */ /* DWORD dwCreationFlags for CreateThread */ /* LPVOID lpParameter for CreateThread */ /* LPTHREAD_START_ROUTINE lpStartAddress for CreateThread */ /* SIZE_T dwStackSize for CreateThread */ /* LPSECURITY_ATTRIBUTES lpThreadAttributes for CreateThread */ *(uint8_t*)((int)lpParameter + 0x107) = 0;
     CreateThread((LPSECURITY_ATTRIBUTES)0x0, 0, (LPTHREAD_START_ROUTINE)QSERVER_PlayerMessageThread, lpParameter, 0, &dwThreadId);
 }
 
@@ -2847,7 +2949,7 @@ uint32_t __fastcall QSERVER_FindGameTokenByName(char * szGameName) {
       }
 
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return 0;
       }
     } while (true);
@@ -2910,7 +3012,7 @@ BOOL __fastcall GAME_CheckIfGameNameExistsSafely(char * szGameName) {
       }
 
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         return 1;
       }
     } while (true);
@@ -3100,7 +3202,7 @@ int32_t __stdcall SrvProcessAllGames(int32_t bLimitFrameSkip) {
       }
 
       nToken++;
-      if ((intptr_t)nToken >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)nToken >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         if (!bTickedAnyGame) {
           return 0;
         }
@@ -3173,7 +3275,7 @@ int32_t __stdcall QSERVER_DispatchAndCleanup(uint32_t * pTokenCursor, int32_t bF
 
       next_game:
       pTokenCursor++;
-      if ((intptr_t)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
+      if ((int)pTokenCursor >= (intptr_t)((char*)&gaQServerGameByToken + sizeof(gaQServerGameByToken))) {
         if (!bAnyGameDispatched) {
           return 0;
         }
@@ -3232,7 +3334,7 @@ void __stdcall QSERVER_ClientDisconnectCallback(int32_t nClientId, char * szFile
 void __fastcall NET_D2GS_SERVER_SrvJoinAct(int32_t nClientId) {
     D2BOOT_MarkFmt("SrvJoinAct enter (clientid %d)", (int)nClientId); // [d2boot]
     D2ClientStrc* pClient;
-    int nReason; // [11th sync] was upstream's pDrlgActNull (int32 reason code; fork spelling kept for the REFUSED mark)
+    int32_t nReason;
     uint32_t nToken = D2Net::Game::Server::QSERVER_GetClientGameToken(nClientId);
     ::SGAMEDATA* pGame = QSERVER_FindAndLockGame(nToken);
     if (pGame) {
@@ -3240,9 +3342,6 @@ void __fastcall NET_D2GS_SERVER_SrvJoinAct(int32_t nClientId) {
       bIsInGame = Clients::IsClientInGame(pGame, nClientId);
       if (bIsInGame) {
         pClient = Clients::SERVER_GetClientFromGmeByClientId(pGame, nClientId);
-        // [11th sync] upstream's regen respelled the receiver pDrlgActNull
-        // (decompiler artifact name; still the int32 reason code per
-        // Clients.h) — fork's nReason spelling kept with the REFUSED mark.
         nReason = Clients::CLIENT_LoadCharacterAndSendGameData(pClient, pGame, 1, nullptr, 0, 0);
         if (nReason) {
           D2BOOT_MarkFmt("SrvJoinAct: char load REFUSED (reason %d) - client gets 0xB4", (int)nReason); // [d2boot]
@@ -3414,7 +3513,7 @@ void __fastcall NET_D2GS_SERVER_LeaveServer(uint32_t nClientId, int32_t bBroadca
 }
 
 // Removes a client from the server by token, cleaning up their connection state.
-void __fastcall LeaveServer(::SGAMEDATA * pQServer, D2ClientStrc * nClientToken) {
+void __fastcall LeaveServer(::SGAMEDATA * pQServer, uint32_t nClientToken) {
     // Frame slots -12..-4 are ONE object: &pActiveClient is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
@@ -3427,8 +3526,8 @@ void __fastcall LeaveServer(::SGAMEDATA * pQServer, D2ClientStrc * nClientToken)
     __frame0.pSaveCompleteClient = 0;
     ForEachClient(pQServer, (fpForEachClientFn)CLIENT_GetSaveCompleteClient, &__frame0.pSaveCompleteClient);
     D2ClientStrc* pFoundClient = __frame0.pSaveCompleteClient;
-    if (!__frame0.pSaveCompleteClient && (pFoundClient = nClientToken , !nClientToken)) {
-      __frame0.pActiveClient = nClientToken;
+    if (!__frame0.pSaveCompleteClient && (pFoundClient = (D2ClientStrc*)nClientToken , !nClientToken)) {
+      __frame0.pActiveClient = (D2ClientStrc*)nClientToken;
       ForEachClient(pQServer, (fpForEachClientFn)CLIENT_GetFirstActiveClient, &__frame0.pActiveClient);
       if (__frame0.pActiveClient) {
         nClientId = Clients::GetClientNo(__frame0.pActiveClient);

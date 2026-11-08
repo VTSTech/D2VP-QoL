@@ -69,7 +69,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2WinWndHandlerStrc",
         "int32_t"
       ]
     },
@@ -91,7 +90,6 @@
         "exit"
       ],
       "usedTypes": [
-        "D2WinWndHandlerStrc",
         "int32_t"
       ]
     },

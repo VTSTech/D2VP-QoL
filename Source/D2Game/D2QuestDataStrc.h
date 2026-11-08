@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Game)
 #error "D2Game header included by a module that may not use D2Game (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Game) && !defined(D2_LOADS_D2Game)
-#error "internal D2Game header included from another module; include D2Game's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -41,16 +38,11 @@ typedef bool (__fastcall *QUESTSTATUS)(struct D2QuestDataStrc * pQuestData, stru
 struct D2QuestDataStrc;
 
 // Data types
-#ifndef D2_DEFINED_D2NPCMessageTableStrc
-#define D2_DEFINED_D2NPCMessageTableStrc
 struct __attribute__((packed)) D2NPCMessageTableStrc {
     /* 0x00 */ D2NPCMessageStrc pMessages[16];
     /* 0xC0 */ int nMessagesCount;
 };
 
-#endif // D2_DEFINED_D2NPCMessageTableStrc
-#ifndef D2_DEFINED_D2QuestDataA1Q1Strc
-#define D2_DEFINED_D2QuestDataA1Q1Strc
 struct __attribute__((packed)) D2QuestDataA1Q1Strc {
     /* 0x00 */ D2QuestGUIDStrc sQuestGUID; // Player tracking for den area
     /* 0x84 */ bool bQuestCompleted; // Set when all den monsters killed
@@ -60,9 +52,6 @@ struct __attribute__((packed)) D2QuestDataA1Q1Strc {
     /* 0x88 */ int32_t nDenMonstersLeftToKillCount; // Remaining monsters = spawn - kill count
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q1Strc
-#ifndef D2_DEFINED_D2QuestDataA1Q2Strc
-#define D2_DEFINED_D2QuestDataA1Q2Strc
 struct D2QuestDataA1Q2Strc {
     /* 0x00 */ bool bBloodRavenKilled; // Set when Blood Raven is killed
     /* 0x01 */ bool bQuestCompleted; // Quest completion flag
@@ -72,9 +61,6 @@ struct D2QuestDataA1Q2Strc {
     /* 0x08 */ int32_t nBloodRavenGUID; // GUID of Blood Raven unit
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q2Strc
-#ifndef D2_DEFINED_D2QuestDataA1Q3Strc
-#define D2_DEFINED_D2QuestDataA1Q3Strc
 struct __attribute__((packed)) D2QuestDataA1Q3Strc {
     /* 0x00 */ uint8_t field_0x00;
     /* 0x01 */ uint8_t bMalusTaken; // Set when Horadric Malus has been picked up
@@ -98,9 +84,6 @@ struct __attribute__((packed)) D2QuestDataA1Q3Strc {
     /* 0xA3 */ uint8_t field_0xA3;
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q3Strc
-#ifndef D2_DEFINED_D2QuestDataA1Q4Strc
-#define D2_DEFINED_D2QuestDataA1Q4Strc
 struct __attribute__((packed)) D2QuestDataA1Q4Strc {
     /* 0x000 */ uint32_t nQuestStep; // Current quest progression step
     /* 0x004 */ struct SGAMEDATA * pGame; // Pointer to game instance
@@ -123,9 +106,6 @@ struct __attribute__((packed)) D2QuestDataA1Q4Strc {
     /* 0x138 */ D2QuestGUIDStrc sQuestGUID2; // Player tracking - Cain interaction
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q4Strc
-#ifndef D2_DEFINED_D2QuestDataA1Q5Strc
-#define D2_DEFINED_D2QuestDataA1Q5Strc
 struct __attribute__((packed)) D2QuestDataA1Q5Strc {
     /* 0x000 */ int32_t aPlayersInTowerGUIDs[12]; // Player GUIDs in tower (secondary tracking list)
     /* 0x030 */ uint16_t nPlayersInTowerCount; // Number of players in tower; unsigned word: every read is MOVZX (Q05_Callback00_NpcActivate 00594c50)
@@ -147,9 +127,6 @@ struct __attribute__((packed)) D2QuestDataA1Q5Strc {
     /* 0x11D */ uint8_t pad_0x11d[3];
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q5Strc
-#ifndef D2_DEFINED_D2QuestDataA1Q6Strc
-#define D2_DEFINED_D2QuestDataA1Q6Strc
 struct __attribute__((packed)) D2QuestDataA1Q6Strc {
     /* 0x000 */ D2QuestGUIDStrc sQuestGUIDCain; // Player tracking for Deckard Cain (NPC 0x109) interactions
     /* 0x084 */ D2QuestGUIDStrc sQuestGUIDAkara; // Player tracking for Akara (NPC 0x94) interactions
@@ -163,16 +140,10 @@ struct __attribute__((packed)) D2QuestDataA1Q6Strc {
     /* 0x197 */ uint8_t field_0x197;
 };
 
-#endif // D2_DEFINED_D2QuestDataA1Q6Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q0Strc
-#define D2_DEFINED_D2QuestDataA2Q0Strc
 struct D2QuestDataA2Q0Strc {
     /* 0x00 */ D2QuestGUIDStrc sQuestGUID;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q0Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q1Strc
-#define D2_DEFINED_D2QuestDataA2Q1Strc
 struct D2QuestDataA2Q1Strc {
     /* 0x00 */ bool bRadamentKilled; // Set to 1 when Radament is killed. First byte of the dword also used for other flags
     /* 0x01 */ uint8_t field_0x1;
@@ -190,9 +161,6 @@ struct D2QuestDataA2Q1Strc {
     /* 0x13 */ uint8_t field_0x13;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q1Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q2Strc
-#define D2_DEFINED_D2QuestDataA2Q2Strc
 struct D2QuestDataA2Q2Strc {
     /* 0x00 */ int32_t field_0x00;
     /* 0x04 */ int32_t field_0x04;
@@ -211,9 +179,6 @@ struct D2QuestDataA2Q2Strc {
     /* 0x2C */ int32_t nAssembledByPlayerGUID; // GUID of the player who assembled the staff
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q2Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q3Strc
-#define D2_DEFINED_D2QuestDataA2Q3Strc
 struct __attribute__((packed)) D2QuestDataA2Q3Strc {
     /* 0x00 */ uint8_t field_0x00;
     /* 0x01 */ uint8_t bDarknessTimerArmed;
@@ -231,9 +196,6 @@ struct __attribute__((packed)) D2QuestDataA2Q3Strc {
     /* 0x9C */ int32_t nViperAmuletDropCount;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q3Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q4Strc
-#define D2_DEFINED_D2QuestDataA2Q4Strc
 struct D2QuestDataA2Q4Strc {
     /* 0x00 */ uint8_t field_0x00;
     /* 0x01 */ uint8_t field_0x01;
@@ -276,9 +238,6 @@ struct D2QuestDataA2Q4Strc {
     /* 0x47 */ uint8_t field_0x47;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q4Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q5Strc
-#define D2_DEFINED_D2QuestDataA2Q5Strc
 struct D2QuestDataA2Q5Strc {
     /* 0x00 */ uint8_t bSummonerKilled;
     /* 0x01 */ uint8_t bSummonerAiActivated;
@@ -291,9 +250,6 @@ struct D2QuestDataA2Q5Strc {
     /* 0x0B */ uint8_t field_0xB;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q5Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q6Strc
-#define D2_DEFINED_D2QuestDataA2Q6Strc
 struct D2QuestDataA2Q6Strc {
     /* 0x00 */ uint8_t field_0x0; // cleared in OnEndCallback
     /* 0x01 */ uint8_t bTombEntered; // set=1 in Callback_08 when player enters Duriel's chamber; gating Cain ActiveFilter
@@ -341,18 +297,12 @@ struct D2QuestDataA2Q6Strc {
     /* 0x64 */ int field_0x64;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q6Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q7Strc
-#define D2_DEFINED_D2QuestDataA2Q7Strc
 struct D2QuestDataA2Q7Strc {
     operator uint8_t() const { return *reinterpret_cast<const uint8_t*>(this); }
 
     /* 0x00 */ uint8_t bGossipAwaits;
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q7Strc
-#ifndef D2_DEFINED_D2QuestDataA2Q8Strc
-#define D2_DEFINED_D2QuestDataA2Q8Strc
 struct D2QuestDataA2Q8Strc {
     operator uint16_t() const { return *reinterpret_cast<const uint16_t*>(this); }
 
@@ -360,9 +310,6 @@ struct D2QuestDataA2Q8Strc {
     /* 0x01 */ uint8_t field_0x1; // initialized to 0, unused in known callbacks
 };
 
-#endif // D2_DEFINED_D2QuestDataA2Q8Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q0Strc
-#define D2_DEFINED_D2QuestDataA3Q0Strc
 struct D2QuestDataA3Q0Strc {
     /* 0x00 */ bool bHratliSpawned; // Set when Hratli is spawned
     /* 0x01 */ bool bHratliMapAiSet; // Set when Hratli map AI has been configured
@@ -379,9 +326,6 @@ struct D2QuestDataA3Q0Strc {
     /* 0x18 */ struct D2MapAIStrc * pDrlgMap; // Pointer to DrlgMap for Hratli AI map AI moved via DRLGPRESET_TransferMapAI
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q0Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q1Strc
-#define D2_DEFINED_D2QuestDataA3Q1Strc
 struct __attribute__((packed)) D2QuestDataA3Q1Strc {
     /* 0x00 */ uint8_t bCanComplete; // Set to true in InitData, cleared when tome turned in
     /* 0x01 */ bool bCheckPartyForTome; // Party check flag for tome ownership
@@ -402,9 +346,6 @@ struct __attribute__((packed)) D2QuestDataA3Q1Strc {
     /* 0x1C */ D2QuestGUIDStrc sQuestGUID; // Player tracking for tome quest completion
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q1Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q2Strc
-#define D2_DEFINED_D2QuestDataA3Q2Strc
 struct __attribute__((packed)) D2QuestDataA3Q2Strc {
     /* 0x00 */ uint8_t bOrbPlaced; // Compelling orb placed flag
     /* 0x01 */ uint8_t bQuestCompleted; // Set true in Q19_Callback_11 (dialog 0x21f) via pA1Q2 cast; checked in Q19_Callback_02 to trigger RewardAwaits broadcast
@@ -426,9 +367,6 @@ struct __attribute__((packed)) D2QuestDataA3Q2Strc {
     /* 0x2C */ D2QuestGUIDStrc sQuestGUID; // Player tracking for Khalim's Will completion
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q2Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q3Strc
-#define D2_DEFINED_D2QuestDataA3Q3Strc
 struct D2QuestDataA3Q3Strc {
     /* 0x00 */ uint8_t bSerpentItemDropped; // Set when serpent drops Gidbinn
     /* 0x01 */ bool bAcceptedQuest; // Set when Hratli gives quest (msg 0x23B)
@@ -456,9 +394,6 @@ struct D2QuestDataA3Q3Strc {
     /* 0x2C */ int32_t nQuestStage; // Quest progress stage (2=complete, used in Callback_13)
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q3Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q4Strc
-#define D2_DEFINED_D2QuestDataA3Q4Strc
 struct D2QuestDataA3Q4Strc {
     /* 0x00 */ uint8_t bBirdDropped; // Set when golden bird has been dropped; checked by Q22_IsGoldenBirdQuestActive
     /* 0x01 */ uint8_t bCanDropBird; // Init to 1; enables bird drop in CheckGoldenBirdDropConditions
@@ -481,9 +416,6 @@ struct D2QuestDataA3Q4Strc {
     /* 0x18 */ int32_t nGoldenBirdState; // Quest progress state (1=Cain told, 2=bird acquired, 4=bird traded)
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q4Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q5Strc
-#define D2_DEFINED_D2QuestDataA3Q5Strc
 struct D2QuestDataA3Q5Strc {
     /* 0x00 */ bool bLastKilledCouncilByte0; // Low byte of council tracking
     /* 0x01 */ bool bCouncilMemberKillNotify; // Set in OnCouncilMemberKilled
@@ -511,9 +443,6 @@ struct D2QuestDataA3Q5Strc {
     /* 0x4C */ int32_t field_0x4C;
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q5Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q6Strc
-#define D2_DEFINED_D2QuestDataA3Q6Strc
 struct D2QuestDataA3Q6Strc {
     /* 0x00 */ bool bQuestTimerActive; // Set in Callback_08 when quest timer started, cleared in QuestUpdate
     /* 0x01 */ bool bBridgeObjectValid; // Bridge/orb object 1 is valid (HandleKhalimsWillCompletion)
@@ -542,9 +471,6 @@ struct D2QuestDataA3Q6Strc {
     /* 0x33 */ uint8_t field_0x33;
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q6Strc
-#ifndef D2_DEFINED_D2QuestDataA3Q7Strc
-#define D2_DEFINED_D2QuestDataA3Q7Strc
 struct D2QuestDataA3Q7Strc {
     /* 0x00 */ bool bHasSpawnCoords; // Set when Dark Wanderer spawn coords are valid
     /* 0x01 */ bool bQuestCompleted; // Initialized true in Q24_InitData via pA1Q2 cast (A1Q2::bQuestCompleted offset 1); tracks transition-actor quest completion latch
@@ -559,9 +485,6 @@ struct D2QuestDataA3Q7Strc {
     /* 0x10 */ int32_t nDarkWandererGUID; // GUID of Dark Wanderer monster unit for portal spawning
 };
 
-#endif // D2_DEFINED_D2QuestDataA3Q7Strc
-#ifndef D2_DEFINED_D2QuestDataA4Q1Strc
-#define D2_DEFINED_D2QuestDataA4Q1Strc
 struct __attribute__((packed)) D2QuestDataA4Q1Strc {
     /* 0x00 */ int field_0x00; // unused/reserved
     /* 0x04 */ POINT ptIzualDeath; // Izual death X coord (POINT.x)
@@ -577,9 +500,6 @@ struct __attribute__((packed)) D2QuestDataA4Q1Strc {
     /* 0x18 */ int field_0x18; // unused/reserved
 };
 
-#endif // D2_DEFINED_D2QuestDataA4Q1Strc
-#ifndef D2_DEFINED_D2QuestDataA4Q2Strc
-#define D2_DEFINED_D2QuestDataA4Q2Strc
 struct __attribute__((packed)) D2QuestDataA4Q2Strc {
     /* 0x00 */ uint8_t bTyraelTalked; // Set to 1 when Tyrael talked
     /* 0x01 */ uint8_t bDiabloSpawnStarted; // Diablo spawn process started
@@ -613,9 +533,6 @@ struct __attribute__((packed)) D2QuestDataA4Q2Strc {
     /* 0x48 */ int nSealBossKillCount; // Count of seal bosses killed (3 triggers chaos kill)
 };
 
-#endif // D2_DEFINED_D2QuestDataA4Q2Strc
-#ifndef D2_DEFINED_D2QuestDataA4Q3Strc
-#define D2_DEFINED_D2QuestDataA4Q3Strc
 struct D2QuestDataA4Q3Strc {
     /* 0x00 */ uint8_t nForgeStage; // Hellforge object stage: 0 untouched, 2 when the soulstone is placed, 3 when the 3rd hammer strike smashes it (OBJOP_A4Q3_HellforgeSmash 0x005b5c10)
     /* 0x01 */ uint8_t byForgeStageHigh; // reserved
@@ -636,9 +553,6 @@ struct D2QuestDataA4Q3Strc {
     /* 0x1F */ uint8_t field_0x1F; // padding
 };
 
-#endif // D2_DEFINED_D2QuestDataA4Q3Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q1Strc
-#define D2_DEFINED_D2QuestDataA5Q1Strc
 struct D2QuestDataA5Q1Strc {
     /* 0x00 */ struct D2MapAIStrc * pPresetDrlgFile; // Copied preset-object DRLG file (DRLGPRESET_CopyPresetObjects); see Q31_OnPresetObjectLoad map AI moved via DRLGPRESET_TransferMapAI
     /* 0x04 */ struct D2RoomStrc * pShenkRoom; // struct D2RoomStrc* room where Shenk died (read in Q31_CheckNearShenk, written via Callback_08)
@@ -654,9 +568,6 @@ struct D2QuestDataA5Q1Strc {
     /* 0x17 */ uint8_t bDrlgMapTaken; // Guard: DRLG map already taken/attached to Shenk AI (Q31_OnPresetObjectLoad)
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q1Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q2Strc
-#define D2_DEFINED_D2QuestDataA5Q2Strc
 struct __attribute__((packed)) D2QuestDataA5Q2Strc {
     /* 0x000 */ D2QuestGUIDStrc sQuestGUID;
     /* 0x084 */ uint8_t bQuestCompleted; // Set when quest accepted (gossip line 0x4e80 in Q32_Callback_11); cleared after reward claimed
@@ -685,9 +596,6 @@ struct __attribute__((packed)) D2QuestDataA5Q2Strc {
     /* 0x15C */ int32_t nWussieMonsterCount; // Count of wussie monsters tracked
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q2Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q3Strc
-#define D2_DEFINED_D2QuestDataA5Q3Strc
 struct __attribute__((packed)) D2QuestDataA5Q3Strc {
     /* 0x000 */ D2QuestGUIDStrc sQuestGUID;
     /* 0x084 */ int32_t nAnyaState; // 0=not started, 1=found, 2=complete
@@ -748,9 +656,6 @@ struct __attribute__((packed)) D2QuestDataA5Q3Strc {
     /* 0x110 */ int32_t nNihlathakObjectGUID;
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q3Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q4Strc
-#define D2_DEFINED_D2QuestDataA5Q4Strc
 struct __attribute__((packed)) D2QuestDataA5Q4Strc {
     /* 0x00 */ D2QuestGUIDStrc sQuestGUID;
     /* 0x84 */ uint8_t field_0x84;
@@ -764,9 +669,6 @@ struct __attribute__((packed)) D2QuestDataA5Q4Strc {
     /* 0x8C */ uint8_t * pRoomTarget; // Room where Nihlathak was killed
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q4Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q5Strc
-#define D2_DEFINED_D2QuestDataA5Q5Strc
 struct D2QuestDataA5Q5Strc {
     /* 0x00 */ uint8_t bAncientsDefeated; // Set to 1 when all ancients killed
     /* 0x01 */ uint8_t bQualKehkTalked; // Talked to Qual-Kehk
@@ -806,9 +708,6 @@ struct D2QuestDataA5Q5Strc {
     /* 0x60 */ int nSummitDoorObjectMode; // reserved
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q5Strc
-#ifndef D2_DEFINED_D2QuestDataA5Q6Strc
-#define D2_DEFINED_D2QuestDataA5Q6Strc
 struct __attribute__((packed)) D2QuestDataA5Q6Strc {
     /* 0x00 */ D2QuestGUIDStrc sQuestGUID;
     /* 0x84 */ uint8_t field_0x84;
@@ -834,16 +733,10 @@ struct __attribute__((packed)) D2QuestDataA5Q6Strc {
     /* 0xA4 */ int32_t nQuestFlags; // Quest state flags bitmask sent to client in 0x50 QuestSpecial packet (Q36_SendQuestSpecialPacket)
 };
 
-#endif // D2_DEFINED_D2QuestDataA5Q6Strc
-#ifndef D2_DEFINED_D2QuestDataCallbacksStrc
-#define D2_DEFINED_D2QuestDataCallbacksStrc
 struct D2QuestDataCallbacksStrc {
     /* 0x00 */ QUESTCALLBACKFN fpQuestStateHandler[15];
 };
 
-#endif // D2_DEFINED_D2QuestDataCallbacksStrc
-#ifndef D2_DEFINED_D2QuestSpecificDataUnion
-#define D2_DEFINED_D2QuestSpecificDataUnion
 union D2QuestSpecificDataUnion {
     operator uint32_t() const { return *reinterpret_cast<const uint32_t*>(this); }
 
@@ -884,9 +777,6 @@ union D2QuestSpecificDataUnion {
     /* 0x00 */ struct D2QuestDataStrc * pA4Q4; // added: missing quest union member (assigned =0 in code)
 };
 
-#endif // D2_DEFINED_D2QuestSpecificDataUnion
-#ifndef D2_DEFINED_D2QuestDataStrc
-#define D2_DEFINED_D2QuestDataStrc
 struct __attribute__((packed)) D2QuestDataStrc {
     /* 0x00 */ eD2QuestsInternal nQuestNoInternal;
     /* 0x04 */ struct SGAMEDATA * pGame;
@@ -912,5 +802,3 @@ struct __attribute__((packed)) D2QuestDataStrc {
     /* 0xF0 */ bool (__fastcall *fpSequenceFilter)(struct D2QuestDataStrc *);
     /* 0xF4 */ struct D2QuestDataStrc * pPrev;
 };
-
-#endif // D2_DEFINED_D2QuestDataStrc

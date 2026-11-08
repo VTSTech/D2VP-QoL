@@ -542,8 +542,7 @@
       ],
       "usedTypes": [
         "D2EscMenuItemStrc",
-        "D2UIMouseMsgStrc",
-        "uint32_t"
+        "D2UIMouseMsgStrc"
       ]
     },
     {
@@ -718,9 +717,6 @@
       "calledFunctions": [
         "Unreferenced_0047d5b0",
         "ESCMENU_GetItemIndexFromMouseY"
-      ],
-      "usedTypes": [
-        "int32_t"
       ]
     },
     {

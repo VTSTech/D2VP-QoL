@@ -32,7 +32,7 @@
         "ITEMDROP_AddToDropList"
       ],
       "usedTypes": [
-        "uint32_t"
+        "int32_t"
       ]
     },
     {
@@ -72,7 +72,6 @@
       ],
       "usedTypes": [
         "D2ItemsTxt",
-        "D2RoomStrc",
         "D2UnitStrc",
         "SGAMEDATA",
         "int32_t",
@@ -190,7 +189,6 @@
         "ITEMDROP_IsItemClassEligible"
       ],
       "usedTypes": [
-        "D2ItemClassCandidateStrc",
         "D2ItemsTableStrc",
         "D2ItemsTxt",
         "D2SeedStrc",
@@ -1158,8 +1156,7 @@
         "SGAMEDATA",
         "eAct",
         "eD2LevelId",
-        "int32_t",
-        "uint32_t"
+        "int32_t"
       ]
     },
     {
@@ -1188,8 +1185,7 @@
         "SGAMEDATA",
         "eAct",
         "eD2LevelId",
-        "int32_t",
-        "uint32_t"
+        "int32_t"
       ]
     },
     {

@@ -824,7 +824,6 @@
         "SStrLen"
       ],
       "usedTypes": [
-        "D2BnReadUserDataStrc",
         "char *",
         "int32_t",
         "uint32_t"
@@ -1744,9 +1743,6 @@
       "namespace": "Bnclient::BnSend",
       "calledFunctions": [
         "Unreferenced_0051d350"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -1819,7 +1815,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "D2BnNewsTableStrc",
         "uint8_t"
       ]
     },
@@ -1840,7 +1835,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "D2BnNewsEntryStrc",
         "D2BnNewsTableStrc",
         "uint32_t"
       ]
@@ -1872,9 +1866,6 @@
       "namespace": "Bnclient::BnSend",
       "calledFunctions": [
         "Unreferenced_0051d690"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -1892,7 +1883,7 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "D2BnNewsTableStrc"
+        "uint32_t"
       ]
     },
     {
@@ -1926,9 +1917,6 @@
       "namespace": "Bnclient::BnSend",
       "calledFunctions": [
         "Unreferenced_0051d720"
-      ],
-      "usedTypes": [
-        "uint32_t"
       ]
     },
     {
@@ -2048,7 +2036,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "D2BnNewsEntryStrc",
         "uint32_t"
       ]
     },

@@ -17,7 +17,7 @@
         "SCMD_ConvertBool"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
+        "D2GameNpcStrc",
         "uint32_t"
       ]
     },
@@ -39,7 +39,8 @@
         "SMemCopy"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
+        "D2MonsterAiStrc",
+        "D2UnitDataMonsterStrc",
         "uint32_t"
       ]
     },
@@ -61,7 +62,7 @@
         "SStrCopy"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
+        "D2UnitDataMonsterStrc",
         "uint32_t"
       ]
     },
@@ -107,9 +108,9 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc *",
         "pfnSCmdErrorCallback",
-        "pfnSCmdUnknownArgCallback"
+        "pfnSCmdUnknownArgCallback",
+        "uint32_t"
       ]
     },
     {
@@ -124,9 +125,6 @@
       "namespace": "Storm::Source::SCMD",
       "calledFunctions": [
         "Unreferenced_006c4010"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -159,9 +157,6 @@
       "namespace": "Storm::Source::SCMD",
       "calledFunctions": [
         "Unreferenced_006c40b0"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -176,9 +171,6 @@
       "namespace": "Storm::Source::SCMD",
       "calledFunctions": [
         "Unreferenced_006c40d0"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -249,7 +241,6 @@
       ],
       "usedTypes": [
         "SCMD",
-        "StormLinkStrc",
         "uint32_t"
       ]
     },
@@ -286,9 +277,6 @@
       "namespace": "Storm::Source::SCMD",
       "calledFunctions": [
         "Unreferenced_006c4360"
-      ],
-      "usedTypes": [
-        "StormLinkedListStrc"
       ]
     },
     {
@@ -305,9 +293,7 @@
         "SCMD_GetHandler"
       ],
       "usedTypes": [
-        "SCMD",
-        "StormLinkStrc",
-        "intptr_t"
+        "SCMD"
       ]
     },
     {
@@ -343,8 +329,8 @@
         "UnlinkAll"
       ],
       "usedTypes": [
+        "D2StormListHead",
         "StormLinkStrc",
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -360,9 +346,6 @@
       "namespace": "Storm::Source::SCMD",
       "calledFunctions": [
         "Unreferenced_006c4470"
-      ],
-      "usedTypes": [
-        "StormLinkStrc"
       ]
     },
     {
@@ -401,7 +384,6 @@
       ],
       "usedTypes": [
         "SCMD",
-        "StormLinkStrc",
         "uint32_t",
         "uint8_t"
       ]
@@ -445,7 +427,6 @@
         "SMemFree"
       ],
       "usedTypes": [
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -490,8 +471,8 @@
       ],
       "usedTypes": [
         "CMDPARAMS",
+        "D2StormListHead",
         "StormCmdArgDefStrc",
-        "StormLinkedListStrc",
         "uint32_t"
       ]
     },
@@ -561,9 +542,9 @@
         "SCMD_PerformConversion"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc *",
         "pfnSCmdErrorCallback",
-        "pfnSCmdUnknownArgCallback"
+        "pfnSCmdUnknownArgCallback",
+        "uint32_t"
       ]
     },
     {
@@ -580,8 +561,7 @@
         "SCmdCheckId"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
-        "StormLinkedListStrc"
+        "D2StormListHead"
       ]
     },
     {
@@ -600,7 +580,7 @@
         "SCMD_FreeAllNodes"
       ],
       "usedTypes": [
-        "StormLinkedListStrc"
+        "D2StormListHead"
       ]
     },
     {
@@ -617,8 +597,7 @@
         "SCmdGetNum"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
-        "StormLinkedListStrc"
+        "D2StormListHead"
       ]
     },
     {
@@ -637,8 +616,7 @@
         "SStrCopy"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
-        "StormLinkedListStrc"
+        "D2StormListHead"
       ]
     },
     {
@@ -678,8 +656,6 @@
         "__security_check_cookie"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc *",
-        "char *",
         "pfnSCmdErrorCallback",
         "pfnSCmdUnknownArgCallback",
         "uint32_t"
@@ -720,7 +696,6 @@
         "__security_check_cookie"
       ],
       "usedTypes": [
-        "StormCmdArgDefStrc",
         "pfnSCmdErrorCallback",
         "pfnSCmdUnknownArgCallback",
         "uint32_t"
