@@ -2,7 +2,7 @@
 
 > **Running this checklist:** GitHub renders the boxes below read-only in the file view — task-list checkboxes are only live inside issues. To run a pass, open **Issues → New issue → "Vanilla+ Smoke Test"**: the template ([.github/ISSUE_TEMPLATE/smoke-test.md](.github/ISSUE_TEMPLATE/smoke-test.md), generated from this file by [tools/gen-smoke-issue-template.py](tools/gen-smoke-issue-template.py)) pre-fills every check as a clickable box, with a Verdict section to fill at the end. This file stays the canonical reference; when a round changes a check, re-run the generator and commit both files.
 
-Build: **Vanilla+0.0.8-R137** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135); the Countess-chest fix — R136 field-verified 2026-11-08, owner-closed ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), §N); the proc-tooltip fix — R137 field-verified 2026-11-08, owner-closed ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33), §O).
+Build: **Vanilla+0.0.8-R138** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135); the Countess-chest fix — R136 field-verified 2026-11-08, owner-closed ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), §N); the proc-tooltip fix — R137 field-verified 2026-11-08, owner-closed ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33), §O); the windowed-1080p row-table fix — R138 field-verified 2026-11-09, owner-closed ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31), §P).
 Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 **Known-fail — none.** (Resolved 2026-11-03, [issue #8](https://github.com/VTSTech/D2VP-QoL/issues/8): the necro skeleton spawn tint is FIELD-VERIFIED on the R90b/R91 build — "Skeletons are finally white again" — and is now the standing §B item-5 regression check. The 2026-11-03 D3D registry-corruption episode was owner-environment, not a build bug — see the watch note in §L.)
@@ -11,7 +11,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R137`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R138`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -146,6 +146,15 @@ Magic/rare drops with a "Chance to Cast" affix used to render `<x>% Chance to Ca
 
 - [ ] **51. The issue repro, inverted (the fix proof):** hover any magic/rare item with a "Chance to Cast" affix → the line reads the real level and the skill name, e.g. `5% Chance to Cast Level 3 Dim Vision When You Strike` — **no `Level 0`, no truncation**. Keep as a per-build regression check.
 - [ ] **52. Ride-along sanity:** a charged staff/wand's charge line renders exactly as before — same descfunc block, the fix touches one call site's argument list.
+
+---
+
+## P. Windowed (`-w`) 1080p select ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31), R138 — FIELD-VERIFIED 2026-11-09, owner-closed)
+
+Selecting 1920x1080 while running windowed (`-w`) crashed the game on the first world frame — an own-code AV WRITE in `D2GFX_DrawWallTileBasic`. The software tile blitters index `gaYBufferRowOffsets[nScreenY + 0x20]` and the vertical clip lets `nScreenY` reach `height - 0x30`, so the maximum index is `height - 16`; retail sized the table for its tallest stop (732 = 700 + 0x20) and the 1080p `-w` stop read 332 slots past the end — the garbage row offsets became wild write destinations. Fullscreen D3D was immune by construction (its wall tiles are hardware vertex draws that never touch the table), and 720p `-w` stayed inside — why the earlier field passes never caught it. R138 sizes the table for the tallest ladder stop (1112 = 1080 + 0x20) (record HISTORY **H56**).
+
+- [ ] **53. The issue repro, inverted (the fix proof):** boot `-w`, join a game, `Esc → Options → Video Options` → select 1920x1080 → the world renders at the full 1920x1080 DIB — **no crash, no `d2crash-*.txt`** (pre-R138 this died on the first world frame). Keep as a per-build regression check.
+- [ ] **54. Ride-along sanity:** the smaller windowed stops (640x480 / 800x600 / 1280x720 / 1344x700) and fullscreen D3D/Glide behave exactly as before — the fix is one array bound. The 1366x768 `-w` select (the other overreading stop pre-fix, max index 752) doubles as the still-owed R116 windowed eyeball: frame straight, no shear, no top-strip smear.
 
 ---
 

@@ -153,6 +153,15 @@ Magic/rare drops with a "Chance to Cast" affix used to render `<x>% Chance to Ca
 
 ---
 
+## P. Windowed (`-w`) 1080p select ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31), R138 — FIELD-VERIFIED 2026-11-09, owner-closed)
+
+Selecting 1920x1080 while running windowed (`-w`) crashed the game on the first world frame — an own-code AV WRITE in `D2GFX_DrawWallTileBasic`. The software tile blitters index `gaYBufferRowOffsets[nScreenY + 0x20]` and the vertical clip lets `nScreenY` reach `height - 0x30`, so the maximum index is `height - 16`; retail sized the table for its tallest stop (732 = 700 + 0x20) and the 1080p `-w` stop read 332 slots past the end — the garbage row offsets became wild write destinations. Fullscreen D3D was immune by construction (its wall tiles are hardware vertex draws that never touch the table), and 720p `-w` stayed inside — why the earlier field passes never caught it. R138 sizes the table for the tallest ladder stop (1112 = 1080 + 0x20) (record HISTORY **H56**).
+
+- [ ] **53. The issue repro, inverted (the fix proof):** boot `-w`, join a game, `Esc → Options → Video Options` → select 1920x1080 → the world renders at the full 1920x1080 DIB — **no crash, no `d2crash-*.txt`** (pre-R138 this died on the first world frame). Keep as a per-build regression check.
+- [ ] **54. Ride-along sanity:** the smaller windowed stops (640x480 / 800x600 / 1280x720 / 1344x700) and fullscreen D3D/Glide behave exactly as before — the fix is one array bound. The 1366x768 `-w` select (the other overreading stop pre-fix, max index 752) doubles as the still-owed R116 windowed eyeball: frame straight, no shear, no top-strip smear.
+
+---
+
 ## Evidence to keep if anything breaks
 
 | Artifact | Comes from | Tells us |

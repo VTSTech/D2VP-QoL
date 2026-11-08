@@ -11,6 +11,13 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R138 — Windowed 1080p crash fix** ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31),
+  owner-closed 2026-11-09). Selecting 1920x1080 while running windowed (`-w`) crashed the
+  game on the first world frame — fullscreen was fine. The software tile blitters' row-offset
+  lookup table was sized for retail's tallest resolution (700 rows) and read past its end at
+  the fork's taller stops, handing the wall-tile blitter wild write destinations. The table is
+  sized for the 1080p stop now (one constant). Field-verified 2026-11-09
+  ("R138 confirmed closes #31").
 - **R137 — Proc tooltip fix** ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33),
   owner-closed 2026-11-08). Magic/rare items with a "Chance to Cast" affix showed
   "<x>% Chance to Cast Level 0" with no skill name and no event tail. Display-only —
