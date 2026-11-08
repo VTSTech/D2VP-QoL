@@ -1,5 +1,5 @@
 // vanilla-plus core gates - implementation. Fork-owned TU; see VanillaPlusCore.h
-// for the charter and docs/merge-upstream.md for the merge playbook.
+// for the charter.
 // Include set mirrors D2Client.cpp's (the code moved verbatim from there).
 
 #include "Source/D2Client/D2Client.h"
@@ -1082,14 +1082,14 @@ int __stdcall VPRES_PickFontMatchingDC6(struct DC6* pTargetDC6) {
 //     of the extern declarations in globals/globals.h);
 //   - VANILLAPLUS_SelfCheck pins what only the runtime can see (values and
 //     wired callbacks), once per process from ALTTOGGLE_EnsureIni (boot).
-// Any failure means a merge edit was lost or upstream changed shape - audit
-// against docs/merge-upstream.md before changing these expectations.
+// Any failure means a fork edit was lost or the tree changed shape - audit
+// the VP markers before changing these expectations.
 static_assert(UI_VANILLAPLUS == 38,
     "vanilla-plus: UI_VANILLAPLUS moved - upstream added/changed a UI var; "
-    "re-audit the flag-38 count bumps (docs/merge-upstream.md)");
+    "re-audit the flag-38 count bumps (handoff.md §8)");
 static_assert(UI_RECIPESCROLL == 37,
     "vanilla-plus: upstream inserted a UI var before UI_VANILLAPLUS; "
-    "re-audit the flag-38 count bumps (docs/merge-upstream.md)");
+    "re-audit the flag-38 count bumps (handoff.md §8)");
 // VP: the gaEscMenuOptionsTable sizeof assert lived here until the row-10
 // table went TU-private (962f88d5); the self-check now runtime-checks the
 // count through EscMenu::VP_GetOptionsTable.
@@ -1111,12 +1111,12 @@ void __stdcall VANILLAPLUS_SelfCheck() {
     nDone = 1;
     if (gnUIFlagCount != 0x27) {
         D2BOOT_Fail("vanilla-plus self-check: gnUIFlagCount != 0x27 - a merge "
-                    "likely dropped the count bumps (see docs/merge-upstream.md)");
+                    "likely dropped the count bumps (see handoff.md §8)");
         exit(-1);
     }
     if (D2Client::UI::EscMenu::VP_GetHeaderOptions()->nItemCount != 0x6) {
         D2BOOT_Fail("vanilla-plus self-check: gaEscMenuHeaderOptions.nItemCount "
-                    "!= 6 - the row-10 esc-menu edit was lost (see docs/merge-upstream.md)");
+                    "!= 6 - the row-10 esc-menu edit was lost (see handoff.md §8)");
         exit(-1);
     }
     // The row-10 entry is INSERTED above "Previous Menu" (index 4 of 6, owner
@@ -1130,7 +1130,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
         if (kRow10Count != 6) {
             D2BOOT_Fail("vanilla-plus self-check: gaEscMenuOptionsTable count "
                         "!= 6 - the row-10 table edit or its home moved in a "
-                        "merge (see docs/merge-upstream.md)");
+                        "merge (see handoff.md §8)");
             exit(-1);
         }
         int nWired = 0;
@@ -1144,7 +1144,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
             D2BOOT_Fail("vanilla-plus self-check: gaEscMenuOptionsTable row-10 "
                         "click callback not wired (or duplicated) - the row-10 "
                         "table edit was lost or doubled in a merge "
-                        "(see docs/merge-upstream.md)");
+                        "(see handoff.md §8)");
             exit(-1);
         }
     }
@@ -1169,7 +1169,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
                 &D2Client::UI::EscMenu::UI_SLIDER_DrawResolutionValue) {
                 D2BOOT_Fail("vanilla-plus self-check: Resolution row draw "
                             "callback not wired - the resolution-mode "
-                            "globals.cpp edit was lost (see docs/merge-upstream.md)");
+                            "globals.cpp edit was lost (see handoff.md §8)");
                 exit(-1);
             }
         }
@@ -1177,14 +1177,14 @@ void __stdcall VANILLAPLUS_SelfCheck() {
             D2BOOT_Fail("vanilla-plus self-check: Resolution row init callback "
                         "not found (or duplicated) - the resolution-mode table "
                         "wiring was lost or doubled in a merge "
-                        "(see docs/merge-upstream.md)");
+                        "(see handoff.md §8)");
             exit(-1);
         }
     }
     if (gUIFlagDismissModeTable[38] !=
         (D2UIFlagDescStrc*)&gaUIFlagDescs[9].anDismissMode[0]) {
         D2BOOT_Fail("vanilla-plus self-check: gUIFlagDismissModeTable[38] alias "
-                    "missing - the dismiss-mode edit was lost (see docs/merge-upstream.md)");
+                    "missing - the dismiss-mode edit was lost (see handoff.md §8)");
         exit(-1);
     }
 }

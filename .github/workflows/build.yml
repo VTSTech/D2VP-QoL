@@ -3,9 +3,9 @@ name: build
 on:
   push:
     branches: [main, vanilla-plus-port]
-    paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
+    paths-ignore: ['**.md']
   pull_request:
-    paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
+    paths-ignore: ['**.md']
   workflow_dispatch:
 
 # A newer push makes an older build of the same ref pointless.
@@ -19,9 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # NOTE: the vanilla-plus merge gates (tools/check-vanilla-plus.sh) are
+      # NOTE: the vanilla-plus gates (tools/check-vanilla-plus.sh) are
       # deliberately NOT run here — a gate failure must not halt the build.
-      # They are a manual audit step (see docs/merge-upstream.md, step 4):
+      # They are a manual audit step:
       #   tools/check-vanilla-plus.sh "$GITHUB_WORKSPACE"
 
       - name: Install the toolchain

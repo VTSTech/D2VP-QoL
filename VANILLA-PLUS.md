@@ -105,11 +105,11 @@ cannot be attributed.
    README). Next slate candidates, scoped and ranked low-risk-first in
    [FEATURES.md](FEATURES.md). Candidates are discussed per issue; nothing lands
    without a config gate.
-4. **Keep current with upstream** — **standing cadence.** Eight numbered syncs
-   so far (Ghidra DB → 1948), each per
-   [docs/merge-upstream.md](docs/merge-upstream.md) with the full audit
-   battery (gate suite, marker-placement and dead-store audits, refile-aliasing
-   audit, merge-site syntax sweep); the fork is ahead of upstream and never behind.
+4. **Keep current with upstream** — **RETIRED 2026-11-09** (owner: unlikely to resume
+   merging). Ten numbered syncs landed while the cadence ran (Ghidra DB → 1970, the
+   eleventh rolled back), each with the full audit battery; the merge protocol, the
+   audit tooling and the hand-port shelf left the tree with the retirement — git
+   history keeps them. The fork maintains its source directly.
 
 ## Build
 

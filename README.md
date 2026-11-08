@@ -172,7 +172,7 @@ protocol) · [SMOKE-CHECKLIST.md](SMOKE-CHECKLIST.md) (the in-game test pass).
 **For agents (verbose by design):** [FEATURES.md](FEATURES.md) (the feature slate + house
 feature contract) · [handoff.md](handoff.md) (live work log) ·
 [HISTORY.md](HISTORY.md) (the verbatim archive) · [plans/](plans/) ·
-[docs/merge-upstream.md](docs/merge-upstream.md) · [docs/building.md](docs/building.md).
+[docs/building.md](docs/building.md).
 
 ## Contributing
 
@@ -182,10 +182,9 @@ the suite CI enforces, and green is the bar.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) routes every kind of finding: Vanilla+ improvements
 belong in this repository; fixes to the recovered source itself belong upstream at
-[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are paused for now
-(owner, 2026-11-08, after the failed eleventh sync) — upstream material is hand-ported
-one commit at a time instead, ranked in
-[plans/ELEVENTH-SYNC-SALVAGE.md](plans/ELEVENTH-SYNC-SALVAGE.md).
+[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are **retired**
+(owner, 2026-11-09: unlikely to resume) — the fork maintains its source directly, and
+the merge-era tooling and plans have left the tree (recoverable from git history).
 
 ## Credits
 

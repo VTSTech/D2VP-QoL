@@ -3,7 +3,7 @@
 // Fork-owned TU (picked up by CMake's GLOB_RECURSE) - extracted from
 // D2Client.cpp so the upstream merge surface stays minimal. Do not move this
 // code back into upstream files; upstream files only ever call the entry
-// points declared here (see docs/merge-upstream.md for the merge playbook).
+// points declared here (the fork-only-TU rule, handoff.md §8).
 //
 // Charter: every feature is opt-in via [features] keys in d2vp.ini next to
 // d2.exe; missing file/section/key or a garbage value always reads as 0 =
@@ -234,8 +234,8 @@ int __stdcall D2VP_GetFeatureToggle(const char* szKey);   // 0 = off/missing/gar
 void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue); // write + flush
 void __stdcall D2VP_ConfigReloaded();                     // bust all 2 s gate caches
 // Boot-time consistency audit of the Vanilla+ injection points (count bumps,
-// table rows). Halts loudly with a d2boot.log line when a merge dropped an
-// edit - see docs/merge-upstream.md. Cheap; called from ALTTOGGLE_EnsureIni.
+// table rows). Halts loudly with a d2boot.log line when an edit was lost -
+// see handoff.md §8. Cheap; called from ALTTOGGLE_EnsureIni.
 void __stdcall VANILLAPLUS_SelfCheck();
 // [vanilla-plus shared-stash] Client side of the shared stash (track N
 // round 1 = one page; two shared pages + an outlined pager label since R75,

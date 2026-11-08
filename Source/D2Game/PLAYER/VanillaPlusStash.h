@@ -2,7 +2,7 @@
 //
 // Fork-owned TU (picked up by CMake's GLOB_RECURSE) - do not move this code
 // into upstream files; upstream files only ever call the entry points
-// declared here from thin VP-marked sites (see docs/merge-upstream.md).
+// declared here from thin VP-marked sites (handoff.md §8).
 //
 // Owner constraints (SHARED-STASH-PLAN.md, 2026-11-01):
 //   1. "the stash should have it's own save"  - the shared pool lives in its

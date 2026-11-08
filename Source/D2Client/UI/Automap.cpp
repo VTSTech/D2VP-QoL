@@ -207,7 +207,7 @@ static_assert(sizeof(void*) != 4 || sizeof(::D2AutomapStrc) == 0x2804, "D2_NEW_A
 #endif
 // VP-BEGIN [automap tolerance]: fork-local spell of the upstream per-file
 // D2_FREE_AT macro (rule: code inside upstream files uses that file's
-// conventions; see docs/merge-upstream.md).
+// conventions; handoff.md §8).
 #ifndef D2_FREE
 #define D2_FREE(p) Fog::Memory::FreeClientMemory((p), __FILE__, __LINE__, 0)
 #endif
