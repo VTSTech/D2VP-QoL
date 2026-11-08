@@ -1,5 +1,15 @@
 # Merging upstream without losing Vanilla+ (playbook)
 
+> **STATUS: PAUSED (owner, 2026-11-08).** Upstream merges are on hold after the
+> eleventh sync (merge `17d8a51b`, R135): the merged build spent a day without
+> reaching a clean boot and, when it finally ran, textures were corrupted. The whole
+> round was rolled back to `8067c4a` (R134) in `86cd10cd`. This document stays as the
+> archive of the eleven-sync process and its war stories — it is **not** live
+> procedure. The fork continues by improving the R134 source directly; anything still
+> wanted from upstream is hand-ported one commit at a time (ranked list:
+> [plans/ELEVENTH-SYNC-SALVAGE.md](../plans/ELEVENTH-SYNC-SALVAGE.md)). Syncs may
+> resume when a process exists that bounds the cost the eleventh one blew through.
+
 Upstream `jaenster/redivivus` moves; this fork recompiles it with the Vanilla+
 opt-in layer on top. This document is the procedure for pulling upstream in
 with zero feature loss and a bounded merge surface. It exists because every

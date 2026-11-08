@@ -38,9 +38,12 @@ function on the Mac build, typed field accesses, referenced strings — inferenc
 how the read-only Ghidra MCP server lets an AI agent read the databases and file
 corrections addressed **by address**.
 
-Fixes landed upstream arrive here at the next sync — this fork tracks ahead of upstream,
-never behind, and [docs/merge-upstream.md](docs/merge-upstream.md) documents the merge
-protocol (eight numbered syncs so far).
+Upstream syncs are **paused** (owner, 2026-11-08, after the failed eleventh sync — the
+rollback record and the reasoning live in handoff.md rev 145). The fork improves its
+R134 source directly; upstream material is hand-ported one commit at a time, ranked in
+[plans/ELEVENTH-SYNC-SALVAGE.md](plans/ELEVENTH-SYNC-SALVAGE.md).
+[docs/merge-upstream.md](docs/merge-upstream.md) stays as the archive of the
+eleven-sync merge protocol; syncs resume only when a process bounds their cost.
 
 ## If you want to improve the game (Vanilla+)
 
@@ -66,7 +69,7 @@ enforces most of them mechanically:
 3. **Fork edits are marked.** Edits inside upstream files ride between `// VP-BEGIN` and
    `// VP-END` markers; new code goes in fork-only TUs
    (`D2Client/UI/VanillaPlusCore.{h,cpp}` and friends). Upstream files stay free of new
-   code so the next sync merges clean.
+   code so hand-ported upstream material diffs clean.
 4. **Every source change updates the gate.** New feature, new anchor, new marker — add
    the gate rows that pin it, and the suite stays green.
 5. **LF everywhere.** Merged `main` is LF-normalized; detect and preserve each file's

@@ -171,8 +171,10 @@ the suite CI enforces, and green is the bar.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) routes every kind of finding: Vanilla+ improvements
 belong in this repository; fixes to the recovered source itself belong upstream at
-[Redivivus](https://github.com/jaenster/redivivus), and fixes landed there arrive here at
-the next sync.
+[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are paused for now
+(owner, 2026-11-08, after the failed eleventh sync) — upstream material is hand-ported
+one commit at a time instead, ranked in
+[plans/ELEVENTH-SYNC-SALVAGE.md](plans/ELEVENTH-SYNC-SALVAGE.md).
 
 ## Credits
 
