@@ -171,6 +171,15 @@ The retail version line ("v 1.14d") is replaced by the fork build tag on both su
 
 ---
 
+## R. Ctrl+Click stash transfer (R140 — owner ask, no issue)
+
+With the stash panel open, **Ctrl+Click** moves an item between the inventory and the stash in one click (D2R parity). The direction follows the clicked item: an inventory item goes to the stash, a stash item goes to the inventory; the shared-stash pages behave identically. A full target plays the "won't fit" sound and nothing moves. Shop behavior untouched — Ctrl+Click in an open shop still sells.
+
+- [ ] **57. Put:** open the stash, Ctrl+Click an item in your **inventory** → it lands in the stash's first free cell, one click, no dragging, item-move sound plays. Ride-alongs: an unidentified item transfers fine; with the stash deliberately full the refuse sound plays and the item stays; flip to the **Shared** tab and Ctrl+Click → the item lands in the shared page.
+- [ ] **58. Take:** Ctrl+Click an item **in the stash** → it lands in your inventory's first free cell. With your inventory deliberately full, the refuse sound plays and the item stays. After each move the item is immediately clickable in its new home and nothing duplicates or vanishes after closing and re-opening both panels (the pre-R140 defect was a client-side vanish with no server move).
+
+---
+
 ## Evidence to keep if anything breaks
 
 | Artifact | Comes from | Tells us |

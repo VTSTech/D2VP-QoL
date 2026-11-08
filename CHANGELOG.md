@@ -11,6 +11,14 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R140 — Ctrl+Click stash transfer** (owner ask, no issue). With the stash open,
+  **Ctrl+Click** now moves an item — inventory → stash or stash → inventory, one
+  click, no dragging; the shared-stash pages work unchanged, and a full target
+  plays the "won't fit" sound. Retail wired Ctrl+Click to sell-in-shop only; with
+  no shop open the branch fell through to a client-side removal with no packet
+  (the item vanished locally until the next sync), so that dead branch is
+  re-expressed as the real transfer — the same `0x18` place packet and free-cell
+  finder the drag-and-drop and cube paths already use.
 - **R139 — On-screen build tag** (owner ask, no issue). The title screen and the
   in-game automap overlay used to show the retail version line ("v 1.14d"); both
   now show the fork build tag — **`D2VP-R139`** — so the exe identifies itself at

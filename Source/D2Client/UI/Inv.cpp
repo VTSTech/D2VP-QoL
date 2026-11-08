@@ -9729,6 +9729,50 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
             return 1;
           }
         }
+
+        // VP-BEGIN [ctrl-click stash R140]: Ctrl+Click moves an item between the
+        // inventory and the open stash (D2R parity, owner ask). Retail wires
+        // Ctrl+Click to the sell-to-shop path only; with no shop open this
+        // branch fell through to a bare client-side ITEM_RemoveClientSide with
+        // no packet, so the clicked item vanished locally until the next
+        // inventory sync. Re-expressed as the real transfer: the clicked item's
+        // containing page picks the direction (INVENTORY -> STASH, STASH ->
+        // INVENTORY), the free cell comes from the same
+        // INVENTORY_FindItemGridPosition the put-in-cube branch below uses, and
+        // the move rides the same 0x18 insert-into-buffer packet the
+        // drag-and-drop place path sends (buffer = the D2Common page byte:
+        // 4 = stash, 0 = inventory; the stash UI's two views, personal 0xc and
+        // shared 0xd, are both page-4 content, so the shared stash pages work
+        // unchanged). A full target container plays the same refuse sound the
+        // cube path plays. Everything else - belt items, the cube-open and
+        // trade-open panels - keeps the old fall-through shape.
+        if (!nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+          eInventoryPage eClickedFromPage;
+          int nExpansionFlag;
+          int nTargetPage;
+          int nTargetPageByte;
+          int nTargetCellX;
+          int nTargetCellY;
+          eClickedFromPage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
+          if (eClickedFromPage == INVPAGE_INVENTORY || eClickedFromPage == INVPAGE_STASH) {
+            nTargetPageByte = (eClickedFromPage == INVPAGE_INVENTORY) ? 4 : 0;
+            nExpansionFlag = GAME::Game::CLIENT_CheckExpansion();
+            nTargetPage = (int)D2Common::Units::GetInventoryPage(pUnit, (uint8_t)nTargetPageByte, nExpansionFlag);
+            nTargetCellX = 0;
+            nTargetCellY = 0;
+            if (D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInvWork, pCursorItem_lcl, nTargetPage, &nTargetCellX, &nTargetCellY, (uint8_t)nTargetPageByte)) {
+              /* Insert item into buffer 18 [DWORD id] [DWORD xpos] [DWORD ypos] [DWORD buffer] */
+              GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(0x18, pCursorItem_lcl->nUnitGUID, nTargetCellX, nTargetCellY, nTargetPageByte);
+              UNIT::ITEM_RemoveClientSide(pCursorItem_lcl);
+              Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(pCursorItem_lcl), nullptr, 0, 0, 0);
+              return 1;
+            }
+
+            UNIT::UnitSnd::UNITSND_PlayPlayerSound(pUnit, 0x13);
+            return 0;
+          }
+        }
+        // VP-END [ctrl-click stash R140]
       } else {
         if ((uint32_t)targetItem & 4) {
           nTxCost = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_beltable(pCursorItem_lcl);
