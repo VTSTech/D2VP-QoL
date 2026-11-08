@@ -11,6 +11,11 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R139 — On-screen build tag** (owner ask, no issue). The title screen and the
+  in-game automap overlay used to show the retail version line ("v 1.14d"); both
+  now show the fork build tag — **`D2VP-R139`** — so the exe identifies itself at
+  a glance. One define (`Redivivus/d2_boot.h`) feeds the title screen, the automap
+  line and the `d2boot.log` self-ID, so every future round bumps a single line.
 - **R138 — Windowed 1080p crash fix** ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31),
   owner-closed 2026-11-09). Selecting 1920x1080 while running windowed (`-w`) crashed the
   game on the first world frame — fullscreen was fine. The software tile blitters' row-offset

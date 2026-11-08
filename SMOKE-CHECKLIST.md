@@ -1,8 +1,8 @@
 # Vanilla+ Smoke Test — in-game checklist
 
-> **Running this checklist:** GitHub renders the boxes below read-only in the file view — task-list checkboxes are only live inside issues. To run a pass, open **Issues → New issue → "Vanilla+ Smoke Test"**: the template ([.github/ISSUE_TEMPLATE/smoke-test.md](.github/ISSUE_TEMPLATE/smoke-test.md), generated from this file by [tools/gen-smoke-issue-template.py](tools/gen-smoke-issue-template.py)) pre-fills every check as a clickable box, with a Verdict section to fill at the end. This file stays the canonical reference; when a round changes a check, re-run the generator and commit both files.
+> **Running this checklist:** GitHub renders the boxes below read-only in the file view — task-list checkboxes are only live inside issues. To run a pass, open **Issues → New issue → "Vanilla+ Smoke Test"**: the template ([.github/ISSUE_TEMPLATE/smoke-test.md](.github/ISSUE_TEMPLATE/smoke-test.md)) pre-fills every check as a clickable box, with a Verdict section to fill at the end. This file stays the canonical reference; when a round changes a check, update both files by hand (the generator script was removed at rev 152).
 
-Build: **Vanilla+0.0.8-R138** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135); the Countess-chest fix — R136 field-verified 2026-11-08, owner-closed ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), §N); the proc-tooltip fix — R137 field-verified 2026-11-08, owner-closed ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33), §O); the windowed-1080p row-table fix — R138 field-verified 2026-11-09, owner-closed ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31), §P).
+Build: **Vanilla+0.0.8-R139** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135); the Countess-chest fix — R136 field-verified 2026-11-08, owner-closed ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), §N); the proc-tooltip fix — R137 field-verified 2026-11-08, owner-closed ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33), §O); the windowed-1080p row-table fix — R138 field-verified 2026-11-09, owner-closed ([issue #31](https://github.com/VTSTech/D2VP-QoL/issues/31), §P); the on-screen build tag — R139, field ask §Q (items 55–56).
 Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 **Known-fail — none.** (Resolved 2026-11-03, [issue #8](https://github.com/VTSTech/D2VP-QoL/issues/8): the necro skeleton spawn tint is FIELD-VERIFIED on the R90b/R91 build — "Skeletons are finally white again" — and is now the standing §B item-5 regression check. The 2026-11-03 D3D registry-corruption episode was owner-environment, not a build bug — see the watch note in §L.)
@@ -11,7 +11,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R138`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R139`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -155,6 +155,15 @@ Selecting 1920x1080 while running windowed (`-w`) crashed the game on the first 
 
 - [ ] **53. The issue repro, inverted (the fix proof):** boot `-w`, join a game, `Esc → Options → Video Options` → select 1920x1080 → the world renders at the full 1920x1080 DIB — **no crash, no `d2crash-*.txt`** (pre-R138 this died on the first world frame). Keep as a per-build regression check.
 - [ ] **54. Ride-along sanity:** the smaller windowed stops (640x480 / 800x600 / 1280x720 / 1344x700) and fullscreen D3D/Glide behave exactly as before — the fix is one array bound. The 1366x768 `-w` select (the other overreading stop pre-fix, max index 752) doubles as the still-owed R116 windowed eyeball: frame straight, no shear, no top-strip smear.
+
+---
+
+## Q. On-screen build tag (R139 — owner ask, no issue)
+
+The retail version line ("v 1.14d") is replaced by the fork build tag on both surfaces that showed it. One define (`Redivivus/d2_boot.h` `D2VP_BUILD_TAG`) feeds the title screen text box, the automap overlay line and the `d2boot.log` self-ID (`Vanilla+0.0.8-R139`) — a round bump is one line there. The crash-report milestone string ("D2 1.14d") is report metadata and stays retail.
+
+- [ ] **55. Title screen:** at the main menu the version text reads **`D2VP-R139`** — not "v 1.14d" (same spot as before).
+- [ ] **56. Automap:** in game with the automap open, the version line on the top-right overlay stack reads **`D2VP-R139`** — not "v 1.14d". Ride-along: the other overlay lines (level name, difficulty, password, server IP) still draw in their usual order and positions, and the tag stays fully on-screen at 640x480.
 
 ---
 

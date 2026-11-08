@@ -6,7 +6,7 @@ title: "Smoke Test — Vanilla+0.0.8-RXX"
 
 **Build under test:** `Vanilla+0.0.8-RXX` — fill in the round (title too); line 1 of `d2boot.log` must say it (item 0). Tick the boxes as you run — they are live in this issue; paste logs and screenshots as comments. A crash gets its own comments with the artifacts from the table at the bottom.
 
-Core path takes ~15 min. Run top to bottom — the fast checks come first. The repo copy ([SMOKE-CHECKLIST.md](https://github.com/VTSTech/D2VP-QoL/blob/main/SMOKE-CHECKLIST.md)) is the canonical reference: the per-round build stamp and field history live there, and any round that adds or changes a check re-runs `tools/gen-smoke-issue-template.py` and commits both.
+Core path takes ~15 min. Run top to bottom — the fast checks come first. The repo copy ([SMOKE-CHECKLIST.md](https://github.com/VTSTech/D2VP-QoL/blob/main/SMOKE-CHECKLIST.md)) is the canonical reference: the per-round build stamp and field history live there, and any round that adds or changes a check updates both files by hand (the generator script was removed at rev 152).
 
 **Verdict:** fill in the Verdict section at the bottom when the pass is done.
 
@@ -159,6 +159,15 @@ Selecting 1920x1080 while running windowed (`-w`) crashed the game on the first 
 
 - [ ] **53. The issue repro, inverted (the fix proof):** boot `-w`, join a game, `Esc → Options → Video Options` → select 1920x1080 → the world renders at the full 1920x1080 DIB — **no crash, no `d2crash-*.txt`** (pre-R138 this died on the first world frame). Keep as a per-build regression check.
 - [ ] **54. Ride-along sanity:** the smaller windowed stops (640x480 / 800x600 / 1280x720 / 1344x700) and fullscreen D3D/Glide behave exactly as before — the fix is one array bound. The 1366x768 `-w` select (the other overreading stop pre-fix, max index 752) doubles as the still-owed R116 windowed eyeball: frame straight, no shear, no top-strip smear.
+
+---
+
+## Q. On-screen build tag (R139 — owner ask, no issue)
+
+The retail version line ("v 1.14d") is replaced by the fork build tag on both surfaces that showed it. One define (`Redivivus/d2_boot.h` `D2VP_BUILD_TAG`) feeds the title screen text box, the automap overlay line and the `d2boot.log` self-ID — a round bump is one line there. The crash-report milestone string ("D2 1.14d") is report metadata and stays retail.
+
+- [ ] **55. Title screen:** at the main menu the version text reads **`D2VP-R139`** (fill in the running round's tag) — not "v 1.14d" (same spot as before).
+- [ ] **56. Automap:** in game with the automap open, the version line on the top-right overlay stack reads **`D2VP-R139`** (fill in the running round's tag) — not "v 1.14d". Ride-along: the other overlay lines (level name, difficulty, password, server IP) still draw in their usual order and positions, and the tag stays fully on-screen at 640x480.
 
 ---
 
