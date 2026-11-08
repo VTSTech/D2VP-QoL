@@ -96,40 +96,6 @@ struct tagCANDIDATELIST { uint32_t dwStyle; };
 typedef struct tagRGBQUAD RGBQUAD;
 struct _SERVICE_STATUS { uint32_t dwServiceType; };
 typedef void* SERVICE_STATUS_HANDLE;
-// _SYSTEM_INFO moved to vp_host_api.h (eleventh sync): it must be COMPLETE
-// before Fog.h embeds it by value (sWinSystemInfo), and api.h - parsed after
-// d2_platform.h - can spell it with the tree's DWORD/LPVOID forms, verbatim
-// from SFile.h's host fallback. SFile.h defers through the shared
-// VP_HOST_DEFINED__SYSTEM_INFO guard.
-// IMAGE_DOS_HEADER (eleventh sync): upstream's platform-header regen now
-// declares `extern "C" IMAGE_DOS_HEADER __ImageBase;` UNCONDITIONALLY (both
-// Win32 and host paths - the x64 module walk), which parses BEFORE
-// vp_host_api.h's layout-faithful definition is force-included. Forward-
-// typedef here so that declaration parses; the real body still comes from
-// vp_host_api.h (typedef redeclaration to the same type is legal). On
-// Windows the SDK typedef applies (same name).
-struct _IMAGE_DOS_HEADER;
-typedef struct _IMAGE_DOS_HEADER IMAGE_DOS_HEADER;
-// __time32_t / struct in_addr (eleventh sync): the first real host runs of
-// the fork-surface sweep (its default list had been stale since the tenth
-// sync's layout move) surfaced SDK types upstream headers spell directly -
-// Fog.h / Fog/Src/LogManager.h / D2Launch/MainMenus.h take __time32_t, Fog.h's
-// BNClient surface takes struct in_addr - which crtdefs.h / winsock provide
-// on the real mingw build (d2_platform.h's _WIN32 block claims the mingw SDK
-// forms). The host path never carried them. Width-faithful minimal forms;
-// the fork TUs never touch the internals.
-typedef int32_t __time32_t; /* MSVC CRT: 32-bit signed (long on i686) */
-typedef struct in_addr {
-    union {
-        struct { uint8_t s_b1, s_b2, s_b3, s_b4; } S_un_b;
-        struct { uint16_t s_w1, s_w2; } S_un_w;
-        uint32_t S_addr;
-    } S_un;
-} IN_ADDR;
-// struct sockaddr (eleventh sync): d2_platform.h defines it only inside the
-// _WIN32 mingw-claim block (the claimed _ip_types.h region); Fog.h's BNClient
-// surface references it from host-compiled TUs. Canonical winsock layout;
-// the real build takes the SDK form.
-struct sockaddr { uint16_t sa_family; char sa_data[14]; };
+struct _SYSTEM_INFO { uint32_t dwOemId; };
 
 #endif // !defined(_WIN32)

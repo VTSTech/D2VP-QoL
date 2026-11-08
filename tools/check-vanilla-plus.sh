@@ -217,7 +217,7 @@ gate "options page: shared ini path"      Source/D2Client/UI/VanillaPlusOptions.
 
 # ---- automap crash tolerance ----------------------------------------------
 gate "automap tolerance VP blocks (4 sites + macro)" Source/D2Client/UI/Automap.cpp 'VP-BEGIN \[automap tolerance\]' 5
-gate "automap tolerant frees"  Source/D2Client/UI/Automap.cpp 'D2_FREE\(pCellData\);' 4  # [11th sync] upstream regen renamed the local nErrorAddress -> pCellData; the four tolerance frees follow it
+gate "automap tolerant frees"             Source/D2Client/UI/Automap.cpp         'D2_FREE\(nErrorAddress\);'  4
 
 # ---- sound-defect: class sound tables + sounds.txt null guard ---------------
 gate "sounds.txt null guard in SOUND_PlaySound" Source/D2Client/Sound/Sound.cpp 'VP: lookup returns null' 1
@@ -286,22 +286,7 @@ gate "resolution: init attach"                  Source/D2Client/UI/EscMenu.cpp  
 gate "resolution: minipanel clamp + modes 4/5/6" Source/D2Client/UI/MiniPanel.cpp   'nResolution > 5|nScreenMode_lcl = 6|nScreenMode_lcl = 5|nScreenMode_lcl = 4' 4
 gate "resolution: core blank builder"        Source/D2Client/UI/VanillaPlusCore.cpp '__stdcall VPRES_BuildBlankPlaceholder' 1
 gate "resolution: core font pick"            Source/D2Client/UI/VanillaPlusCore.cpp '__stdcall VPRES_PickFontMatchingDC6' 1
-# R138: count 1 -> 2 - the self-check's evidence dump takes exp.draw's address
-# beside the scan's compare (the wiring is still ONE table row; both hits are
-# in VanillaPlusCore.cpp itself).
-gate "resolution: self-check wiring"         Source/D2Client/UI/VanillaPlusCore.cpp 'UI_SLIDER_DrawResolutionValue' 2
-gate "resolution: self-check evidence mark"  Source/D2Client/UI/VanillaPlusCore.cpp 'resolution wiring rows=%d wired=%d \[R139\]' 1
-# R139: the R138 boot abort's root cause - the eleventh sync's public-header
-# split regenerated D2Client.h's D2EscMenuItemStrc at upstream's retail [4]
-# while EscMenu.h kept the fork's R115 [6]; sizeof then differed per TU by
-# include order and the self-check's TU mis-walked the 0x558-stride tables at
-# 0x550. Both copies pinned at [6] beside static_asserts; these gates fail if
-# either copy drifts again.
-# R139: count 2, not 1 - the field line AND the static_assert's message both
-# carry the literal; a revert of the field to upstream's retail [4] drops the
-# count to 1 and fails this gate.
-gate "split-copy: D2EscMenuItemStrc [6] in D2Client.h" Source/D2Client/D2Client.h 'pDC6SubImages\[6\]' 2
-gate "split-copy: D2EscMenuItemStrc [6] in EscMenu.h"  Source/D2Client/UI/EscMenu.h 'pDC6SubImages\[6\]' 1
+gate "resolution: self-check wiring"         Source/D2Client/UI/VanillaPlusCore.cpp 'UI_SLIDER_DrawResolutionValue' 1
 # Issue #23: the visible 1280x720 label must sit where the retail value
 # images sit - right-aligned to the value-column anchor (alignment 2) and on
 # their ink line (glyph-cell descent compensated: DRAW_text anchors the cell
@@ -1097,12 +1082,8 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # the 100-int cache sat adjacent in the original .data; the regen's separate
 # statics made it an OOB read of unrelated globals (pointer read as roll bound
 # -> seed%ptr -> pTable+idx*4 fault). Cache moved to file scope + accessor.)
-gate "res: self-id 0.0.8-R139"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R139' 1
-gate "res: self-id R138 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R138' 0
-gate "res: self-id R137 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R137' 0
-gate "res: self-id R136 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R136' 0
+gate "res: self-id 0.0.8-R135"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 1
 gate "res: self-id R127 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R127' 0
-gate "res: self-id R135 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 0
 # ---- [vanilla-plus issue #32] rev 136: track T - the gamble-cache fix. Root
 # cause: D2Game/UNIT/SUNITNPC.cpp GAMBLE_GenerateGambleInventory read the
 # per-level upper-bound cache through vanilla .data adjacency

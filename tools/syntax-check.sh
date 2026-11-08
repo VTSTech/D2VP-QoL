@@ -42,25 +42,11 @@ cd "$ROOT" || { echo "syntax-check: no such dir: $ROOT" >&2; exit 2; }
 
 # Default: every fork-owned TU (the files the fork owns end to end - the
 # merge playbook's "fork surface"). Extra args append one-off files.
-# Paths are post-tenth-sync layout (9a3c246f moved every module under
-# Source/; the pre-restructure defaults here had been MISSING since).
-# Eleventh sync: VanillaPlusSound, VanillaPlusCombat, ShadowDiag, d2_boot
-# and d2_hangwatch joined the surface - VanillaPlusSound.cpp carried a real
-# owner-build break (public D2Sound.h no longer declares the module-private
-# SOUND_GetEAXEnabledFlag) that this list being stale let through. The
-# per-round full-surface instrument is scripts/fork_surface_syntax_sweep.sh
-# (every TU that differs from upstream, baseline-diffed); this list is the
-# quick per-overlay check.
 TUS=(
-    "Source/D2Client/UI/VanillaPlusCore.cpp"
-    "Source/D2Client/UI/VanillaPlusOptions.cpp"
-    "Source/D2Game/PLAYER/VanillaPlusStash.cpp"
-    "Source/D2Game/UNIT/VanillaPlusCombat.cpp"
-    "Source/D2Glide/Renderer/ShadowDiag.cpp"
-    "Source/D2Sound/VanillaPlusSound.cpp"
-    "Redivivus/d2_boot.cpp"
+    "D2Client/UI/VanillaPlusCore.cpp"
+    "D2Client/UI/VanillaPlusOptions.cpp"
+    "D2Game/PLAYER/VanillaPlusStash.cpp"
     "Redivivus/d2_crash.cpp"
-    "Redivivus/d2_hangwatch.cpp"
 )
 if [ "$#" -gt 0 ]; then TUS=("$@"); fi
 
@@ -129,7 +115,7 @@ cp "$SHADOW/d2_platform.h" "$SHADOW/Source/D2Headers/d2_platform.h"
 cat > "$SHADOW/windows.h" <<'EOF'
 #pragma once
 #include "d2_platform.h"
-#include "Source/Fog/Debug.h"
+#include "Fog/Debug.h"
 EOF
 # d2_crash.cpp's module walker; its API surface lives in vp_host_api.h.
 cat > "$SHADOW/tlhelp32.h" <<'EOF'

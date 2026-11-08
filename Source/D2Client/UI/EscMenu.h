@@ -62,13 +62,6 @@ struct D2EscMenuItemStrc {
     /* 0x53C */ struct DC6 * pDC6Main; // Loaded main DC6 image
     /* 0x540 */ struct DC6 * pDC6SubImages[6]; // Array of loaded sub-image DC6 pointers (VP [R115]: grown from R112's 5 to 6 for the video-options slider's sixth stop (1920x1080); retail tables keep shipping <= 4 stops, the designated inits zero-fill the tail slots, and the only count-6 row is the VP Resolution row whose slots 2-5 attach at runtime)
 };
-// VP [R139]: pins this copy beside D2Client.h's - the R138 boot abort was
-// exactly one copy drifting while the other stayed right (include order then
-// decided which sizeof each TU saw). Guarded to the real i686 target.
-static_assert(sizeof(void*) != 4 || sizeof(D2EscMenuItemStrc) == 0x558,
-    "vanilla-plus: D2EscMenuItemStrc drifted off 0x558 in EscMenu.h - "
-    "the two guard-shared copies (D2Client.h / EscMenu.h) must agree "
-    "(docs/merge-upstream.md)");
 
 #endif // D2_DEFINED_D2EscMenuItemStrc
 #ifndef D2_DEFINED_D2EscMenuUIFlagStrc

@@ -16,7 +16,6 @@
 #include "Source/globals/globals.h"
 #include "Source/D2Common/D2Common.h"
 #include "Source/D2gfx/D2gfx.public.h"
-#include "Source/D2gfx/D2GFX.h" // VP: [11th sync re-plant] the fork's R110-R115 ladder calls D2GFX_Get/SetPresentationStretch; upstream's include-only-what-it-uses list dropped it (upstream's body never calls them)
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/GAME/View.data.h"
 #include "Source/D2Client/UI/Help.data.h"
@@ -2493,7 +2492,7 @@ BOOL VPRES3D_PresentHostedFrame() {
     return 1;
 }
 
-static BOOL __stdcall RENDERER_D3D_InitializeDevice(int nResolutionMode, HWND hWnd) { // [11th sync] upstream's HWND typing adopted - the fork's i686 spellings unchanged below
+static BOOL __stdcall RENDERER_D3D_InitializeDevice(int nResolutionMode, int hWnd) {
     // Static local variables (originally global data)
     static uint8_t gszRendererD3DDeviceInitializationCode[272] = {
     0x3e,
@@ -6354,6 +6353,29 @@ void __fastcall PlayerSmacker(D2SmackerContextStrc * pContext) {
       if (!gnRenderState) {
         RENDERER_D3D_BlitSmackerFrame(0x1d4, pContext, 0x3c);
         return;
+      }
+    } else if (pContext->eMode == 's' && (pSmackHandle = pContext->hSmack , pSmackHandle != 0)) {
+      nWaitStatus = SmackWait(pSmackHandle);
+      if (!nWaitStatus) {
+        if (!gnGlideWindowHandle) {
+          return;
+        }
+
+        SmackDoFrame(pSmackHandle);
+        RENDERER_D3D_PresentSmackerFrame();
+        if (*(int*)((int)pSmackHandle + 0x374) == *(int*)((int)pSmackHandle + 0xc)) {
+          Renderer::CloseSmacker(pContext);
+        } else {
+          SmackNextFrame(pSmackHandle);
+        }
+        if (gnRenderState) {
+          return;
+        }
+
+        RENDERER_D3D_ResetSmackerSurfaces();
+      }
+      if (!gnRenderState) {
+        RENDERER_D3D_BlitSmackerFrame(*(int*)((int)pSmackHandle + 4), pContext, *(int*)((int)pSmackHandle + 8));
       }
     }
 }

@@ -769,12 +769,7 @@ void __fastcall DebugFillBackBuffer(int nPosX, int nPosY) {
       exit(-1);
     }
 
-    // VP: [R116] row addr + nRowStride: real DIB stride. Eleventh sync: upstream's
-    // pointer-width typing (272e075e) re-signed DRAW_DebugFillRect's row start as
-    // uint8_t* - pass the pointer directly, the Ghidra-era (int32_t) cast no
-    // longer converts (the mingw cross-sweep caught what the host merge-site
-    // sweep's baseline diff cancelled).
-    D2CMP::SRC::FastCmp::DRAW_DebugFillRect(gpRenderBackBufferBits + nPosX + RENDERER_WINDOWED_nDIBPitch * nPosY, RENDERER_WINDOWED_nDIBPitch);
+    D2CMP::SRC::FastCmp::DRAW_DebugFillRect((int32_t)(gpRenderBackBufferBits + nPosX + RENDERER_WINDOWED_nDIBPitch * nPosY), RENDERER_WINDOWED_nDIBPitch); // [R116] row addr + nRowStride: real DIB stride
     return;
 }
 

@@ -30,7 +30,6 @@
 #include "Source/D2MCPClient/D2MCPClient.h"
 #include "Source/Fog/Src/LogManager.h"
 #include "Redivivus/d2_boot.h" // [d2boot] direct include: 11th-sync include refactor broke the transitive path
-#include "Source/D2gfx/D2GFX.h" // VP: [11th sync re-plant] DEVMODEA typedef + the R111 mode-probe; upstream's include-only list dropped it
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 

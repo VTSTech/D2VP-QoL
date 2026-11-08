@@ -67,7 +67,7 @@ struct D2ClientLightPulseStrc {
 #ifndef D2_DEFINED_D2UIFlagDescStrc
 #define D2_DEFINED_D2UIFlagDescStrc
 struct D2UIFlagDescStrc {
-    /* 0x00 */ uint32_t anDismissMode[39]; // VP: vanilla-plus grown 38 -> 39 for UI_VANILLAPLUS; old nDismissMode@0x54 is anDismissMode[0x15]. Existing rows' new last column zero-initializes (dismiss action 0 = ignore), so no initializer edits. Eleventh sync: this public-header-split copy (7b70255) was regenerated from upstream's 38-entry form - the fork's column must live in both copies, as with D2UIFlagStrc's VanillaPlus member (see 7a904e3a).
+    /* 0x00 */ uint32_t anDismissMode[38]; // indexed by eD2UIvars; old nDismissMode@0x54 is anDismissMode[0x15]
 };
 #endif // D2_DEFINED_D2UIFlagDescStrc
 
@@ -112,7 +112,6 @@ struct D2UIFlagStrc {
     /* 0x8C */ BOOL HireIcons;
     /* 0x90 */ BOOL MercMenu;
     /* 0x94 */ BOOL UnusedScroll;
-    /* 0x98 */ BOOL VanillaPlus; // VP: vanilla-plus UI_VANILLAPLUS page flag (row 10); keeps (&GFX_bShowUIFlag.Game)[38] in enum order [11th sync re-plant: the public-header split duplicated this struct - the fork's member must live in both copies]
 };
 #endif // D2_DEFINED_D2UIFlagStrc
 
