@@ -1,6 +1,6 @@
 # Contributing
 
-This fork serves two goals, and almost any contribution lands under one of them:
+This fork serves three goals, and almost any contribution lands under one of them:
 
 1. **Recover retail 1.14d** — turn `Game.exe` back into C++ and make the rebuild
    byte-match the original binary. That work lives **upstream** at
@@ -11,6 +11,10 @@ This fork serves two goals, and almost any contribution lands under one of them:
    widescreen resolution ladder, opt-in quality-of-life. That is **this repository**,
    [VTSTech/D2VP-QoL](https://github.com/VTSTech/D2VP-QoL), and the rest of this file
    is about it.
+3. **Port to Linux** — **`d2linux`**, a native Linux build of the same recovered
+   source: the game itself as the host, no Windows, no Wine, no PE. That is the
+   **[`linux` branch](https://github.com/VTSTech/D2VP-QoL/tree/linux)** of this
+   repository; the `main` line stays the Windows/PE build.
 
 A finding filed in the wrong place is still a finding — it only costs a redirect. When in
 doubt, [open an issue here](https://github.com/VTSTech/D2VP-QoL/issues/new/choose) or
@@ -57,7 +61,7 @@ repo, [Glide3xVK](https://github.com/VTSTech/Glide3xVK).
 ### The house rules
 
 These invariants keep the fork mergeable with upstream. The gate suite
-([`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh), currently **519 checks**)
+([`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh), currently **520 checks**)
 enforces most of them mechanically:
 
 1. **Vanilla by default.** With no `d2vp.ini` (or a missing key) the game behaves like
@@ -139,6 +143,20 @@ Human-facing docs stay short: [README.md](README.md), [CHANGELOG.md](CHANGELOG.m
 [FEATURES.md](FEATURES.md) (the slate), [handoff.md](handoff.md) (the live work log),
 [HISTORY.md](HISTORY.md) (the verbatim archive) and [plans/](plans/). A behavior change
 puts one line in the human lane and the detail in the agent lane.
+
+## If you want to help port the game to Linux
+
+Goal 3 lives on the **[`linux` branch](https://github.com/VTSTech/D2VP-QoL/tree/linux)**:
+**`d2linux`**, a native Linux ELF that *is* the game host — no Windows, no Wine, no PE.
+It shares `main`'s recovered game source but swaps the Windows host layer for an SDL3
+one ([`platform/linux/`](https://github.com/VTSTech/D2VP-QoL/tree/linux/platform/linux)
+on that branch), keeps the game code i386 (the decompiled logic assumes the 32-bit x86
+ABI), and is verified by behavior — no byte-match is possible for a port. Its charter,
+mission split, milestone ladder and build instructions are in
+[`docs/linux-port.md`](https://github.com/VTSTech/D2VP-QoL/blob/linux/docs/linux-port.md)
+on that branch. The two tracks must not break each other: a game-source change made *for*
+Linux is `#ifdef`-guarded and has to leave the Windows PE build byte-identical — so
+branch off `linux` and start from its docs, not from `main`.
 
 ## License
 
