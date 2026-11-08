@@ -144,6 +144,15 @@ Killing The Countess (Forgotten Tower cellar 5) triggers the vanilla scripted de
 
 ---
 
+## O. "Chance to Cast" proc tooltips ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33), R137 — FIELD-VERIFIED 2026-11-08, owner-closed)
+
+Magic/rare drops with a "Chance to Cast" affix used to render `<x>% Chance to Cast Level 0` and stop — no skill name, no event tail. **Display-only**: the server-side proc stats, the saves and the packets were always correct. The tooltip formatter's descfunc-15 branch passed a literal 0 in the Level slot and the level int in the skill-name slot, where the issue-18 format-args guard ate the line. R137 passes (chance, level, name) as vanilla did (SkillDesc.cpp case 0xf; record HISTORY **H54**).
+
+- [ ] **51. The issue repro, inverted (the fix proof):** hover any magic/rare item with a "Chance to Cast" affix → the line reads the real level and the skill name, e.g. `5% Chance to Cast Level 3 Dim Vision When You Strike` — **no `Level 0`, no truncation**. Keep as a per-build regression check.
+- [ ] **52. Ride-along sanity:** a charged staff/wand's charge line renders exactly as before — same descfunc block, the fix touches one call site's argument list.
+
+---
+
 ## Evidence to keep if anything breaks
 
 | Artifact | Comes from | Tells us |

@@ -11,6 +11,12 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R137 — Proc tooltip fix** ([issue #33](https://github.com/VTSTech/D2VP-QoL/issues/33),
+  owner-closed 2026-11-08). Magic/rare items with a "Chance to Cast" affix showed
+  "<x>% Chance to Cast Level 0" with no skill name and no event tail. Display-only —
+  the items' hidden proc stats were always correct. The tooltip formatter now passes
+  the real level and skill name, as vanilla did. Field-verified 2026-11-08
+  ("R137 confirmed closes Issue #33").
 - **R136 — Countess-chest crash fix** ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29),
   owner-closed 2026-11-08). Killing The Countess crashed the game seconds after death,
   as the scripted smoke-to-chest sequence opened her reward chest — the chest's potion

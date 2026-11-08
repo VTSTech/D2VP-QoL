@@ -1087,8 +1087,10 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # paused window, self-ID bumped per the house rule).
 # Re-pinned to R136 2026-11-08 (rev 149; the issue #29 countess-chest fix lands -
 # a code round, self-ID bumped per the house rule).
-gate "res: self-id 0.0.8-R136"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R136' 1
-gate "res: self-id R135 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 0
+# Re-pinned to R137 2026-11-08 (rev 150; the issue #33 proc-tooltip fix lands,
+# owner field-verified - a code round, self-ID bumped per the house rule).
+gate "res: self-id 0.0.8-R137"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R137' 1
+gate "res: self-id R136 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R136' 0
 # ---- [vanilla-plus issue #32] rev 136: track T - the gamble-cache fix. Root
 # cause: D2Game/UNIT/SUNITNPC.cpp GAMBLE_GenerateGambleInventory read the
 # per-level upper-bound cache through vanilla .data adjacency
