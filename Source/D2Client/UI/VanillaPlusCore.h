@@ -226,6 +226,7 @@ void __stdcall ITEMILVL_AppendNameSuffix(struct D2UnitStrc * pItem, uint16_t * w
 // every gate; while a panel is open held-Shift is inert in world space,
 // and the click-modifier semantics of Shift are untouched.
 BOOL __stdcall SHIFTCOMPARE_Active();      // config: shift_compare on?
+BOOL __stdcall VPCTRLXFER_Active();        // config: ctrl_click_xfer on?
 void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp after the LoadItemDesc publish
 // [vanilla-plus options page] d2vp.ini feature-toggle bridge (row 10). The
 // page reads/flips the same [features] keys the gates consume; writes use

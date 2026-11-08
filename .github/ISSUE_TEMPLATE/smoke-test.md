@@ -173,10 +173,11 @@ The retail version line ("v 1.14d") is replaced by the fork build tag on both su
 
 ## R. Ctrl+Click stash transfer (R140 — owner ask, no issue)
 
-With the stash panel open, **Ctrl+Click** moves an item between the inventory and the stash in one click (D2R parity). The direction follows the clicked item: an inventory item goes to the stash, a stash item goes to the inventory; the shared-stash pages behave identically. A full target plays the "won't fit" sound and nothing moves. Shop behavior untouched — Ctrl+Click in an open shop still sells.
+With the stash panel open, **Ctrl+Click** moves an item between the inventory and the stash in one click (D2R parity). The direction follows the clicked item: an inventory item goes to the stash, a stash item goes to the inventory; the shared-stash pages behave identically. A full target plays the "won't fit" sound and nothing moves. Shop behavior untouched — Ctrl+Click in an open shop still sells. The whole feature is gated: `[features] ctrl_click_xfer` in d2vp.ini (default 0 — "every feature ships OFF") = the Options page's "Ctrl Click Transfer" row; items 57–58 assume it is on.
 
 - [ ] **57. Put:** open the stash, Ctrl+Click an item in your **inventory** → it lands in the stash's first free cell, one click, no dragging, item-move sound plays. Ride-alongs: an unidentified item transfers fine; with the stash deliberately full the refuse sound plays and the item stays; flip to the **Shared** tab and Ctrl+Click → the item lands in the shared page.
 - [ ] **58. Take:** Ctrl+Click an item **in the stash** → it lands in your inventory's first free cell. With your inventory deliberately full, the refuse sound plays and the item stays. After each move the item is immediately clickable in its new home and nothing duplicates or vanishes after closing and re-opening both panels (the first R140 field build sent the place packet without the pick, so every move died server-side: sound played, item stayed).
+- [ ] **59. Gate:** in the Vanilla+ Options page, flip **Ctrl Click Transfer** off → Ctrl+Click is the retail dead click again (both panels, item never moves, shop sell unaffected); flip it back on → the transfer works on the very next Ctrl+Click, no restart or panel reopen (the write busts the gate's 2 s cache). A d2vp.ini from before R140 predates the key — flipping the row once writes `ctrl_click_xfer=1` and it persists.
 
 ---
 

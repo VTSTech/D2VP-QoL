@@ -20,7 +20,9 @@ its source round. Per-tag notes: the
   manual drag sends, with the free-cell finder the cube path uses (the server's
   `0x18` handler rejects a place unless the item is on the cursor, which is why
   the first field build — `0x18` alone — silently did nothing: sound played,
-  item stayed).
+  item stayed). Gated on **`d2vp.ini [features] ctrl_click_xfer`** (default 0,
+  like every feature; the Vanilla+ Options page's "Ctrl Click Transfer" row) —
+  off is the retail dead click.
 - **R139 — On-screen build tag** (owner ask, no issue). The title screen and the
   in-game automap overlay used to show the retail version line ("v 1.14d"); both
   now show the fork build tag — **`D2VP-R139`** — so the exe identifies itself at

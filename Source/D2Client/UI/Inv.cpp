@@ -9754,8 +9754,11 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         // the empty-hand branch), which is the 0x19 handler's precondition.
         // A full target container plays the same refuse sound the cube path
         // plays. Everything else - belt items, the cube-open and trade-open
-        // panels - keeps the old fall-through shape.
-        if (!nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+        // panels - keeps the old fall-through shape. The whole branch is
+        // gated on [features] ctrl_click_xfer (d2vp.ini / the Options page's
+        // "Ctrl Click Transfer" row, via VPCTRLXFER_Active's 2 s hot-read):
+        // off = the retail dead click, byte-for-byte pre-R140.
+        if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
           eInventoryPage eClickedFromPage;
           int nExpansionFlag;
           int nTargetPage;

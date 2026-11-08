@@ -261,7 +261,16 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       slot. Works in the inventory, stash, cube, trade and at\r\n"
         ";       the vendor (your items and the shop stock). Side-by-side\r\n"
         ";       viewing only, like D2R's compare - no stat-delta lines.\r\n"
-        "shift_compare=0\r\n";
+        "shift_compare=0\r\n"
+        "\r\n"
+        "; Ctrl+Click stash transfer (D2R parity):\r\n"
+        ";   0 = off: Ctrl+Click does exactly retail           (vanilla behavior)\r\n"
+        ";   1 = with the stash panel open, Ctrl+Click moves an item in one\r\n"
+        ";       click: an inventory item goes to the stash, a stash item to\r\n"
+        ";       the inventory; the Shared tab behaves the same. A full\r\n"
+        ";       target plays the \"won't fit\" sound and nothing moves.\r\n"
+        ";       Ctrl+Click in an open shop still sells.\r\n"
+        "ctrl_click_xfer=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -628,6 +637,23 @@ BOOL __stdcall SHIFTCOMPARE_Active() {
     return gbShiftCompareMode;
 }
 
+// VP: [ctrl-click stash / R140] ctrl_click_xfer - the Ctrl+Click stash
+// transfer's gate, same 2 s hot-read shape as the gate above. Read per
+// Ctrl+Click rather than per frame, so the cache only saves ini opens; the
+// write bridge busts dwCtrlClickXferLastCheck (D2VP_ConfigReloaded), so a
+// flip in the Options page lands on the very next Ctrl+Click.
+static int gbCtrlClickXferMode = 0;
+static DWORD dwCtrlClickXferLastCheck = 0;   // 2 s ini re-read gate (row-28 pattern)
+
+BOOL __stdcall VPCTRLXFER_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwCtrlClickXferLastCheck || dwNow - dwCtrlClickXferLastCheck >= 2000) {
+        dwCtrlClickXferLastCheck = dwNow;
+        gbCtrlClickXferMode = D2VP_GetFeatureToggle("ctrl_click_xfer");
+    }
+    return gbCtrlClickXferMode;
+}
+
 // The trigger read, retail's own idiom (UpdateMouseModifierKeyState,
 // Game.cpp:1193-1221): the key bound to cmd 0x24 in either binding slot,
 // GetAsyncKeyState(vk) < 0 = down. No CmdTbl entry, no latch, no keyup
@@ -901,6 +927,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwItemIlvlLastCheck = 0;      // next ITEMILVL_Active() re-reads item_ilvl
     dwNoPanelShiftLastCheck = 0;  // next PANELSHIFT_NoShiftWorld() re-reads no_panel_shift
     dwShiftCompareLastCheck = 0;  // next SHIFTCOMPARE_Active() re-reads shift_compare
+    dwCtrlClickXferLastCheck = 0; // next VPCTRLXFER_Active() re-reads ctrl_click_xfer
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
