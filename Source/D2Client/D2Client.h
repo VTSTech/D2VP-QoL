@@ -913,8 +913,18 @@ struct D2EscMenuItemStrc {
     /* 0x334 */ char szSubImage3Path[260]; // Path to third sub-image
     /* 0x438 */ char szSubImage4Path[260]; // Path to fourth sub-image
     /* 0x53C */ struct DC6 * pDC6Main; // Loaded main DC6 image
-    /* 0x540 */ struct DC6 * pDC6SubImages[4]; // Array of loaded sub-image DC6 pointers
+    /* 0x540 */ struct DC6 * pDC6SubImages[6]; // Array of loaded sub-image DC6 pointers (VP [R139 re-plant]: the eleventh sync's public-header split regenerated this copy from upstream's retail [4] while EscMenu.h kept the fork's R115 [6] - two guard-shared definitions with different sizeof split the TUs by include order, and the boot self-check's TU (D2Client.h first) walked the 0x558-stride tables at 0x550 (the R138 boot abort, rev 147). [6] restored per the two-copies rule the D2UIFlagStrc::VanillaPlus fix established; retail tables keep shipping <= 4 stops, the designated inits zero-fill the tail slots, and the only count-6 row is the VP Resolution row whose slots 2-5 attach at runtime)
 };
+// VP [R139]: the instrument for the R138 boot abort - any future one-copy
+// drift of this struct fails every TU's compile instead of mis-walking rows
+// at runtime. Guarded to the real i686 target (host syntax sweeps see 8-byte
+// pointers); same pattern as d2_platform.h's SEH3/EH4 layout asserts.
+static_assert(sizeof(void*) != 4 || sizeof(D2EscMenuItemStrc) == 0x558,
+    "vanilla-plus: D2EscMenuItemStrc drifted off 0x558 - the fork's R115 "
+    "pDC6SubImages[6] growth was lost or diverged in one of the two "
+    "guard-shared copies (D2Client.h / EscMenu.h); the loader's 0x156-int "
+    "strides and the stop-2..5 runtime attach both ride this size "
+    "(docs/merge-upstream.md)");
 #endif // D2_DEFINED_D2EscMenuItemStrc
 #ifndef D2_DEFINED_D2EscMenuUIFlagStrc
 #define D2_DEFINED_D2EscMenuUIFlagStrc
