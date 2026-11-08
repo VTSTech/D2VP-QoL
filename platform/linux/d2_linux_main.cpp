@@ -38,7 +38,7 @@
 // Storm/MPQ routing rung, end to end, in CI and on the owner's box.
 #include "D2Hell/D2Hell.h"
 #include "Fog/Fog.h"
-#include "Storm/Source/SFile.h"
+#include "SFile.h"
 #include "Storm/D2ArchiveStrc.h"
 #include <initializer_list>
 #endif

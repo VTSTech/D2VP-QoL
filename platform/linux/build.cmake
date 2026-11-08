@@ -204,8 +204,8 @@ else()
             "d2linux: no SDL3 found. Vendor it as the submodule (preferred):\n"
             "  git submodule add --depth 1 -b release-3.4.18 "
             "https://github.com/libsdl-org/SDL external/SDL\n"
-            "or point -DD2_SDL3_DIR= at a checkout, or install the system "
-            "package (Debian/Ubuntu: libsdl3-dev; Fedora: SDL3-devel).")
+            "or point -DD2_SDL3_DIR= at any SDL checkout to build in-tree; "
+            "-DD2LINUX_ARCH=native keeps the system package usable.")
     endif()
     set(D2_SDL3_TARGET SDL3::SDL3)
     message(STATUS "d2linux: SDL3 system package -> ${D2_SDL3_TARGET}")
@@ -217,7 +217,6 @@ add_executable(d2linux
     platform/linux/d2_linux_audio.cpp)
 target_compile_features(d2linux PRIVATE cxx_std_17)
 target_compile_definitions(d2linux PRIVATE D2LINUX_BUILD_ID="${D2LINUX_BUILD_ID}")
-target_include_directories(d2linux PRIVATE "${CMAKE_SOURCE_DIR}/platform/linux")
 target_link_libraries(d2linux PRIVATE ${D2_SDL3_TARGET})
 target_compile_options(d2linux PRIVATE -Wall -Wextra)
 
@@ -259,56 +258,55 @@ configure_file("${CMAKE_SOURCE_DIR}/platform/linux/tests/d2vp_smoke.mpq"
 # host skeleton + shim layer only (the M0 shape), as the charter says.
 # ---------------------------------------------------------------------------
 set(D2LINUX_GAME_SOURCES
-    PKWARE/PKWARE.cpp
-    Fog/SMem.cpp
-    Fog/Memory.cpp
-    Fog/BitBuffer.cpp
-    Fog/File.cpp
-    Fog/Fog.cpp
-    Fog/Save.cpp
-    Fog/Debug.cpp
-    Fog/Src/DataArrays.cpp
-    Fog/Src/ErrorManager.cpp
-    Fog/Src/LogManager.cpp
-    Fog/Src/String/FogString.cpp
-    Fog/Src/AsyncData.cpp
-    Fog/Src/Safesock.cpp
-    Fog/Source/SFile.cpp
-    Fog/Source/SSComp.cpp
-    Storm/Source/SSignature.cpp
-    Fog/3rdparty/crashy.cpp
-    Fog/3rdparty/crashy/Report.cpp
-    Storm/Source/SReg.cpp
-    Fog/Source/SSignature.cpp
-    Storm/Source/SErr.cpp
-    Storm/Source/SComp.cpp
-    Storm/Source/SBig.cpp
-    Storm/Source/SMem.cpp
-    Storm/Source/SSTR.cpp
-    Storm/Source/SSystem.cpp
-    Storm/Source/SEVT.cpp
-    Storm/Source/SLog.cpp
-    Storm/Source/SFile.cpp
-    Storm/WindowHandle.cpp
-    Storm/3rdparty/zlib/adler32.cpp
-    Storm/3rdparty/zlib/crc32.cpp
-    Storm/3rdparty/zlib/deflate.cpp
-    Storm/3rdparty/zlib/inffast.cpp
-    Storm/3rdparty/zlib/inflate.cpp
-    Storm/3rdparty/zlib/inftrees.cpp
-    Storm/3rdparty/zlib/trees.cpp
-    Storm/3rdparty/zlib/uncompr.cpp
-    Storm/3rdparty/zlib/zutil.cpp
-    support/d2_crt_impl.cpp
-    support/d2_crt_support.cpp
-    D2Hell/D2Hell.cpp
-    D2Lang/D2Lang.cpp
-    D2Lang/StrTable/strtable.cpp
-    D2Lang/Unicode/UNISYS.cpp
-    globals/D2Lang.cpp
-    globals/D2Hell.cpp
-    globals/Fog.cpp
-    globals/Storm.cpp
+    3rdparty/Storm/3rdparty/PKWARE/explode.cpp
+    3rdparty/Storm/3rdparty/PKWARE/implode.cpp
+    Source/Fog/SMem.cpp
+    Source/Fog/Memory.cpp
+    Source/Fog/BitBuffer.cpp
+    Source/Fog/File.cpp
+    Source/Fog/Fog.cpp
+    Source/Fog/Save.cpp
+    Source/Fog/Debug.cpp
+    Source/Fog/Src/DataArrays.cpp
+    Source/Fog/Src/ErrorManager.cpp
+    Source/Fog/Src/LogManager.cpp
+    Source/Fog/Src/String/FogString.cpp
+    Source/Fog/Src/AsyncData.cpp
+    Source/Fog/Src/Safesock.cpp
+    Source/Fog/Source/SFile.cpp
+    Source/Fog/Source/SSComp.cpp
+    3rdparty/Storm/Source/SSignature.cpp
+    3rdparty/crashy/crashy.cpp
+    3rdparty/Storm/Source/SReg.cpp
+    3rdparty/Storm/Source/SErr.cpp
+    3rdparty/Storm/Source/SComp.cpp
+    3rdparty/Storm/Source/SBig.cpp
+    3rdparty/Storm/Source/SMem.cpp
+    3rdparty/Storm/Source/SSTR.cpp
+    3rdparty/Storm/Source/SSystem.cpp
+    3rdparty/Storm/Source/SEVT.cpp
+    3rdparty/Storm/Source/SLog.cpp
+    3rdparty/Storm/Source/SFile.cpp
+    3rdparty/Storm/WindowHandle.cpp
+    3rdparty/Storm/3rdparty/zlib/adler32.cpp
+    3rdparty/Storm/3rdparty/zlib/crc32.cpp
+    3rdparty/Storm/3rdparty/zlib/deflate.cpp
+    3rdparty/Storm/3rdparty/zlib/inffast.cpp
+    3rdparty/Storm/3rdparty/zlib/inflate.cpp
+    3rdparty/Storm/3rdparty/zlib/inftrees.cpp
+    3rdparty/Storm/3rdparty/zlib/trees.cpp
+    3rdparty/Storm/3rdparty/zlib/uncompr.cpp
+    3rdparty/Storm/3rdparty/zlib/zutil.cpp
+    Redivivus/d2_crt_impl.cpp
+    Redivivus/d2_crt_support.cpp
+    Source/D2Hell/D2Hell.cpp
+    Source/D2Lang/D2Lang.cpp
+    Source/D2Lang/StrTable/strtable.cpp
+    Source/D2Lang/Unicode/UNISYS.cpp
+    Source/globals/D2Lang.cpp
+    Source/globals/D2Hell.cpp
+    Source/globals/Fog.cpp
+    Source/globals/Storm.cpp
     # globals/globals.cpp is STEP 2: the 39K-line central-data TU embeds the
     # game's command dispatch tables (D2Client::CMD_* and friends), whose
     # closure is the whole client. Step 1 links without it; the few symbols
@@ -343,12 +341,15 @@ set(D2LINUX_SHIM_SOURCES
 # upstream d2_platform.h regen re-applies the patches automatically.
 set(D2LINUX_PLATFORM_SHADOW_DIR "${CMAKE_BINARY_DIR}/platform-shadow")
 find_program(D2LINUX_SH sh)
+# The mk-platform-shadow.sh script expects d2_platform.h at the repo root.
+# Copy it there before running the script.
 add_custom_command(
     OUTPUT "${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${D2LINUX_PLATFORM_SHADOW_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_platform.h" "${CMAKE_SOURCE_DIR}/d2_platform.h"
     COMMAND ${D2LINUX_SH} "${CMAKE_SOURCE_DIR}/platform/linux/mk-platform-shadow.sh"
             "${CMAKE_SOURCE_DIR}" "${D2LINUX_PLATFORM_SHADOW_DIR}"
-    DEPENDS "${CMAKE_SOURCE_DIR}/d2_platform.h"
+    DEPENDS "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_platform.h"
             "${CMAKE_SOURCE_DIR}/platform/linux/mk-platform-shadow.sh"
     COMMENT "d2linux: generating the platform shadow (d2_platform.h patches)"
     VERBATIM)
@@ -389,7 +390,7 @@ endif()
 # linux twin of the PE-side version self-ID); the binary shape is computed.
 # BANNER-STRING RULE: no ';' anywhere in either string. CMake reads ';' as a
 # list separator, so a semicolon splits the value and target_compile_definitions
-# emits broken -D fragments ("missing terminating \" character", "expected
+# emits broken -D fragments ("missing terminating \"" character", "expected
 # unqualified-id before ':'") on every TU (owner round-4 build failure). The
 # guard below turns that into a configure-time FATAL_ERROR instead.
 list(LENGTH D2LINUX_GAME_SOURCES D2LINUX_GAME_TU_COUNT)
@@ -409,26 +410,50 @@ target_compile_definitions(d2linux PRIVATE
     D2LINUX_PROJECT_STAGE="${D2LINUX_PROJECT_STAGE}"
     D2LINUX_BINARY_SHAPE="${D2LINUX_BINARY_SHAPE}")
 
+# Create a filtered D2Headers directory at the expected location with d2_enums.h and a forwarding d2_platform.h
+set(D2LINUX_D2HEADERS_FILTERED "${CMAKE_BINARY_DIR}/Source/D2Headers")
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${D2LINUX_D2HEADERS_FILTERED}"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_enums.h" "${D2LINUX_D2HEADERS_FILTERED}/d2_enums.h"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+file(WRITE "${D2LINUX_D2HEADERS_FILTERED}/d2_platform.h" "#pragma once
+// Forward to platform shadow which has the real definitions
+#include \"platform-shadow/d2_platform.h\"
+")
+# Add build directory root to include path so platform shadow can find Source/D2Headers/d2_enums.h
 # The shadow dir leads the include path: game headers say #include
 # "d2_platform.h" and must resolve to the SAME file the forced include used
 # (#pragma once dedupes per path; the tree file would double-parse).
-set(D2LINUX_INCLUDE_DIRS "${D2LINUX_PLATFORM_SHADOW_DIR}" "${CMAKE_SOURCE_DIR}")
-file(GLOB_RECURSE D2LINUX_GAME_HEADERS CONFIGURE_DEPENDS
-    LIST_DIRECTORIES false
-    "${CMAKE_SOURCE_DIR}/*.h")
-foreach(h IN LISTS D2LINUX_GAME_HEADERS)
-    string(FIND "${h}" "${CMAKE_SOURCE_DIR}/asm_matching/" _in_asm)
-    string(FIND "${h}" "${CMAKE_SOURCE_DIR}/thirdparty/" _in_bt)
-    string(FIND "${h}" "${CMAKE_SOURCE_DIR}/vanilla-plus/" _in_vp)
-    string(FIND "${h}" "${CMAKE_SOURCE_DIR}/external/" _in_ext)
-    string(FIND "${h}" "${CMAKE_SOURCE_DIR}/platform/" _in_plat)
-    if(NOT _in_asm EQUAL 0 AND NOT _in_bt EQUAL 0 AND NOT _in_vp EQUAL 0
-       AND NOT _in_ext EQUAL 0 AND NOT _in_plat EQUAL 0)
-        get_filename_component(_dir "${h}" DIRECTORY)
-        list(APPEND D2LINUX_INCLUDE_DIRS "${_dir}")
-    endif()
-endforeach()
-list(REMOVE_DUPLICATES D2LINUX_INCLUDE_DIRS)
+# Explicit include paths for all include styles used in the codebase:
+# 1. platform-shadow (patched d2_platform.h)
+# 2. platform (for platform/linux includes)
+# 3. build-linux (for filtered D2Headers at build-linux/Source/D2Headers)
+# 3b. Source/ (for D2Client/Message.h, D2Hell/D2Hell.h, etc.)
+# 4. Repo root (for platform/linux/d2_linux_compat.h, Storm/...)
+# 5. 3rdparty/ (for Storm/ includes like Storm/D2ArchiveStrc.h)
+# 6. 3rdparty/Storm/Source (for SFile.h, etc.)
+# 7. Source/Fog/Source (for Fog/Source includes)
+# 8. 3rdparty/Storm/Source (for Storm/Source includes)
+# 9. 3rdparty/Storm/H (for Storm/H includes)
+# 10. 3rdparty/Storm/3rdparty/PKWARE (for PKWARE includes)
+# 11. 3rdparty/Storm/3rdparty/zlib (for zlib includes)
+# 10. 3rdparty/crashy (for crashy includes)
+# 11. 3rdparty/libbacktrace (for libbacktrace includes)
+set(D2LINUX_INCLUDE_DIRS
+    "${D2LINUX_PLATFORM_SHADOW_DIR}"
+    "${CMAKE_SOURCE_DIR}/platform"
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/Source"
+    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/3rdparty"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/Source"
+    "${CMAKE_SOURCE_DIR}/Source/Fog/Src"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/H"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/3rdparty/PKWARE"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/3rdparty/zlib"
+    "${CMAKE_SOURCE_DIR}/3rdparty/crashy"
+    "${CMAKE_SOURCE_DIR}/3rdparty/libbacktrace"
+)
 target_include_directories(d2linux PRIVATE ${D2LINUX_INCLUDE_DIRS})
 
 set(D2LINUX_GAME_FLAGS -w -fms-extensions -fshort-wchar)

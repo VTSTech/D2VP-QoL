@@ -81,10 +81,10 @@ int gethostname(char*, size_t) noexcept;
 // Struct bodies the shim constructs are the tree's own (non-Windows blocks):
 // _MEMORY_BASIC_INFORMATION (Fog/3rdparty/crashy.h), _SYSTEM_INFO
 // (Storm/Source/SMem.h), the exception family (Fog/Debug.h).
-#include "Fog/3rdparty/crashy.h"
-#include "Storm/Source/SMem.h"
+#include "crashy.h"
+#include "SMem.h"
 // _OSVERSIONINFOA body: Fog/Src/ErrorManager.h (non-Windows block)
-#include "Fog/Src/ErrorManager.h"
+#include "ErrorManager.h"
 // The _CONTEXT body (Fog/Debug.h) — RtlCaptureContext constructs it.
 #include "Fog/Debug.h"
 
@@ -1967,3 +1967,12 @@ LPSTR GetCommandLineA() {
 }
 
 }  // extern "C"
+
+// [d2linux M2] Linux-specific implementation for Storm::Source::SSystem::SetCurrentThreadId
+// Windows equivalent: GetCurrentThreadId(). On Linux, use gettid() (Linux-specific)
+// or pthread_self(). Returns the thread ID as DWORD.
+namespace Storm::Source::SSystem {
+    uint32_t SetCurrentThreadId() {
+        return static_cast<uint32_t>(syscall(SYS_gettid));
+    }
+}  // namespace Storm::Source::SSystem

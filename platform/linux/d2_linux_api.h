@@ -735,4 +735,10 @@ BOOL __stdcall GetWindowsDirectoryA(LPSTR lpBuffer, UINT uSize);
 
 #endif // _WIN32
 
+// [d2linux M2] Linux-specific extension for Storm::Source::SSystem
+// Windows equivalent: GetCurrentThreadId(). On Linux, use gettid().
+namespace Storm::Source::SSystem {
+    uint32_t SetCurrentThreadId();
+}  // namespace Storm::Source::SSystem
+
 #endif // D2_LINUX_API_H

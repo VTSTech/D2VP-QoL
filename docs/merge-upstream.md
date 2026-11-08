@@ -1,5 +1,15 @@
 # Merging upstream without losing Vanilla+ (playbook)
 
+> **STATUS: PAUSED (owner, 2026-11-08).** Upstream merges are on hold after the
+> eleventh sync (merge `17d8a51b`, R135): the merged build spent a day without
+> reaching a clean boot and, when it finally ran, textures were corrupted. The whole
+> round was rolled back to `8067c4a` (R134) in `86cd10cd`. This document stays as the
+> archive of the eleven-sync process and its war stories — it is **not** live
+> procedure. The fork continues by improving the R134 source directly; anything still
+> wanted from upstream is hand-ported one commit at a time (ranked list:
+> [plans/ELEVENTH-SYNC-SALVAGE.md](../plans/ELEVENTH-SYNC-SALVAGE.md)). Syncs may
+> resume when a process exists that bounds the cost the eleventh one blew through.
+
 Upstream `jaenster/redivivus` moves; this fork recompiles it with the Vanilla+
 opt-in layer on top. This document is the procedure for pulling upstream in
 with zero feature loss and a bounded merge surface. It exists because every
@@ -42,6 +52,13 @@ rule in it was learned the hard way (see "War stories" at the bottom).
     git fetch upstream
     git merge upstream/main          # expect conflicts; they are all marked
 
+    # 1.5) line-ending sanity BEFORE merging (the eighth-sync lesson): if the
+    #      fork-touched files are CRLF and upstream's are LF, one normalization
+    #      commit on the fork side FIRST (handoff §8: merged main is
+    #      LF-normalized). The eighth sync's raw trial surface fell
+    #      48 files/78 hunks -> 26 real sites/57 hunks — 22 of the raw
+    #      conflicts were pure line-ending noise that auto-merged away.
+
     # 2) resolve conflicts:
     #    - VP-marked regions: ours (re-apply on top of upstream's new code)
     #    - CMakeLists.txt: root should end up = upstream's + the one
@@ -57,6 +74,17 @@ rule in it was learned the hard way (see "War stories" at the bottom).
 
     # 4) one-second feature audit, no toolchain needed:
     tools/check-vanilla-plus.sh           # per-feature grep gates
+    python3 scripts/include_path_audit.py
+    #    INCLUDE-PATH audit (added R106, after the 1894->1908 sync compile
+    #    break): every quoted #include in every tracked .cpp/.h must resolve
+    #    to a tracked file the way the -I chain does (includer's dir, repo
+    #    root, any dir holding a header = CMake's D2_INCLUDE_DIRS). No
+    #    compiler, no shims - the whole tree in seconds, including the
+    #    single-sided files the merge-site sweep never compiles. The
+    #    1894->1908 sync shipped Draw.cpp still naming D2GfxHelperStrc.h's
+    #    OLD D2Client/ path after the merge took upstream's move of that
+    #    header to D2gfx/ - the owner's Win11 build died at [49/485]. Cheap
+    #    enough to always run.
     python3 scripts/rev47_vp_placement_audit.py
     #    VP-marker PLACEMENT audit (added R47, after issue #10): presence
     #    checks pass a marked block that survived at the wrong brace depth;
@@ -78,6 +106,23 @@ rule in it was learned the hard way (see "War stories" at the bottom).
     #    every D2BOOT_* user TU and proves it still reaches the declaration
     #    (direct include or transitively). Mandatory when the merge touched
     #    include blocks; cheap enough to always run.
+    python3 scripts/refile_aliasing_audit.py
+    #    REFILE-ALIASING audit (added R124, after the 1908->1948 eighth-sync
+    #    D3D fullscreen boot crash): upstream's file-symbols refile turned
+    #    retail globals into function-local statics; a refiled SCALAR indexed
+    #    as an array (or a refile static + the old global-relative spelling of
+    #    the same storage living side by side in one TU) aliases the real
+    #    storage only at RETAIL data addresses - in a rebuilt exe the static
+    #    lives wherever the linker puts it and the indexed read runs into
+    #    unrelated .bss. The eighth sync shipped UploadTextureToCache's four
+    #    node-base sites split across both spellings (the resolver dropped the
+    #    refile on one line of one hunk): the allocator wrote one region, the
+    #    per-frame palette check + SetTexture indexed the other, and D3D
+    #    fullscreen AVed (READ 0x10) on the first texture re-upload. Sweeps
+    #    all 220 refile-marked TUs for the three defect shapes; every grep
+    #    instrument stays green on the broken state (both spellings are
+    #    textually plausible), so this audit is mandatory after any merge that
+    #    carries a refile commit.
     bash scripts/merge_site_syntax_sweep.sh "$(git log --merges -1 --format=%h)"
     #    MERGE-SITE SYNTAX SWEEP (added Rev 92, reworked Rev 93 - baseline
     #    diffing): every audit above is grep-based, and a merge that keeps
@@ -109,6 +154,32 @@ rule in it was learned the hard way (see "War stories" at the bottom).
 The gate is a human audit instrument, not a build prerequisite: CI builds the
 tree either way, and a red gate in CI only blocked shipping without stopping
 the merge. Run it by hand whenever the merge surface moved (steps 0-4 above).
+
+## Bundle identity (agent-built merge rounds)
+
+When the agent sandbox ships a merge round as a git bundle (the handoff §8
+overlay workflow: bundles for upstream merges, zips for regular rounds), every
+commit the bundle carries must be authored AND committed as:
+
+    Super-Z (GLM-5.3-Flash) <super-z@z.ai>
+
+Never the sandbox default (`Z User <z@container>`) — it leaks the container
+identity into the fork's permanent history and makes the owner's `git shortlog`
+attribution lie. Set the repo-local identity BEFORE the first commit of the
+round (amending after the fact rewrites hashes and forces a bundle rebuild):
+
+    git config user.name  "Super-Z (GLM-5.3-Flash)"
+    git config user.email "super-z@z.ai"
+
+Verify before bundling (author and committer, both):
+
+    git log origin/main..main --format='%h | A: %an <%ae> | C: %cn <%ce>'
+
+If commits already went out under the wrong identity, re-author locally
+(`git commit --amend --reset-author` on the tip; for a merge+docs pair,
+`git reset --soft` back and recommit), re-verify, and rebuild the bundle —
+hashes change, so any doc that cites the merge hash must be updated in the
+same rewrite.
 
 ## When a gate fires
 
@@ -292,7 +363,8 @@ PR) so acceptance is frictionless.
   root-cause lineage, and the gate rows were re-pinned to the NEW state (never
   deleted — the gates now assert the superseding form). Checked at the same merge
   and NOT superseded: issue #11's `[glide fix 11]` hook (still fork-side; the
-  glide3x.dll wrapper ships from the `Glide3xVK` branch, which upstream does not
+  glide3x.dll wrapper ships from its own [`Glide3xVK`](https://github.com/VTSTech/Glide3xVK)
+  repository — formerly the branch of the same name here — which upstream does not
   carry — "superseded" requires upstream to actually carry the surface). Rules:
   when upstream ships the retail-exact form of a fork fix, take it whole and
   record the supersession in the old site's comment (two spellings of one
@@ -318,3 +390,87 @@ PR) so acceptance is frictionless.
   side whole (the splice class hides between hunks); grep the retired symbols'
   names file-wide before staging; and when a gate count changes, diff the new site
   against the owner's own recent commits before treating it as merge damage.
+
+- **The 1894->1908 dangling include (427551b7, seventh sync):** the merge took
+  upstream's whole-file regen of `D2GfxHelperStrc.h` (`D2Client/` -> `D2gfx/`,
+  old copies deleted — the commit message even lists the regen) while
+  `D2Client/GAME/Draw.cpp` resolved byte-identical to the fork parent (the
+  [resolution site-5] VP block means the fork side wins the file whole) and kept
+  `#include "D2Client/D2GfxHelperStrc.h"`. Every instrument the round ran was
+  green and DESERVED to be: presence/placement/branch audits check the LINE, and
+  the line was fine — the FILE it named was gone. The merge-site sweep is
+  structurally blind here too: its selection is "differs from BOTH parents", and
+  a parent-1-identical body never compiles, even though the merge changed the
+  header set around it (negative-tested: the sweep runs 0-error on the broken
+  tree). The owner's Win11 build died at [49/485] on the first TU to reach the
+  include. Fix: the include is not VP-marked, so upstream wins — dropped
+  (`Engine/Gfx.h`, already included, carries the full struct; upstream's own
+  Draw.cpp includes nothing for it). Instruments: `include_path_audit.py`
+  (step 4) resolves every quoted include in all 1183 tracked sources without a
+  compiler, covering the single-sided files the sweep's selection skips; the
+  sweep's header now carries the blind-spot note. Rules: when a merge moves or
+  deletes a header, grep the OLD path across the tree before resolving the
+  round ("the include survives the file"); and a file resolved to one parent
+  wholesale still compiles against the MERGE tree's headers — only a whole-tree
+  include walk sees that.
+- **The 1908->1948 refile-aliasing split (`18a368ce`/`fd89b115`, eighth
+  sync):** upstream's `7d30a7d8` refiled module-local symbols into their using
+  modules, turning `RENDERER_DIRECT3D_UploadTextureToCache`'s texture-cache
+  node-buffer bases at retail `0x00970ec4` into a function-local static
+  addressed as `(&INT_00970ec4)[iMipLevel * 7]` — a spelling that aliases the
+  real storage (`&gD3DGenericTextureCache - 4 + iMipLevel * 28`) ONLY at
+  retail data addresses; in a rebuilt exe the static lives wherever the linker
+  puts it and the indexed read runs past the 4-byte static into unrelated
+  .bss. The merge took upstream's spelling for three of the function's four
+  base sites and kept the fourth (the palette-identity check) on the fork's
+  relative form — one hunk, two spellings, and the resolver dropped the refile
+  on the if-condition line. Every instrument was green and DESERVED to be:
+  presence gates count markers, the count gates did not count the statics, the
+  syntax sweep compiles both spellings fine, and each spelling alone is a
+  valid resolution of its own hunk — the defect lived BETWEEN hunks, in which
+  spelling each of the four sites took. The rebuilt exe indexed the texture
+  cache through two different regions (allocator writes vs the per-frame
+  palette check + SetTexture), and D3D fullscreen died at the first
+  title-screen texture re-upload (VEH 0xC0000005, AV READ at 0x10, own-code;
+  `-w` and Glide untouched). Fix: all four sites back on the fork's
+  build-independent relative form (field-proven R74..R122), upstream's dead
+  statics dropped, dated VP note. Instruments: `scripts/refile_aliasing_audit.py`
+  (step 4) sweeps all 220 refile-marked TUs for the three defect shapes —
+  repo-wide CLEAN after the fix, i.e. the only site the eighth sync created.
+  Rules: when a merge carries a refile commit, diff every touched FUNCTION
+  against BOTH parents' spellings of the same storage (the four-sites-in-one-
+  function class hides between hunks); a spelling that is address-equivalent
+  at retail is NOT equivalent in a rebuilt exe — retail-relative forms stay
+  build-independent, prefer them; and when a field crash survives every
+  grep-based audit, suspect the two-spellings-in-one-function class and run
+  the aliasing audit before blaming the old war-story classes.
+- **The 1969->1970 module-directory restructure (`a022ea27`, tenth sync):**
+  upstream moved every module into its own directory (`Source/<module>/`,
+  Storm -> `3rdparty/Storm/`, the shared headers -> `Source/D2Headers/`,
+  `support/` -> `Redivivus/`; renames only) and switched to one static library
+  per module with per-module include gates (`#if !defined(D2_MODULE_LIBRARIES)
+  || defined(D2_MODULE_<m>)`). Rename detection carried the fork's dir-local
+  files along for free (the cheap restructure), but three new classes fell
+  out, each caught by an instrument that already existed: (1) fork-authored
+  accessors parked in upstream headers landed INSIDE module-private blocks —
+  `PORTABLESAVE_FlushConfig` (SFile.h) and `GetGambleLevelCache` (ItemTbls.h)
+  went invisible to their one cross-module caller the moment
+  `D2_MODULE_LIBRARIES` got defined; the fix re-homes the DECLARATION outside
+  the gate with a dated note (the definition stays beside the state it
+  touches) — never weaken the gate; [GetGambleLevelCache retired R135 —
+  the cache moved in-struct, handoff rev 146]; (2) a private upstream symbol a fork
+  feature truly needs gets a fork-owned bridge TU inside the owning module
+  (`Source/D2Sound/VanillaPlusSound.cpp`, claimed by the D2Sound module where
+  the private is visible), never a gate edit; (3) an include-block conflict
+  resolver that re-paths fork includes must treat `// VP-BEGIN/END` wrapper
+  comments as MARKS — stripping them as "stray comments" cost ui.cpp its
+  quest-gossip boot-log mark, and only the gate's 8-mark count noticed (the
+  compile sweep is blind to comment losses by construction). Also: after any
+  layout round, re-path the INSTRUMENTS first, then the sources — the gate
+  suite's custom blocks, the d2boot audit's declaration path and
+  syntax-check's shadow `d2_platform.h` all still named the old tree, and the
+  merge-site sweep drowned in host noise until the shadow mirrored the rooted
+  post-restructure header path. Cross-check of record after a layout round:
+  a whole-tree `-fsyntax-only` compile of every TU with the real cross
+  toolchain (grep audits and host-shim sweeps all stayed green on a tree
+  where five TUs did not compile).

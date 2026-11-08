@@ -1,6 +1,6 @@
-# Building and running Redivivus
+# Building and running D2VP
 
-This is the build that delivers a runnable `d2.exe` today, with a modern compiler. To compile
+This is the build that delivers a runnable D2VP client today, with a modern compiler. To compile
 with the compilers that built the original, Visual C++ 2005 SP1 and Apple LLVM 4.2, with their
 flags, see [original-compilers.md](original-compilers.md).
 
@@ -32,10 +32,27 @@ cmake --build build
 ```
 
 That produces `build/d2.exe`, a 32-bit Windows executable. `tools/check-build.sh` does
-the same from a clean clone and checks the result — run it locally to verify a tree.
-CI no longer builds the PE (the mingw-i686 job was retired; the d2.exe gate is the
-owner's local Win11 build). CI on the `linux` branch builds the native `d2linux`
+the same from a clean clone and checks the result; CI runs it on every push. On Windows,
+`tools/build-local-win11.cmd` runs the same configure and build natively plus the gates:
+it checks the PE, writes `build/d2exe.map` (crash addresses resolve against it) and
+strips a play-sized `build/d2s-<sha>.exe`. CI on the `linux` branch builds the native `d2linux`
 instead — see [linux-port.md](linux-port.md).
+
+Each module under `Source/` and `3rdparty/` builds into its own static library, and the
+executable links them whole in the order of the 1.14d link. `-DREDIVIVUS_MODULE_LIBRARIES=OFF`
+compiles the tree into the executable directly instead.
+
+The module table is `project.json` (`modules`): each module's directory, kind, dependencies
+with their evidence, documented exceptions, link order and strictness. `Source/modules.cmake` is
+generated from it, and the configure step fails when the two disagree, so a change to the table
+belongs in `project.json`.
+
+The build also writes a module gate report. `build/module-gates.tsv` has one row per module
+pair: the includes of a module that the includer could not see under the original 1.13d DLL
+import graph, the documented exceptions, and what reaches it through `Source/globals/globals.h`
+(`via-root`). `build/module-gates-summary.tsv` sums it per module. The report does not fail
+the build, except for a module marked strict in the module table. `tools/check-build.sh`
+prints the summary, and CI uploads the report as the artifact `module-gates`.
 
 ## Run
 
@@ -46,5 +63,6 @@ start it from there:
 d2.exe -w
 ```
 
-`-w` runs it in a window. Releases ship this exe renamed to `d2vp.exe` — same
-binary, a name that says Vanilla+; a locally built `d2.exe` behaves identically.
+`-w` runs it in a window. The stripped `d2s-<sha>.exe` copy is what releases ship:
+upon release it is renamed to `d2vp.exe` — same binary, a name that says Vanilla+.
+A locally built `d2.exe` behaves identically.

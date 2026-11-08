@@ -45,6 +45,7 @@ typedef void* _locale_t;
 // Ghidra-style lowercase type aliases (used throughout reconstructed code)
 // (byte, uint, ushort, ulong already defined above before system headers)
 // Ghidra non-standard integer sizes still spelled by a declaration
+typedef int code(...);  // Ghidra executable code type — code* = callable function pointer
 
 // Ghidra decompiler pseudo-operations (no instruction-level C spelling)
 static inline bool D2_IsNaN(double x) { return x != x; }
@@ -954,4 +955,4 @@ typedef char D2Row_char_32[32];
 typedef uint8_t D2Row_uint8_t_32768[32768];
 
 // Shared enum constants (SOUND_NONE, UNIT_PLAYER, SKILL_Attack, etc.)
-#include "d2_enums.h"
+#include "Source/D2Headers/d2_enums.h"

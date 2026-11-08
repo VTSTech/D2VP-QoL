@@ -39,12 +39,12 @@
 // lists stay untouched BSS and the MPQ self-tests are SKIPPED there.
 #if defined(D2LINUX_HAS_GAME_SLICE)
 
-#include "Fog/Src/LogManager.h"
-#include "Storm/Source/SComp.h"
-#include "Storm/Source/SEVT.h"
-#include "Storm/Source/SErr.h"
-#include "Storm/Source/SFile.h"
-#include "Storm/Source/SSystem.h"
+#include "LogManager.h"
+#include "SComp.h"
+#include "SEVT.h"
+#include "SErr.h"
+#include "SFile.h"
+#include "SSystem.h"
 #include "Storm/WindowHandle.h"
 #include "D2Hell/D2Hell.h"
 
