@@ -15,10 +15,12 @@ its source round. Per-tag notes: the
   **Ctrl+Click** now moves an item — inventory → stash or stash → inventory, one
   click, no dragging; the shared-stash pages work unchanged, and a full target
   plays the "won't fit" sound. Retail wired Ctrl+Click to sell-in-shop only; with
-  no shop open the branch fell through to a client-side removal with no packet
-  (the item vanished locally until the next sync), so that dead branch is
-  re-expressed as the real transfer — the same `0x18` place packet and free-cell
-  finder the drag-and-drop and cube paths already use.
+  no shop open the branch was a dead click (no packet, no cursor), so it is
+  re-expressed as the real transfer — the same `0x19` pick + `0x18` place pair a
+  manual drag sends, with the free-cell finder the cube path uses (the server's
+  `0x18` handler rejects a place unless the item is on the cursor, which is why
+  the first field build — `0x18` alone — silently did nothing: sound played,
+  item stayed).
 - **R139 — On-screen build tag** (owner ask, no issue). The title screen and the
   in-game automap overlay used to show the retail version line ("v 1.14d"); both
   now show the fork build tag — **`D2VP-R139`** — so the exe identifies itself at

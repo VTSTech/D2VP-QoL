@@ -9733,19 +9733,28 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         // VP-BEGIN [ctrl-click stash R140]: Ctrl+Click moves an item between the
         // inventory and the open stash (D2R parity, owner ask). Retail wires
         // Ctrl+Click to the sell-to-shop path only; with no shop open this
-        // branch fell through to a bare client-side ITEM_RemoveClientSide with
-        // no packet, so the clicked item vanished locally until the next
-        // inventory sync. Re-expressed as the real transfer: the clicked item's
-        // containing page picks the direction (INVENTORY -> STASH, STASH ->
-        // INVENTORY), the free cell comes from the same
-        // INVENTORY_FindItemGridPosition the put-in-cube branch below uses, and
-        // the move rides the same 0x18 insert-into-buffer packet the
-        // drag-and-drop place path sends (buffer = the D2Common page byte:
-        // 4 = stash, 0 = inventory; the stash UI's two views, personal 0xc and
-        // shared 0xd, are both page-4 content, so the shared stash pages work
-        // unchanged). A full target container plays the same refuse sound the
-        // cube path plays. Everything else - belt items, the cube-open and
-        // trade-open panels - keeps the old fall-through shape.
+        // branch fell through to the pick-up tail without the 0x19 send - the
+        // item got the brief ITEM_RemoveClientSide lock, never reached the
+        // cursor, and no packet left the client: a dead click. Re-expressed as
+        // the real transfer: the clicked item's containing page picks the
+        // direction (INVENTORY -> STASH, STASH -> INVENTORY), the free cell
+        // comes from the same INVENTORY_FindItemGridPosition the put-in-cube
+        // branch below uses, and the move rides the SAME TWO-PACKET PAIR a
+        // manual drag sends, back to back: 0x19 remove-from-buffer (pick up to
+        // cursor) then 0x18 insert-into-buffer. The 0x18 server handler
+        // (SCMD_0x18_ItemToInventory) opens with SERVER_IsItemOnCursor and
+        // rejects the insert unless the item is already the player's hand
+        // item, so the 0x19 pick is mandatory - sending 0x18 alone was the
+        // first R140 field build's defect (sound played, item never moved).
+        // Buffer = the UI page byte the place path puts on the wire: 4 =
+        // stash, 0 = inventory; the stash UI's two views, personal 0xc and
+        // shared 0xd, are both page-4 content (the shared stash swaps page-4
+        // content server-side), so the shared stash pages work unchanged. The
+        // hand is empty here by construction (this whole path only runs from
+        // the empty-hand branch), which is the 0x19 handler's precondition.
+        // A full target container plays the same refuse sound the cube path
+        // plays. Everything else - belt items, the cube-open and trade-open
+        // panels - keeps the old fall-through shape.
         if (!nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
           eInventoryPage eClickedFromPage;
           int nExpansionFlag;
@@ -9761,6 +9770,9 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
             nTargetCellX = 0;
             nTargetCellY = 0;
             if (D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInvWork, pCursorItem_lcl, nTargetPage, &nTargetCellX, &nTargetCellY, (uint8_t)nTargetPageByte)) {
+              /* Remove item from buffer 19 [DWORD item] - pick up to cursor; the
+                 0x18 place below is rejected unless the item is the hand item */
+              GAME::Msg::NET_D2GS_CLIENT_Send_INT(0x19, pCursorItem_lcl->nUnitGUID);
               /* Insert item into buffer 18 [DWORD id] [DWORD xpos] [DWORD ypos] [DWORD buffer] */
               GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(0x18, pCursorItem_lcl->nUnitGUID, nTargetCellX, nTargetCellY, nTargetPageByte);
               UNIT::ITEM_RemoveClientSide(pCursorItem_lcl);
