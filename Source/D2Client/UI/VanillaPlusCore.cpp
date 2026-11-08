@@ -654,6 +654,58 @@ BOOL __stdcall VPCTRLXFER_Active() {
     return gbCtrlClickXferMode;
 }
 
+// VP: [ctrl-click stash / R141] the deferred half of the transfer pair.
+// R141 field catch (owner, first field pass on the R140 build): "The items
+// move, but the slot they once occupied becomes unusable." Root cause: R140
+// sent 0x19 (pick) + 0x18 (place) back to back in one click, so the client
+// processed the pick echo and the place echo in the SAME packet drain - a
+// sequence no retail flow produces (a manual drag settles the pick on the
+// hand - item lifted out of the source grid - many frames before any place).
+// The target container is fine (D2Common PutItemInInventory unlinks-before-
+// relink, Inventory.cpp :755), but the source container's client-side grid
+// entry went stale: the slot the item left refused every later placement.
+// Fix, retail-shaped: the click sends 0x19 only and PARKS the place here;
+// the stash-panel draw (Inv.cpp, every frame the stash view is open) calls
+// VPCTRLXFER_TickPendingPlace, which releases the 0x18 on the second tick -
+// one full frame (one packet drain) after the pick, exactly a fast manual
+// drag. Drop conditions, both safe by construction:
+//  - panel closed inside the 1-frame window: the tick stops running, the
+//    0x18 never sends, and the item simply stays on the hand/cursor - the
+//    interrupted-drag state, legal and player-recoverable (place it
+//    manually, or drop it).
+//  - a new game joins with a stale stage: impossible in practice (the
+//    window is one frame), and if it ever fired the stale-GUID 0x18 is
+//    rejected server-side (the hand is empty) - the same harmless reject
+//    the R140 first build's lone 0x18 produced.
+static int gnVpXferPlacePending = 0;   // 0 idle; 1 parked this frame; 2 release on the next tick
+static int gnVpXferPlaceGuid = 0;
+static int gnVpXferPlaceX = 0;
+static int gnVpXferPlaceY = 0;
+static int gnVpXferPlacePageByte = 0;
+
+void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte) {
+    gnVpXferPlaceGuid = nGuid;
+    gnVpXferPlaceX = nX;
+    gnVpXferPlaceY = nY;
+    gnVpXferPlacePageByte = nPageByte;
+    gnVpXferPlacePending = 1;
+}
+
+void __stdcall VPCTRLXFER_TickPendingPlace() {
+    if (gnVpXferPlacePending == 1) {
+        gnVpXferPlacePending = 2;   // hold one full frame after the park
+        return;
+    }
+    if (gnVpXferPlacePending != 2) {
+        return;                     // idle
+    }
+    gnVpXferPlacePending = 0;
+    // Same two-packet pair a manual drag sends - now separated by one frame
+    // the way every retail item flow separates them.
+    D2Client::GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(0x18, gnVpXferPlaceGuid, gnVpXferPlaceX, gnVpXferPlaceY, gnVpXferPlacePageByte);
+}
+
+
 // The trigger read, retail's own idiom (UpdateMouseModifierKeyState,
 // Game.cpp:1193-1221): the key bound to cmd 0x24 in either binding slot,
 // GetAsyncKeyState(vk) < 0 = down. No CmdTbl entry, no latch, no keyup

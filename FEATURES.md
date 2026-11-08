@@ -6,10 +6,15 @@
 
 *v8, 2026-11-09. **Row 16 added on owner ask — PLANNED, not implemented**: inventory sort
 (`inventory_sort`, §16) — a Sort affordance for the personal inventory that replays the
-row 0c packet pair (`0x19` pick + `0x18` place) through a paced, abortable queue. Zero
-server-side code (every packet is one a manual drag also sends); the draft's one hard
-part is legal-move sequencing on a packed grid (scratch-cell cycle-breaking). Earlier
-same day: v7.*
+row 0c packet pair (`0x19` pick + `0x18` place) through a paced, abortable queue; zero
+server-side code; the one hard part is legal-move sequencing on a packed grid
+(scratch-cell cycle-breaking). Plan:
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). **Row 0a drafted the same
+day** on owner ask — the Z-key camera zoom plan
+([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)) — the Task C item finally on
+paper: renderer-side scale (the R117–R122 wide-reach arc is the zoom-out groundwork, the
+R112 stretch ladder the cursor-truth precedent), UI stays 1:1; effort firms M → M–L.
+Earlier same day: v7.*
 
 *v7, 2026-11-09. **Row 0c added and IMPLEMENTED the same round (R140)**: Ctrl+Click
 stash transfer (`ctrl_click_xfer`) — the slate's Ctrl+Click family gains its shipped
@@ -91,7 +96,7 @@ Every slate row must satisfy all of these before it ships:
 
 | # | Feature | Area | D2R parity source | Effort | Risk | Gate key |
 |---|---|---|---|---|---|---|
-| 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M | Med | `camera_zoom` |
+| 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **PLANNED**, drafted 2026-11-09: [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md) (renderer-side scale, UI stays 1:1, cursor truth; the R117–R122 reach arc is the zoom-out groundwork) |
 | 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
 | 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; field ask SMOKE §R pending) |
 | 1 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
@@ -109,16 +114,18 @@ Every slate row must satisfy all of these before it ships:
 | 13 | Stackable runes | Inventory | None — owner suggestion 2026-11-05; PD2 stacks runes in its currency tab | M | Med | `stack_runes` |
 | 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
-| 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` |
+| 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
 
-Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go; row 0b
+Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
+2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
 shipped (R125, field-verified R126) and row 0c shipped (R140) — they are
 the slate's head, not new scope. Rows 1–9 were the new candidates; row 6 shipped for 0.0.4, and row 1 shipped as the orb-face readout and was repurposed post-release (see §1).
 Rows 12–13 are **planned scope** (owner suggestion 2026-11-05, not yet implemented): one
 mechanism — letting a class of items merge into stacks the way arrows/tomes already do —
 behind two separate gates, drafted together in §12/§13. Row 16 is **planned scope**
 (owner suggestion 2026-11-09, not yet implemented): a Sort affordance for the personal
-inventory — retail-packet replay, zero server changes; drafted in §16. Rows 14–15 **shipped** as the
+inventory — retail-packet replay, zero server changes; drafted in §16, full plan at
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Rows 14–15 **shipped** as the
 video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mode — the
 whole site-1..6 pipeline routes it (§14) —
 and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
@@ -257,6 +264,23 @@ refuse — **not yet field-run**). Record: [HISTORY.md](HISTORY.md) **H60**. Fil
 `Inv.cpp` (the branch), `VanillaPlusCore.{h,cpp}` (gate + ini template),
 `VanillaPlusOptions.cpp` (row 10 — box height 0x1b1→0x1d1, Previous Menu row
 0x184→0x1a4).
+
+**R141 field catch + fix** (owner, first field pass on the R140 build: "The items move,
+but the slot they once occupied becomes unusable."): the R140 pair went out back to back,
+so the client processed the **pick echo and the place echo in the same packet drain** —
+a sequence no retail flow produces (a manual drag settles the pick on the hand, lifting
+the item out of the source grid, frames before any place), and the **source container's
+client-side grid entry went stale**: the emptied slot refused every later placement.
+Server side was clean (the item did move; the target insert is unlink-before-relink —
+D2Common `PutItemInInventory`, `Inventory.cpp` :755). Fix, retail-shaped: the click sends
+the `0x19` and **parks** the `0x18` (`VPCTRLXFER_ParkPlace`, VanillaPlusCore.cpp); the
+stash-panel draw releases it **one full frame later** (`VPCTRLXFER_TickPendingPlace`,
+called beside `VPSHAREDUI_DrawTab` at the Inv.cpp stash draw site) — a fast manual drag.
+Panel closed inside the 1-frame window = the interrupted-drag state (item stays on the
+hand/cursor, player-recoverable). Self-ID → **`Vanilla+0.0.8-R141`**. Field ask: re-run
+SMOKE §R 57–58 + the new **60** (the emptied slot accepts a placement immediately after
+the transfer, both directions). Files: `Inv.cpp` (park instead of send + the tick call),
+`VanillaPlusCore.{h,cpp}` (park + tick), `Redivivus/d2_boot.h` (round bump).
 
 ### 1. Persistent globe text (was: HP/MP globe hover values) — `[features] globe_persistent`
 
@@ -927,89 +951,30 @@ refuse — **not yet field-run**). Record: [HISTORY.md](HISTORY.md) **H60**. Fil
 ### 16. Inventory sort — `[features] inventory_sort` (PLANNED — owner suggestion 2026-11-09, not implemented)
 
 - **The ask** (owner, 2026-11-09, chat, no issue): "How hard would it be to add an
-  inventory sort?" The assessment said **Medium — easier than row 9** (no server-side
-  code at all, unlike the shared stash's custom button id + page blocks); this section
-  is the drafted plan that came out of that read of the tree.
-- **No D2R parity — researched before drafting**: D2R never shipped an inventory sort
-  (the grid stays manual tetris through 2.7). The sort/arrange button is a modern-ARPG
-  staple — D3 puts one on the stash (the anvil) — and the classic D2 workflow it
-  replaces is the ATMA/GoMule habit of re-arranging one cell at a time. Same framing
-  as rows 4, 9 and 12/13 (owner suggestion, no-parity).
-- **Behavior (v1 scope)**: a **Sort** affordance on the personal inventory panel sorts
-  the personal inventory grid only, into a deterministic layout: potions first (rejuv
-  above heal above mana, by tier), then keys/tomes/scrolls, then gems/runes/jewels,
-  then charms, then rings/amulets, then the rest (weapons/armor by type then name) —
-  shelf-packed top-left first, larger footprints before smaller within a category.
-  Equipped items, belt, cube contents and the stash are untouched (a stash-side sort
-  is a later row if wanted). The sort is a **visible sequence** — items hop one move
-  at a time — not an instant rearrange.
-- **Proposed**: gate `inventory_sort`: `0` = vanilla; `1` = the affordance is live.
-  Trigger is an owner call (button beside the inventory's gold area vs. a hotkey vs.
-  both). One trigger snapshots the grid, computes the target layout + the move list,
-  then replays it as **retail packet pairs only** — the same two-packet pair row 0c
-  ships: `0x19` remove-from-buffer (pick to cursor) then `0x18` insert-into-buffer at
-  the chosen cell (the `0x18` handler opens with `SERVER_IsItemOnCursor`, so the pair
-  is mandatory — the R140 first field build proved `0x18` alone is a dead send), sent
-  through `NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT` (the shared-stash tab's send
-  helper), paced ~100–150 ms per pair so the GS never sees a burst and the player
-  watches the sort happen (~3–5 s for a full grid). **Zero server-side code**: every
-  packet is one a human drag also sends, nothing in D2Game moves, and the feature is
-  realm-safe in principle (SP-first QA per charter, like every row).
-- **The one hard part — legal-move sequencing**: the GS validates each insert against
-  the live grid (fit check), so every place in the sequence must target a cell that is
-  free **at that moment**. Pick-first frees the source cell before the place, so an
-  insertion order works until the grid is packed enough to carry cyclic displacements
-  (A's target holds B, B's target holds A). Draft answer: vacate one **scratch cell**
-  first (inside the sort region), run the cycle-breaking rotation through it, refill
-  it last. A refused move (fit-check reject) aborts the remaining queue, leaves the
-  grid legal, marks d2boot.log — never loop-retry.
-- **Abort surface (must-have, not polish)**: the queue kills itself on any item click
-  or drag while it is live (the manual pick must win — otherwise it races the queued
-  pick), inventory panel close, death/TP, game leave, and a defensive queue-length
-  cap. Cursor occupied at trigger = refuse with the cube path's refuse sound (0x13),
-  no queue starts. Every hop is server-broadcast (the same trust shape as a manual
-  drag), so an aborted queue leaves no client-predicted state to unwind.
-- **Candidate regions (all "verify" — no tree-verify pass yet)**: the row 0c branch in
-  `Inv.cpp` as the move primitive (`ITEM_GetContainingInventoryPage` direction pick,
-  `INVENTORY_FindItemGridPosition` out-params — a sort pins its own x/y instead of
-  first-fit); the grid snapshot via the player unit's inventory walk
-  (`D2Common/INVENTORY/Inventory.*` — occupancy, item x/y and size records, the same
-  API the fit check reads); category/score fields from the item records the row 0b
-  slot resolver already reads (ItemTypes rows, item-code families); the draw +
-  hit-test clone of the shared-stash tab (`VPSHAREDUI_DrawTab` in VanillaPlusCore.cpp
-  — outlined text, saved/restored font, rect hit-test) if the trigger is a button, or
-  row 0b's cmd-key read if a hotkey; pacing as a per-frame tick state machine beside
-  the alt_toggle frame hook; the queue lives in VanillaPlusCore.cpp (no new TU — the
-  nine-TU fork surface grows only for cause).
-- **Contract notes**: rule 4 satisfied by construction — one choke point (a single
-  enqueue/tick pair) drives every move, and each move rides the two retail opcodes
-  nothing else needs gating. Rule 5 clean: packets only, no `.d2s`/`.d2x` surface
-  touched, nothing client-predicted. The ini template comment discloses the pacing
-  (a sort takes seconds on purpose) and the inventory-only scope.
-- **Prior art**: D3 stash sort (the anvil); PoE-era player expectation; ATMA/GoMule
-  re-arranging. D2R: none (through 2.7).
-- **Risk**: Med — the first slate row that streams a scripted input sequence. The bug
-  classes are desync-adjacent (a lost/mis-ordered pair leaves an item on the server
-  cursor) and interaction races (user clicks mid-sort); both are bounded by the abort
-  surface and the refuse-don't-retry rule, and nothing writes save data.
-- **Exit**: a mixed 30+-item grid sorts to the same layout twice in a row
-  (determinism); a mid-sort click aborts with the grid legal and every item
-  reachable; no residual cursor item after any abort; an inventory with only 3 free
-  cells still sorts (the scratch-cell case); `0` from a fresh start = vanilla
-  byte-for-byte (no packet ever sent); save → load → retail-load `.d2s` all clean.
-  Field ask rides a new SMOKE section at implementation time (the row 0c pattern).
-- **Owner calls at tree-verify time**: (1) the trigger — button, hotkey, or both;
-  (2) the category order (the draft above is the default); (3) size-first vs.
-  name-first within a category; (4) whether the affordance also shows on the stash
-  panel in v1 (draft says no — inventory only).
-- **Roadmap (three rounds, the row 9 shape)**: **Round 1** tree-verify — the anchors
-  above → exact pins, the pair shape re-confirmed against the live `0x18`/`0x19`
-  handlers, the placement echo the next pair waits on identified, grid API surface
-  pinned; **Round 2** implement — gate + snapshot + sequencer + paced replay + abort
-  surface + the Options page's eleventh row ("Inventory Sort"; Previous Menu moves
-  down one pitch, the R125/R140 pattern) + ini template; self-ID roll per the R139
-  one-line define; **Round 3** field QA — the exit loop above on the owner's Win11
-  build + the new SMOKE rows.
+  inventory sort?" — assessed **Medium, easier than row 9**: unlike the shared stash it
+  needs zero server-side code, because every move is a packet a manual drag also sends.
+- **No D2R parity** (D2R never shipped a sort button, through 2.7); the sort/arrange
+  button is a modern-ARPG staple (D3's stash anvil) and replaces the ATMA/GoMule
+  one-cell-at-a-time re-arranging habit. Same framing as rows 4, 9 and 12/13
+  (owner suggestion, no-parity).
+- **Behavior (v1)**: a Sort affordance on the personal inventory panel sorts the personal
+  inventory grid only — potions, then keys/tomes/scrolls, then gems/runes/jewels, then
+  charms, then rings/amulets, then the rest — shelf-packed top-left, bigger footprints
+  first. Equipped, belt, cube contents and the stash are untouched; the sort is a
+  **visible sequence of real moves** (~3–5 s paced), not an instant rearrange.
+- **Mechanism**: snapshot the grid → score + shelf-pack the target layout → diff into a
+  legal move list → replay as the row 0c `0x19`+`0x18` packet pairs through
+  `NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT`, paced ~100–150 ms. The one hard part is
+  legal-move sequencing on a packed grid (scratch-cell cycle-breaking); the abort surface
+  (user click wins, panel close/death/TP/game-leave kill the queue, refuse-don't-retry)
+  is must-have, not polish. `.d2s`/`.d2x` untouched; realm-safe in principle.
+- **Risk**: Med — the first slate row that streams a scripted input sequence
+  (desync-adjacent races, bounded by the abort surface). **Exit**: determinism, the
+  3-free-cells scratch-cell case, no residual cursor item after any abort, `0` = vanilla
+  byte-for-byte, retail-load `.d2s` clean.
+- **Full plan: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md)** — pillars,
+  tree-verify anchors, the sequencer, the failure matrix, the three-round roadmap and the
+  four owner calls (trigger; category order; size- vs name-first; stash affordance in v1).
 
 ---
 
@@ -1049,7 +1014,12 @@ refuse — **not yet field-run**). Record: [HISTORY.md](HISTORY.md) **H60**. Fil
   "they did nothing" replies on the 2.7 notes thread — while PD2 ships it, "Hellforge will
   now drop stacked gems and runes" in the patch notes linked above); inventory sort
   (2026-11-09 — no-parity row 16: D2R has no sort button; D3's stash anvil and the
-  ATMA/GoMule re-arranging habit are the prior art, §16).
+  ATMA/GoMule re-arranging habit are the prior art, §16); Z-key camera zoom (2026-11-09 —
+  the row 0a Task C draft; D2R launch feature).
+- Zoom prior art: D2R's launch camera zoom (Z / mouse wheel); d2dx/d2gl-class
+  renderer-side dynamic zoom — projection scale + inverse cursor mapping, the class
+  plans/CAMERA-ZOOM-PLAN.md follows; hackmap-era engine-side zoom (the rejected class —
+  it fights the game's own click mapping).
 - Engine grounding: Phrozen Keep draw-mode documentation (25%/50% stipple, color
   blends; 1.10/1.13-era threads) — the paletted transparency family row 4 mode 2 uses.
 - Resolution prior art: retail's dormant mode 3 (in-tree: size-table case, DDraw sentinel

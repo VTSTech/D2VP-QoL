@@ -227,6 +227,8 @@ void __stdcall ITEMILVL_AppendNameSuffix(struct D2UnitStrc * pItem, uint16_t * w
 // and the click-modifier semantics of Shift are untouched.
 BOOL __stdcall SHIFTCOMPARE_Active();      // config: shift_compare on?
 BOOL __stdcall VPCTRLXFER_Active();        // config: ctrl_click_xfer on?
+void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte); // R141: park the 0x18 half of the pair (Inv.cpp click branch)
+void __stdcall VPCTRLXFER_TickPendingPlace(); // R141: release the parked 0x18 one frame later (Inv.cpp stash draw site)
 void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp after the LoadItemDesc publish
 // [vanilla-plus options page] d2vp.ini feature-toggle bridge (row 10). The
 // page reads/flips the same [features] keys the gates consume; writes use
