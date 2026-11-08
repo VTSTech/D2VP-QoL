@@ -1085,8 +1085,10 @@ gate "escmenu: null sub-image draw guard"     Source/D2Client/UI/EscMenu.cpp    
 # Re-pinned to R134 2026-11-08 (rev 145; the rollback base, tree == 8067c4a).
 # Re-pinned to R135 2026-11-08 (rev 146; salvage round 1 - four hand-ports from the
 # paused window, self-ID bumped per the house rule).
-gate "res: self-id 0.0.8-R135"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 1
-gate "res: self-id R134 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R134' 0
+# Re-pinned to R136 2026-11-08 (rev 149; the issue #29 countess-chest fix lands -
+# a code round, self-ID bumped per the house rule).
+gate "res: self-id 0.0.8-R136"              Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R136' 1
+gate "res: self-id R135 gone"               Source/Game/Main.cpp                    'Vanilla\+0\.0\.8-R135' 0
 # ---- [vanilla-plus issue #32] rev 136: track T - the gamble-cache fix. Root
 # cause: D2Game/UNIT/SUNITNPC.cpp GAMBLE_GenerateGambleInventory read the
 # per-level upper-bound cache through vanilla .data adjacency
@@ -1461,6 +1463,16 @@ gate "shiftcmp: row count pin (R125)"         Source/D2Client/UI/VanillaPlusOpti
 gate "shiftcmp: back-row Y re-pin (R125)"     Source/D2Client/UI/VanillaPlusOptions.cpp 'VPPAGE_BACK_ROW_Y = 0x184' 1
 gate "shiftcmp: box height re-pin (R125)"     Source/D2Client/UI/VanillaPlusOptions.cpp 'VPPAGE_BOX_HEIGHT = 0x1b1' 1
 gate "shiftcmp: shield-kind slot pick (R126)"  Source/D2Client/UI/VanillaPlusCore.cpp   'ITEMTYPE_AnyShield' 1
+
+# ---- [d2vp-fix] R136 proposal: issue #29 - Countess-chest potion tags must be returned by value
+# SERVER_MissleKilled (ObjectsMode.cpp, the only consumer - the TowerChestSpawner target opener)
+# stores the getter result into D2UnitStrc::dwDropItemCode, a 4CC VALUE field (' bks', 'qhr '...).
+# The reassembly returned the row ADDRESS instead (clamp branch: a dangling stack local); the
+# pointer went through the Items.txt tag search (GetClassIdFromName), missed -> -1 ->
+# ERROR_UnrecoverableInternalError_Halt 0x9ea in ITEM_RewardItemToDrop = halt line=2538, then the
+# Fog-fatal teardown (second halt line=290) and the VEH AV - on every Countess kill. Issue #29.
+gate "countess-chest: tag-by-value returns"    Source/D2Game/ITEMS/Items/Drop.cpp       'return \*\(const int32_t\*\)(HP|MP)LIST' 4
+gate "countess-chest: no address/stack returns left" Source/D2Game/ITEMS/Items/Drop.cpp 'return \(int32_t\)(HP|MP)LIST\[|sz(Hp|Mp)Code' 0
 
 # ---- docs budgets (owner, 2026-11-06: "The handoff.md should maintain a limit of 16kb") ----
 # Two doc lanes: human (README/CHANGELOG/SMOKE - concise) and agent (handoff/HISTORY/plans -

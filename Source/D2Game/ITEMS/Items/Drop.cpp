@@ -2176,8 +2176,7 @@ int32_t __fastcall UNIT_GetMaxAvailableHPCharCode(D2UnitStrc * pUnit) {
 }; D2_STATIC_GUARD(HPLIST, "D2Game::ITEMS::Items::Drop::UNIT_GetMaxAvailableHPCharCode::HPLIST");
     static int HPLISTSIZE = 0x4; D2_STATIC_GUARD(HPLISTSIZE, "D2Game::ITEMS::Items::Drop::UNIT_GetMaxAvailableHPCharCode::HPLISTSIZE");
 
-    char szHpCode[4];
-    D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pUnit);
+    D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pUnit); // VP: countess-chest #29] the reassembly's stack-local copy buffer removed (see the return fix below)
     if (!pRoom) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xd5e);
       exit(-1);
@@ -2190,14 +2189,17 @@ int32_t __fastcall UNIT_GetMaxAvailableHPCharCode(D2UnitStrc * pUnit) {
       neAct += ACT_III;
     }
     if ((uint32_t)neAct >= (uint32_t)HPLISTSIZE) {
-      szHpCode[0] = HPLIST[3][0];
-      szHpCode[1] = HPLIST[3][1];
-      szHpCode[2] = HPLIST[3][2];
-      szHpCode[3] = HPLIST[3][3];
-      return (int32_t)szHpCode;
+      // VP-BEGIN [countess-chest #29]: return the potion tag BY VALUE. The reassembly copied the
+      // row into a stack local and returned its ADDRESS; the only caller (SERVER_MissleKilled,
+      // the Countess-chest opener) stores that pointer into D2UnitStrc::dwDropItemCode, a 4CC
+      // value field - and GetClassIdFromName then misses the Items.txt tag search -> -1 ->
+      // ERROR_UnrecoverableInternalError_Halt 0x9ea (halt report line=2538) on every Countess
+      // kill = issue #29. Retail: the list is four dword tags; the row read as int32 = 'hp4 '.
+      return *(const int32_t*)HPLIST[3];
+      // VP-END [countess-chest #29]
     }
 
-    return (int32_t)HPLIST[neAct];
+    return *(const int32_t*)HPLIST[neAct]; // VP: countess-chest #29] retail: the row dword (Normal act I = 'hp1 ' = 0x20317068), not the row address
 }
 
 int32_t __fastcall UNIT_GetMaxAvailableMPCharCode(D2UnitStrc * pUnit) {
@@ -2210,8 +2212,7 @@ int32_t __fastcall UNIT_GetMaxAvailableMPCharCode(D2UnitStrc * pUnit) {
 }; D2_STATIC_GUARD(MPLIST, "D2Game::ITEMS::Items::Drop::UNIT_GetMaxAvailableMPCharCode::MPLIST");
     static int MPLISTSIZE = 0x4; D2_STATIC_GUARD(MPLISTSIZE, "D2Game::ITEMS::Items::Drop::UNIT_GetMaxAvailableMPCharCode::MPLISTSIZE");
 
-    char szMpCode[4];
-    D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pUnit);
+    D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pUnit); // VP: countess-chest #29] the reassembly's stack-local copy buffer removed (see the return fix below)
     if (!pRoom) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xd7d);
       exit(-1);
@@ -2224,14 +2225,13 @@ int32_t __fastcall UNIT_GetMaxAvailableMPCharCode(D2UnitStrc * pUnit) {
       neAct += ACT_III;
     }
     if ((uint32_t)neAct >= (uint32_t)MPLISTSIZE) {
-      szMpCode[0] = MPLIST[3][0];
-      szMpCode[1] = MPLIST[3][1];
-      szMpCode[2] = MPLIST[3][2];
-      szMpCode[3] = MPLIST[3][3];
-      return (int32_t)szMpCode;
+      // VP-BEGIN [countess-chest #29]: return the potion tag BY VALUE (see the HP twin above).
+      // Retail: the row read as int32 = 'mp4 '.
+      return *(const int32_t*)MPLIST[3];
+      // VP-END [countess-chest #29]
     }
 
-    return (int32_t)MPLIST[neAct];
+    return *(const int32_t*)MPLIST[neAct]; // VP: countess-chest #29] retail: the row dword (Normal act I = 'mp1 ' = 0x2031706D), not the row address
 }
 
 void __fastcall RefreshDurability(::SGAMEDATA * pGame, D2UnitStrc * pUnit) {

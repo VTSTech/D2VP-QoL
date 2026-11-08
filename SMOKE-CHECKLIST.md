@@ -2,7 +2,7 @@
 
 > **Running this checklist:** GitHub renders the boxes below read-only in the file view — task-list checkboxes are only live inside issues. To run a pass, open **Issues → New issue → "Vanilla+ Smoke Test"**: the template ([.github/ISSUE_TEMPLATE/smoke-test.md](.github/ISSUE_TEMPLATE/smoke-test.md), generated from this file by [tools/gen-smoke-issue-template.py](tools/gen-smoke-issue-template.py)) pre-fills every check as a clickable box, with a Verdict section to fill at the end. This file stays the canonical reference; when a round changes a check, re-run the generator and commit both files.
 
-Build: **Vanilla+0.0.8-R128** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135).
+Build: **Vanilla+0.0.8-R136** (confirm via line 1 of `d2boot.log` before starting). The per-round build history (R74 → R128, one line per round) and the closed-section narratives live in **HISTORY.md H43**. **The last full-belt pass: the R104 build (2026-11-04, [issue #28](https://github.com/VTSTech/D2VP-QoL/issues/28)) — every §A–§L check green**; the R105–R128 chain carries per-round field passes on the touched surfaces (resolution stops, wide-view, D3D fullscreen — R124 verified, shift-compare — R125/R126 verified 2026-11-06, vpdiag retirement R127 = no field ask, gamble fix — R128 verified 2026-11-06, owner-closed [#32]; the R135 salvage build (the `d6746a33` retail-table supersession) re-passed the Gheed click 2026-11-08 on Win11 — §M1 green, §M2–M4 not yet re-run on R135); the Countess-chest fix — R136 field-verified 2026-11-08, owner-closed ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), §N).
 Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 **Known-fail — none.** (Resolved 2026-11-03, [issue #8](https://github.com/VTSTech/D2VP-QoL/issues/8): the necro skeleton spawn tint is FIELD-VERIFIED on the R90b/R91 build — "Skeletons are finally white again" — and is now the standing §B item-5 regression check. The 2026-11-03 D3D registry-corruption episode was owner-environment, not a build bug — see the watch note in §L.)
@@ -11,7 +11,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first.
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R128`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R136`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -128,6 +128,15 @@ The one-click crash: talking to Gheed (or any gambling NPC) and clicking **Gambl
 - [ ] **2.** `d2boot.log` must show the fix chain: `gamble: gen start npc=0x.... level=<your level> cache=<count> total=<count>` → ~14 × `gamble: roll level=.. bound=.. pick=..` with **sane bounds** (`bound` is a small count, 2..total — never a huge pointer-looking value) → `gamble: gen done items=14`. A garbage-looking `bound=` means the running exe predates the fix (check item 0).
 - [ ] **3.** Buy one gamble item — gold deducts, item lands in inventory (the purchase path was unreachable while the open crash stood; first field exercise here).
 - [ ] **4.** Re-open the gamble screen a second time in the same session — fresh item list, still no crash.
+
+---
+
+## N. The Countess chest sequence ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), R136 — FIELD-VERIFIED 2026-11-08, owner-closed)
+
+Killing The Countess (Forgotten Tower cellar 5) triggers the vanilla scripted death: smoke drifts from the corpse to each chest and pops it open a few seconds later — **that part is retail**. The crash was ours: the chest's potion reward returned a memory **address** instead of the potion's 4CC item code, so the drop lookup halted on **every** Countess kill (halt line=2538 → teardown halt line=290 → VEH) right after the first chest burst. R136 returns the tags by value (Drop.cpp, both getters; record HISTORY **H52**).
+
+- [x] **49. The issue repro, inverted (the fix proof):** kill The Countess → the smoke drifts, each registered chest pops open (gold + potions), gameplay continues — **no `halt report:` / `d2crash-*.txt`**. — **CONFIRMED 2026-11-08 (owner: "R136 confirmed closes #29").** Keep as a per-build regression check.
+- [ ] **50. Ride-along sanity:** a normal session's other kills and drops (Blood Raven, a champion pack, a regular chest) behave exactly as before — the fix touches only the two potion-tag getters, and the Countess-chest opener is their only caller.
 
 ---
 

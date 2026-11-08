@@ -126,12 +126,21 @@ With `[features] no_panel_shift=1` (wide layouts only), a single open panel rend
 
 ## M. Gamble at a gambling NPC ([issue #32](https://github.com/VTSTech/D2VP-QoL/issues/32), R128 — FIELD-VERIFIED 2026-11-06, owner-closed)
 
-The one-click crash: talking to Gheed (or any gambling NPC) and clicking **Gamble** crashed the game on every round since the source regeneration. R128 fixed the broken item-table lookup and the §M pass went green the same day (window opens, sane `gamble:` bounds, one purchase, re-open clean). The items stay as the **standing gamble regression check** for future full-belt runs.
+The one-click crash: talking to Gheed (or any gambling NPC) and clicking **Gamble** crashed the game on every round since the source regeneration. R128 fixed the broken item-table lookup and the §M pass went green the same day (window opens, sane `gamble:` bounds, one purchase, re-open clean). The items stay as the **standing gamble regression check** for future full-belt runs. **R135 re-check (2026-11-08, Win11):** the salvage build carrying the `d6746a33` retail single-table supersession talked to Gheed and opened the gamble screen with **no crash** — item 1 green on R135. Items 2–4 (the `gamble:` log chain, one purchase, the same-session re-open) have not been re-run on R135 yet; item 2's log glance is the cheapest next step.
 
 - [ ] **1.** Talk to Gheed in town → click **Gamble** → the gamble window opens with a mixed item list and **no crash** (pre-R128 this died with an AV READ ~1 s after the click).
 - [ ] **2.** `d2boot.log` must show the fix chain: `gamble: gen start npc=0x.... level=<your level> cache=<count> total=<count>` → ~14 × `gamble: roll level=.. bound=.. pick=..` with **sane bounds** (`bound` is a small count, 2..total — never a huge pointer-looking value) → `gamble: gen done items=14`. A garbage-looking `bound=` means the running exe predates the fix (check item 0).
 - [ ] **3.** Buy one gamble item — gold deducts, item lands in inventory (the purchase path was unreachable while the open crash stood; first field exercise here).
 - [ ] **4.** Re-open the gamble screen a second time in the same session — fresh item list, still no crash.
+
+---
+
+## N. The Countess chest sequence ([issue #29](https://github.com/VTSTech/D2VP-QoL/issues/29), R136 — FIELD-VERIFIED 2026-11-08, owner-closed)
+
+Killing The Countess (Forgotten Tower cellar 5) triggers the vanilla scripted death: smoke drifts from the corpse to each chest and pops it open a few seconds later — **that part is retail**. The crash was ours: the chest's potion reward returned a memory **address** instead of the potion's 4CC item code, so the drop lookup halted on **every** Countess kill (halt line=2538 → teardown halt line=290 → VEH) right after the first chest burst. R136 returns the tags by value (Drop.cpp, both getters; record HISTORY **H52**).
+
+- [ ] **49. The issue repro, inverted (the fix proof):** kill The Countess → the smoke drifts, each registered chest pops open (gold + potions), gameplay continues — **no `halt report:` / `d2crash-*.txt`**. — **CONFIRMED 2026-11-08 (owner: "R136 confirmed closes #29").** Keep as a per-build regression check.
+- [ ] **50. Ride-along sanity:** a normal session's other kills and drops (Blood Raven, a champion pack, a regular chest) behave exactly as before — the fix touches only the two potion-tag getters, and the Countess-chest opener is their only caller.
 
 ---
 
