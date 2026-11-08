@@ -451,6 +451,22 @@ gate "r116: fillY rides real stride"       Source/D2Gdi/Renderer/Windowed.cpp   
 gate "r116: cel nDstPitch slots"           Source/D2Gdi/Renderer/Windowed.cpp      'RENDERER_nWindowHeight, RENDERER_WINDOWED_nDIBPitch' 4
 gate "r116: dib pitch global wired"        Source/D2Gdi/Renderer/Windowed.cpp      'RENDERER_WINDOWED_nDIBPitch' 26
 
+# ---- issue #31: -w 1080p select AV WRITE (track V) --------------------------
+# Owner: "[1080p] D3D Windowed crashes upon selecting 1080p - Fullscreen is
+# fine". Root cause: gaYBufferRowOffsets (D2GfxHelperStrc.cpp) is indexed
+# [nScreenY + 0x20] by every software tile blitter and the vertical clip lets
+# nScreenY reach height - 0x30 -> max index = height - 16. Retail sized the
+# table 732 = 700 + 0x20 for its tallest stop (1344x700); the VP ladder's
+# 1366x768 (max index 752) and 1920x1080 (max index 1064) stops read past the
+# table into sibling statics and gpLineBufferTileArray, and the garbage row
+# offsets hand D2GFX_DrawWallTileBasic wild destinations. Evidence:
+# d2crash-20261108-122806.txt (own-code AV WRITE to 0B88BF60, frame #0
+# D2GFX_DrawWallTileBasic+0x66B, symbolized via the owner's d2exe.map).
+# Fullscreen D3D is immune (hardware vertex tiles, never touches the table);
+# 720p windowed (max index 704) stays inside - why the 2026-10-30 field pass
+# never caught it. Triage: plans/ISSUE31-WINDOWED-1080P.md rev 2.
+gate "iss31: y-row table covers 1080p"     Source/D2gfx/D2GfxHelperStrc.cpp        'gaYBufferRowOffsets\[1112\]' 1
+
 # ---- r117: resolution-scaled edge-void fill (D2Client/GAME/Draw.cpp) ----
 # Owner at the new 1920x1080 stop (PERSPECTIVE on): "some blackness at the
 # very edge". Not a present/letterbox artifact - measured 0px solid black on
