@@ -11,6 +11,13 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R141 — Ctrl+Click: the vacated-slot fix** (field catch on R140,
+  [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)). The R140 build sent the `0x19`
+  pick and `0x18` place back to back; the two echoes drained in one packet batch and the
+  source container's client-side grid entry went stale — the emptied slot refused every
+  later placement. R141 parks the place packet and releases it one full frame later (the
+  timing of a fast manual drag). Field-verified 2026-11-09 — "R141 confirmed", issue
+  closed. Self-ID `Vanilla+0.0.8-R141`.
 - **R140 — Ctrl+Click stash transfer** (owner ask, no issue). With the stash open,
   **Ctrl+Click** now moves an item — inventory → stash or stash → inventory, one
   click, no dragging; the shared-stash pages work unchanged, and a full target

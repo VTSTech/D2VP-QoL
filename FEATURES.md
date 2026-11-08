@@ -98,7 +98,7 @@ Every slate row must satisfy all of these before it ships:
 |---|---|---|---|---|---|---|
 | 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **PLANNED**, drafted 2026-11-09: [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md) (renderer-side scale, UI stays 1:1, cursor truth; the R117–R122 reach arc is the zoom-out groundwork) |
 | 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
-| 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; field ask SMOKE §R pending) |
+| 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
 | 1 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
 | 2 | Clock / game-timer overlay | HUD | D2R Tab-screen game timer; BH wall-clock | S | Low | `clock_overlay` |
 | 3 | Item ilvl on tooltips | Loot | D2R 2.5 display-item-level toggle | S–M | Low | **Shipped** (R55 standalone line → R56 name-suffix → R57 bare digits → R59 single-space trim — `item_ilvl`, see §3; first shipped in release 0.0.7) |
@@ -216,7 +216,7 @@ slot preference (Slot rules above), +1 `shiftcmp:` gate (shield-kind slot pick) 
 docs-budget gate). **FIELD-VERIFIED 2026-11-06** ("Great job, works" — the shield
 slot legs ran on the owner builds). Nothing owed.
 
-### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; field ask SMOKE §R pending)
+### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35)
 
 **The ask** (owner, 2026-11-09, no issue): "Can we make Ctrl+Click put/remove items from
 Stash when Stash is open?" — D2R PC parity (Ctrl+Click moves an item with a container
@@ -279,7 +279,10 @@ called beside `VPSHAREDUI_DrawTab` at the Inv.cpp stash draw site) — a fast ma
 Panel closed inside the 1-frame window = the interrupted-drag state (item stays on the
 hand/cursor, player-recoverable). Self-ID → **`Vanilla+0.0.8-R141`**. Field ask: re-run
 SMOKE §R 57–58 + the new **60** (the emptied slot accepts a placement immediately after
-the transfer, both directions). Files: `Inv.cpp` (park instead of send + the tick call),
+the transfer, both directions). **FIELD-VERIFIED 2026-11-09** — owner: "R141 confirmed
+closes #35": the emptied slot takes placements, both directions, transfers still
+complete; owner-closed ([#35](https://github.com/VTSTech/D2VP-QoL/issues/35)); standing
+regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + the tick call),
 `VanillaPlusCore.{h,cpp}` (park + tick), `Redivivus/d2_boot.h` (round bump).
 
 ### 1. Persistent globe text (was: HP/MP globe hover values) — `[features] globe_persistent`

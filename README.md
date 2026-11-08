@@ -88,7 +88,9 @@ latest release tag is
   `Redivivus/d2_boot.h` `D2VP_ROUND` — feeds the tag and the build self-ID, so a
   round bump is one line) and the **Ctrl+Click stash transfer** (R140 — one-click
   inventory ↔ stash move with the stash open, shared pages included,
-  `[features] ctrl_click_xfer`; field pass pending, SMOKE §R).
+  `[features] ctrl_click_xfer`; the R141 follow-up fixed the vacated-slot field catch —
+  field-verified 2026-11-09, [#35](https://github.com/VTSTech/D2VP-QoL/issues/35) closed,
+  SMOKE §R).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
