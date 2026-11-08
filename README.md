@@ -10,8 +10,8 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R139-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
-[![Gates](https://img.shields.io/badge/vanilla%2B%20gates-525%2F525-2ea043)](tools/check-vanilla-plus.sh)
+[![Release](https://img.shields.io/badge/release-0.0.8--R140-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -60,9 +60,9 @@ every feature ships OFF. The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R139`** (line 1 of `d2boot.log` pins any build); the
-latest shipped release is tag
-**[`R137`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R137)**, 2026-11-06.
+Current build: **`Vanilla+0.0.8-R140`** (line 1 of `d2boot.log` pins any build); the
+latest release tag is
+**[`R140`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R140)**, 2026-11-09.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -72,7 +72,7 @@ latest shipped release is tag
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R139, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R140, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
@@ -82,9 +82,13 @@ latest shipped release is tag
   lines now read the real level and skill name; field-verified 2026-11-08), the
   **windowed-1080p crash fix** (R138,
   [#31](https://github.com/VTSTech/D2VP-QoL/issues/31) — selecting 1920x1080 while
-  running windowed no longer crashes on the first frame; field-verified 2026-11-09)
-  and the **on-screen build tag** (R139 — the title screen and the automap overlay
-  show **`D2VP-R139`** instead of the retail "v 1.14d").
+  running windowed no longer crashes on the first frame; field-verified 2026-11-09),
+  the **on-screen build tag** (R139 — the title screen and the automap overlay
+  show **`D2VP-R139`** instead of the retail "v 1.14d"; one define —
+  `Redivivus/d2_boot.h` `D2VP_ROUND` — feeds the tag and the build self-ID, so a
+  round bump is one line) and the **Ctrl+Click stash transfer** (R140 — one-click
+  inventory ↔ stash move with the stash open, shared pages included,
+  `[features] ctrl_click_xfer`; field pass pending, SMOKE §R).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
@@ -180,9 +184,12 @@ feature contract) · [handoff.md](handoff.md) (live work log) ·
 
 ## Contributing
 
-Changes are welcome as pull requests or patches against a release tag. Run
-[`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh) before opening a PR — it is
-the suite CI enforces, and green is the bar.
+Changes are welcome as pull requests or patches against a release tag. CI builds every
+push and PR with the mingw-i686 toolchain
+([`tools/check-build.sh`](tools/check-build.sh) is the same build locally) — a clean
+build is the bar. (The old vanilla-plus gate suite — `tools/check-vanilla-plus.sh`,
+525 checks — was retired 2026-11-09; the script lives in git history, and the Win11
+MSYS2 build stays the compile gate of record for release rounds.)
 
 [CONTRIBUTING.md](CONTRIBUTING.md) routes every kind of finding: Vanilla+ improvements
 belong in this repository; fixes to the recovered source itself belong upstream at
