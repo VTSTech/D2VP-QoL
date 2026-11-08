@@ -1469,9 +1469,18 @@ static BOOL __stdcall ItemStatCost_DescFunc_DGrpFunc(D2UnitStrc * pUnit, D2StatL
 
       wStrId = SKILLDESC_GetStatNameString(iVar1, 0);
       wszLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(wStrId);
-      uVar2 = 0;
       nRepairCostFinal = nStatParam;
-      D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszOutputBuffer, D2Lang::StrTable::strtable::GetLocaleString(pStatCostLine->descstrpos), nGroupValue, uVar2, nRepairCostFinal, wszLocaleStr);
+      // VP-BEGIN [proc-level0 #33]: descfunc 15's format consumes %d(chance) %d(level)
+      // %s(skill name) - "...%d%% Chance to Cast Level %d %s..." (+ the literal event
+      // tail inside descstrpos). The regeneration inserted a literal 0 as the second
+      // vararg (ghidra register-reuse artifact, same family as the #18 dropped-name
+      // call site), so the Level %d slot read the constant: every "x% Chance to Cast"
+      // line rendered "Level 0", and the level int landed in the %s slot where the
+      // [issue-18 fmt-args] sub-0x10000 guard terminates the line - no skill name, no
+      // event tail (issue #33). Pass the decoded level, then the name, as vanilla did.
+      // Generation and the save/packet round-trip were verified correct - display-only.
+      D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszOutputBuffer, D2Lang::StrTable::strtable::GetLocaleString(pStatCostLine->descstrpos), nGroupValue, nRepairCostFinal, wszLocaleStr);
+      // VP-END [proc-level0 #33]
       goto append_descstr2;
       case 0x10:
         wStrId = SKILLDESC_GetStatNameString(nStatParam, 0);

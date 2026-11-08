@@ -1474,6 +1474,15 @@ gate "shiftcmp: shield-kind slot pick (R126)"  Source/D2Client/UI/VanillaPlusCor
 gate "countess-chest: tag-by-value returns"    Source/D2Game/ITEMS/Items/Drop.cpp       'return \*\(const int32_t\*\)(HP|MP)LIST' 4
 gate "countess-chest: no address/stack returns left" Source/D2Game/ITEMS/Items/Drop.cpp 'return \(int32_t\)(HP|MP)LIST\[|sz(Hp|Mp)Code' 0
 
+# ---- [d2vp-fix] R137 proposal: issue #33 - proc tooltips must pass the level in the Level %d slot
+# The "x% Chance to Cast Level N <skill>" family (stats 195-202, descfunc 15) formats through
+# SkillDesc.cpp ItemStatCost_DescFunc_DGrpFunc case 0xf. The regeneration inserted a literal 0
+# as the second vararg, so the Level %d slot read the constant: every proc line rendered
+# "Level 0", and the level int landed in the %s slot where the [issue-18 fmt-args] sub-0x10000
+# guard silently terminates the line (no skill name, no event tail). Same family as #16/#18.
+gate "proc-line: level in the level slot (R137)" Source/D2Client/UI/SkillDesc.cpp 'GetLocaleString\(pStatCostLine->descstrpos\), nGroupValue, nRepairCostFinal, wszLocaleStr' 1
+gate "proc-line: literal-zero vararg gone"       Source/D2Client/UI/SkillDesc.cpp 'nGroupValue, uVar2, nRepairCostFinal' 0
+
 # ---- docs budgets (owner, 2026-11-06: "The handoff.md should maintain a limit of 16kb") ----
 # Two doc lanes: human (README/CHANGELOG/SMOKE - concise) and agent (handoff/HISTORY/plans -
 # verbose OK). handoff.md is the working-state doc and grows back fast, so its 16 KB cap is
