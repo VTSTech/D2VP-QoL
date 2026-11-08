@@ -10,7 +10,7 @@
 </a>
 
 [![Release](https://img.shields.io/badge/release-0.0.8--R128-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
-[![Gates](https://img.shields.io/badge/vanilla%2B%20gates-519%2F519-2ea043)](tools/check-vanilla-plus.sh)
+[![Gates](https://img.shields.io/badge/vanilla%2B%20gates-524%2F524-2ea043)](tools/check-vanilla-plus.sh)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -58,9 +58,9 @@ every feature ships OFF. The wider candidate slate is scoped in
 
 ## Status
 
-Current: **`Vanilla+0.0.8-R128`** — shipped as tag
-**[`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128)**, 2026-11-06 (line 1
-of `d2boot.log` pins any build).
+Current build: **`Vanilla+0.0.8-R137`** (line 1 of `d2boot.log` pins any build); the
+latest shipped release is tag
+**[`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128)**, 2026-11-06.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -70,20 +70,29 @@ of `d2boot.log` pins any build).
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
+- **In the working build since the R128 tag** (rounds R135–R137, overlay-delivered —
+  per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
+  upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
+  crash fix** (R136,
+  [#29](https://github.com/VTSTech/D2VP-QoL/issues/29), field-verified 2026-11-08)
+  and the **proc-tooltip fix** (R137,
+  [#33](https://github.com/VTSTech/D2VP-QoL/issues/33) — "x% Chance to Cast Level 0"
+  lines now read the real level and skill name; field-verified 2026-11-08).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
   ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24),
   [#28](https://github.com/VTSTech/D2VP-QoL/issues/28)); `d2vp.exe` is field-played
   daily.
-- **Open issues (4)**: the 1080p D3D-windowed crash
+- **Open issues (3)**: the 1080p D3D-windowed crash
   ([#31](https://github.com/VTSTech/D2VP-QoL/issues/31), filed 2026-11-06 — fullscreen
-  is fine), the post-Countess crash ([#29](https://github.com/VTSTech/D2VP-QoL/issues/29),
-  filed 2026-11-06), the Refilling Shrine XP buff
+  is fine), the Refilling Shrine XP buff
   ([#25](https://github.com/VTSTech/D2VP-QoL/issues/25)) and the intermittent
   attribute-point crash ([#18](https://github.com/VTSTech/D2VP-QoL/issues/18)) — triage
-  pending. Recently closed: #32 (Gheed gamble crash, fixed R128), #26 (720p panel
-  margins + `no_panel_shift`), #22 (Bloodraven turn-in), #8 (necro skeleton tint).
+  pending. Recently closed: #33 (proc tooltips read "Level 0", fixed R137), #29
+  (post-Countess crash, fixed R136), #32 (Gheed gamble crash, fixed R128), #26 (720p
+  panel margins + `no_panel_shift`), #22 (Bloodraven turn-in), #8 (necro skeleton
+  tint).
 - A crash writes a symbolised report (`d2crash-<date>-<time>.txt`) next to the
   executable; a 12 s hangwatch dumps one if the main loop ever stops beating. See
   [Crash reports](#crash-reports).
