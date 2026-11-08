@@ -9,7 +9,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R128-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R137-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Gates](https://img.shields.io/badge/vanilla%2B%20gates-524%2F524-2ea043)](tools/check-vanilla-plus.sh)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -60,7 +60,7 @@ every feature ships OFF. The wider candidate slate is scoped in
 
 Current build: **`Vanilla+0.0.8-R137`** (line 1 of `d2boot.log` pins any build); the
 latest shipped release is tag
-**[`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128)**, 2026-11-06.
+**[`R137`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R137)**, 2026-11-06.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
