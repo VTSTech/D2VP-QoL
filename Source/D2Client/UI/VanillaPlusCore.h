@@ -234,6 +234,7 @@ void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp aft
 // page reads/flips the same [features] keys the gates consume; writes use
 // WritePrivateProfileStringA and flush every gate's 2 s hot-read cache.
 int __stdcall D2VP_GetFeatureToggle(const char* szKey);   // 0 = off/missing/garbage
+int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault); // R144: per-row read default (unlock_fps_interp's gate reads a missing key as 1)
 void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue); // write + flush
 void __stdcall D2VP_ConfigReloaded();                     // bust all 2 s gate caches
 // Boot-time consistency audit of the Vanilla+ injection points (count bumps,
@@ -323,7 +324,7 @@ BOOL __stdcall VPNOINTRO_IsRequested();
 // feeds the camera, the sprite world offset and the player's
 // sprite/shadow/states one frame-shared delta interpolated between two real
 // position samples taken at each client world update (unlock_fps_interp,
-// ini-only sub-gate, default on).
+// default on; ini-only through R143, a Vanilla+ Options row since R144).
 BOOL __stdcall UNLOCKFPS_Active();         // config: unlock_fps on? (2 s hot-read)
 BOOL __stdcall UNLOCKFPS_ShouldPresent();  // pacer: draw now? (FALSE when gate off)
 void __stdcall UNLOCKFPS_NotePresent();    // telemetry: a present actually happened

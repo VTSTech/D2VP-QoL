@@ -284,7 +284,8 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       as the proof the game speed is unchanged.\r\n"
         "unlock_fps=0\r\n"
         "\r\n"
-        "; Sub-tick interpolation (R143) - rides Unlock FPS, no Options row:\r\n"
+        "; Sub-tick interpolation (R143) - rides Unlock FPS; the Vanilla+\r\n"
+        "; Options row (R144) is called \"FPS Interpolation\":\r\n"
         ";   1 = while Unlock FPS is on, the world scroll and everything in it\r\n"
         ";       glide between game ticks at the present rate (the game speed is\r\n"
         ";       still exactly retail - this is render smoothing only)\r\n"
@@ -981,7 +982,7 @@ static const DWORD UNLOCKFPS_PERIOD_MS = 16; // fixed 60 Hz v1 target (owner: bo
 static const DWORD UNLOCKFPS_SIM_TICK_MS = 40; // [unlock-fps-interp R143] retail client world-update period (25 Hz) - the alpha clock base
 
 static int gbUnlockFpsMode = 0;
-static int gbUnlockFpsInterp = 0;           // [unlock-fps-interp R143] unlock_fps_interp sub-gate (ini-only, default 1)
+static int gbUnlockFpsInterp = 0;           // [unlock-fps-interp R143] unlock_fps_interp sub-gate (default 1; ini-only through R143, the FPS Interpolation Options row since R144)
 static DWORD dwUnlockFpsLastCheck = 0;      // 2 s ini re-read gate (row-28 pattern)
 static DWORD dwUnlockFpsNextPresent = 0;    // pacer deadline (GetTickCount); 0 = unanchored
 static DWORD dwUnlockFpsLastPoll = 0;       // recency of the last ShouldPresent poll
@@ -1246,13 +1247,26 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOf
 // exactly like an external editor that lost a race.
 
 int __stdcall D2VP_GetFeatureToggle(const char* szKey) {
+    return D2VP_GetFeatureToggleDefault(szKey, 0);
+}
+
+// R144: the options page's per-row read default. Every feature key is
+// 0-defaulted (missing/garbage = vanilla) except unlock_fps_interp - its
+// gate reads a missing key as 1 (UNLOCKFPS_Active: interp is the intended
+// look), and the row must display what the gate acts on: ALTTOGGLE_EnsureIni
+// writes the template only for a MISSING FILE and never backfills keys, so
+// a pre-R143 ini carries no unlock_fps_interp and a 0-default read would
+// show Off while the interp runs. The panel flips stay exact too: the page
+// toggle inverts the displayed default, so the first click on a default-on
+// row writes 0 (with a 0-default read it would write 1 - a silent no-op).
+int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault) {
     char szIniPath[260];
     ALTTOGGLE_EnsureIni();
     if (!szKey || !ALTTOGGLE_BuildIniPath(szIniPath)) {
-        return 0;
+        return nDefault ? 1 : 0;
     }
-    // Missing file/section/key or a non-numeric value = 0 = vanilla.
-    return GetPrivateProfileIntA("features", szKey, 0, szIniPath) ? 1 : 0;
+    // Missing file/section/key or a non-numeric value = nDefault.
+    return GetPrivateProfileIntA("features", szKey, nDefault ? 1 : 0, szIniPath) ? 1 : 0;
 }
 
 void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {

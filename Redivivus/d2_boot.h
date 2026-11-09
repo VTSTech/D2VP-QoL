@@ -10,7 +10,7 @@
 // version line (D2Client AUTOMAP_DrawVersion) print D2VP_BUILD_TAG instead of
 // the retail "v 1.14d", and the boot self-ID (Game/Main.cpp) composes its
 // R-number from D2VP_ROUND, so all three stay in lockstep per round.
-#define D2VP_ROUND "143"
+#define D2VP_ROUND "144"
 #define D2VP_BUILD_TAG "D2VP-R" D2VP_ROUND
 
 extern "C" {

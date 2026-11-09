@@ -12,7 +12,12 @@ the decoupled present only** (interpolation is the follow-on), **vsync untouched
 the option ships as **"Unlock FPS"**. Slate row 17. Status: **Implemented R142 (published,
 tag R142 — field green on §S-61 telemetry + the §S-64 menu flip) and R143 = Phase 2
 shipped, revised R143.1 (two-sample) and R143.2 (delivery wiring) after the owner's
-jitter field reports (see §4 as-built); §S-65 field pass re-asked against R143.2.**
+jitter field reports (see §4 as-built); the R143.2 glide is field-accepted 2026-11-09
+(owner: "Ok, I think it looks good now"). R144: the `unlock_fps_interp` sub-gate left
+ini-only for the twelfth Vanilla+ Options row — "FPS Interpolation", directly under
+Unlock FPS — and the Options page reflowed to two columns of six (box 0x1f1→0x151,
+fits 640x480 whole again; the row reads a missing key as 1 via
+`D2VP_GetFeatureToggleDefault` so its display always matches the gate).**
 Implementation record (R142): the pacer/gate/telemetry live in `VanillaPlusCore.cpp`
 (`UNLOCKFPS_*`), with three one-site consumers — the draw dispatch in
 `Game.cpp CLIENT_GameLoopFrame`, the pump idle sleep in `Message.cpp MessageGameLoop`,

@@ -11,6 +11,21 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R144 — Vanilla+ Options page: two columns + the interpolation row lands on the
+  panel** (owner ask: "Is unlock_fps_interp on the Vanilla+ Options Panel? … Can we
+  make the panel two column instead of one?"). The page was one column of eleven rows —
+  the box had grown to 497 px and clipped its empty bottom margin at 640x480. It is now
+  **two columns of six rows**: labels left, On/Off right-aligned per column,
+  per-column hover highlight and hit-testing, Previous Menu full-width below; the box
+  is 337 px again and fits every video stop whole, 640x480 included. **`unlock_fps_interp`
+  leaves ini-only** and takes the twelfth row, **FPS Interpolation**, directly under
+  Unlock FPS — same write bridge as every row (flip → ini write → 2 s cache flush).
+  The row reads a missing key as **1** through a new per-row read default
+  (`D2VP_GetFeatureToggleDefault`) so the display always matches what the gate acts on:
+  on a pre-R143 ini without the key (the template is only written for a missing file,
+  never backfilled) it shows On — the truth — and the first click writes a real `0`
+  instead of a silent no-op `1`. The R143.2 glide is field-accepted (owner:
+  "Ok, I think it looks good now"). Self-ID `Vanilla+0.0.8-R144`.
 - **R143 — Unlock FPS: sub-tick interpolation** (plan Phase 2, owner: "lets continue";
   revised **R143.1** after the owner's field report "the interpolation is jittery, looks
   better at 0").

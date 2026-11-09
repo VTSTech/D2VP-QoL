@@ -4,7 +4,7 @@
 > per-row scoping, implementation notes, round records). Humans: the feature table and
 > status live in [README.md](README.md), per-release changes in [CHANGELOG.md](CHANGELOG.md).
 
-*v9, 2026-11-09. **Row 17 added on owner ask — IMPLEMENTED R142 (published, tag R142) + R143 sub-tick interpolation (plan Phase 2, `unlock_fps_interp` ini-only default 1; two-sample R143.1, delivery wiring R143.2 after the owner's jitter field reports)**; field pass GREEN on §S-61 (telemetry: presents ~60/s, client ticks ~25/s, /fps reads 60) and the §S-64 mid-session menu flip (off→25, on→60, no restart); items 62–65 field pass pending**: the
+*v10, 2026-11-09. **Row 17 added on owner ask — IMPLEMENTED R142 (published, tag R142) + R143 sub-tick interpolation (plan Phase 2, `unlock_fps_interp` default 1; two-sample R143.1, delivery wiring R143.2 after the owner's jitter field reports; the owner field-accepted the R143.2 glide 2026-11-09: "Ok, I think it looks good now") + R144 Options-page rework — the page is two columns of six (box 0x1f1→0x151, fits 640x480 whole again) and `unlock_fps_interp` takes the twelfth row, **FPS Interpolation****; field pass GREEN on §S-61 (telemetry: presents ~60/s, client ticks ~25/s, /fps reads 60), the §S-64 mid-session menu flip (off→25, on→60, no restart) and the §S-65 glide look (owner: "looks good now"); items 62–64 + the R144 item 66 field pass pending**: the
 presentation-FPS unlock (`unlock_fps`, §17, option name **Unlock FPS**) — presents at
 ~60 Hz while the simulation stays byte-exact retail 25 Hz; the same-session recon found
 the cap is a single draw gate in `CLIENT_GameLoopFrame`, not a structural coupling, and
@@ -124,7 +124,7 @@ Every slate row must satisfy all of these before it ships:
 | 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
-| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` ini-only sub-gate default 1, 0 = the R142 step-cadence look); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — and the §S-64 menu flip green (off→25, on→60); §S 62–65 field pass pending) |
+| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
@@ -138,14 +138,14 @@ inventory — retail-packet replay, zero server changes; drafted in §16, full p
 [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Row 17 **implemented R142**
 (owner ask 2026-11-09): the presentation-FPS unlock — the sim stays 25 Hz, only the
 present decouples; scoped in §17, full plan at
-[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md), field pass green on §S-61 + the §S-64 menu flip (62–65 field pass pending; R143 shipped the Phase 2 interpolation). Rows 14–15 **shipped** as the
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md), field pass green on §S-61 + the §S-64 menu flip + the §S-65 glide look (62–64 and the R144 item 66 field pass pending; R143 shipped the Phase 2 interpolation, R144 put it on the panel). Rows 14–15 **shipped** as the
 video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mode — the
 whole site-1..6 pipeline routes it (§14) —
 and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
-**Shipped as of R143**: rows 0b (R125/R126), 0c (R140), 17 (R142 + the R143 interpolation), plus rows 1, 3, 6, 9, 10
+**Shipped as of R144**: rows 0b (R125/R126), 0c (R140), 17 (R142 + the R143 interpolation + the R144 panel row), plus rows 1, 3, 6, 9, 10
 and 11 — and, outside this slate, the pre-slate pair
 `alt_toggle`/`portable_save` (handoff ledger rows 28–31, releases
-0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Eleven features
+0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Twelve features
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 
@@ -994,7 +994,7 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 ---
 
-### 17. Presentation FPS unlock — `[features] unlock_fps` (Implemented R142 published + R143 interpolation — owner ask 2026-11-09; field green on §S-61 + §S-64 flip, 62–65 field pass pending)
+### 17. Presentation FPS unlock — `[features] unlock_fps` (Implemented R142 published + R143 interpolation + R144 panel row — owner ask 2026-11-09; field green on §S-61 + §S-64 flip + the §S-65 glide look, 62–64 + item 66 field pass pending)
 
 - **The ask** (owner, 2026-11-09, chat, no issue): "How can we unlock the FPS to 60 in D3D
   fullscreen?", scoped by the follow-up: the 25 FPS is known to be tied to the game tick
@@ -1048,8 +1048,12 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   sawtooth at every tick+present boundary) and the sprite-world offset's delta was dead
   behind the shake early-return — hence R143.2. Monsters,
   missiles, items ride the world offset unchanged — they glide with the floor.
-  Animations stay tick-locked. Sub-gate **`[features] unlock_fps_interp`** (ini-only,
-  default 1, no Options row; 0 = the R142 look, hot-read). Known minor: the automap
+  Animations stay tick-locked. Sub-gate **`[features] unlock_fps_interp`** (default 1;
+  ini-only through R143 — since R144 the twelfth Vanilla+ Options row, **FPS
+  Interpolation**, directly under its owner; the row rides the same write bridge as the
+  others and reads a missing key as 1 through the per-row read default
+  `D2VP_GetFeatureToggleDefault`, matching the gate — a pre-R143 ini without the key
+  displays On, which is what the gate acts on; 0 = the R142 look, hot-read either way). Known minor: the automap
   arrow and the player's overhead label keep tick positions (≤ one tick of travel).
   Harness: R143.1 34/34 unit green, superseded R143.2 by the loop-order wiring sim
   10/10 green (sawtooth reproduction + monotone bounded glide + kick-free stop/turn).

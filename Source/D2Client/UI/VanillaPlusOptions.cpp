@@ -131,12 +131,19 @@ static const int VPLABEL_BASELINE_INSET = 4;
 static const uint16_t VPPAGE_FONT_ID = 0xd;        // FontInGameChat - ControlConfig's font
 
 // Page layout (mirrors the ControlConfig panel box for a familiar look).
+// R144: the page is TWO COLUMNS of VPP_ROWS_PER_COL rows each. The one-column
+// page had grown to 0x1f1 (497 px) over eleven rows - past the 640x480 height
+// (the box clipped its bottom 9 px there) and past one glance; the twelfth
+// row (unlock_fps_interp, this round) would have pushed the box to 0x211
+// (529 px). Six per column pulls it back to 0x151 (337 px) - the box fits
+// every stop whole again, 640x480 included ((480-337)/2 = 71 top margin).
 static const int VPPAGE_BOX_WIDTH = 0x26c;
-static const int VPPAGE_BOX_HEIGHT = 0x1f1;        // R142: was 0x1d1 - grew one pitch for the eleventh row (see the layout check)
+static const int VPPAGE_COL_WIDTH = 0x136;         // R144: half the box width - one column's span
+static const int VPPAGE_BOX_HEIGHT = 0x151;        // R144: was 0x1f1 - two columns of six rows (see the layout check)
 static const int VPPAGE_ROW_PITCH = 0x20;
 static const int VPPAGE_ROW_HEIGHT = 0x1a;
 static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
-static const int VPPAGE_BACK_ROW_Y = 0x1c4;        // from box top (R142: was 0x1a4 - moved below the eleventh row, see the layout check)
+static const int VPPAGE_BACK_ROW_Y = 0x124;        // from box top (R144: was 0x1c4 - six rows per column pull it back up)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
 // [features] keys rendered by the page. Adding a slate feature = +1 entry
@@ -147,19 +154,20 @@ static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 struct VPPFeatureRow {
     const char* szKey;        // d2vp.ini [features] key
     const wchar_t* wszLabel;  // row label
+    int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[11] = {
-    { "alt_toggle", L"Show Items Toggle" },
-    { "auto_gold", L"Auto Gold Pickup" },
-    { "portable_save", L"Portable Saves" },
-    { "globe_persistent", L"Persistent Globe Text" },
-    { "item_ilvl", L"Item Level Tooltips" },
-    { "shared_stash", L"Shared Stash" },  // VP: [shared-stash] track N round 1 (R67: in-game Options row - the tab is no longer ini-only)
+static const VPPFeatureRow gaVanillaPlusRows[12] = {
+    { "alt_toggle", L"Show Items Toggle", 0 },
+    { "auto_gold", L"Auto Gold Pickup", 0 },
+    { "portable_save", L"Portable Saves", 0 },
+    { "globe_persistent", L"Persistent Globe Text", 0 },
+    { "item_ilvl", L"Item Level Tooltips", 0 },
+    { "shared_stash", L"Shared Stash", 0 },  // VP: [shared-stash] track N round 1 (R67: in-game Options row - the tab is no longer ini-only)
     // VP: [issue #26 / R101] no-panel-shift - the toggle is no longer ini-only.
     // The row rides the same D2VP_* bridge as the other six; the write bridge
     // already busts dwNoPanelShiftLastCheck (D2VP_ConfigReloaded), so flipping
     // it here re-reads the key on the very next PANELSHIFT_NoShiftWorld poll.
-    { "no_panel_shift", L"No Panel World Shift" },
+    { "no_panel_shift", L"No Panel World Shift", 0 },
     // VP: [manaburn-fix / R108] mana_burn_fix - the toggle is no longer
     // ini-only. The row rides the same D2VP_* bridge as the other seven
     // (the ini template block shipped with R106, so a fresh d2vp.ini already
@@ -169,7 +177,7 @@ static const VPPFeatureRow gaVanillaPlusRows[11] = {
     // so a flip here lands on the next drain roll within 2 s, the same
     // latency as an external ini edit, while the panel draw below re-reads
     // the key fresh every frame and shows the flip immediately.
-    { "mana_burn_fix", L"Mana Burn Fix" },
+    { "mana_burn_fix", L"Mana Burn Fix", 0 },
     // VP: [shift-compare / R125] shift_compare - the toggle rides the same
     // D2VP_* bridge as the other eight (label = the owner's wording, 2026-11-06).
     // The ini template block ships in the same round, so both a fresh
@@ -179,7 +187,7 @@ static const VPPFeatureRow gaVanillaPlusRows[11] = {
     // flip here shows on the very next hover frame; the compare capture also
     // re-reads the key fresh every frame it fires, so the round trip is
     // immediate in both directions.
-    { "shift_compare", L"Shift Item Compare" },
+    { "shift_compare", L"Shift Item Compare", 0 },
     // VP: [ctrl-click stash / R140] ctrl_click_xfer - the toggle rides the
     // same D2VP_* bridge as the other nine. The ini template block ships in
     // the same round, so both a fresh d2vp.ini and an existing one can carry
@@ -187,7 +195,7 @@ static const VPPFeatureRow gaVanillaPlusRows[11] = {
     // once). The gate VPCTRLXFER_Active (VanillaPlusCore.cpp) is read per
     // Ctrl+Click and the write bridge busts its cache tick, so a flip here
     // lands on the very next Ctrl+Click - no restart, no panel reopen.
-    { "ctrl_click_xfer", L"Ctrl Click Transfer" },
+    { "ctrl_click_xfer", L"Ctrl Click Transfer", 0 },
     // VP: [unlock-fps / R142] unlock_fps - the presentation-FPS unlock
     // (FEATURES.md row 17, plans/FPS-UNLOCK-PLAN.md). Label = the owner's
     // wording ("for v1 call the option Unlock FPS"). Bool gate, fixed 60 Hz
@@ -197,10 +205,25 @@ static const VPPFeatureRow gaVanillaPlusRows[11] = {
     // cache tick (D2VP_ConfigReloaded), so a flip here re-reads the key on the
     // very next draw poll; the pacer unanchors itself on gate-off and the
     // retail draw gate takes over from the same frame.
-    { "unlock_fps", L"Unlock FPS" },
+    { "unlock_fps", L"Unlock FPS", 0 },
+    // VP: [unlock-fps-interp R144] unlock_fps_interp - the R143 sub-tick
+    // interpolation sub-gate leaves ini-only and takes the twelfth row,
+    // directly under its owner. It rides the same D2VP_* bridge; nReadDefault
+    // is 1 because the gate itself reads a missing key as 1 (UNLOCKFPS_Active:
+    // "missing key = 1, the intended look") - the generic 0-default read
+    // would display Off while the interp actually runs on a pre-R143 ini
+    // (ALTTOGGLE_EnsureIni writes the template only for a missing FILE, it
+    // never backfills keys). The write path is key-generic already: a flip
+    // writes an explicit 0/1 and busts dwUnlockFpsLastCheck
+    // (D2VP_ConfigReloaded), so the next UNLOCKFPS_Active poll re-reads
+    // within the same 2 s window an external ini edit gets. With the gate off
+    // the row is inert (the interp consumers all poll UNLOCKFPS_Active first)
+    // - it stays a plain toggle like every other row, no graying.
+    { "unlock_fps_interp", L"FPS Interpolation", 1 },
 };
-static const int VPP_ROW_COUNT = 11;
-static const int VPP_ROW_BACK = 11; // hit-test index of the Previous Menu row
+static const int VPP_ROW_COUNT = 12;
+static const int VPP_ROW_BACK = 12; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 6; // R144: two columns of six - row i draws at column i / 6, band i % 6
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
@@ -218,13 +241,20 @@ static const int VPP_ROW_BACK = 11; // hit-test index of the Previous Menu row
 // the eleventh row (unlock_fps) spans boxTop+0x190..0x1aa, so the back row
 // moves down one pitch again, to boxTop+0x1c4 (0x1aa+0x1a); its bottom
 // 0x1de grows the box from 0x1d1 to 0x1f1 (same 0x13 bottom margin).
-// 0x1f1 = 497 now exceeds the 640x480 height - the first layout check this
-// page has failed on the smallest stop: at 480p the box top is
-// (480-497)/2 = -8, so the solid box and its frame clip their bottom 9 px
-// (decorative margin only: the first row lands at 72, the back row spans
-// 444..470 - every row stays fully on-screen and clickable, the clipped
-// strip is empty box). 800x600 and every wide stop fit whole as before
-// ((600-497)/2 = 51).
+// 0x1f1 = 497 exceeded the 640x480 height (the bottom 9 px of empty box
+// clipped there). R144: the twelfth row (unlock_fps_interp) would have
+// pushed the back row to boxTop+0x1e4 and the box to 0x211 (529 px, 50 px
+// past 480p) - instead the page splits into TWO COLUMNS of six rows:
+// the last row of each column spans boxTop+0xf0..0x10a, the back row
+// returns to boxTop+0x124 (0x10a+0x1a, the same one-row 0x1a gap), its
+// bottom 0x13e sets the box to 0x151 (337 px, same 0x13 bottom margin) -
+// every stop fits whole again, 640x480 included ((480-337)/2 = 71).
+// Horizontal (R144): each column's band is its half of the box inset 0x0e
+// per side (width 0x11a); the label sits 0x10 into the band (column 0 keeps
+// the 0x1e label x this page has always used) and the On/Off value
+// right-aligns 0x10 inside the band's right edge - measured per draw, so a
+// fixed left x sized for the full box can't crowd the longest label
+// ("Persistent Globe Text") in either column.
 
 // Input handlers (definitions below; the batch array references them).
 // Deliberately NO WM_MOUSEMOVE (0x200) entry - see the header comment block:
@@ -256,23 +286,50 @@ static int VPPAGE_RowTopY(int nRowIndex) {
     if (nRowIndex == VPP_ROW_BACK) {
         return nBoxY + VPPAGE_BACK_ROW_Y;
     }
-    return nBoxY + VPPAGE_FIRST_ROW_Y + nRowIndex * VPPAGE_ROW_PITCH;
+    // R144: two columns - the vertical band follows the row's position WITHIN
+    // its column (i % VPP_ROWS_PER_COL), not the global index.
+    return nBoxY + VPPAGE_FIRST_ROW_Y
+        + (nRowIndex % VPP_ROWS_PER_COL) * VPPAGE_ROW_PITCH;
+}
+
+// R144: the on-screen band (left x + width) of one feature row - the strip
+// the hover highlight fills and the mouse hit-test accepts: the row's
+// column-half of the box inset 0x0e per side. The back row keeps the
+// full-width strip (draw and hit-test handle it separately, as before).
+static void VPPAGE_RowBand(int nRowIndex, int* pnLeft, int* pnWidth) {
+    int nBoxX = 0;
+    int nBoxY = 0;
+    VPPAGE_GetBoxOrigin(&nBoxX, &nBoxY);
+    int nCol = nRowIndex / VPP_ROWS_PER_COL;
+    *pnLeft = nBoxX + nCol * VPPAGE_COL_WIDTH + 0x0e;
+    *pnWidth = VPPAGE_COL_WIDTH - 0x1c;
 }
 
 static int VPPAGE_HitTest(int nMouseX, int nMouseY) {
+    // Feature rows (R144): a hit needs the row's vertical band AND its own
+    // column's horizontal band - the same y is two rows now, one per column.
+    for (int i = 0; i < VPP_ROW_COUNT; i++) {
+        int nTop = VPPAGE_RowTopY(i);
+        if (nMouseY < nTop || nMouseY >= nTop + VPPAGE_ROW_HEIGHT) {
+            continue;
+        }
+        int nBandLeft = 0;
+        int nBandWidth = 0;
+        VPPAGE_RowBand(i, &nBandLeft, &nBandWidth);
+        if (nMouseX >= nBandLeft && nMouseX < nBandLeft + nBandWidth) {
+            return i;
+        }
+    }
+    // Previous Menu row: full-width strip, the contract it always had.
     int nBoxX = 0;
     int nBoxY = 0;
     VPPAGE_GetBoxOrigin(&nBoxX, &nBoxY);
     int nRowLeft = nBoxX + 0x12;
     int nRowRight = nBoxX + VPPAGE_BOX_WIDTH - 0x12;
-    if (nMouseX < nRowLeft || nMouseX >= nRowRight) {
-        return -1;
-    }
-    for (int i = 0; i <= VPP_ROW_BACK; i++) {
-        int nTop = VPPAGE_RowTopY(i);
-        if (nMouseY >= nTop && nMouseY < nTop + VPPAGE_ROW_HEIGHT) {
-            return i;
-        }
+    int nBackTop = VPPAGE_RowTopY(VPP_ROW_BACK);
+    if (nMouseX >= nRowLeft && nMouseX < nRowRight
+        && nMouseY >= nBackTop && nMouseY < nBackTop + VPPAGE_ROW_HEIGHT) {
+        return VPP_ROW_BACK;
     }
     return -1;
 }
@@ -560,7 +617,10 @@ static void VANILLAPLUS_ToggleRow(int nRowIndex) {
         return;
     }
     const char* szKey = gaVanillaPlusRows[nRowIndex].szKey;
-    int nValue = D2VP_GetFeatureToggle(szKey);
+    // R144: read through the row's own default so the flip inverts what the
+    // display shows (unlock_fps_interp reads a missing key as 1 - a generic
+    // 0-default read would make the first click a silent no-op write of 1).
+    int nValue = D2VP_GetFeatureToggleDefault(szKey, gaVanillaPlusRows[nRowIndex].nReadDefault);
     // WritePrivateProfileStringA through D2Client's bridge: writes d2vp.ini
     // and flushes every gate's 2 s hot-read cache (same-frame effect for the
     // draw, <= 1 frame for auto_gold, next save-path resolution for
@@ -631,9 +691,16 @@ static void VPPAGE_DrawCenteredText(const wchar_t* wszText, int nBaselineY, int 
     D2Win::Src::D2WinFont::DRAW_text((uint16_t*)wszText, D2Client::UI::ui::ScreenSizeX / 2 - nWidth / 2, nBaselineY, nColor, 0);
 }
 
-static void VPPAGE_DrawValueText(int nBoxX, int nValue, int nBaselineY) {
+static void VPPAGE_DrawValueText(int nValueRightX, int nValue, int nBaselineY) {
     // On = green (2), Off = red (1) - classic D2 locale color codes.
-    D2Win::Src::D2WinFont::DRAW_text((uint16_t*)(nValue ? L"On" : L"Off"), nBoxX + VPPAGE_BOX_WIDTH - 0x5a, nBaselineY, nValue ? 2 : 1, 0);
+    // R144: right-aligned to the row band (the x argument is the band's
+    // right text edge, 0x10 in from the band's right): two columns halve the
+    // row width, and a fixed left x sized for the full box would crowd the
+    // longest labels. DRAW_text0 measures without drawing - the same
+    // measure-then-place pattern the centered-text helper uses.
+    const wchar_t* wszValue = nValue ? L"On" : L"Off";
+    int nWidth = D2Win::Src::D2WinFont::DRAW_text0((uint16_t*)wszValue);
+    D2Win::Src::D2WinFont::DRAW_text((uint16_t*)wszValue, nValueRightX - nWidth, nBaselineY, nValue ? 2 : 1, 0);
 }
 
 void __stdcall DRAW_VanillaPlusOptions() {
@@ -663,12 +730,16 @@ void __stdcall DRAW_VanillaPlusOptions() {
     int nHover = VPPAGE_HitTest(nMouseX, nMouseY);
     for (int i = 0; i < VPP_ROW_COUNT; i++) {
         int nRowY = VPPAGE_RowTopY(i);
+        int nBandLeft = 0;
+        int nBandWidth = 0;
+        VPPAGE_RowBand(i, &nBandLeft, &nBandWidth);
         if (nHover == i) {
-            Engine::Gfx::D2GFX_DrawSolidRectExBySize(nBoxX + 0x12, nRowY, VPPAGE_BOX_WIDTH - 0x24, VPPAGE_ROW_HEIGHT, 0, DRAW_TRANSPARENT);
+            Engine::Gfx::D2GFX_DrawSolidRectExBySize(nBandLeft, nRowY, nBandWidth, VPPAGE_ROW_HEIGHT, 0, DRAW_TRANSPARENT);
         }
         int nBaselineY = nRowY + VPPAGE_ROW_HEIGHT - VPPAGE_TEXT_BASELINE_INSET;
-        D2Win::Src::D2WinFont::DRAW_text((uint16_t*)gaVanillaPlusRows[i].wszLabel, nBoxX + 0x1e, nBaselineY, 0, 0);
-        VPPAGE_DrawValueText(nBoxX, D2VP_GetFeatureToggle(gaVanillaPlusRows[i].szKey), nBaselineY);
+        D2Win::Src::D2WinFont::DRAW_text((uint16_t*)gaVanillaPlusRows[i].wszLabel, nBandLeft + 0x10, nBaselineY, 0, 0);
+        VPPAGE_DrawValueText(nBandLeft + nBandWidth - 0x10,
+            D2VP_GetFeatureToggleDefault(gaVanillaPlusRows[i].szKey, gaVanillaPlusRows[i].nReadDefault), nBaselineY);
     }
 
     // Previous Menu row (same highlight/click contract as the toggles).
