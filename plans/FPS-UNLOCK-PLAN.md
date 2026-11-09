@@ -9,15 +9,54 @@ draw gate in the client frame loop, not a structural coupling; the simulation pa
 independently and never has to change. Owner constraints set same day (all four calls in
 §9 resolved): **v1 is a bool gate** (`[features] unlock_fps`) **targeting a fixed 60 Hz,
 the decoupled present only** (interpolation is the follow-on), **vsync untouched**, and
-the option ships as **"Unlock FPS"**. Slate row 17. Status: **Implemented R142 — rounds
-1–2 done (tree-verify + code + docs); round 3 field QA pending (SMOKE §S, items 61–64).**
+the option ships as **"Unlock FPS"**. Slate row 17. Status: **Implemented R142 (published,
+tag R142 — field green on §S-61 telemetry + the §S-64 menu flip) and R143 = Phase 2
+shipped, revised R143.1 (two-sample) and R143.2 (delivery wiring) after the owner's
+jitter field reports (see §4 as-built); §S-65 field pass re-asked against R143.2.**
 Implementation record (R142): the pacer/gate/telemetry live in `VanillaPlusCore.cpp`
 (`UNLOCKFPS_*`), with three one-site consumers — the draw dispatch in
 `Game.cpp CLIENT_GameLoopFrame`, the pump idle sleep in `Message.cpp MessageGameLoop`,
 and the EndScene budget in `D2GFX.cpp` (own 2 s-poll reader, renderer boundary).
-Sandbox verification: the pacer section extracted verbatim into a stubbed harness —
-15/15 green (steady 60 Hz grid, jitter, re-anchor-no-burst, GetTickCount wrap, gate
-flips same-poll, idle-sleep bounds, stats window). Round 1 pins that held: the stats
+Implementation record (R143, revised R143.1 + R143.2): `UNLOCKFPS_GetPlayerRenderOffset`
+(same TU) interpolates between two real position samples — `UNLOCKFPS_NoteClientTick`
+snapshots the player's draw-space position (the same `GetTargetX/Y` every consumer
+reads live) at each client world update, and the offset glides the world from the
+previous sample to the current one (`offset = −(cur − prev) × (1 − α)`, α = ms since
+that update / 40 clamped to one tick) at five draw-time sites —
+the view center (`InGameDraw`), the sprite world offset (`DRAW_UpdateMouseWorldOffsets`),
+the player's sprite (its delta cancels the camera's: the character keeps its retail
+screen-fixed position while the world glides), the player's shadow and state overlays —
+all write-nowhere; monsters/missiles/items ride the world offset and glide with the floor.
+The first cut extrapolated retail's `PATH_GetScreenVelocity` (`pos + screenVelocity × α`);
+a prediction is never exact (quantized path velocity vs the real per-tick displacement,
+start/stop, turns), so every tick boundary snapped by the prediction error — the owner's
+field report "the interpolation is jittery, looks better at 0" — and R143.1 replaced
+prediction with measurement (continuous at every tick boundary by construction, one
+frame-shared offset per present via a dedicated epoch counter, >128 px/tick = teleport:
+snap). R143.1 still kicked in the field ("still looks jittery at 1, looks better at
+0"): the delivery around the math was broken, three wiring defects — (1) the snapshot
+ran AFTER the draw (in the `didClientLoop` block behind the present gate), so on
+tick+present frames the draw read the live post-tick position against the previous
+segment's pair and renderPos sawtoothed a full tick at every boundary; (2) the sprite
+world offset's delta sat behind `DRAW_UpdateMouseWorldOffsets`' shake early-return —
+dead in normal play — so unit shadows, state overlays, `GFX_IsUnitOnScreen` culling and
+the mouse pick stayed tick-locked against the gliding camera; (3) the player-sprite
+cancel double-added in perspective. R143.2 fixed all three: the snapshot call moved
+BEFORE the draw block (Game.cpp), the MouseOffsets delta applies before the shake check
+(Path.cpp), and the Wall2 cancel adds top-down / subtracts in perspective (MouseOffsets
+already carries the delta into projected coords).
+Sandbox verification: R143.1's 34/34 unit harness was superseded R143.2 by a loop-order
+wiring sim (`scripts/interp-r1432-harness.c`, gcc `-Wall -Wextra`, 10/10 green): the
+R143.1 order (snapshot after the draw) reproduces the field sawtooth — an 18 px backward
+kick at every tick+present boundary on a 32 px walking step — and the R143.2 order
+proves a monotone forward glide that never outruns the sim, no kick at the stop boundary,
+per-present displacement bounded through a direction flip, plus the carried ramp,
+late-tick clamp, teleport snap, standing-still zeros and the FALSE contract. The
+R143.1 34-test unit record (15 pacer: steady 60 Hz grid, jitter, re-anchor-no-burst,
+GetTickCount wrap, gate flips same-poll, idle-sleep bounds, stats window; 19 interp:
+two-sample ramp, tick-boundary continuity (no hop), late-tick clamp, frame-cache
+coherence, standing-still zeros, teleport snap, every FALSE path, the activation mark's
+interp suffix). Round 1 pins that held: the stats
 split is purely additive (lightmap ladder outcome-identical at 60; `GetFPSSkip` feeds
 only the /fps overlay); the SP pause path and cutscene/loading loops stop polling the
 draw site and fall back to retail pacing via the 100 ms recency-out.
@@ -146,14 +185,41 @@ telemetry habit.
   (`DRAW_LowLevelDrawing` / `GameLoopFuncInitGame` keep their own pacing).
 - MP branch: `didTick` keeps gating `ClientSideGameLoop()`; the draw decouples identically.
 
-**Phase 2 — sub-tick interpolation (follow-on arc, sketched):**
+**Phase 2 — sub-tick interpolation (SHIPPED R143, REVISED R143.1 two-sample + R143.2 delivery — as-built):**
 
-- Render-time only: `renderPos = pos + velocity × α` with `α` from the pacer's tick
-  boundary; write to a draw-pass shadow, never into `D2DynamicPathStrc`.
-- Order of value: **camera first** (one vector — the player-follow; the world scroll going
-  60 Hz kills most perceived judder), then **missiles** (fast movers show the worst
-  tick-step), then remaining units. Animation frames stay tick-locked — the D2R-era look.
-- The camera site is the one anchor this recon has not pinned yet — Round 1 item.
+- Render-time only; write to a draw-pass offset, never into `D2DynamicPathStrc`.
+- As-built (R143.1, two-sample): `UNLOCKFPS_NoteClientTick` snapshots the player's
+  draw-space position (the same `GetTargetX/Y` the consumers read) at each client world
+  update; `UNLOCKFPS_GetPlayerRenderOffset` returns `offset = −(cur − prev) × (1 − α)`
+  (α = ms since that update / 40, clamped to one tick) — interpolation between two real
+  samples, continuous at every tick boundary by construction. The original R143 form
+  (`renderPos = pos + screenVelocity × α`, retail's `PATH_GetScreenVelocity`) was an
+  extrapolation: its prediction error snapped the picture at every tick boundary and a
+  stop collapsed the whole accumulated offset — the owner's "jittery, looks better at
+  0" field report. The offset is computed once per present (dedicated epoch counter, so
+  the 5 s stats reset can't alias the cache) and shared by all five guarded sites —
+  view center (`InGameDraw`), sprite world offset (`DRAW_UpdateMouseWorldOffsets`), the
+  player's sprite/shadow/state overlays. The camera and sprite deltas cancel on the
+  player, so the character stays screen-fixed and the world glides — the D2
+  camera-follow shape. A per-tick displacement over 128 px (teleport, level change,
+  resurrect) snaps instead of gliding. Monsters/missiles/items ride the world offset
+  (they glide with the floor); their own sub-tick smoothing (per-unit samples at their
+  draw sites) remains open as a possible R144 refinement — the world-scroll glide
+  carries most of the win, per the original ordering. Animations stay tick-locked.
+  Sub-gate `unlock_fps_interp` (ini-only, default 1; 0 = the R142 step-cadence look).
+  Known minor: the automap arrow and the player's overhead label keep tick positions
+  (≤ one tick of travel).
+- Delivery wiring (R143.2, the field "still looks jittery at 1" fix): the two-sample
+  math is only as continuous as its wiring — the snapshot must run BEFORE the draw
+  (consumers read the live position; a pair caught up after the draw made renderPos
+  sawtooth a full tick at every tick+present boundary), the sprite world offset must
+  get the delta unconditionally (R143.1 placed it after the shake early-return, dead in
+  normal play, leaving shadows/overlays/culling tick-locked against the gliding
+  camera), and the player-sprite cancel must flip sign in perspective (MouseOffsets
+  already carries the delta into projected coords). A residual, bounded velocity wobble
+  (±20% of one frame's travel) comes from the tick gate's 33.3/50 ms firing pattern
+  under the 60 Hz loop — position-continuous, far under the old stepping; a sim-phase α
+  clock is the R144 refinement if the field wants it butter-smooth.
 
 ## 5. Failure and recovery matrix (R61 pattern — degrade to mark, never halt)
 

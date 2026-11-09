@@ -282,7 +282,15 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       unchanged. Vsync behavior is untouched. d2boot.log carries a\r\n"
         ";       presents/ticks-per-second pair once per 5 s while this is on,\r\n"
         ";       as the proof the game speed is unchanged.\r\n"
-        "unlock_fps=0\r\n";
+        "unlock_fps=0\r\n"
+        "\r\n"
+        "; Sub-tick interpolation (R143) - rides Unlock FPS, no Options row:\r\n"
+        ";   1 = while Unlock FPS is on, the world scroll and everything in it\r\n"
+        ";       glide between game ticks at the present rate (the game speed is\r\n"
+        ";       still exactly retail - this is render smoothing only)\r\n"
+        ";   0 = the R142 look: the picture still refreshes at ~60 FPS but the\r\n"
+        ";       world and characters step at the classic 25 Hz cadence\r\n"
+        "unlock_fps_interp=1\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -970,11 +978,31 @@ uint32_t __stdcall PANELSHIFT_BorderForWorld(uint32_t eBorderType) {
 //     the present rate with the client-tick rate. Zero marks when off.
 
 static const DWORD UNLOCKFPS_PERIOD_MS = 16; // fixed 60 Hz v1 target (owner: bool for v1, numeric later)
+static const DWORD UNLOCKFPS_SIM_TICK_MS = 40; // [unlock-fps-interp R143] retail client world-update period (25 Hz) - the alpha clock base
 
 static int gbUnlockFpsMode = 0;
+static int gbUnlockFpsInterp = 0;           // [unlock-fps-interp R143] unlock_fps_interp sub-gate (ini-only, default 1)
 static DWORD dwUnlockFpsLastCheck = 0;      // 2 s ini re-read gate (row-28 pattern)
 static DWORD dwUnlockFpsNextPresent = 0;    // pacer deadline (GetTickCount); 0 = unanchored
 static DWORD dwUnlockFpsLastPoll = 0;       // recency of the last ShouldPresent poll
+static DWORD dwUnlockFpsLastClientTick = 0; // [unlock-fps-interp R143] alpha clock anchor: GetTickCount at the last client world update
+// [unlock-fps-interp R143.1] two-sample interpolation state: the player's
+// draw-space position - the same D2Common::Units::GetTargetX/Y every consumer
+// site reads - snapshotted at each client world update. The render offset
+// glides the world from the previous sample to the current one (interpolation
+// between two real samples: continuous at every tick boundary by construction,
+// no velocity prediction to be wrong - R143's extrapolation snapped by its own
+// prediction error every tick, the field jitter the owner reported).
+static const int UNLOCKFPS_INTERP_SNAP_PX = 128; // per-tick displacement beyond this = teleport/level change: snap, don't glide
+static int gnUnlockFpsPrevPosX = 0;
+static int gnUnlockFpsPrevPosY = 0;
+static int gnUnlockFpsCurPosX = 0;
+static int gnUnlockFpsCurPosY = 0;
+static int gbUnlockFpsHaveSnap = 0;                 // prev/cur pair valid (player seen at least once)
+static int gnUnlockFpsOffsetX = 0;                  // per-present cache: one offset per frame,
+static int gnUnlockFpsOffsetY = 0;                  // shared by the camera and every sprite draw
+static DWORD dwUnlockFpsFrameId = 1;                // [R143.1] increments per present - the interp cache epoch (starts 1 so the 0 cache key never matches)
+static DWORD dwUnlockFpsOffsetFrame = 0;            // [R143.1] present epoch the cached offset was computed for
 static int sbUnlockFpsTimerRaised = 0;      // timeBeginPeriod(1) one-way latch
 static DWORD dwUnlockFpsStatsWindowTick = 0;
 static DWORD dwUnlockFpsPresentCount = 0;
@@ -989,8 +1017,12 @@ BOOL __stdcall UNLOCKFPS_Active() {
             ALTTOGGLE_EnsureIni();
             // Missing file/section/key or a non-numeric value = 0 = vanilla.
             gbUnlockFpsMode = GetPrivateProfileIntA("features", "unlock_fps", 0, szIniPath) ? 1 : 0;
+            // [unlock-fps-interp R143] interpolation rides the gate; missing key = 1
+            // (the intended look). 0 restores the R142 step-cadence presentation.
+            gbUnlockFpsInterp = GetPrivateProfileIntA("features", "unlock_fps_interp", 1, szIniPath) ? 1 : 0;
         } else {
             gbUnlockFpsMode = 0;
+            gbUnlockFpsInterp = 0;
         }
     }
     return gbUnlockFpsMode;
@@ -1006,7 +1038,8 @@ BOOL __stdcall UNLOCKFPS_ShouldPresent() {
     if (!sbUnlockFpsTimerRaised) {
         sbUnlockFpsTimerRaised = 1;
         timeBeginPeriod(1); // 16 ms pacing needs 1 ms Sleep granularity; one-way latch, never lowered
-        D2BOOT_Mark("unlock-fps: [features] unlock_fps=1 - present pacer 60 Hz, sim stays 25 Hz (timeBeginPeriod(1))");
+        D2BOOT_MarkFmt("unlock-fps: [features] unlock_fps=1 - present pacer 60 Hz, sim stays 25 Hz (timeBeginPeriod(1))%s",
+                       gbUnlockFpsInterp ? " + sub-tick interp (two-sample)" : "");
     }
     if (!dwUnlockFpsNextPresent) {
         // First activation this process (or the first poll after a re-anchor
@@ -1061,11 +1094,44 @@ static void UNLOCKFPS_StatsIfDue() {
 }
 
 void __stdcall UNLOCKFPS_NotePresent() {
+    dwUnlockFpsFrameId++; // [unlock-fps-interp R143.1] new present epoch: the next draw recomputes the shared offset
     dwUnlockFpsPresentCount++;
     UNLOCKFPS_StatsIfDue();
 }
 
 void __stdcall UNLOCKFPS_NoteClientTick() {
+    // [unlock-fps-interp R143.1] two-sample snapshot: capture the player's
+    // draw-space position right after a client world update moved it, shifting
+    // the previous sample aside. [R143.2] the CALL SITE moved before the draw
+    // block (Game.cpp) - on a tick+present iteration the draw reads this
+    // position live, so the pair must already describe it or the render
+    // sawtooths a full tick at every boundary (the residual field jitter).
+    // Kept fresh even with the gate off (two int reads) so a mid-session
+    // flip-on starts from a valid pair.
+    D2UnitStrc* pPlayer = D2Client::UNIT::Player::GetPlayerUnit_UI();
+    if (pPlayer) {
+        int nPosX = D2Common::Units::GetTargetX(pPlayer);
+        int nPosY = D2Common::Units::GetTargetY(pPlayer);
+        if (!gbUnlockFpsHaveSnap) {
+            gnUnlockFpsPrevPosX = nPosX; // first sample: no previous tick, no glide
+            gnUnlockFpsPrevPosY = nPosY;
+            gbUnlockFpsHaveSnap = 1;
+        } else if (nPosX - gnUnlockFpsCurPosX > UNLOCKFPS_INTERP_SNAP_PX
+                || gnUnlockFpsCurPosX - nPosX > UNLOCKFPS_INTERP_SNAP_PX
+                || nPosY - gnUnlockFpsCurPosY > UNLOCKFPS_INTERP_SNAP_PX
+                || gnUnlockFpsCurPosY - nPosY > UNLOCKFPS_INTERP_SNAP_PX) {
+            gnUnlockFpsPrevPosX = nPosX; // teleport / level change / resurrect:
+            gnUnlockFpsPrevPosY = nPosY; // discontinuity - snap, never glide it
+        } else {
+            gnUnlockFpsPrevPosX = gnUnlockFpsCurPosX;
+            gnUnlockFpsPrevPosY = gnUnlockFpsCurPosY;
+        }
+        gnUnlockFpsCurPosX = nPosX;
+        gnUnlockFpsCurPosY = nPosY;
+    } else {
+        gbUnlockFpsHaveSnap = 0; // out of game / loading: drop the stale pair
+    }
+    dwUnlockFpsLastClientTick = GetTickCount(); // alpha clock anchor (cheap; harmless when the gate is off)
     dwUnlockFpsTickCount++;
     UNLOCKFPS_StatsIfDue();
 }
@@ -1090,6 +1156,82 @@ int __stdcall UNLOCKFPS_IdleSleepMs() {
         nUntilDeadline = (int32_t)UNLOCKFPS_PERIOD_MS; // stay responsive to a gate flip
     }
     return nUntilDeadline;
+}
+
+// [vanilla-plus unlock-fps-interp] R143.1 two-sample, R143.2 delivery fix -
+// sub-tick render delta (plan §4 Phase 2). R143 extrapolated the player's
+// position with PATH_GetScreenVelocity x alpha; a prediction is never exact
+// (quantized path velocity vs the real per-tick displacement, start/stop,
+// turns), so every tick boundary snapped by the prediction error - the field
+// jitter the owner reported ("jittery, looks better at 0"). R143.1
+// interpolates between two real samples instead: at each client world update
+// NoteClientTick snapshots the player's draw-space position (the same
+// GetTargetX/Y every consumer reads); the render offset glides the world from
+// the previous sample to the current one, renderPos = prev + (cur - prev) x
+// alpha with alpha = ms since that update / 40 clamped to one tick.
+// R143.2 (still "jittery at 1" in the field) fixed the delivery around that
+// math, which is only as continuous as its wiring:
+//   1. The snapshot must run BEFORE the draw. Consumers read GetTargetX/Y
+//      LIVE - on a tick+present iteration the draw sees the post-tick
+//      position while a pair caught up after the draw still described the
+//      previous segment, so renderPos leapt a full tick forward (offset ~0
+//      on the new base) and was pulled back the next present: a sawtooth at
+//      the tick rate. Game.cpp now calls NoteClientTick before the draw
+//      block, so the pair always matches the base the draws read.
+//   2. The sprite world offset (MouseXOffset/YOffset - shadows, state
+//      overlays, perspective sprite anchor, GFX_IsUnitOnScreen culling, the
+//      mouse world-pick) must get the delta unconditionally: R143.1 added it
+//      after DRAW_UpdateMouseWorldOffsets' shake early-return, dead in
+//      normal play, leaving that whole layer tick-locked against a gliding
+//      camera. Path.cpp now applies it before the shake check.
+//   3. The player-sprite cancel in Wall2 flips sign in perspective mode
+//      (MouseOffsets already carries the delta into projected coords).
+// With that wiring: just before a tick the offset reaches 0 (render = cur),
+// just after it is -(new cur - old cur) (render = the same point) -
+// continuous at every tick boundary by construction, whatever the step
+// shape. Standing still: delta 0, offset 0. A displacement over
+// UNLOCKFPS_INTERP_SNAP_PX px in one tick (teleport, level change,
+// resurrect) snaps instead of gliding across the map. The offset is
+// computed once per present (cache keyed on a dedicated present epoch, not
+// the stats counter - StatsIfDue resets that every 5 s window) and shared by
+// every consumer, so the camera and the player sprite ride the exact same
+// delta within a frame (per-site GetTickCount calls could straddle a 1 ms
+// boundary and break the glue). Write-nowhere by contract: consumers add this
+// to their draw position only; D2DynamicPathStrc is never touched. Fills 0
+// and returns FALSE whenever it should not apply (gate/interp off, no
+// snapshot yet, null out) so every site reduces to retail.
+BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY) {
+    if (pnOffsetX) {
+        *pnOffsetX = 0;
+    }
+    if (pnOffsetY) {
+        *pnOffsetY = 0;
+    }
+    if (!pnOffsetX || !pnOffsetY) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsMode || !gbUnlockFpsInterp) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsHaveSnap || !dwUnlockFpsLastClientTick) {
+        return FALSE; // no client world update seen yet this process
+    }
+    if (dwUnlockFpsOffsetFrame != dwUnlockFpsFrameId) {
+        // First consumer this present: compute the frame's offset once so the
+        // camera and every sprite draw share it.
+        dwUnlockFpsOffsetFrame = dwUnlockFpsFrameId;
+        DWORD dwSinceTick = GetTickCount() - dwUnlockFpsLastClientTick;
+        if (dwSinceTick >= UNLOCKFPS_SIM_TICK_MS) {
+            dwSinceTick = UNLOCKFPS_SIM_TICK_MS; // clamp at the sample: offset 0, render = cur
+        }
+        int nDeltaX = gnUnlockFpsCurPosX - gnUnlockFpsPrevPosX;
+        int nDeltaY = gnUnlockFpsCurPosY - gnUnlockFpsPrevPosY;
+        gnUnlockFpsOffsetX = nDeltaX * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS;
+        gnUnlockFpsOffsetY = nDeltaY * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS;
+    }
+    *pnOffsetX = gnUnlockFpsOffsetX;
+    *pnOffsetY = gnUnlockFpsOffsetY;
+    return TRUE;
 }
 
 // ===== [vanilla-plus options page] d2vp.ini feature toggle bridge ==========

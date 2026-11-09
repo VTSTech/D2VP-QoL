@@ -11,6 +11,38 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R143 — Unlock FPS: sub-tick interpolation** (plan Phase 2, owner: "lets continue";
+  revised **R143.1** after the owner's field report "the interpolation is jittery, looks
+  better at 0").
+  With `unlock_fps=1` the world now **glides between game ticks at the present rate**:
+  the camera, the sprite world offset and everything world-anchored (floor, monsters,
+  missiles, items) glide between the last two tick-snapped samples — applied at draw
+  time only, nothing written back to the path; the sim stays byte-exact 25 Hz (the
+  d2boot presents/ticks pair still proves it). The character keeps its retail screen
+  position (the camera cancels the delta), shadows/auras stay glued. Ships under a
+  second, ini-only key **`[features] unlock_fps_interp`** (default 1, no Options row;
+  `0` = the R142 step-cadence look, hot-read). Self-ID `Vanilla+0.0.8-R143`. **R143.1**:
+  the first cut extrapolated a velocity prediction (`pos + screenVelocity × α`); a
+  prediction is never exact, so every tick boundary snapped by its own error — the
+  reported jitter. The revision interpolates between two real position samples taken at
+  each client world update, which is continuous at every tick boundary by construction;
+  one frame-shared offset (camera and every sprite ride the same delta), teleports and
+  level changes snap instead of gliding. The d2boot mark now reads
+  `+ sub-tick interp (two-sample)` — that string identifies the revised build.
+  **R143.2** (owner field: "still looks jittery at 1, looks better at 0"): the two-sample
+  math was right, the delivery was not — three wiring defects fixed. (1) The snapshot
+  ran AFTER the draw, so on tick+present frames the draw read the live post-tick
+  position against the previous segment's pair and the picture sawtoothed a full tick
+  at every boundary (a sandbox loop-order harness reproduces an 18 px backward kick on
+  a 32 px walking step — the exact reported jitter); the snapshot call now runs before
+  the draw block. (2) The sprite world offset's delta sat behind the shake early-return
+  in `DRAW_UpdateMouseWorldOffsets`, dead in normal play — unit shadows, state overlays,
+  on-screen culling and the mouse world-pick stayed tick-locked against the gliding
+  camera; the delta now applies before that check. (3) The player-sprite cancel
+  double-added in perspective mode; it now subtracts there (MouseOffsets already carried
+  the delta into projected coords). Sandbox wiring harness 10/10 green: sawtooth
+  reproduction, monotone bounded glide, kick-free stop and turn.
+
 - **R142 — Unlock FPS: presentation-FPS unlock** (owner ask, no issue). With
   **`d2vp.ini [features] unlock_fps`** (default 0, like every feature; the Vanilla+
   Options page's new **"Unlock FPS"** row) the game **presents at ~60 FPS while the

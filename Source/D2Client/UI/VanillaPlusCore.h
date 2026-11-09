@@ -308,10 +308,40 @@ BOOL __stdcall VPNOINTRO_IsRequested();
 // anti-spin budget drops to 1 ms under the gate (its own 2 s-poll reader - no
 // D2Client imports across the renderer boundary). Vsync: bVSYNC semantics
 // untouched - on a 60 Hz panel vsync hands back exactly the 60 the pacer asks
-// for; NOVSYNC lets the pacer rule. Sub-tick interpolation is the deliberate
-// follow-on arc (plan §4 Phase 2), not in this round.
+// for; NOVSYNC lets the pacer rule. Sub-tick interpolation shipped R143 (plan
+// §4 Phase 2) and took two field-driven revisions: R143.1 replaced the
+// velocity prediction ("jittery, looks better at 0" - a prediction snaps by
+// its own error every tick) with interpolation between two real samples, and
+// R143.2 fixed the delivery (still "jittery at 1"): the snapshot now runs
+// BEFORE the draw (the draw reads the live post-tick position - a pair caught
+// up after the draw made renderPos sawtooth a full tick every boundary), the
+// sprite world offset gets the delta unconditionally (R143.1 added it after
+// DRAW_UpdateMouseWorldOffsets' shake early-return, so shadows/state
+// overlays/culling stayed tick-locked while the camera glided), and the
+// player-sprite cancel flips sign in perspective (MouseOffsets already
+// carries the delta into projected coords). UNLOCKFPS_GetPlayerRenderOffset
+// feeds the camera, the sprite world offset and the player's
+// sprite/shadow/states one frame-shared delta interpolated between two real
+// position samples taken at each client world update (unlock_fps_interp,
+// ini-only sub-gate, default on).
 BOOL __stdcall UNLOCKFPS_Active();         // config: unlock_fps on? (2 s hot-read)
 BOOL __stdcall UNLOCKFPS_ShouldPresent();  // pacer: draw now? (FALSE when gate off)
 void __stdcall UNLOCKFPS_NotePresent();    // telemetry: a present actually happened
-void __stdcall UNLOCKFPS_NoteClientTick(); // telemetry: a client world update ran
+void __stdcall UNLOCKFPS_NoteClientTick(); // snapshot prev/cur pos pair (R143.2: called BEFORE the draw)
 int __stdcall UNLOCKFPS_IdleSleepMs();     // pump idle: ms to sleep (<= 0 = retail Sleep(10))
+// R143 sub-tick interpolation, R143.1 two-sample + R143.2 delivery revisions
+// (plan §4 Phase 2): NoteClientTick - called before the draw block, every
+// iteration a client world update ran - snapshots the player's draw-space
+// position (GetTargetX/Y, the same fields every consumer reads live);
+// UNLOCKFPS_GetPlayerRenderOffset then returns the frame-shared delta that
+// carries the camera, the sprite world offset and the player's sprite/shadow/
+// state draws from the previous sample toward the current one -
+// offset = -(cur - prev) x (1 - alpha), alpha = ms since the last client world
+// update / 40 clamped to one tick. Interpolation between two real samples:
+// continuous at every tick boundary by construction (a prediction would snap
+// by its own error every tick - the R143 field jitter). Write-nowhere: every
+// consumer adds it to its draw position only; nothing here touches
+// D2DynamicPathStrc. Fills 0 and returns FALSE whenever it should not apply
+// (gate/interp off, no snapshot yet, null out) so every site reduces to
+// retail; standing still returns 0 offsets.
+BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY);

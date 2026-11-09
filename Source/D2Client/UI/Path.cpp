@@ -437,6 +437,23 @@ void __stdcall DRAW_UpdateMouseWorldOffsets() {
     int32_t nTargetY = D2Common::Units::GetTargetY(pUnit);
     MouseXOffset = nTargetX - ui::ScreenSizeX / 2;
     MouseYOffset = nTargetY - Inv::ScreenSizeY / 2 + 0x10;
+    // VP-BEGIN [unlock-fps-interp R143.2]: the sprite world offset rides the
+    // same sub-tick delta as the view center (Game.cpp InGameDraw), so every
+    // MouseOffsets consumer - unit shadows, state overlays, the perspective
+    // sprite anchor, on-screen culling (GFX_IsUnitOnScreen) and the mouse
+    // world-pick - glides with the floor instead of stepping at 25 Hz against
+    // it (R143.1 added this AFTER the shake early-return below, so in normal
+    // play, which has no shake, the delta never landed and those layers
+    // stayed tick-locked while the camera glided - the residual field
+    // jitter). Applied before the shake check so it is unconditional;
+    // shake then adds on top exactly as retail. Off: 0 delta, byte-for-byte
+    // retail.
+    int nVpInterpDx = 0;
+    int nVpInterpDy = 0;
+    UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    MouseXOffset += nVpInterpDx;
+    MouseYOffset += nVpInterpDy;
+    // VP-END [unlock-fps-interp R143.2]
     BOOL bHasShake = GAME::View::SHAKE_GetShake(&nShakeX, &nShakeY);
     if (!bHasShake) {
       return;

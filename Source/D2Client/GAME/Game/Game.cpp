@@ -1032,6 +1032,21 @@ void __fastcall InGameDraw(int32_t bSkipCursor) {
     nTmp = D2Common::Units::GetTargetY(pUnit);
     uint32_t myCenterY = nTmp - (nViewBottom - nViewTop) / 2;
     View::SHAKE_AdjustCenterByShake(&myCenterX, &myCenterY);
+    // VP-BEGIN [unlock-fps-interp R143]: sub-tick camera. Retail recomputes the
+    // view center every draw from the player's tick-snapped position, so under
+    // the 60 Hz pacer the world scroll still steps at 25 Hz. Adding the frame's
+    // shared sub-tick offset (R143.1 two-sample: the world glides from the
+    // previous tick sample to the current one, continuous at every tick
+    // boundary by construction) makes the scroll present-rate smooth while the
+    // sim stays byte-exact 25 Hz - render-time only, nothing is written back to
+    // the path (the weather per-draw camera delta below gets the smooth motion
+    // for free). Gate/interp off: both offsets 0, byte-for-byte retail.
+    int nVpInterpDx = 0;
+    int nVpInterpDy = 0;
+    UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    myCenterX += nVpInterpDx;
+    myCenterY += nVpInterpDy;
+    // VP-END [unlock-fps-interp R143]
     if (gnLastCameraWorldX != -1 || gnLastCameraWorldY != -1) {
       gnCameraWorldDeltaX = myCenterX - gnLastCameraWorldX;
       gnCameraWorldDeltaY = myCenterY - gnLastCameraWorldY;
@@ -2829,6 +2844,19 @@ uint32_t __stdcall CLIENT_GameLoopFrame(uint32_t dwUnused) {
           D2Sound::Src::D2SoundFast::SOUND_StopMusic();
           D2Sound::Src::D2SoundSmp::SOUNDSMP_SetGlobalVolume(0xff);
         }
+        if (didClientLoop) {
+          // VP: [unlock-fps-interp R143.2] two-sample snapshot BEFORE the draw.
+          // R143.1 took it after the present block, so on a tick+present
+          // iteration the draw read the live post-tick position while the
+          // prev/cur pair still described the previous segment: renderPos
+          // leapt a full tick forward (offset ~0 on the live base) and was
+          // pulled back the next present - a sawtooth at the tick rate, the
+          // "still jittery at 1" field report. Consumers draw at the live
+          // GetTargetX/Y, so the pair must be caught up to what the draw is
+          // about to read, every iteration, before any consumer can ask for
+          // the frame offset. No-op when the gate is off (two int reads).
+          UNLOCKFPS_NoteClientTick();
+        }
         // VP-BEGIN [unlock-fps R142]: presentation-FPS unlock (FEATURES.md row
         // 17). With [features] unlock_fps=1 the draw moves onto the 60 Hz
         // present pacer (UNLOCKFPS_ShouldPresent - skip-never-queue); the tick
@@ -2856,7 +2884,9 @@ uint32_t __stdcall CLIENT_GameLoopFrame(uint32_t dwUnused) {
         }
         // VP-END [unlock-fps R142]
         if (didClientLoop) {
-          UNLOCKFPS_NoteClientTick(); // VP: [unlock-fps R142] tick-side telemetry counter (no-op when the gate is off)
+          // VP: [unlock-fps-interp R143.2] the snapshot moved above the draw
+          // block (the R143.1 sawtooth fix); this stays post-draw for the
+          // after-draw sound bookkeeping only.
           D2Client::Sound::SoundHdr::DRAW_AfterDraw();
         }
 
