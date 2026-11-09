@@ -2,10 +2,10 @@ name: build
 
 on:
   push:
-    branches: [main, vanilla-plus-port, linux]
+    branches: [linux]
     paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
   pull_request:
-    paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
+    paths-ignore: ['**.md']
   workflow_dispatch:
 
 # A newer push makes an older build of the same ref pointless.
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   # [d2linux] native Linux track (branch `linux`, docs/linux-port.md). Builds
   # d2linux and runs its headless --smoke self-test. This is the only CI job
-  # on the linux branch; on main it runs alongside the mingw-i686 PE job.
+  # on the linux branch.
   #
   # M1 (game TUs join the build): the job builds the charter arch, i386 —
   # the decomp assumes the 32-bit MSVC x86 ABI (PLAN.md §7 R1) — with the
@@ -105,93 +105,3 @@ jobs:
         with:
           name: d2linux-${{ github.sha }}
           path: build-linux/d2linux
-
-  mingw-i686:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      # NOTE: the vanilla-plus merge gates (tools/check-vanilla-plus.sh) are
-      # deliberately NOT run here — a gate failure must not halt the build.
-      # They are a manual audit step (see docs/merge-upstream.md, step 4):
-      #   tools/check-vanilla-plus.sh "$GITHUB_WORKSPACE"
-
-      - name: Install the toolchain
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq g++-mingw-w64-i686 binutils-mingw-w64-i686 cmake ninja-build ccache
-
-      # The compile cache. A run saves under its own sha and restores the newest
-      # earlier one, so an unchanged translation unit is not compiled again.
-      - name: Restore the compile cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ccache
-          key: ccache-mingw-i686-${{ github.sha }}
-          restore-keys: ccache-mingw-i686-
-
-      - name: Build from a clean clone
-        env:
-          CHECK_BUILD_WORK: ${{ runner.temp }}/redivivus
-          CHECK_BUILD_REPORTS: ${{ runner.temp }}/reports
-        run: |
-          export CCACHE_DIR=$HOME/.cache/ccache CCACHE_MAXSIZE=2G CCACHE_COMPRESS=true
-          tools/check-build.sh "$GITHUB_WORKSPACE" "$GITHUB_SHA"
-
-      # check-build.sh builds in a temp clone and deletes it, so build in-tree
-      # too and keep the exe as an artifact.
-      - name: Build in-tree
-        run: |
-          cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake
-          cmake --build build -j "$(getconf _NPROCESSORS_ONLN)"
-
-      # Ship the stripped exe only. The link still embeds -O0 + DWARF (the
-      # charter), but the fat exe is no longer uploaded: crash triage resolves
-      # module+offset addresses against the map artifact below, which the link
-      # writes via -Wl,-Map (CMakeLists.txt). strip does not move sections, so
-      # map offsets stay valid against the stripped exe.
-      - name: Make stripped d2s-<commit>.exe
-        run: |
-          D2S="build/d2s-${GITHUB_SHA::7}.exe"
-          cp build/d2.exe "$D2S"
-          strip "$D2S"
-          echo "D2S=$D2S" >> "$GITHUB_ENV"
-
-      - name: Upload d2s-<commit>.exe (play/distribute)
-        uses: actions/upload-artifact@v4
-        with:
-          name: d2s-${{ github.sha }}
-          path: ${{ env.D2S }}
-
-      - name: Upload linker map (crash address -> symbol, for triage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: d2-map-${{ github.sha }}
-          path: build/d2exe.map
-          if-no-files-found: warn
-
-      # Report only: a wrong-direction include between modules fails the build only in
-      # a module the module table marks strict.
-      - name: Module gate report
-        if: always()
-        shell: bash
-        run: |
-          R="${{ runner.temp }}/reports"
-          [ -f "$R/module-gates-summary.tsv" ] || { echo "no gate report"; exit 0; }
-          cat "$R/module-gates.tsv"
-          {
-            echo "## Module gates"
-            echo
-            echo "Includes of a module the includer may not see under the original import graph (report only; strict modules fail the build)."
-            echo
-            awk -F'\t' 'NR==1 {print "|" $1 "|" $2 "|" $3 "|" $4 "|" $5 "|" $6 "|"; print "|-|-|-|-|-|-|"; next} {print "|" $1 "|" $2 "|" $3 "|" $4 "|" $5 "|" $6 "|"}' "$R/module-gates-summary.tsv"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Keep the gate report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: module-gates
-          path: ${{ runner.temp }}/reports/
-          retention-days: 30
-          if-no-files-found: ignore
