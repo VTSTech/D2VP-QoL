@@ -6,14 +6,27 @@ the 25FPS is tied to the game tick rate and that that is a limiting factor. I wa
 now that we have the source code, can we maintain the default tick rate while unlocking the
 presentation FPS". *The same-session recon answered **yes** — the 25 FPS presentation is a
 draw gate in the client frame loop, not a structural coupling; the simulation paces itself
-independently and never has to change. Owner constraints not yet set — the open calls are
-§9. Slate row 17 (`[features] render_fps`). Status: **PLANNED — no code yet.**
+independently and never has to change. Owner constraints set same day (all four calls in
+§9 resolved): **v1 is a bool gate** (`[features] unlock_fps`) **targeting a fixed 60 Hz,
+the decoupled present only** (interpolation is the follow-on), **vsync untouched**, and
+the option ships as **"Unlock FPS"**. Slate row 17. Status: **Implemented R142 — rounds
+1–2 done (tree-verify + code + docs); round 3 field QA pending (SMOKE §S, items 61–64).**
+Implementation record (R142): the pacer/gate/telemetry live in `VanillaPlusCore.cpp`
+(`UNLOCKFPS_*`), with three one-site consumers — the draw dispatch in
+`Game.cpp CLIENT_GameLoopFrame`, the pump idle sleep in `Message.cpp MessageGameLoop`,
+and the EndScene budget in `D2GFX.cpp` (own 2 s-poll reader, renderer boundary).
+Sandbox verification: the pacer section extracted verbatim into a stubbed harness —
+15/15 green (steady 60 Hz grid, jitter, re-anchor-no-burst, GetTickCount wrap, gate
+flips same-poll, idle-sleep bounds, stats window). Round 1 pins that held: the stats
+split is purely additive (lightmap ladder outcome-identical at 60; `GetFPSSkip` feeds
+only the /fps overlay); the SP pause path and cutscene/loading loops stop polling the
+draw site and fall back to retail pacing via the 100 ms recency-out.
 
 ---
 
 ## 1. Goal and non-goals (v1)
 
-**Goal.** With `[features] render_fps=1`, the game **presents at 60 Hz while the simulation
+**Goal.** With `[features] unlock_fps=1`, the game **presents at 60 Hz while the simulation
 stays at retail 25 Hz** — server ticks, client world updates and every gameplay timer run
 byte-exact retail cadence; only the draw+present cadence decouples. The immediate wins are
 a 60 Hz software cursor, hover/tooltip/target-highlight responsiveness and up to ~40 ms
@@ -27,7 +40,9 @@ deferred) is what makes world *motion* look 60.
 - **No tick-rate changes of any kind.** `SrvProcessAllGames`, `ClientSideGameLoop` and the
   frame-skip math keep the 40 ms cadence. The retail `GAMETYPE_SINGLEPLAYER_UNCAPPED`
   QA path is explicitly **rejected** as a mechanism — see §3 (it speeds the *server*).
-- No options beyond the 60 Hz target in v1 (a numeric target value is §9 call 1).
+- No tunables beyond the bool gate in v1 — the target is fixed at 60 Hz (owner: "bool for
+  v1, we can do numeric target fps later"); a numeric 30–240 target is the recorded
+  follow-up (§9 call 1).
 - No rendering-path changes: the pacer lives upstream of the renderer, so Glide, D3D and
   DDraw all inherit it unchanged (field matrix still walks each — §8).
 
@@ -37,7 +52,7 @@ deferred) is what makes world *motion* look 60.
    client world updates per wall-clock second is unchanged. Verified in the field by
    counting, not eyeballing (§8): animation frame advances and walk speed over a fixed
    route must be identical gate-on vs gate-off.
-2. **Default OFF = vanilla byte-for-byte.** With `render_fps` missing/0 the draw gate, the
+2. **Default OFF = vanilla byte-for-byte.** With `unlock_fps` missing/0 the draw gate, the
    Sleep(10) idle pacing and the EndScene 5 ms budget are untouched — predicate-false at
    every site (contract rule 1).
 3. **One pacing owner.** Under the gate exactly one new pacer owns the present deadline;
@@ -99,10 +114,13 @@ sleep granularity — verify at implement time.
 
 ## 4. Design (recommended shape)
 
-**Gate**: `[features] render_fps` — bool in v1, `1` = 60 Hz present target (numeric target
-values 30–240 = §9 call 1). Ini template entry + a Vanilla+ Options row (row 11 — call 4
-decides now or ini-only first). d2boot.log mark on pacer enable + present-rate stats in the
-existing telemetry habit.
+**Gate**: `[features] unlock_fps` — **bool, v1**: `1` = decoupled present at a fixed 60 Hz
+target, `0`/missing = retail draw gate. The numeric target (30–240, clamped) is the
+recorded follow-up — widening it later only changes the pacer's period constant, no shape
+change (§9 call 1). Ships the same round as an **"Unlock FPS"** row in Vanilla+ Options
+(the row-11 pitch pattern; eleventh row moves Previous Menu one pitch again) plus the ini
+template entry. d2boot.log mark on pacer enable + present-rate stats in the existing
+telemetry habit.
 
 **Phase 1 — the decoupled present (v1, this plan's rounds):**
 
@@ -180,7 +198,7 @@ existing telemetry habit.
 
 - Tick-rate identity: with a fixed route + stopwatch, animation advances, walk time and
   monster behavior identical gate-on/off (count ticks from the new telemetry — no eyeballs).
-- `render_fps=0`/missing from a fresh start = vanilla byte-for-byte; save → load unaffected
+- `unlock_fps=0`/missing from a fresh start = vanilla byte-for-byte; save → load unaffected
   (nothing render-side persists; no save-format surface at all).
 - 60 presents/s on a 60 Hz panel with vsync on (Flip throttles — expected and clean);
   NOVSYNC behavior sane on the owner's high-refresh panel, no tearing complaints.
@@ -188,17 +206,20 @@ existing telemetry habit.
   visibly better (the actual point).
 - SMOKE rows for the touched surface pass on the R142+ build; handoff ledger row written.
 
-## 9. The four owner calls
+## 9. Owner calls — all four resolved 2026-11-09 (chat)
 
-1. **Bool vs numeric** — v1 draft is `render_fps=1` → fixed 60 Hz target (contract-fit,
-   one answer to document). A numeric target (30–240, clamped) is the flexible shape —
-   wanted now, or later?
-2. **Interpolation scope** — ship the decoupled present first and judge it in the field
-   (draft), or pull the camera interpolation into the first ship for the full D2R-feel
-   target?
-3. **Vsync default under the gate** — leave `bVSYNC` semantics untouched (draft: on a 60 Hz
-   panel vsync gives exactly 60; NOVSYNC lets the pacer rule) or expose a per-feature
-   override?
-4. **Options page row** — add the **Render FPS** row to Vanilla+ Options in the same round
-   (the row-10 pitch pattern; eleventh row moves Previous Menu one pitch again), or
-   ini-only for a round first?
+1. **Bool vs numeric** → **bool for v1** (owner: "bool for v1, we can do numeric target
+   fps later"). v1 targets a fixed 60; a numeric target (30–240, clamped) stays a clean
+   follow-up — widening it only changes the pacer's period constant, no shape change.
+2. **Interpolation scope** → **decoupled first** (owner: "decoupled first"). v1 ships the
+   present pacer alone and gets judged in the field; camera→missile→unit interpolation
+   (§4 Phase 2) stays the follow-on arc, its own round(s).
+3. **Vsync under the gate** → **untouched for v1** (owner: "vsync untouched for v1").
+   `bVSYNC` semantics stay exactly as retail: on a 60 Hz panel vsync hands back exactly
+   the 60 the pacer asks for; NOVSYNC lets the pacer rule. A per-feature override, if
+   ever wanted, is a separate round.
+4. **The option's name** → **"Unlock FPS"** (owner: "for v1 call the option Unlock FPS").
+   The Options row and all docs say Unlock FPS; the ini key is `unlock_fps` — bool,
+   matching the `[features]` snake_case bool convention (`alt_toggle`, `shared_stash`,
+   …). The row lands in the same round as the code (the row-11 pitch pattern; eleventh
+   row moves Previous Menu one pitch again).

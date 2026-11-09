@@ -2829,17 +2829,34 @@ uint32_t __stdcall CLIENT_GameLoopFrame(uint32_t dwUnused) {
           D2Sound::Src::D2SoundFast::SOUND_StopMusic();
           D2Sound::Src::D2SoundSmp::SOUNDSMP_SetGlobalVolume(0xff);
         }
-        if (!gnFrameSkipCounter) {
+        // VP-BEGIN [unlock-fps R142]: presentation-FPS unlock (FEATURES.md row
+        // 17). With [features] unlock_fps=1 the draw moves onto the 60 Hz
+        // present pacer (UNLOCKFPS_ShouldPresent - skip-never-queue); the tick
+        // gate (gnFrameSkipCounter) keeps its tick-side meaning above and the
+        // sim stays 25 Hz byte-exact (the pacer never touches the tick paths).
+        // Gate off: bVpPacedPresent = FALSE and UNLOCKFPS_Active() = 0, so
+        // both branches below reduce to the retail block, byte-for-byte.
+        int nVpUnlockActive = UNLOCKFPS_Active();
+        BOOL bVpPacedPresent = nVpUnlockActive ? UNLOCKFPS_ShouldPresent() : FALSE;
+        if (bVpPacedPresent || (!nVpUnlockActive && !gnFrameSkipCounter)) {
           pRoom = UNIT::CUnit::GetCurrentRoom();
           if (pRoom) {
             gClientGameData.CurrentDrawFunction(0);
             gClientGameData.gnFramesDrawnCounter++;
             gClientGameData.framesDrawn++;
+            if (bVpPacedPresent) {
+              UNLOCKFPS_NotePresent();
+            }
           }
-        } else if (didTick) {
+        } else if (didTick && !nVpUnlockActive) {
+          // Under the pacer the present decision is the pacer's, so the
+          // "tick window without a draw" counter only keeps its retail
+          // meaning when the retail gate owns the draw.
           gClientGameData.framesSkipped++;
         }
+        // VP-END [unlock-fps R142]
         if (didClientLoop) {
+          UNLOCKFPS_NoteClientTick(); // VP: [unlock-fps R142] tick-side telemetry counter (no-op when the gate is off)
           D2Client::Sound::SoundHdr::DRAW_AfterDraw();
         }
 

@@ -4,13 +4,14 @@
 > per-row scoping, implementation notes, round records). Humans: the feature table and
 > status live in [README.md](README.md), per-release changes in [CHANGELOG.md](CHANGELOG.md).
 
-*v9, 2026-11-09. **Row 17 added on owner ask — PLANNED, not implemented**: the presentation-FPS
-unlock (`render_fps`, §17) — presents at 60 Hz while the simulation stays byte-exact retail
-25 Hz; the same-session recon found the cap is a single draw gate in `CLIENT_GameLoopFrame`,
-not a structural coupling, and flagged retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` QA path
-as the wrong tool (it speeds the server). Plan:
-[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md). Effort firms S–M for the v1 decoupled
-present; interpolation is the deliberate follow-on. Same day, earlier: v8.
+*v9, 2026-11-09. **Row 17 added on owner ask — IMPLEMENTED R142, field pass pending**: the
+presentation-FPS unlock (`unlock_fps`, §17, option name **Unlock FPS**) — presents at
+~60 Hz while the simulation stays byte-exact retail 25 Hz; the same-session recon found
+the cap is a single draw gate in `CLIENT_GameLoopFrame`, not a structural coupling, and
+flagged retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` QA path as the wrong tool (it
+speeds the server). Owner scoped v1 same day: bool gate, fixed 60 Hz target, decoupled
+present only, vsync untouched. Plan: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md).
+Effort S–M as called; interpolation is the deliberate follow-on. Same day, earlier: v8.
 
 *v8, 2026-11-09. **Row 16 added on owner ask — PLANNED, not implemented**: inventory sort
 (`inventory_sort`, §16) — a Sort affordance for the personal inventory that replays the
@@ -123,7 +124,7 @@ Every slate row must satisfy all of these before it ships:
 | 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
-| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `render_fps` — **PLANNED**, drafted 2026-11-09: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md) (decoupled present pacer in `CLIENT_GameLoopFrame`; sim stays 25 Hz byte-exact; retail's UNCAPPED game type rejected — it speeds the server; interpolation is the follow-on) |
+| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation is the follow-on; field pass pending — SMOKE §S 61–64) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
@@ -134,17 +135,17 @@ mechanism — letting a class of items merge into stacks the way arrows/tomes al
 behind two separate gates, drafted together in §12/§13. Row 16 is **planned scope**
 (owner suggestion 2026-11-09, not yet implemented): a Sort affordance for the personal
 inventory — retail-packet replay, zero server changes; drafted in §16, full plan at
-[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Row 17 is **planned scope**
-(owner ask 2026-11-09, not yet implemented): the presentation-FPS unlock — the sim stays
-25 Hz, only the present decouples; drafted in §17, full plan at
-[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md). Rows 14–15 **shipped** as the
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Row 17 **implemented R142**
+(owner ask 2026-11-09): the presentation-FPS unlock — the sim stays 25 Hz, only the
+present decouples; scoped in §17, full plan at
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md), field pass pending (SMOKE §S). Rows 14–15 **shipped** as the
 video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mode — the
 whole site-1..6 pipeline routes it (§14) —
 and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
-**Shipped as of R140**: rows 0b (R125/R126) and 0c (R140), plus rows 1, 3, 6, 9, 10
+**Shipped as of R142**: rows 0b (R125/R126), 0c (R140), 17 (R142), plus rows 1, 3, 6, 9, 10
 and 11 — and, outside this slate, the pre-slate pair
 `alt_toggle`/`portable_save` (handoff ledger rows 28–31, releases
-0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Ten features
+0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Eleven features
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 
@@ -993,13 +994,14 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 ---
 
-### 17. Presentation FPS unlock — `[features] render_fps` (PLANNED — owner ask 2026-11-09, not implemented)
+### 17. Presentation FPS unlock — `[features] unlock_fps` (Implemented R142 — owner ask 2026-11-09; field pass pending)
 
 - **The ask** (owner, 2026-11-09, chat, no issue): "How can we unlock the FPS to 60 in D3D
   fullscreen?", scoped by the follow-up: the 25 FPS is known to be tied to the game tick
   rate — "can we maintain the default tick rate while unlocking the presentation FPS".
   The same-session recon answered **yes**: the coupling is a draw gate, not a structural
-  one.
+  one. Owner set the v1 scope the same day: **bool gate, fixed 60 Hz target, decoupled
+  present only, vsync untouched, option named Unlock FPS** (§9 of the plan).
 - **The cap, mapped** (the recon's value — every site read this session): the simulation
   paces itself — `SrvProcessAllGames` enforces its own 40 ms cadence internally
   (`Frames_TimeBetweenFrames = 1000/25`) and runs every pump iteration regardless; the 25
@@ -1008,11 +1010,16 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   40 ms window). `D2GFX_EndScene`'s 5 ms budget is an anti-spin guard, and the D3D
   fullscreen present (a DirectDraw `Flip`, vsync flag 1 / NOVSYNC 9 in
   `D2Direct3D/Renderer/Direct3D.cpp`) flips whenever called — the flip is not the limiter.
-- **Mechanism (v1)**: keep the tick gate for the server tick + `ClientSideGameLoop`
-  byte-exact; move the draw behind a 60 Hz present pacer; pace the message-pump idle sleep
-  to the pacer deadline; drop the EndScene budget to 1 ms under the gate; split the
-  tick/present stats so field reports can *count* that the sim is unchanged. Renderer-
-  agnostic by construction (the pacer sits upstream of EndScene, shared by all backends).
+- **Mechanism (v1, shipped R142)**: keep the tick gate for the server tick +
+  `ClientSideGameLoop` byte-exact; the draw moved behind a 60 Hz present pacer
+  (`UNLOCKFPS_ShouldPresent`, VanillaPlusCore.cpp — skip-never-queue, >= 4 periods stale
+  re-anchors); the message-pump idle sleep paces to the pacer deadline
+  (`UNLOCKFPS_IdleSleepMs`); the EndScene budget dropped 5→1 ms under the gate (D2gfx
+  keeps its own 2 s-poll reader — no D2Client imports across the renderer boundary);
+  tick/present stats split — a presents/ticks-per-second pair goes to d2boot.log every
+  5 s so field reports can *count* that the sim is unchanged. Renderer-agnostic by
+  construction (the pacer sits upstream of EndScene, shared by all backends).
+  `timeBeginPeriod(1)` raised once on first activation (one-way latch).
 - **The trap, flagged**: retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` game type /
   `CONNECTIONTYPE_SINGLEPLAYERUNCAPPED` connection looks like the hook for this — it is
   not: it speeds the **server** (skips a 500 ms packet throttle, bypasses dispatch
@@ -1021,16 +1028,17 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   fixed-point per-tick velocity (`nVelocityX/Y`) beside `Coords`/`ScreenPos`, so sub-tick
   render positions are `pos + velocity × α` on a render-time shadow — camera first (kills
   most perceived judder), then missiles, then units; animation frames stay tick-locked.
-  Pulled into v1 only if the owner calls for it (§9 call 2 of the plan).
+  Owner has called the order — decoupled first (§9 call 2 of the plan); interpolation
+  stays the follow-on arc.
 - **Risk**: Med — ×~2.4 draw cost at 60 Hz (the renderer idles 37.5 of every 40 ms today;
   skip-never-queue pacer bounds the overrun) and pacing wobble from Sleep granularity
   (`timeBeginPeriod(1)` from the already-imported winmm — verify). **Exit**: tick-rate
-  identity proven by counting, `render_fps=0` byte-for-byte vanilla, 60 presents/s on a
+  identity proven by counting, `unlock_fps=0` byte-for-byte vanilla, 60 presents/s on a
   60 Hz vsync panel, pause/cutscene/loading untouched.
 - **Full plan: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md)** — pillars, the
   cap-site map with line anchors, the pacer design, the failure matrix, the three-round
-  roadmap and the four owner calls (bool vs numeric target; interpolation scope; vsync
-  default; options row now or ini-only).
+  roadmap and the four owner calls, all resolved same day (bool v1 at a fixed 60;
+  decoupled first; vsync untouched; option named **Unlock FPS**, ini key `unlock_fps`).
 
 ---
 

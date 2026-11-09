@@ -292,3 +292,26 @@ void __stdcall VPSHAREDUI_DrawTab();
 // path and are NOT affected. Returns 0 without the switch: vanilla
 // byte-for-byte.
 BOOL __stdcall VPNOINTRO_IsRequested();
+
+// [vanilla-plus unlock-fps] R142: presentation-FPS unlock (FEATURES.md row 17,
+// plans/FPS-UNLOCK-PLAN.md). Owner v1 scope (2026-11-09): bool gate, fixed
+// 60 Hz target, the decoupled present only, vsync untouched, option named
+// "Unlock FPS". Retail shape: the simulation paces itself (SrvProcessAllGames
+// keeps its own 1000/25 cadence and runs every pump iteration) and the 25 FPS
+// *presentation* exists only because CLIENT_GameLoopFrame gates the draw
+// behind the tick (gnFrameSkipCounter). Under [features] unlock_fps=1 the draw
+// moves onto a 60 Hz present pacer - skip-never-queue: at the deadline draw
+// once and advance a full period; >= 4 periods late re-anchors, never queues -
+// so server ticks and client world updates keep the retail 25 Hz cadence
+// byte-exact while cursor/tooltip/highlight redraw rides 60. The pump idle
+// Sleep(10) paces to the deadline (Message.cpp), and D2GFX_EndScene's 5 ms
+// anti-spin budget drops to 1 ms under the gate (its own 2 s-poll reader - no
+// D2Client imports across the renderer boundary). Vsync: bVSYNC semantics
+// untouched - on a 60 Hz panel vsync hands back exactly the 60 the pacer asks
+// for; NOVSYNC lets the pacer rule. Sub-tick interpolation is the deliberate
+// follow-on arc (plan §4 Phase 2), not in this round.
+BOOL __stdcall UNLOCKFPS_Active();         // config: unlock_fps on? (2 s hot-read)
+BOOL __stdcall UNLOCKFPS_ShouldPresent();  // pacer: draw now? (FALSE when gate off)
+void __stdcall UNLOCKFPS_NotePresent();    // telemetry: a present actually happened
+void __stdcall UNLOCKFPS_NoteClientTick(); // telemetry: a client world update ran
+int __stdcall UNLOCKFPS_IdleSleepMs();     // pump idle: ms to sleep (<= 0 = retail Sleep(10))

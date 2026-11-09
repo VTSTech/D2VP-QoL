@@ -1,65 +1,81 @@
-# Round summary — R139 (rev 153, 2026-11-09): the on-screen build tag
+# Round summary — R142 (rev 154, 2026-11-09): Unlock FPS — the presentation-FPS unlock
 
-Owner: **"For R139 can we change the 'V 1.14D' Title Screen/Automap Text to be 'D2VP-Rxx'"**.
-Code round: the title screen and the in-game automap overlay no longer show the retail
-version line ("v 1.14d") — both show **`D2VP-R139`**. Self-ID bumps to
-**`Vanilla+0.0.8-R139`** (line 1 of `d2boot.log`). First round after the rev-152 cleanup.
+Owner: **"start R142"**, after scoping v1 the same day: *"bool for v1, we can do numeric
+target fps later, for v1 lets target 60 - decoupled first - vsync untouched - for v1 call
+the option Unlock FPS"*. Code round: with `[features] unlock_fps` on (default OFF), the
+game **presents at ~60 FPS while the simulation keeps the exact retail 25 Hz cadence**.
+Self-ID bumps to **`Vanilla+0.0.8-R142`** (line 1 of `d2boot.log`). Plan:
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md) (FEATURES.md row 17).
 
-## What changed (4 code files)
+## What changed (6 code files)
 
-- `Redivivus/d2_boot.h` — **NEW defines** (one line to bump each round):
-  `D2VP_ROUND "139"` + `D2VP_BUILD_TAG "D2VP-R" D2VP_ROUND`. The header every
-  boot-marking TU already includes.
-- `Source/D2Launch/MainMenus.cpp` — `UIMENU_MainMenu`'s version text box (form 0x115)
-  prints `D2VP_BUILD_TAG` instead of the `sprintf "v %d.%d%c"` line. The retail
-  internal-build append (`D2IniData_launcher->bBUILD` → `" 71"`) is retired with the old
-  text — the tag IS the build identity now. The struct field stays at 0x223 (zero layout
-  change; only the read site is gone).
-- `Source/D2Client/UI/Automap.cpp` — `AUTOMAP_DrawVersion` prints `D2VP_BUILD_TAG` (same
-  swap). The TU gains the `Redivivus/d2_boot.h` include — the module-gate-safe pattern
-  five D2Client TUs already carry (`ClientModeInGame`, `Game.cpp`, `Msg.cpp`,
-  `Roster.cpp`, `SCmd.cpp`).
-- `Source/Game/Main.cpp` — the boot self-ID composes `"Vanilla+0.0.8-" D2VP_ROUND` →
-  `Vanilla+0.0.8-R139`, so d2boot.log line 1 stays in lockstep with the on-screen tag.
+- `Redivivus/d2_boot.h` — `D2VP_ROUND "141"` → `"142"`.
+- `Source/D2Client/UI/VanillaPlusCore.h` — the `UNLOCKFPS_*` API block (gate, pacer,
+  telemetry, idle pacing) with the mechanism summary.
+- `Source/D2Client/UI/VanillaPlusCore.cpp` — the **[vanilla-plus unlock-fps]** section:
+  `UNLOCKFPS_Active` (2 s hot-read, row-28 pattern), `UNLOCKFPS_ShouldPresent`
+  (60 Hz deadline pacer — skip-never-queue; ≥ 4 periods stale re-anchors, small
+  lateness stays on the absolute grid), `UNLOCKFPS_NotePresent`/`UNLOCKFPS_NoteClientTick`
+  (tick/present counters), `UNLOCKFPS_StatsIfDue` (one d2boot mark per 5 s window:
+  the presents/ticks pair that proves the sim is unchanged), `UNLOCKFPS_IdleSleepMs`
+  (sleep-until-deadline, 100 ms recency-out for the loops that stop polling).
+  `timeBeginPeriod(1)` raised once on first activation (one-way latch; winmm already
+  linked). Plus: the `D2VP_ConfigReloaded` cache bust, the `<mmsystem.h>` include, and
+  the ini template block (`unlock_fps=0`, documented).
+- `Source/D2Client/GAME/Game/Game.cpp` — `CLIENT_GameLoopFrame`'s draw block moves
+  behind the pacer when the gate is on (`bVpPacedPresent || (!active && !gnFrameSkipCounter)`);
+  gate off reduces to the retail block byte-for-byte. `UNLOCKFPS_NoteClientTick`
+  piggybacks the `didClientLoop` branch. The tick paths above the block
+  (`SrvProcessAllGames` 1000/25, `ClientSideGameLoop`, the frame-skip math) are untouched.
+- `Source/D2Client/Message.cpp` — `MessageGameLoop`'s idle `Sleep(10)` paces to the
+  pacer deadline under the gate (`UNLOCKFPS_IdleSleepMs()`; ≤ 0 → the retail Sleep(10)).
+  Input still rides the pump — the pacer only decides when to draw.
+- `Source/D2Client/UI/VanillaPlusOptions.cpp` — the eleventh feature row **Unlock FPS**
+  (`unlock_fps`); back row 0x1a4→0x1c4, box 0x1d1→0x1f1. Layout check re-run: **first
+  miss at 640x480** — the box is one pitch taller than 480p, so only its empty bottom
+  margin clips (box top −8; first row at 72, back row 444..470 — every row on-screen and
+  clickable). 800x600 and every wide stop fit whole.
+- `Source/D2gfx/D2GFX.cpp` — `D2GFX_EndScene`'s 5 ms anti-spin budget drops to 1 ms
+  under the gate (its job — don't spin at the 25 Hz draw gate — is gone once the pacer
+  owns the cadence). D2gfx keeps its own 2 s-poll ini reader (the `MANABURN_FixActive`
+  server-gate shape): no D2Client imports across the renderer boundary. Gate off = the
+  5 ms math, byte-exact.
 
-A future round bump is ONE line: `D2VP_ROUND` in `Redivivus/d2_boot.h`.
+Deliberately untouched: the tick paths, vsync (`bVSYNC` semantics), the SP pause path
+(it draws every pump iteration in retail and never polls the draw site — the recency-out
+keeps it retail), cutscenes (Bink paces itself) and loading screens (own loops).
 
-Marks: `// VP-BEGIN/END [build-tag R139]` at both draw sites. Deliberately untouched:
-the crash-report milestone string (`ErrorManager.cpp`, "D2 1.14d") — report metadata,
-not screen text.
+## Docs (5 files + template)
 
-## Docs
-
-- `CHANGELOG.md` — R139 entry (top of the 0.0.8 section).
-- `README.md` — release badge + Current build → R139; the since-R128 list gains the tag.
-- `SMOKE-CHECKLIST.md` — build line + item 0 → R139; new **§Q** (items 55–56: title +
-  automap show the tag). The stale `tools/gen-smoke-issue-template.py` reference is
-  updated (the script was removed at rev 152).
-- `.github/ISSUE_TEMPLATE/smoke-test.md` — §Q appended by hand (generator removed at
-  rev 152; both files note the hand-sync).
-- `handoff.md` → **rev 153**; the rev-152 paragraph offloaded verbatim to **H58**;
-  **H59** = the R139 record; §1 self-ID line + §8 H-index updated.
-- `HISTORY.md` — **H58** (the rev-152 paragraph, byte-identical offload) + **H59**.
-
-## Suggested commit split (3)
-
-1. `Vanilla+0.0.8-R139` — the four code files (build tag + self-ID bump).
-2. `docs: rev 153 - R139 build tag; rev-152 offloaded to H58` — handoff.md, HISTORY.md,
-   ROUND-SUMMARY.md.
-3. `docs: R139 in CHANGELOG/README/SMOKE + template §Q` — the four docs.
+1. `CHANGELOG.md` — the R142 entry (recon summary, mechanism, the UNCAPPED rejection,
+   the interpolation follow-on).
+2. `README.md` — the **Unlock FPS** table row; status → R142; the since-R128 list.
+3. `SMOKE-CHECKLIST.md` + `.github/ISSUE_TEMPLATE/smoke-test.md` — build line + item 0
+   → R142, item 2 row count (eleven) + the 480p note, and the new **§S** (items 61–64).
+4. `FEATURES.md` — v9 header + row 17 + §17 → **Implemented R142, field pass pending**;
+   the shipped-as-of tally (eleven features).
+5. `plans/FPS-UNLOCK-PLAN.md` — status → implemented (rounds 1–2), the implementation
+   record and the round-1 pins that held.
+6. `handoff.md` — this rev's header record (rev 154); R139's paragraph compressed into
+   the PREVIOUS list with R140/R141 one-liners.
 
 ## Verification
 
 - Sandbox (no cross toolchain — the compile gate of record is your Win11 build):
-  repo-wide format-string sweep — **zero** `"v %d.%d%c"` sites remain;
-  `D2VP_BUILD_TAG` consumed at exactly the two draw sites; `D2VP_ROUND` consumed by the
-  self-ID compose; `nVersionLen` fully removed; no struct/layout edits; the edits are
-  string-literal swaps + one adjacent-literal concat (`"Vanilla+0.0.8-" D2VP_ROUND`).
-- Field: **§Q item 55** — the main-menu version text reads `D2VP-R139`;
-  **item 56** — the automap overlay's top-right version line reads `D2VP-R139`
-  (ride-along: level name / difficulty / password / server IP lines unchanged;
-  tag fully on-screen at 640x480).
-- d2boot.log line 1 must say `Vanilla+0.0.8-R139`.
+  the pacer section extracted **verbatim** from `VanillaPlusCore.cpp` into a stubbed
+  harness (`scripts/build_unlockfps_test.sh`) — **15/15 green, `-Wall -Wextra`, zero
+  warnings**: steady 60 Hz grid (~344 presents/5.5 s), 18 ms wake jitter (no drift
+  explosion), 1 s absence → re-anchor, no backlog burst, GetTickCount wrap, gate
+  flips take effect the same poll, idle sleep bounded 1..16, gate off = zero marks +
+  the retail sentinel, stats window math (~312 presents vs ~125 ticks per 5 s).
+- Consumer sweep: the only `fps_drawn`/`fps_skip` readers outside the frame loop are
+  the lightmap quality ladder (top quality at both 25 and 60) and the `/fps` debug
+  overlay (cosmetic) — the stats split is purely additive.
+- Field ask: **SMOKE §S items 61–64** — the d2boot presents/ticks pair (sim identity
+  by counting), the stopwatch walk/attack check, the 60 Hz cursor/tooltip feel on a
+  60 Hz panel (vsync on and off), and the boundaries (pause/loading/cutscenes/menus +
+  the mid-session flip both ways).
+- d2boot.log line 1 must say `Vanilla+0.0.8-R142`.
 
 ## Still owed (unchanged from rev 152)
 
@@ -69,3 +85,6 @@ not screen text.
 - SMOKE ride-alongs on any future build; §P item 54's 1366x768 `-w` select doubles as
   the R116 eyeball.
 - §7 triages: #25 (track R, shrine XP buff), #18 (track Q, attribute-point crash).
+- The unlock-fps follow-on when the field pass lands: sub-tick interpolation
+  (camera → missiles → units, plan §4 Phase 2) and, if wanted, the numeric target
+  (30–240) — both scoped in the plan.

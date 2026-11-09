@@ -22,6 +22,7 @@
 #include "Source/Fog/Src/LogManager.h"
 #include "3rdparty/Storm/Source/SReg.h"
 #include "Source/globals/globals.h"
+#include <string.h> // VP: [unlock-fps R142] strrchr (this TU had no string include before the gate reader)
 #include "Source/D2Client/D2Client.globals.h"
 #include "Source/D2Client/D2GfxSettingsStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
@@ -988,6 +989,38 @@ static LARGE_INTEGER gliPerfCounterStart = {}; D2_STATIC_GUARD(gliPerfCounterSta
 
 // End render frame. Dispatches EndScene1/2 to backend, then Sleep() for frame pacing.
 // 5ms frame budget enforced - if frame took <5ms, sleeps remainder to throttle FPS.
+// VP: [unlock-fps R142] under [features] unlock_fps the budget drops to 1 ms -
+// its job (don't spin at the retail 25 Hz draw gate) is gone once the client's
+// present pacer owns the cadence, and a 5 ms sleep ahead of the Flip would sit
+// between the pacer deadline and the present. Missing/garbage/0 = 5 ms,
+// byte-exact retail.
+
+// VP-BEGIN [unlock-fps R142]: D2gfx keeps its own 2 s-poll reader for the gate
+// (the MANABURN_FixActive server-gate shape): no D2Client imports across the
+// renderer boundary. Local path build mirrors ALTTOGGLE_BuildIniPath.
+static int s_nUnlockFpsCache = 0;
+static DWORD s_dwUnlockFpsTick = 0;
+static BOOL D2GFX_UNLOCKFPS_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!s_dwUnlockFpsTick || dwNow - s_dwUnlockFpsTick >= 2000) {
+        char szIniPath[260];
+        s_dwUnlockFpsTick = dwNow;
+        s_nUnlockFpsCache = 0;
+        DWORD dwLen = GetModuleFileNameA(nullptr, szIniPath, 240);
+        if (dwLen && dwLen < 240) {
+            char* pSlash = strrchr(szIniPath, '\\');
+            if (pSlash) {
+                pSlash[1] = '\0';
+                lstrcatA(szIniPath, "d2vp.ini");
+                // Missing file/section/key or a non-numeric value = 0 = retail budget.
+                s_nUnlockFpsCache = GetPrivateProfileIntA("features", "unlock_fps", 0, szIniPath) ? 1 : 0;
+            }
+        }
+    }
+    return s_nUnlockFpsCache;
+}
+// VP-END [unlock-fps R142]
+
 BOOL __stdcall D2GFX_EndScene() {
     // Static local variables (originally global data)
     static double gdFrameSleepRemainder = 0; D2_STATIC_GUARD(gdFrameSleepRemainder, "D2gfx::D2GFX::D2GFX_EndScene::gdFrameSleepRemainder");
@@ -1001,12 +1034,14 @@ BOOL __stdcall D2GFX_EndScene() {
     }
 
     double dVar1 = D2GFX_CalculateGammaRamp();
-    if (dVar1 - gdFrameStartTime <= 5.0) {
+    // VP: [unlock-fps R142] 5 ms -> 1 ms under [features] unlock_fps (2 s-poll reader above)
+    double dFrameBudget = D2GFX_UNLOCKFPS_Active() ? 1.0 : 5.0;
+    if (dVar1 - gdFrameStartTime <= dFrameBudget) {
       DWORD dwMilliseconds;
-      dVar2 = 5.0 - (dVar1 - gdFrameStartTime) + gdFrameSleepRemainder;
+      dVar2 = dFrameBudget - (dVar1 - gdFrameStartTime) + gdFrameSleepRemainder;
       dwMilliseconds = (DWORD)dVar2;
       gdFrameSleepRemainder = dVar2 - (double)(int)dwMilliseconds;
-      if ((int)dwMilliseconds < 1 || 5 < (int)dwMilliseconds) {
+      if ((int)dwMilliseconds < 1 || dFrameBudget < (int)dwMilliseconds) {
         gdFrameSleepRemainder = 0.0;
       } else {
         /* DWORD dwMilliseconds for Sleep */ Sleep(dwMilliseconds);

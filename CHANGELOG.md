@@ -11,6 +11,23 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R142 — Unlock FPS: presentation-FPS unlock** (owner ask, no issue). With
+  **`d2vp.ini [features] unlock_fps`** (default 0, like every feature; the Vanilla+
+  Options page's new **"Unlock FPS"** row) the game **presents at ~60 FPS while the
+  simulation keeps the exact retail 25 Hz cadence**. The recon found the 25 FPS
+  presentation is only a draw gate in the client frame loop — `CLIENT_GameLoopFrame`
+  presents one draw per 40 ms tick window — so R142 moves the draw onto a 60 Hz present
+  pacer (skip-never-queue: a slow GPU re-anchors, never queues), paces the message-pump
+  idle sleep to the same deadline, and drops `D2GFX_EndScene`'s 5 ms anti-spin budget to
+  1 ms under the gate. Server ticks, client world updates, movement, animations and
+  timers stay byte-exact; vsync untouched. The immediate wins: a 60 Hz cursor,
+  hover/tooltip/target-highlight responsiveness and up to ~40 ms less input-to-photon
+  latency. `d2boot.log` carries a presents/ticks-per-second pair once per 5 s while the
+  gate is on — the field proof the game speed is unchanged. Retail's own
+  `GAMETYPE_SINGLEPLAYER_UNCAPPED` QA path was considered and **rejected** — it speeds
+  the *server*, a game-speed change. Sub-tick interpolation (world *motion* at 60) is
+  the deliberate follow-on; plan at [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md).
+  Self-ID `Vanilla+0.0.8-R142`. Field ask: SMOKE **§S** (items 61–64).
 - **R141 — Ctrl+Click: the vacated-slot fix** (field catch on R140,
   [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)). The R140 build sent the `0x19`
   pick and `0x18` place back to back; the two echoes drained in one packet batch and the

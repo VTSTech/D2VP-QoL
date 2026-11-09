@@ -132,11 +132,11 @@ static const uint16_t VPPAGE_FONT_ID = 0xd;        // FontInGameChat - ControlCo
 
 // Page layout (mirrors the ControlConfig panel box for a familiar look).
 static const int VPPAGE_BOX_WIDTH = 0x26c;
-static const int VPPAGE_BOX_HEIGHT = 0x1d1;        // R140: was 0x1b1 - grew one pitch for the tenth row (see the layout check)
+static const int VPPAGE_BOX_HEIGHT = 0x1f1;        // R142: was 0x1d1 - grew one pitch for the eleventh row (see the layout check)
 static const int VPPAGE_ROW_PITCH = 0x20;
 static const int VPPAGE_ROW_HEIGHT = 0x1a;
 static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
-static const int VPPAGE_BACK_ROW_Y = 0x1a4;        // from box top (R140: was 0x184 - moved below the tenth row, see the layout check)
+static const int VPPAGE_BACK_ROW_Y = 0x1c4;        // from box top (R142: was 0x1a4 - moved below the eleventh row, see the layout check)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
 // [features] keys rendered by the page. Adding a slate feature = +1 entry
@@ -148,7 +148,7 @@ struct VPPFeatureRow {
     const char* szKey;        // d2vp.ini [features] key
     const wchar_t* wszLabel;  // row label
 };
-static const VPPFeatureRow gaVanillaPlusRows[10] = {
+static const VPPFeatureRow gaVanillaPlusRows[11] = {
     { "alt_toggle", L"Show Items Toggle" },
     { "auto_gold", L"Auto Gold Pickup" },
     { "portable_save", L"Portable Saves" },
@@ -188,9 +188,19 @@ static const VPPFeatureRow gaVanillaPlusRows[10] = {
     // Ctrl+Click and the write bridge busts its cache tick, so a flip here
     // lands on the very next Ctrl+Click - no restart, no panel reopen.
     { "ctrl_click_xfer", L"Ctrl Click Transfer" },
+    // VP: [unlock-fps / R142] unlock_fps - the presentation-FPS unlock
+    // (FEATURES.md row 17, plans/FPS-UNLOCK-PLAN.md). Label = the owner's
+    // wording ("for v1 call the option Unlock FPS"). Bool gate, fixed 60 Hz
+    // present target; the sim (server ticks + client world updates) stays 25 Hz
+    // byte-exact, vsync untouched. The gate UNLOCKFPS_Active
+    // (VanillaPlusCore.cpp) is 2 s hot-read and the write bridge busts its
+    // cache tick (D2VP_ConfigReloaded), so a flip here re-reads the key on the
+    // very next draw poll; the pacer unanchors itself on gate-off and the
+    // retail draw gate takes over from the same frame.
+    { "unlock_fps", L"Unlock FPS" },
 };
-static const int VPP_ROW_COUNT = 10;
-static const int VPP_ROW_BACK = 10; // hit-test index of the Previous Menu row
+static const int VPP_ROW_COUNT = 11;
+static const int VPP_ROW_BACK = 11; // hit-test index of the Previous Menu row
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
@@ -204,10 +214,17 @@ static const int VPP_ROW_BACK = 10; // hit-test index of the Previous Menu row
 // from 0x191 to 0x1b1 (same 0x13 bottom margin as R101/R108). R140: the
 // tenth row (ctrl_click_xfer) spans boxTop+0x170..0x18a, so the back row
 // moves down one pitch again, to boxTop+0x1a4 (0x18a+0x1a); its bottom
-// 0x1be grows the box from 0x1b1 to 0x1d1 (same 0x13 bottom margin). Still
-// fits every renderer height: at 640x480 the box top is (480-0x1d1)/2 = 7,
-// bottom 472 < 480; the box is a runtime-sized solid rect, so no asset
-// constrains the height.
+// 0x1be grows the box from 0x1b1 to 0x1d1 (same 0x13 bottom margin). R142:
+// the eleventh row (unlock_fps) spans boxTop+0x190..0x1aa, so the back row
+// moves down one pitch again, to boxTop+0x1c4 (0x1aa+0x1a); its bottom
+// 0x1de grows the box from 0x1d1 to 0x1f1 (same 0x13 bottom margin).
+// 0x1f1 = 497 now exceeds the 640x480 height - the first layout check this
+// page has failed on the smallest stop: at 480p the box top is
+// (480-497)/2 = -8, so the solid box and its frame clip their bottom 9 px
+// (decorative margin only: the first row lands at 72, the back row spans
+// 444..470 - every row stays fully on-screen and clickable, the clipped
+// strip is empty box). 800x600 and every wide stop fit whole as before
+// ((600-497)/2 = 51).
 
 // Input handlers (definitions below; the batch array references them).
 // Deliberately NO WM_MOUSEMOVE (0x200) entry - see the header comment block:

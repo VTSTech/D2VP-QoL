@@ -136,6 +136,7 @@
 #include "Redivivus/d2_boot.h" // [vanilla-plus] self-check failures
 #include <stdlib.h> // exit (self-check halt)
 #include <cstddef> // offsetof (flag-store tripwire)
+#include <mmsystem.h> // [unlock-fps R142] timeBeginPeriod - 16 ms pacing needs 1 ms Sleep granularity (winmm is linked)
 
 // [vanilla-plus alt-toggle] Config-gated Alt-key ground-item-label toggle
 // (D2R "Show Items: Toggle" parity). d2vp.ini next to d2.exe:
@@ -270,7 +271,18 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       the inventory; the Shared tab behaves the same. A full\r\n"
         ";       target plays the \"won't fit\" sound and nothing moves.\r\n"
         ";       Ctrl+Click in an open shop still sells.\r\n"
-        "ctrl_click_xfer=0\r\n";
+        "ctrl_click_xfer=0\r\n"
+        "\r\n"
+        "; Presentation FPS unlock (the Vanilla+ Options row is called\r\n"
+        "; \"Unlock FPS\"):\r\n"
+        ";   0 = the game presents at the classic 25 FPS    (vanilla behavior)\r\n"
+        ";   1 = the picture (cursor, tooltips, target highlights, alt labels)\r\n"
+        ";       refreshes at ~60 FPS while the game itself keeps the exact\r\n"
+        ";       retail speed: ticks, movement, animations and timers are\r\n"
+        ";       unchanged. Vsync behavior is untouched. d2boot.log carries a\r\n"
+        ";       presents/ticks-per-second pair once per 5 s while this is on,\r\n"
+        ";       as the proof the game speed is unchanged.\r\n"
+        "unlock_fps=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -934,6 +946,152 @@ uint32_t __stdcall PANELSHIFT_BorderForWorld(uint32_t eBorderType) {
     return eBorderType;
 }
 
+// ===== [vanilla-plus unlock-fps] R142 - presentation-FPS unlock =============
+// FEATURES.md row 17 / plans/FPS-UNLOCK-PLAN.md. See VanillaPlusCore.h for the
+// mechanism summary. This TU owns the pacer state and the gate; the three
+// upstream consumers are one-line sites: the draw dispatch
+// (Game.cpp CLIENT_GameLoopFrame), the pump idle sleep (Message.cpp
+// MessageGameLoop) and the EndScene budget (D2GFX.cpp, which keeps its own
+// reader - renderer boundary). Design points the code below must keep true:
+//   - Skip-never-queue (the frame-skip lesson, moved to the present side): at
+//     the deadline draw once and advance the deadline a full period; when the
+//     pump was away (message storm, loading, the SP pause path - none of them
+//     poll ShouldPresent) the anchor is >= 4 periods stale, so re-anchor
+//     instead of looping the backlog off. Small lateness (pump wake jitter,
+//     a few ms) stays on the absolute grid - the += keeps the average at
+//     exactly 16 ms/present instead of compounding wake jitter upward.
+//   - The pacer only decides when to DRAW, never when to poll: input rides
+//     the message pump exactly as retail.
+//   - Unanchor on gate-off and recency-out (menus/loading/pause stop polling
+//     ShouldPresent; after 100 ms the pump falls back to the retail Sleep(10)
+//     by itself, so those loops keep their vanilla pacing untouched).
+//   - Telemetry (pillar 1 of the plan - sim identity proven by counting, not
+//     eyeballing): while the gate is on, one d2boot mark per 5 s window pairs
+//     the present rate with the client-tick rate. Zero marks when off.
+
+static const DWORD UNLOCKFPS_PERIOD_MS = 16; // fixed 60 Hz v1 target (owner: bool for v1, numeric later)
+
+static int gbUnlockFpsMode = 0;
+static DWORD dwUnlockFpsLastCheck = 0;      // 2 s ini re-read gate (row-28 pattern)
+static DWORD dwUnlockFpsNextPresent = 0;    // pacer deadline (GetTickCount); 0 = unanchored
+static DWORD dwUnlockFpsLastPoll = 0;       // recency of the last ShouldPresent poll
+static int sbUnlockFpsTimerRaised = 0;      // timeBeginPeriod(1) one-way latch
+static DWORD dwUnlockFpsStatsWindowTick = 0;
+static DWORD dwUnlockFpsPresentCount = 0;
+static DWORD dwUnlockFpsTickCount = 0;
+
+BOOL __stdcall UNLOCKFPS_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsLastCheck || dwNow - dwUnlockFpsLastCheck >= 2000) {
+        char szIniPath[260];
+        dwUnlockFpsLastCheck = dwNow;
+        if (ALTTOGGLE_BuildIniPath(szIniPath)) {
+            ALTTOGGLE_EnsureIni();
+            // Missing file/section/key or a non-numeric value = 0 = vanilla.
+            gbUnlockFpsMode = GetPrivateProfileIntA("features", "unlock_fps", 0, szIniPath) ? 1 : 0;
+        } else {
+            gbUnlockFpsMode = 0;
+        }
+    }
+    return gbUnlockFpsMode;
+}
+
+BOOL __stdcall UNLOCKFPS_ShouldPresent() {
+    if (!UNLOCKFPS_Active()) {
+        dwUnlockFpsNextPresent = 0; // gate off (or just flipped off): unanchor
+        return FALSE;
+    }
+    DWORD dwNow = GetTickCount();
+    dwUnlockFpsLastPoll = dwNow;
+    if (!sbUnlockFpsTimerRaised) {
+        sbUnlockFpsTimerRaised = 1;
+        timeBeginPeriod(1); // 16 ms pacing needs 1 ms Sleep granularity; one-way latch, never lowered
+        D2BOOT_Mark("unlock-fps: [features] unlock_fps=1 - present pacer 60 Hz, sim stays 25 Hz (timeBeginPeriod(1))");
+    }
+    if (!dwUnlockFpsNextPresent) {
+        // First activation this process (or the first poll after a re-anchor
+        // reset): present immediately, pace from here.
+        dwUnlockFpsNextPresent = dwNow + UNLOCKFPS_PERIOD_MS;
+        return TRUE;
+    }
+    if ((int32_t)(dwNow - dwUnlockFpsNextPresent) < 0) {
+        return FALSE; // before the deadline
+    }
+    if ((int32_t)(dwNow - dwUnlockFpsNextPresent) >= (int32_t)(UNLOCKFPS_PERIOD_MS * 4)) {
+        // The pump was away (menus / loading / SP pause path don't poll, or a
+        // stall longer than four periods): re-anchor - skip, never queue.
+        dwUnlockFpsNextPresent = dwNow + UNLOCKFPS_PERIOD_MS;
+        return TRUE;
+    }
+    // At/after the deadline, on the grid: consume the slot(s).
+    do {
+        dwUnlockFpsNextPresent += UNLOCKFPS_PERIOD_MS;
+    } while ((int32_t)(dwNow - dwUnlockFpsNextPresent) >= 0);
+    return TRUE;
+}
+
+static void UNLOCKFPS_StatsIfDue() {
+    if (!gbUnlockFpsMode) {
+        // Gate off: keep the counters zeroed so a later flip-on starts a clean
+        // window; no marks - the vanilla log stays vanilla.
+        dwUnlockFpsPresentCount = 0;
+        dwUnlockFpsTickCount = 0;
+        dwUnlockFpsStatsWindowTick = 0;
+        return;
+    }
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsStatsWindowTick) {
+        dwUnlockFpsStatsWindowTick = dwNow;
+        return;
+    }
+    DWORD dwWindowMs = dwNow - dwUnlockFpsStatsWindowTick;
+    if (dwWindowMs < 5000) {
+        return;
+    }
+    DWORD dwPresents = dwUnlockFpsPresentCount;
+    DWORD dwTicks = dwUnlockFpsTickCount;
+    dwUnlockFpsStatsWindowTick = dwNow;
+    dwUnlockFpsPresentCount = 0;
+    dwUnlockFpsTickCount = 0;
+    DWORD dwPresentsPerSec = dwPresents * 1000 / dwWindowMs;
+    DWORD dwTicksPerSec = dwTicks * 1000 / dwWindowMs;
+    D2BOOT_MarkFmt("unlock-fps: presents %u in %u ms (~%u/s), client ticks %u (~%u/s) - sim stays 25 Hz",
+                   (unsigned)dwPresents, (unsigned)dwWindowMs, (unsigned)dwPresentsPerSec,
+                   (unsigned)dwTicks, (unsigned)dwTicksPerSec);
+}
+
+void __stdcall UNLOCKFPS_NotePresent() {
+    dwUnlockFpsPresentCount++;
+    UNLOCKFPS_StatsIfDue();
+}
+
+void __stdcall UNLOCKFPS_NoteClientTick() {
+    dwUnlockFpsTickCount++;
+    UNLOCKFPS_StatsIfDue();
+}
+
+int __stdcall UNLOCKFPS_IdleSleepMs() {
+    if (!UNLOCKFPS_Active()) {
+        dwUnlockFpsNextPresent = 0;
+        return 0; // caller keeps the retail Sleep(10)
+    }
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsNextPresent || dwNow - dwUnlockFpsLastPoll > 100) {
+        // No live pacer (gate on, but the draw site is not polling: menus,
+        // loading, the SP pause path): retail pacing - those loops own their
+        // own cadence.
+        return 0;
+    }
+    int32_t nUntilDeadline = (int32_t)(dwUnlockFpsNextPresent - dwNow) - 1;
+    if (nUntilDeadline < 1) {
+        return 1; // due: wake now, the next callback iteration draws
+    }
+    if (nUntilDeadline > (int32_t)UNLOCKFPS_PERIOD_MS) {
+        nUntilDeadline = (int32_t)UNLOCKFPS_PERIOD_MS; // stay responsive to a gate flip
+    }
+    return nUntilDeadline;
+}
+
 // ===== [vanilla-plus options page] d2vp.ini feature toggle bridge ==========
 // The "Vanilla+ Options" page (D2Client/UI/VanillaPlusOptions.cpp) reads and
 // flips the same [features] keys the gates consume. Reads go through the
@@ -980,6 +1138,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwNoPanelShiftLastCheck = 0;  // next PANELSHIFT_NoShiftWorld() re-reads no_panel_shift
     dwShiftCompareLastCheck = 0;  // next SHIFTCOMPARE_Active() re-reads shift_compare
     dwCtrlClickXferLastCheck = 0; // next VPCTRLXFER_Active() re-reads ctrl_click_xfer
+    dwUnlockFpsLastCheck = 0;     // next UNLOCKFPS_Active() re-reads unlock_fps
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }

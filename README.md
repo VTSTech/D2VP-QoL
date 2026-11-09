@@ -53,6 +53,7 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | Mana Burn Fix | `[features] mana_burn_fix` | Repairs retail's Mana Burn bug (256x the intended mana drain, 512x in Hell) to the designed 66–100% of monster-level damage, matching D2R post-2.4. |
 | Shift Item Compare | `[features] shift_compare` | Hold **Shift** over an equippable item and a second tooltip draws beside it: the item you have equipped for that body slot (D2R hover-compare parity) — inventory, stash, cube, trade, vendor; shield/quiver hovers compare the off-hand, weapons the primary. |
 | Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. |
+| Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. |
 
 No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
 every feature ships OFF. The wider candidate slate is scoped in
@@ -60,7 +61,7 @@ every feature ships OFF. The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R140`** (line 1 of `d2boot.log` pins any build); the
+Current build: **`Vanilla+0.0.8-R142`** (line 1 of `d2boot.log` pins any build); the
 latest release tag is
 **[`R140`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R140)**, 2026-11-09.
 
@@ -72,7 +73,7 @@ latest release tag is
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R140, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R142, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
@@ -90,7 +91,8 @@ latest release tag is
   inventory ↔ stash move with the stash open, shared pages included,
   `[features] ctrl_click_xfer`; the R141 follow-up fixed the vacated-slot field catch —
   field-verified 2026-11-09, [#35](https://github.com/VTSTech/D2VP-QoL/issues/35) closed,
-  SMOKE §R).
+  SMOKE §R) and the **Unlock FPS** feature (R142 — the presentation-FPS unlock:
+  `[features] unlock_fps`, ~60 FPS present on a 25 Hz sim; field ask SMOKE §S).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
