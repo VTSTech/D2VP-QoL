@@ -377,6 +377,11 @@ void __stdcall InitializeUI() {
     // starts every game on the personal page as well).
     VPSHAREDUI_ResetForNewGame();
     // VP-END [shared-stash]
+    // VP-BEGIN [automap-clock R147]: the session clock anchors at the same
+    // wholesale UI reset - one GetTickCount() capture per game, so the
+    // Session line reads time-since-this-game-started.
+    VPCLOCK_ResetSession();
+    // VP-END [automap-clock R147]
     GFX_bShowUIFlag.AltShowItems = 0;
     GFX_bShowUIFlag.Cash = 0;
     GFX_bShowUIFlag.Quest = 0;

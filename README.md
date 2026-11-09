@@ -56,6 +56,7 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. |
 | Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. |
 | FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. Off = the classic 25 Hz step cadence at ~60 presents. |
+| Automap Clock | `[features] automap_clock` | The automap overlay gains two lines under the build tag, right-aligned with the other overlay text: **Session** (real time since you entered the current game, `H:MM:SS`) and **System** (your PC's local clock, `HH:MM` 24-hour). Pure display. |
 
 No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
 every feature ships OFF (the one deliberate exception: `unlock_fps_interp` — the
@@ -103,7 +104,11 @@ latest release tag is
   field-accepted 2026-11-09) and the **two-column Vanilla+ Options page** (R144 — the
   panel split into two columns of six so it fits whole again down to 640x480, and the
   interpolation knob took the twelfth row, **FPS Interpolation** — the README gallery
-  screenshot shows it in game; field ask SMOKE §S).
+  screenshot shows it in game; field ask SMOKE §S), the **shared stash at a hundred
+  pages** (R145/R146 — the pager arrows doubled to `<<`/`>>` for a bigger click
+  target, then the page count went 10 → 100; field-confirmed "Good job, works") and
+  the **automap clock** (R147 — `[features] automap_clock`: Session + System time
+  lines under the build tag; field ask SMOKE §T).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds

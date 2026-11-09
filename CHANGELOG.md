@@ -11,6 +11,13 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R147 — Automap clock: Session + System time** (owner ask: "Let's add an in game
+  clock to the Automap. Session Time and System Time"). With `automap_clock=1` the
+  automap overlay gains two lines under the build tag, right-aligned with the other
+  overlay text: **Session** (real time since you entered the current game, `H:MM:SS`)
+  and **System** (your PC's local clock, `HH:MM` 24-hour). Opt-in (default off), a
+  **Automap Clock** row joins the Vanilla+ Options page (the page is two columns of
+  seven now, box 0x151→0x171 — still whole at 640x480). Self-ID `Vanilla+0.0.8-R147`.
 - **R146 — Shared Stash: 100 pages** (owner ask: "Good job, works. Let's increase the
   Shared Stash pages to 100" — the "Then 100" leg of the original R63 roadmap). The
   R82 design was built for this: the `.sss` v2 header grows to 812 bytes (one

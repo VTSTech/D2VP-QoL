@@ -1,3 +1,5 @@
+*v11, 2026-11-10. **Row 18 added and IMPLEMENTED the same round (R147) on owner ask** ("Let's add an in game clock to the Automap. Session Time and System Time"): the automap clock (`automap_clock`, §18, option **Automap Clock**) — **Session** (real time since game entry, `H:MM:SS`, one `GetTickCount()` anchor per game at the UI reset — pause menus and cutscenes count) + **System** (the PC's local clock, `HH:MM` 24-hour, per-frame `GetLocalTime`) on the retail automap text-overlay stack directly under the build tag; display-only, the gate charter (default off, 2 s hot-read, the Options-page write bridge), the Options page two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144). **Thirteen features ship.** R146 (the shared stash at a hundred pages) added no row. Field ask: §T 67–71.*
+
 # FEATURES.md — D2R backport slate (vanilla-plus)
 
 > **Agent lane.** This file is the feature slate for the agent (verbose by design:
@@ -125,6 +127,7 @@ Every slate row must satisfy all of these before it ships:
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
 | 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
+| 18 | Automap clock (Session + System time) | HUD | None — owner suggestion 2026-11-10 ("Let's add an in game clock to the Automap. Session Time and System Time"); speedrun/PD2 overlay staple | S | Low | `automap_clock` — **Implemented** (R147 — option **Automap Clock**; display-only: two lines on the retail automap text-overlay stack directly under the build tag, right-aligned with the level name/difficulty family — **Session** = real time since game entry, `H:MM:SS`, anchored by one `GetTickCount()` capture in `InitializeUI`'s per-game reset (pause menus and cutscenes count — a desk stopwatch, not a play-time meter), **System** = the PC's local clock via `GetLocalTime`, `HH:MM` 24-hour, re-read every frame; the same 2 s gate charter, a **Automap Clock** row took the thirteenth Options slot and the page went to two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144, still whole at 640x480); no server half, no packets, no files) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
@@ -148,6 +151,8 @@ and 11 — and, outside this slate, the pre-slate pair
 0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Twelve features
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
+**R146/R147 updates**: row 9's stash went to a hundred pages (see the row + §9);
+row 18 (**Automap Clock**, `automap_clock`) shipped R147 — **thirteen features ship**.
 
 ---
 
@@ -1070,6 +1075,46 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 ---
 
+### 18. Automap clock (Session + System time) — `[features] automap_clock` (Implemented R147 — owner ask 2026-11-10)
+
+- **Behavior (owner ask: "Let's add an in game clock to the Automap. Session Time and
+  System Time")**: with the gate on, the automap's text overlay — the font-1 stack
+  retail right-aligns at `WindowSizeX − width − 0x10` (game password, level name,
+  version line, difficulty, server IP, expansion tag, one `0x10` row each) — gains
+  two lines directly under the build tag:
+  - **`Session H:MM:SS`** — real time elapsed since the current game was entered
+    (hours unpadded). Anchored by one `GetTickCount()` capture per game in
+    `InitializeUI`'s wholesale UI reset (`VPCLOCK_ResetSession` — the same site that
+    starts the stash page mirror on the personal page). Wall-clock elapsed, not
+    tick-counted play time: pause menus and cutscenes count — a desk stopwatch, the
+    honest "how long have I been in this game" reading. `GetTickCount` wraps at
+    49.7 days; unsigned subtraction is wrap-correct for any shorter session.
+  - **`System HH:MM`** — the PC's local wall clock (Win32 `GetLocalTime`), 24-hour,
+    read fresh every frame the automap draws, so it is always current.
+- **Implementation (display-only — no server half, no packets, no files)**: the VP
+  helper `VPCLOCK_Draw(&AUTOMAP_TextHeightOffset, SpellSel::WindowSizeX)` rides
+  inside `AUTOMAP_Draw`'s font-1 window (VP site right after `AUTOMAP_DrawVersion`,
+  so the stack reads version, clock, difficulty); it reads and advances the shared
+  offset one `0x10` row per line, color 4, and draws nothing (offset untouched) with
+  the gate off. Lines are pure-ASCII char buffers through `SStrPrintf` (the item-ilvl
+  digit idiom) widened 1:1 into the `uint16_t` buffers `DRAW_text` takes.
+- **Gate charter, unchanged**: `[features] automap_clock`, missing
+  file/section/key/garbage = 0 = vanilla byte-for-byte; the shared 2 s hot-read cache
+  (busted by `D2VP_ConfigReloaded`, so an Options-page flip or an external ini edit
+  lands on the next automap frame); ini template block ships in the same round.
+- **Options page**: the **Automap Clock** row is the thirteenth — the page reflowed
+  from two columns of six to two columns of SEVEN (`VPP_ROWS_PER_COL 6→7`; column 0
+  carries seven rows, its last band boxTop+0x110..0x12a is the exact band R101's
+  seventh row once occupied; column 1 carries six). Back row boxTop+0x124→**0x144**
+  (one pitch down, same 0x1a gap), box 0x151→**0x171** = 369 px — the same 0x13
+  bottom margin, and every video stop still fits whole, 640x480 included
+  ((480−369)/2 = 55 top margin).
+- **QA contract**: the Win11 MSYS2 build (compile gate of record) + the SMOKE §T
+  loop (tab on/off, line contents vs the PC clock, per-game reset, 640x480 fit of
+  the reflowed Options page, gate-off byte-for-byte).
+
+---
+
 ## Dropped candidates (and why)
 
 | Candidate | Verdict | Reason |
@@ -1108,7 +1153,9 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   (2026-11-09 — no-parity row 16: D2R has no sort button; D3's stash anvil and the
   ATMA/GoMule re-arranging habit are the prior art, §16); Z-key camera zoom (2026-11-09 —
   the row 0a Task C draft; D2R launch feature); presentation-FPS unlock (2026-11-09 —
-  row 17, the owner's 60 Hz ask with the tick-rate constraint).
+  row 17, the owner's 60 Hz ask with the tick-rate constraint); automap clock
+  (2026-11-10 — no-parity row 18: D2R's Tab-screen game timer threads are the nearest
+  parity anchor; the overlay lines reuse the automap's own text stack, §18).
 - Zoom prior art: D2R's launch camera zoom (Z / mouse wheel); d2dx/d2gl-class
   renderer-side dynamic zoom — projection scale + inverse cursor mapping, the class
   plans/CAMERA-ZOOM-PLAN.md follows; hackmap-era engine-side zoom (the rejected class —

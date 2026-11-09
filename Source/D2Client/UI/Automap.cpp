@@ -3147,6 +3147,12 @@ void __stdcall AUTOMAP_Draw() {
     AUTOMAP_DrawGamePassword();
     AUTOMAP_DrawLevelName();
     AUTOMAP_DrawVersion();
+    // VP-BEGIN [automap-clock R147]: the gated Session/System clock lines
+    // ride this same font-1 overlay stack - the helper advances
+    // AUTOMAP_TextHeightOffset by one 0x10 row per line it draws (nothing,
+    // offset untouched, with the [features] automap_clock gate off).
+    VPCLOCK_Draw(&AUTOMAP_TextHeightOffset, SpellSel::WindowSizeX);
+    // VP-END [automap-clock R147]
     AUTOMAP_DrawDifficulty();
     if (eGameType == GAMETYPE_OBNET_HOST || eGameType == GAMETYPE_LAN_HOST) {
       AUTOMAP_DrawServerIP();

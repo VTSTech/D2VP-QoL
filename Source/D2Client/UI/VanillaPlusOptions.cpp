@@ -139,11 +139,11 @@ static const uint16_t VPPAGE_FONT_ID = 0xd;        // FontInGameChat - ControlCo
 // every stop whole again, 640x480 included ((480-337)/2 = 71 top margin).
 static const int VPPAGE_BOX_WIDTH = 0x26c;
 static const int VPPAGE_COL_WIDTH = 0x136;         // R144: half the box width - one column's span
-static const int VPPAGE_BOX_HEIGHT = 0x151;        // R144: was 0x1f1 - two columns of six rows (see the layout check)
+static const int VPPAGE_BOX_HEIGHT = 0x171;        // R147: was 0x151 - two columns of seven rows (see the layout check)
 static const int VPPAGE_ROW_PITCH = 0x20;
 static const int VPPAGE_ROW_HEIGHT = 0x1a;
 static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
-static const int VPPAGE_BACK_ROW_Y = 0x124;        // from box top (R144: was 0x1c4 - six rows per column pull it back up)
+static const int VPPAGE_BACK_ROW_Y = 0x144;        // from box top (R147: was 0x124 - seven rows per column push it down one pitch)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
 // [features] keys rendered by the page. Adding a slate feature = +1 entry
@@ -156,7 +156,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[12] = {
+static const VPPFeatureRow gaVanillaPlusRows[13] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -220,10 +220,20 @@ static const VPPFeatureRow gaVanillaPlusRows[12] = {
     // the row is inert (the interp consumers all poll UNLOCKFPS_Active first)
     // - it stays a plain toggle like every other row, no graying.
     { "unlock_fps_interp", L"FPS Interpolation", 1 },
+    // VP: [automap-clock R147] automap_clock - the thirteenth row. The ini
+    // template block ships in the same round, so both a fresh d2vp.ini and
+    // an existing one can carry the key (an ini from before R147 reads 0
+    // until the row is flipped once). The gate VPCLOCK_Draw's 2 s cache is
+    // busted by the write bridge (dwAutomapClockLastCheck in
+    // D2VP_ConfigReloaded), so a flip here lands on the next automap frame
+    // - no restart, no map toggle needed. Display-only: two overlay lines
+    // on the automap (Session H:MM:SS since game entry + System HH:MM),
+    // FEATURE row 18.
+    { "automap_clock", L"Automap Clock", 0 },
 };
-static const int VPP_ROW_COUNT = 12;
-static const int VPP_ROW_BACK = 12; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 6; // R144: two columns of six - row i draws at column i / 6, band i % 6
+static const int VPP_ROW_COUNT = 13;
+static const int VPP_ROW_BACK = 13; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 7; // R147: was 6 - two columns of seven (thirteen rows: col 0 bands 0-6, col 1 bands 0-5)
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
@@ -255,6 +265,15 @@ static const int VPP_ROWS_PER_COL = 6; // R144: two columns of six - row i draws
 // right-aligns 0x10 inside the band's right edge - measured per draw, so a
 // fixed left x sized for the full box can't crowd the longest label
 // ("Persistent Globe Text") in either column.
+// R147: the thirteenth row (automap_clock) needs seven bands per column -
+// VPP_ROWS_PER_COL 6 -> 7. Column 0's last band (index 6) spans
+// boxTop+0x110..0x12a (the exact band R101's seventh row once occupied),
+// so the back row moves down one pitch to boxTop+0x144 (0x12a+0x1a, the
+// same one-row 0x1a gap), its bottom 0x15e grows the box from 0x151 to
+// 0x171 (369 px, the same 0x13 bottom margin) - every stop still fits
+// whole, 640x480 included ((480-369)/2 = 55 top margin). Column 1 carries
+// six rows (bands 0-5, boxTop+0x50..0x10a); the empty band 6 of column 1
+// stays empty - the hit-test only accepts bands rows actually occupy.
 
 // Input handlers (definitions below; the batch array references them).
 // Deliberately NO WM_MOUSEMOVE (0x200) entry - see the header comment block:

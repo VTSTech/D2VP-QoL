@@ -292,7 +292,15 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       still exactly retail - this is render smoothing only)\r\n"
         ";   0 = the R142 look: the picture still refreshes at ~60 FPS but the\r\n"
         ";       world and characters step at the classic 25 Hz cadence\r\n"
-        "unlock_fps_interp=1\r\n";
+        "unlock_fps_interp=1\r\n"
+        "\r\n"
+        "; Automap clock (R147):\r\n"
+        ";   0 = off: the automap overlay lines exactly as retail (vanilla behavior)\r\n"
+        ";   1 = the automap gains two lines under the build tag, right-aligned\r\n"
+        ";       with the other overlay text: Session (real time since you\r\n"
+        ";       entered the current game, H:MM:SS - pause menus and cutscenes\r\n"
+        ";       count) and System (your PC's local clock, HH:MM 24-hour).\r\n"
+        "automap_clock=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -1287,6 +1295,12 @@ void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {
 // Called by D2VP_SetFeatureToggle after each write; exported for future
 // tooling (console commands, external reload hooks).
 static void VPSHAREDUI_FlushGateCache(); // defined in the shared-stash block below
+// [automap-clock R147] the clock's gate cache + session anchor live here so
+// the reload bust below sees them; the functions are in the clock block at
+// the end of the TU.
+static int gbAutomapClockMode = 0;
+static DWORD dwAutomapClockLastCheck = 0;   // 2 s ini re-read gate (row-28 pattern)
+static DWORD dwVpClockSessionStartTick = 0; // GetTickCount() captured at game entry
 void __stdcall D2VP_ConfigReloaded() {
     dwAltToggleLastCheck = 0;     // next ALTTOGGLE_Active() re-reads alt_toggle
     dwAutoGoldLastCheck = 0;      // next AUTO_GOLD_Active() re-reads auto_gold
@@ -1296,6 +1310,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwShiftCompareLastCheck = 0;  // next SHIFTCOMPARE_Active() re-reads shift_compare
     dwCtrlClickXferLastCheck = 0; // next VPCTRLXFER_Active() re-reads ctrl_click_xfer
     dwUnlockFpsLastCheck = 0;     // next UNLOCKFPS_Active() re-reads unlock_fps
+    dwAutomapClockLastCheck = 0;  // next VPCLOCK_Draw() re-reads automap_clock (R147)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -2015,4 +2030,93 @@ BOOL __stdcall VPNOINTRO_IsRequested() {
         D2BOOT_Mark("[vp] cmdline -nointro: boot intro videos disabled"); // [d2boot]
     }
     return nParsed;
+}
+
+// ===== [vanilla-plus automap-clock R147] ====================================
+// Session/System clock on the automap overlay (owner ask 2026-11-10: "Let's
+// add an in game clock to the Automap. Session Time and System Time"). A
+// display-only client feature - no server half, no packets, no files. The
+// lines ride the retail automap text-overlay stack (AUTOMAP_Draw's font-1
+// family: right-aligned at WindowSizeX - width - 0x10, one 0x10 row per
+// line, color 4) exactly like the level name, the build tag, the difficulty
+// and the server IP; the VP site sits right after the build-tag line, so the
+// stack order reads version, clock, difficulty. Gate = the charter every
+// feature keeps: [features] automap_clock, missing file/section/key or
+// garbage = 0 = vanilla byte-for-byte (no pixels), the same 2 s hot-read
+// cache every gate uses, busted by the Options-page write bridge
+// (D2VP_ConfigReloaded) so a flip lands on the next automap frame.
+//
+//   Session - real time elapsed since the current game was entered. The
+//      anchor is taken in InitializeUI's VP site (the same wholesale UI
+//      reset that starts the stash page mirror on the personal page) via
+//      VPCLOCK_ResetSession: one GetTickCount() capture per game. Wall-clock
+//      elapsed, not tick-counted play time: pause menus and cutscenes count,
+//      exactly like a stopwatch on the desk - the honest "how long have I
+//      been in this game" reading. Format H:MM:SS (hours unpadded).
+//   System - the PC's local wall clock (Win32 GetLocalTime), HH:MM 24-hour,
+//      read fresh every frame the automap draws, so it is always current.
+//
+// Text building: pure-ASCII char buffers through SStrPrintf (the item-ilvl
+// digit idiom) widened 1:1 into the uint16_t buffers D2WinFont draws - no
+// locale, no wide-format pitfalls. GetTickCount wraps at 49.7 days;
+// unsigned subtraction is wrap-correct, so any session shorter than that
+// reads true.
+
+static BOOL VPCLOCK_GateActive() {
+    DWORD dwNow = GetTickCount();
+    if (!dwAutomapClockLastCheck || dwNow - dwAutomapClockLastCheck >= 2000) {
+        dwAutomapClockLastCheck = dwNow;
+        gbAutomapClockMode = D2VP_GetFeatureToggle("automap_clock");
+    }
+    return gbAutomapClockMode;
+}
+
+// Anchor the session clock at game entry (InitializeUI's wholesale UI reset
+// - the same site that starts the stash page mirror on the personal page).
+void __stdcall VPCLOCK_ResetSession() {
+    dwVpClockSessionStartTick = GetTickCount();
+}
+
+// The two overlay lines. Called from AUTOMAP_Draw inside its font-1 window,
+// right after the build-tag line: reads and advances *pnTextHeightOffset by
+// one 0x10 row per line drawn, right-aligns at nScreenX - width - 0x10 (the
+// family's right edge), color 4. Gate off = nothing drawn, offset untouched.
+void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX) {
+    if (!pnTextHeightOffset || !VPCLOCK_GateActive()) {
+        return;
+    }
+
+    char szLine[40];
+    uint16_t wLine[40];
+    for (int i = 0; i < 40; i++) {
+        wLine[i] = L'\0';
+    }
+
+    // Session: real elapsed since game entry, H:MM:SS.
+    DWORD dwSeconds = (GetTickCount() - dwVpClockSessionStartTick) / 1000;
+    Storm::Source::SSTR::SStrPrintf(szLine, sizeof(szLine), "Session %u:%02u:%02u",
+                                    (unsigned)(dwSeconds / 3600),
+                                    (unsigned)((dwSeconds / 60) % 60),
+                                    (unsigned)(dwSeconds % 60));
+    for (int i = 0; i < 40 && szLine[i]; i++) {
+        wLine[i] = (uint16_t)(uint8_t)szLine[i]; // pure ASCII, 1:1 widen
+    }
+    int nWidth = D2Win::Src::D2WinFont::DRAW_text0(wLine);
+    D2Win::Src::D2WinFont::DRAW_text(wLine, nScreenX - nWidth - 0x10, *pnTextHeightOffset, 4, 0);
+    *pnTextHeightOffset += 0x10;
+
+    // System: the PC's local wall clock, HH:MM 24-hour.
+    SYSTEMTIME sTime;
+    GetLocalTime(&sTime);
+    Storm::Source::SSTR::SStrPrintf(szLine, sizeof(szLine), "System %02u:%02u",
+                                    (unsigned)sTime.wHour, (unsigned)sTime.wMinute);
+    for (int i = 0; i < 40; i++) {
+        wLine[i] = L'\0';
+    }
+    for (int i = 0; i < 40 && szLine[i]; i++) {
+        wLine[i] = (uint16_t)(uint8_t)szLine[i];
+    }
+    nWidth = D2Win::Src::D2WinFont::DRAW_text0(wLine);
+    D2Win::Src::D2WinFont::DRAW_text(wLine, nScreenX - nWidth - 0x10, *pnTextHeightOffset, 4, 0);
+    *pnTextHeightOffset += 0x10;
 }
