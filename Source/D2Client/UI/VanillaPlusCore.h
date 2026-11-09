@@ -3,7 +3,7 @@
 // Fork-owned TU (picked up by CMake's GLOB_RECURSE) - extracted from
 // D2Client.cpp so the upstream merge surface stays minimal. Do not move this
 // code back into upstream files; upstream files only ever call the entry
-// points declared here (the fork-only-TU rule, handoff.md §8).
+// points declared here (see docs/merge-upstream.md for the merge playbook).
 //
 // Charter: every feature is opt-in via [features] keys in d2vp.ini next to
 // d2.exe; missing file/section/key or a garbage value always reads as 0 =
@@ -226,24 +226,20 @@ void __stdcall ITEMILVL_AppendNameSuffix(struct D2UnitStrc * pItem, uint16_t * w
 // every gate; while a panel is open held-Shift is inert in world space,
 // and the click-modifier semantics of Shift are untouched.
 BOOL __stdcall SHIFTCOMPARE_Active();      // config: shift_compare on?
-BOOL __stdcall VPCTRLXFER_Active();        // config: ctrl_click_xfer on?
-void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte); // R141: park the 0x18 half of the pair (Inv.cpp click branch)
-void __stdcall VPCTRLXFER_TickPendingPlace(); // R141: release the parked 0x18 one frame later (Inv.cpp stash draw site)
 void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp after the LoadItemDesc publish
 // [vanilla-plus options page] d2vp.ini feature-toggle bridge (row 10). The
 // page reads/flips the same [features] keys the gates consume; writes use
 // WritePrivateProfileStringA and flush every gate's 2 s hot-read cache.
 int __stdcall D2VP_GetFeatureToggle(const char* szKey);   // 0 = off/missing/garbage
-int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault); // R144: per-row read default (unlock_fps_interp's gate reads a missing key as 1)
 void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue); // write + flush
 void __stdcall D2VP_ConfigReloaded();                     // bust all 2 s gate caches
 // Boot-time consistency audit of the Vanilla+ injection points (count bumps,
-// table rows). Halts loudly with a d2boot.log line when an edit was lost -
-// see handoff.md §8. Cheap; called from ALTTOGGLE_EnsureIni.
+// table rows). Halts loudly with a d2boot.log line when a merge dropped an
+// edit - see docs/merge-upstream.md. Cheap; called from ALTTOGGLE_EnsureIni.
 void __stdcall VANILLAPLUS_SelfCheck();
 // [vanilla-plus shared-stash] Client side of the shared stash (track N
 // round 1 = one page; two shared pages + an outlined pager label since R75,
-// TEN shared pages since R82, A HUNDRED since R146; server half lives in
+// TEN shared pages since R82; server half lives in
 // D2Game/PLAYER/VanillaPlusStash.cpp).
 // d2vp.ini next to d2.exe, [features] shared_stash=0|1 - default/missing
 // file/missing key/garbage = 0 = vanilla byte-for-byte (no tab pixels, no
@@ -251,22 +247,21 @@ void __stdcall VANILLAPLUS_SelfCheck();
 // text tab (top-right, no hotkey by owner decision): clicking the word
 // flips the visible stash page by sending the C->S 0x4F Click-Button packet
 // with the out-of-retail-range button id 0x7D and the ABSOLUTE desired page
-// in the param word (0 personal, 1..100 shared pages 1..100); the <<
-// and >> arrows beside the word step one page at a time. The server
+// in the param word (0 personal, 1..10 shared pages 1..10); the <
+// and > arrows beside the word step one page at a time. The server
 // materializes the requested shared page into the retail stash grid
 // (page 4) - every retail stash flow keeps working - and borrows the
 // goldbank stat for the shared gold pool while a shared page is active, so
 // the retail deposit/withdraw gold buttons move shared gold untouched. The
-// save flush (PlayerSave::SaveGameAllGameTypes VP site) parks all hundred
-// shared pages into _d2vp_shared.sss (v2 format; R82-R145 ten-page, pre-R82
-// two-page and pre-R75 one-page files read back - the pages the file
-// doesn't carry start empty)
+// save flush (PlayerSave::SaveGameAllGameTypes VP site) parks all ten shared
+// pages into _d2vp_shared.sss (v2 format; pre-R82 two-page and pre-R75
+// one-page files read back - the pages the file doesn't carry start empty)
 // and restores the personal page + personal gold before any .d2s is built
 // (I1: character saves stay retail-pure).
 BOOL __stdcall VPSHAREDUI_FeatureActive();   // config: shared_stash on?
-int __stdcall VPSHAREDUI_IsSharedPage();     // client mirror: 0 personal, 1..100 = shared page on screen
+int __stdcall VPSHAREDUI_IsSharedPage();     // client mirror: 0 personal, 1..10 = shared page on screen
 void __stdcall VPSHAREDUI_ResetForNewGame(); // entering a game starts personal
-// Hit-test + pager for the tab composite (word + << >> arrows). TRUE = the
+// Hit-test + pager for the tab composite (word + < > arrows). TRUE = the
 // click hit an element whose target differs from the current page: the
 // mirror is updated, the 0x4F/0x7D toggle is sent with the desired page,
 // and the caller must swallow the message (VP site in
@@ -294,56 +289,3 @@ void __stdcall VPSHAREDUI_DrawTab();
 // path and are NOT affected. Returns 0 without the switch: vanilla
 // byte-for-byte.
 BOOL __stdcall VPNOINTRO_IsRequested();
-
-// [vanilla-plus unlock-fps] R142: presentation-FPS unlock (FEATURES.md row 17,
-// plans/FPS-UNLOCK-PLAN.md). Owner v1 scope (2026-11-09): bool gate, fixed
-// 60 Hz target, the decoupled present only, vsync untouched, option named
-// "Unlock FPS". Retail shape: the simulation paces itself (SrvProcessAllGames
-// keeps its own 1000/25 cadence and runs every pump iteration) and the 25 FPS
-// *presentation* exists only because CLIENT_GameLoopFrame gates the draw
-// behind the tick (gnFrameSkipCounter). Under [features] unlock_fps=1 the draw
-// moves onto a 60 Hz present pacer - skip-never-queue: at the deadline draw
-// once and advance a full period; >= 4 periods late re-anchors, never queues -
-// so server ticks and client world updates keep the retail 25 Hz cadence
-// byte-exact while cursor/tooltip/highlight redraw rides 60. The pump idle
-// Sleep(10) paces to the deadline (Message.cpp), and D2GFX_EndScene's 5 ms
-// anti-spin budget drops to 1 ms under the gate (its own 2 s-poll reader - no
-// D2Client imports across the renderer boundary). Vsync: bVSYNC semantics
-// untouched - on a 60 Hz panel vsync hands back exactly the 60 the pacer asks
-// for; NOVSYNC lets the pacer rule. Sub-tick interpolation shipped R143 (plan
-// §4 Phase 2) and took two field-driven revisions: R143.1 replaced the
-// velocity prediction ("jittery, looks better at 0" - a prediction snaps by
-// its own error every tick) with interpolation between two real samples, and
-// R143.2 fixed the delivery (still "jittery at 1"): the snapshot now runs
-// BEFORE the draw (the draw reads the live post-tick position - a pair caught
-// up after the draw made renderPos sawtooth a full tick every boundary), the
-// sprite world offset gets the delta unconditionally (R143.1 added it after
-// DRAW_UpdateMouseWorldOffsets' shake early-return, so shadows/state
-// overlays/culling stayed tick-locked while the camera glided), and the
-// player-sprite cancel flips sign in perspective (MouseOffsets already
-// carries the delta into projected coords). UNLOCKFPS_GetPlayerRenderOffset
-// feeds the camera, the sprite world offset and the player's
-// sprite/shadow/states one frame-shared delta interpolated between two real
-// position samples taken at each client world update (unlock_fps_interp,
-// default on; ini-only through R143, a Vanilla+ Options row since R144).
-BOOL __stdcall UNLOCKFPS_Active();         // config: unlock_fps on? (2 s hot-read)
-BOOL __stdcall UNLOCKFPS_ShouldPresent();  // pacer: draw now? (FALSE when gate off)
-void __stdcall UNLOCKFPS_NotePresent();    // telemetry: a present actually happened
-void __stdcall UNLOCKFPS_NoteClientTick(); // snapshot prev/cur pos pair (R143.2: called BEFORE the draw)
-int __stdcall UNLOCKFPS_IdleSleepMs();     // pump idle: ms to sleep (<= 0 = retail Sleep(10))
-// R143 sub-tick interpolation, R143.1 two-sample + R143.2 delivery revisions
-// (plan §4 Phase 2): NoteClientTick - called before the draw block, every
-// iteration a client world update ran - snapshots the player's draw-space
-// position (GetTargetX/Y, the same fields every consumer reads live);
-// UNLOCKFPS_GetPlayerRenderOffset then returns the frame-shared delta that
-// carries the camera, the sprite world offset and the player's sprite/shadow/
-// state draws from the previous sample toward the current one -
-// offset = -(cur - prev) x (1 - alpha), alpha = ms since the last client world
-// update / 40 clamped to one tick. Interpolation between two real samples:
-// continuous at every tick boundary by construction (a prediction would snap
-// by its own error every tick - the R143 field jitter). Write-nowhere: every
-// consumer adds it to its draw position only; nothing here touches
-// D2DynamicPathStrc. Fills 0 and returns FALSE whenever it should not apply
-// (gate/interp off, no snapshot yet, null out) so every site reduces to
-// retail; standing still returns 0 offsets.
-BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY);

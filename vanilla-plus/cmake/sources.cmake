@@ -1,6 +1,6 @@
 # vanilla-plus: fork-owned source/header filters. Included from the root
 # CMakeLists before the source filters run; keep every filter here so the
-# root file stays one include line away from upstream.
+# root file stays one include line away from upstream (docs/merge-upstream.md).
 #
 # A build directory inside the tree must not feed its own files back in, and
 # the vendored libbacktrace (built as its own target below) must not leak its
@@ -38,17 +38,17 @@ endfunction()
 
 foreach(list D2_SOURCES D2_HEADERS)
     list(FILTER ${list} EXCLUDE REGEX "/\\.git/")
-    # The vendored C library (libbacktrace) is built as its own target; its
-    # headers must not land on the game's include path. Excluded by literal
-    # prefix (string(FIND) == 0), NOT by list(FILTER REGEX): CMAKE_SOURCE_DIR
-    # can contain regex metacharacters (e.g. F:\Coding\Code\C++\), which fails
-    # CMake regex compilation ("Nested *?+") - the reason this filter is
-    # literal in the first place. [R130] the vendored libs moved thirdparty/
-    # -> 3rdparty/ at the tenth sync; the libbacktrace prefix here follows,
-    # the belt stays on. (The asm_matching/ exclusion left 2026-11-09 with
-    # the retired upstream merge line - the dir is in git history.)
+    # Vendored C library (libbacktrace) and upstream's msvc8 oracle (asm_matching/)
+    # are built as their own targets; their headers must not land on the game's
+    # include path. Excluded by literal prefix (string(FIND) == 0), NOT by
+    # list(FILTER REGEX): CMAKE_SOURCE_DIR can contain regex metacharacters
+    # (e.g. F:\Coding\Code\C++\), which fails CMake regex compilation
+    # ("Nested *?+") - the reason this filter is literal in the first place.
+    # [R130] the vendored libs moved thirdparty/ -> 3rdparty/ at the tenth
+    # sync; the libbacktrace prefix here follows, the belt stays on.
     d2_list_exclude_prefix(${list} "${CMAKE_BINARY_DIR}/")
     d2_list_exclude_prefix(${list} "${CMAKE_SOURCE_DIR}/3rdparty/libbacktrace/")
+    d2_list_exclude_prefix(${list} "${CMAKE_SOURCE_DIR}/asm_matching/")
     # [R118] scripts/ holds host-side tools only. The root CMakeLists
     # globs *.cpp tree-wide, so R117's host test harness
     # (scripts/test_r117_fill.cpp, with its own main() and stub

@@ -13,7 +13,6 @@
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/Sound/SoundHdr.h"
 #include "Source/D2Client/UI/Path.h"
-#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [unlock-fps-interp R143] UNLOCKFPS_GetPlayerRenderOffset
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
@@ -455,29 +454,6 @@ void __fastcall DRAW_WORLD_Unit(D2UnitStrc * pUnit, uint32_t nGamma, uint32_t nD
       }
     } else {
       UNIT::PlrSkills::PLRSKILLS_CheckSkillWhipAndLeap(pUnit, nGamma);
-      // VP-BEGIN [unlock-fps-interp R143.2]: the local player's sprite cancels
-      // the frame's sub-tick camera delta so the character keeps its exact
-      // retail screen position - in D2 the camera follows the player 1:1, the
-      // character is screen-fixed and the WORLD glides (feet stay planted on
-      // the gliding ground because the cancel rides the same shared offset).
-      // Sign depends on the branch that produced the coords above: top-down
-      // coords are world-space and the view center carries +delta, so the
-      // cancel ADDS it; perspective coords are screen-space and MouseOffsets
-      // (R143.2: now unconditional, see Path.cpp) already carries +delta into
-      // them, so adding again would double the delta - there the cancel
-      // SUBTRACTS. R143.1 added unconditionally: double delta in perspective,
-      // correct only top-down. Off: 0 delta, retail in both modes.
-      int nVpInterpDx = 0;
-      int nVpInterpDy = 0;
-      UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
-      if (bPerspective) {
-        nDrawLayer -= nVpInterpDx;
-        nDrawX -= nVpInterpDy;
-      } else {
-        nDrawLayer += nVpInterpDx;
-        nDrawX += nVpInterpDy;
-      }
-      // VP-END [unlock-fps-interp R143.2]
       bOrder = Engine::Gfx::DRAW_WORLD_Unit_1(pUnit, nGamma, nDrawLayer, nDrawX, nullptr, 1);
       if (bOrder && pUnit) {
         pUnit->eUnitFlags |= UNITFLAG_AUTOMAP;

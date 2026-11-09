@@ -11,9 +11,8 @@ whatever game exe is running (`d2.exe` upstream, `d2vp.exe` in this fork's relea
 `main`; the repository took its current name `D2VP-QoL` on 2026-11-03 — old GitHub URLs
 redirect regardless.)
 
-**Current release: `Vanilla+0.0.8-R140`** (tag `R140`, 2026-11-09) — one 7z with the
-client, the [Glide3xVK](https://github.com/VTSTech/Glide3xVK) wrapper pairing and
-launcher/debug scripts. The feature list lives in
+**Current release: `Vanilla+0.0.8-R127`** — one 7z with the client (the Glide3xVK
+**0.4.8** wrapper pairing and launcher/debug scripts). The feature list lives in
 [README.md](README.md); per-release changes in [CHANGELOG.md](CHANGELOG.md); the live
 work log in [handoff.md](handoff.md). All releases: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
@@ -98,23 +97,19 @@ cannot be attributed.
    1–13), sound (15–16) and drops (14) are fixed, the fullscreen-D3D recovery
    (17–27) is closed, and the 720p render family (issue #26) is root-fixed and
    field-proven; the full smoke belt has passed twice on this base (R83 #24,
-   R104 #28). The 0.0.8 arc (R128–R140) kept the burn-down going — the
-   Gheed-gamble, Countess-chest, proc-tooltip and windowed-1080p defect classes
-   all closed field-verified (issues #32/#29/#33/#31). The crash protocol above
-   handles whatever fires next.
+   R104 #28). The crash protocol above handles whatever fires next.
 2. **Compatibility pass** — **done.** The wrapper's whole feature set (window
    presets, shader chain, controller, base_res) is verified against the rebuilt
    exe by daily field play plus the two full smoke belts.
-3. **Vanilla-plus improvements** — **in flight**: ten features shipped (see
-   README — newest: the Ctrl+Click stash transfer, R140). Next slate candidates,
-   scoped and ranked low-risk-first in
+3. **Vanilla-plus improvements** — **in flight**: nine features shipped (see
+   README). Next slate candidates, scoped and ranked low-risk-first in
    [FEATURES.md](FEATURES.md). Candidates are discussed per issue; nothing lands
    without a config gate.
-4. **Keep current with upstream** — **RETIRED 2026-11-09** (owner: unlikely to resume
-   merging). Ten numbered syncs landed while the cadence ran (Ghidra DB → 1970, the
-   eleventh rolled back), each with the full audit battery; the merge protocol, the
-   audit tooling and the hand-port shelf left the tree with the retirement — git
-   history keeps them. The fork maintains its source directly.
+4. **Keep current with upstream** — **standing cadence.** Eight numbered syncs
+   so far (Ghidra DB → 1948), each per
+   [docs/merge-upstream.md](docs/merge-upstream.md) with the full audit
+   battery (gate suite, marker-placement and dead-store audits, refile-aliasing
+   audit, merge-site syntax sweep); the fork is ahead of upstream and never behind.
 
 ## Build
 
@@ -137,14 +132,9 @@ configure → build → gates → strip). More per platform:
   `tools/check-build.sh`) — do not burn local cycles on full rebuilds. Every
   release tag ships artifacts: `d2s-<sha>.exe` (stripped, play/distribute) +
   `d2-map-<sha>.map` (linker map, load-bearing for crash symbolization).
-- Gate suite **RETIRED** (2026-11-09, rev 152): `tools/check-vanilla-plus.sh`
-  (525 checks at its last count) left the tree — git history keeps the script.
-  The owner's Win11 MSYS2 build stays the compile gate of record; CI
-  (`.github/workflows/build.yml`, `tools/check-build.sh` locally) builds every
-  push/PR with mingw-i686. The build self-ID string (first `d2boot.log` line)
-  still bumps every code round — since R139 one line (`D2VP_ROUND` in
-  `Redivivus/d2_boot.h`) feeds the boot self-ID, the title-screen build tag and
-  the automap build tag together, so any shipped exe pins to its source round.
+- Every source change updates the `tools/check-vanilla-plus.sh` gate table
+  (510 checks at R127); the build self-ID string (first `d2boot.log` line)
+  bumps every code round so any shipped exe pins to its source round.
 - Transfer: the agent sandbox has no push credentials — regular rounds travel
   as **overlay zips of changed files**, upstream merges as **git bundles**;
   user side: `git fetch <file>.bundle main && git merge --ff-only FETCH_HEAD`,

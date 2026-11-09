@@ -299,7 +299,6 @@ set(D2LINUX_GAME_SOURCES
     3rdparty/Storm/3rdparty/zlib/zutil.cpp
     Redivivus/d2_crt_impl.cpp
     Redivivus/d2_crt_support.cpp
-    Source/Game/Main.cpp
     Source/D2Hell/D2Hell.cpp
     Source/D2Lang/D2Lang.cpp
     Source/D2Lang/StrTable/strtable.cpp

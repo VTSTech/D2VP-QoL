@@ -18,7 +18,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+<<<<<<<< HEAD:Redivivus/d2_crt_impl.cpp
 #include "Redivivus/d2_trace.h"
+========
+#include "support/d2_trace.h"
+>>>>>>>> 1afa4c6ace044d596818cbaefa73e3db942f3a83:support/d2_crt_impl.cpp
 
 #ifndef _MSC_VER
 // The CRT's strlen behind Ghidra's _Wrappers name.
@@ -107,4 +111,8 @@ void CRT_ExceptionFilter1(EHExceptionRecord*, EHRegistrationNode*, CONTEXT*, voi
 void CRT_ExceptionFilter2(EHExceptionRecord*, EHRegistrationNode*, CONTEXT*, void*) {}
 void CRT_ExceptionFilter3(EHExceptionRecord*, EHRegistrationNode*, CONTEXT*, void*) {}
 }  // namespace _Wrappers
+<<<<<<<< HEAD:Redivivus/d2_crt_impl.cpp
 #endif  // _MSC_VER || D2LINUX_GAME
+========
+#endif  // _MSC_VER
+>>>>>>>> 1afa4c6ace044d596818cbaefa73e3db942f3a83:support/d2_crt_impl.cpp

@@ -5,7 +5,6 @@
 #include "Source/D2Client/Engine.h"
 #include "Source/D2Client/GAME/Record.h"
 #include "Source/D2Client/UI/EscMenu.h"
-#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [unlock-fps R142] UNLOCKFPS_IdleSleepMs
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2gfx/D2GFX.h"
 #include "Source/Fog/Src/ErrorManager.h"
@@ -223,17 +222,7 @@ int32_t __fastcall MessageGameLoop(::fpGameLoopFunction nfpGameLoopFunction) {
           }
         }
         if (!gnLastMouseButtonEventType && eD2GSGameType_007a0610 != GAMETYPE_OBNET_HOST && eD2GSGameType_007a0610 != GAMETYPE_LAN_HOST) {
-          // VP-BEGIN [unlock-fps R142]: under [features] unlock_fps the idle
-          // sleep paces to the 60 Hz present deadline (sleep-until-deadline,
-          // min 1 ms) so the next callback iteration lands on the pacer grid;
-          // when the pacer is not live (gate off / menus / loading / the SP
-          // pause path - none of them poll the draw site) this returns <= 0
-          // and the retail Sleep(10) runs, byte-for-byte. The pacer only
-          // decides when to draw, never when to poll: input rides the pump
-          // exactly as retail.
-          int nVpIdleSleepMs = UNLOCKFPS_IdleSleepMs();
-          /* DWORD dwMilliseconds for Sleep */ Sleep(nVpIdleSleepMs > 0 ? nVpIdleSleepMs : 10);
-          // VP-END [unlock-fps R142]
+          /* DWORD dwMilliseconds for Sleep */ Sleep(10);
         }
       }
     } while (getMessageResult);

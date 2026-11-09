@@ -38,22 +38,7 @@
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
 
-// VP-BEGIN [windowed-1080p rowtable #31]: every software tile blitter indexes this
-// table gaYBufferRowOffsets[nScreenY + 0x20], and the wall/ground vertical clip
-// (D2GFX_FillYBufferFast: gnTileClipYMin = height - 0x2f) lets nScreenY reach
-// height - 0x30, i.e. max index = height - 16. Retail sized the table for its
-// tallest stop, 1344x700: 700 + 0x20 = 732 entries. The VP ladder's 1366x768
-// (max index 752) and 1920x1080 (max index 1064) stops read past the table into
-// the sibling statics and gpLineBufferTileArray; the garbage row offsets hand
-// D2GFX_DrawWallTileBasic wild destinations - the own-code AV WRITE of issue #31
-// (1080p windowed select crash; d2crash-20261108-122806.txt, frame #0
-// D2GFX_DrawWallTileBasic+0x66B, write to 0B88BF60 = surface + surface read back
-// from an overread slot). Fullscreen D3D is immune: its tiles are hardware vertex
-// draws that never touch this table; 720p windowed (max index 704) stays inside -
-// why the 2026-10-30 field pass never caught it. Size for the tallest ladder stop
-// with retail's +0x20 slack: 1080 + 0x20 = 1112.
-static int32_t gaYBufferRowOffsets[1112] = {}; D2_STATIC_GUARD(gaYBufferRowOffsets, "gaYBufferRowOffsets");
-// VP-END [windowed-1080p rowtable #31]
+static int32_t gaYBufferRowOffsets[732] = {}; D2_STATIC_GUARD(gaYBufferRowOffsets, "gaYBufferRowOffsets");
 static uint32_t gbPerspectiveRenderEnabled = 0; D2_STATIC_GUARD(gbPerspectiveRenderEnabled, "gbPerspectiveRenderEnabled");
 namespace D2gfx::D2GFX {
 // also labelled: gPaletteBlendLookupTable

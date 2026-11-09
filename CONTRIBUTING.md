@@ -32,20 +32,22 @@ boundary or the emitted C++ has to land upstream of the generator, not in its ou
 | | |
 |-|-|
 | **Generated** - edits are overwritten | everything under `Source/`: the module directories (`Source/D2Client/`, `Source/D2Common/`, `Source/D2Game/`, `Source/Fog/`, ...), the shared headers in `Source/D2Headers/`, `Source/modules.cmake`; the global data in `Source/globals/`; also `3rdparty/Storm/` and `3rdparty/crashy/` |
-| **Hand-written** - pull requests welcome | `project.json` (the module table), `Redivivus/`, `3rdparty/libbacktrace/`, `3rdparty/implibs/`, `cmake/`, `docs/`, `tools/`, `CMakeLists.txt`, `.github/`, `README.md` |
+| **Hand-written** - pull requests welcome | `project.json` (the module table), `Redivivus/`, `3rdparty/libbacktrace/`, `3rdparty/implibs/`, `cmake/`, `docs/`, `asm_matching/`, `tools/`, `agent/`, `CMakeLists.txt`, `.github/`, `README.md` |
 
 Upstream's
 [CONTRIBUTING.md](https://github.com/jaenster/redivivus/blob/main/CONTRIBUTING.md)
 covers that workflow end to end: which door a finding takes (issue template vs agent
-proposal) and the evidence ranking (strongest first: the developers' own words, the
-paired function on the Mac build, typed field accesses, referenced strings — inference
-last).
+proposal), the evidence ranking (strongest first: the developers' own words, the paired
+function on the Mac build, typed field accesses, referenced strings — inference last), and
+how the read-only Ghidra MCP server lets an AI agent read the databases and file
+corrections addressed **by address**.
 
-Upstream syncs are **retired** (owner, 2026-11-09: "unlikely we are going to be merging
-again") — the fork improves its source directly. The eleven-sync merge protocol, the
-hand-port shelf and the sync/audit tooling left the tree with the retirement; the
-records live in [HISTORY.md](HISTORY.md) (H47/H48) and everything removed stays in git
-history if the merge line is ever reactivated.
+Upstream syncs are **paused** (owner, 2026-11-08, after the failed eleventh sync — the
+rollback record and the reasoning live in handoff.md rev 145). The fork improves its
+R134 source directly; upstream material is hand-ported one commit at a time, ranked in
+[plans/ELEVENTH-SYNC-SALVAGE.md](plans/ELEVENTH-SYNC-SALVAGE.md).
+[docs/merge-upstream.md](docs/merge-upstream.md) stays as the archive of the
+eleven-sync merge protocol; syncs resume only when a process bounds their cost.
 
 ## If you want to improve the game (Vanilla+)
 
@@ -58,8 +60,8 @@ repo, [Glide3xVK](https://github.com/VTSTech/Glide3xVK).
 
 ### The house rules
 
-These invariants keep the fork's edits pinned and reviewable. The gate suite
-([`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh), currently **525 checks**)
+These invariants keep the fork mergeable with upstream. The gate suite
+([`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh), currently **520 checks**)
 enforces most of them mechanically:
 
 1. **Vanilla by default.** With no `d2vp.ini` (or a missing key) the game behaves like

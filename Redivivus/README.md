@@ -112,9 +112,7 @@ member of this family that is *not* an `__CI*` intrinsic: normal stack argument.
 ### Runtime functions the tree calls by their libcmt names - no shim
 
 The statically linked libcmt is named in Ghidra from the VC8 `libcmt.lib` evidence
-(`asm_matching/msvc8/evidence/libmap.tsv` — removed 2026-11-09 with the upstream
-merge-line retirement, recoverable from git history), each function under its
-undecorated C name in the
+(`asm_matching/msvc8/evidence/libmap.tsv`), each function under its undecorated C name in the
 `compiler` namespace and tagged `runtime`. The tree therefore calls `strchr`, `vfprintf`,
 `_localtime64_s`, `_purecall`, `_strrev` and the rest by the names the target's C runtime exports:
 mingw binds them to msvcrt, Visual C++ 2005 to libcmt. The former shims `CRT_Strchr`,

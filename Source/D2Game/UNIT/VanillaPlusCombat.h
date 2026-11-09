@@ -2,7 +2,7 @@
 //
 // Fork-owned TU (picked up by CMake's GLOB_RECURSE) - do not move this code
 // into upstream files; upstream files only ever call the entry points
-// declared here from thin VP-marked sites (handoff.md §8).
+// declared here from thin VP-marked sites (see docs/merge-upstream.md).
 //
 // [vanilla-plus mana-burn-fix] Retail 1.14d bug: monsters with the Mana Burn
 // affix drain 256x the intended mana with melee hits (512x in Hell). The

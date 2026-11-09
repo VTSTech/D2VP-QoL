@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:Redivivus/d2_crt_support.cpp
 #include "Redivivus/d2_trace.h"
+========
+#include "support/d2_trace.h"
+>>>>>>>> 1afa4c6ace044d596818cbaefa73e3db942f3a83:support/d2_crt_support.cpp
 // Hand-written CRT / intrinsic support layer.
 //
 // Every definition here stands in for a function that IS in Game.exe but is
@@ -11,7 +15,11 @@
 // Rules obeyed here, from docs/regen-workflow.md:
 //   - No fabricated ABI. Every body below is backed by the disassembly or the
 //     decompilation of the named address in
+<<<<<<<< HEAD:Redivivus/d2_crt_support.cpp
 //     Diablo2Lod /windows/lod/1.14d/Game.exe, quoted in Redivivus/README.md.
+========
+//     Diablo2Lod /windows/lod/1.14d/Game.exe, quoted in support/README.md.
+>>>>>>>> 1afa4c6ace044d596818cbaefa73e3db942f3a83:support/d2_crt_support.cpp
 //   - Where the ABI could not be honestly reproduced at the emitted call site,
 //     the symbol is LEFT UNDEFINED rather than stubbed. See README.md.
 //   - No shim exists only to make a count fall.

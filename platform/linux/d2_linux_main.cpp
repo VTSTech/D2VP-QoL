@@ -242,8 +242,8 @@ const char* RunUser32SelfTest() {
     // 1. Class registration carries the proc through to CreateWindowExA.
     WNDCLASSA wc;
     SDL_zero(wc);
-    wc.lpfnWndProc   = (void*)User32TestWndProc;
-    wc.lpszClassName = (char*)"d2test";
+    wc.lpfnWndProc   = User32TestWndProc;
+    wc.lpszClassName = "d2test";
     if (!RegisterClassA(&wc)) {
         return "RegisterClassA failed";
     }
@@ -362,8 +362,8 @@ const char* RunDdrawSelfTest() {
     // test's registration order; a duplicate registration is benign.
     WNDCLASSA wc;
     SDL_zero(wc);
-    wc.lpfnWndProc   = (void*)DdrawTestWndProc;
-    wc.lpszClassName = (char*)"d2ddtest";
+    wc.lpfnWndProc   = DdrawTestWndProc;
+    wc.lpszClassName = "d2ddtest";
     RegisterClassA(&wc);
     HWND hwnd = CreateWindowExA(0, "d2ddtest", "d2linux m2 ddraw self-test",
                                 0x80000000u /*WS_POPUP*/, 0, 0, 640, 480,

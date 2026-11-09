@@ -68,7 +68,6 @@ extern double gfFloatGammaCorrectionInit;
 } // namespace Fog::Src::DataArrays
 namespace Fog::Src::ErrorManager {
 extern float gfTwoPow32;
-extern char s_14_006cc77c[3];
 } // namespace Fog::Src::ErrorManager
 namespace Fog::Src::LogManager {
 extern char s_Cyrix_006cdeb0[6];

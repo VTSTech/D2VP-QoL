@@ -7240,13 +7240,10 @@ void __stdcall UIMENU_MainMenu() {
     FORMS_CreateAnyFormFromListExEx(0xe);
     FORMS_CreateAnyFormFromListExEx(0xf);
     ::D2WinTextBox* pCtlVersionText = (::D2WinTextBox*)FORMS_CreateAnyFormFromListExEx(0x115);
-    // VP-BEGIN [build-tag R139]: the title screen shows the fork build tag instead
-    // of the retail "v 1.14d". D2VP_BUILD_TAG lives in Redivivus/d2_boot.h and the
-    // in-game automap version line reads the same define, so a round bump is one
-    // line there. The retail internal-build append (bBUILD -> " 71") is retired
-    // with the old text - the tag is the build identity now.
-    Storm::Source::SSTR::SStrPrintf(szVersionText, 0x40, "%s", D2VP_BUILD_TAG);
-    // VP-END [build-tag R139]
+    size_t nVersionLen = Storm::Source::SSTR::SStrPrintf(szVersionText, 0x40, "v %d.%d%c", 1, 0xe, 'd');
+    if (D2IniData_launcher->bBUILD) {
+      Storm::Source::SSTR::SStrPrintf(szVersionText + nVersionLen, 0x40 - nVersionLen, " %d", 0x47);
+    }
 
     D2Win::Src::D2WinTextBox::D2WINTEXTBOX_SetTextFromAnsi(pCtlVersionText, szVersionText, 0);
     int bMusicEnabled = D2Sound::Src::D2SoundFast::SOUND_GetOptionsMusic();

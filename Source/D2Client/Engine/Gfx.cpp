@@ -747,17 +747,6 @@ void __stdcall DRAW_UNIT_States(D2UnitStrc * pUnit, int32_t nBlendMode, int32_t 
       nTargetY = D2Common::Units::GetTargetY(pUnit);
       nOffset = UI::Path::DRAW_GetWorldOffsetY();
       nDrawY = nTargetY - nOffset;
-      // VP-BEGIN [unlock-fps-interp R143]: state overlays on the local player
-      // (auras, buffs) ride the sprite's sub-tick delta so they stay glued to
-      // the character while the world scrolls. Off: 0 delta, retail.
-      if (pUnit == UNIT::Player::GetPlayerUnit_UI()) {
-        int nVpInterpDx = 0;
-        int nVpInterpDy = 0;
-        UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
-        nDrawX += nVpInterpDx;
-        nDrawY += nVpInterpDy;
-      }
-      // VP-END [unlock-fps-interp R143]
       if (pUnit && pUnit->eUnitType == UNIT_ITEM && nScreenX != -1 && nScreenY != -1) {
         nDrawX = nScreenX;
         nDrawY = nScreenY;
@@ -3354,17 +3343,6 @@ int32_t __fastcall DrawUnitShadows(D2UnitStrc * pUnit) {
       nScreenX = nCoordTmp + nTmp / 2;
       nCoordTmp = D2Common::Units::GetTargetY(pUnit);
       nScreenY = nCoordTmp + nTmp / 2;
-      // VP-BEGIN [unlock-fps-interp R143]: the local player's shadow rides the
-      // sprite's sub-tick delta so it stays glued to the character while the
-      // world scrolls at the present rate. Off: 0 delta, retail.
-      if (pUnit == UNIT::Player::GetPlayerUnit_UI()) {
-        int nVpInterpDx = 0;
-        int nVpInterpDy = 0;
-        UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
-        nScreenX += nVpInterpDx;
-        nScreenY += nVpInterpDy;
-      }
-      // VP-END [unlock-fps-interp R143]
     }
     if (bPerspToggled) {
       nScreenY += -8;

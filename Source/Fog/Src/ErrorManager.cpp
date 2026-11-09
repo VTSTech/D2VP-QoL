@@ -93,9 +93,6 @@ static uint32_t gbFogErrorManagerInitialized = 0; D2_STATIC_GUARD(gbFogErrorMana
 
 namespace Fog::Src::ErrorManager {
 
-// Language name for index 14
-char s_14_006cc77c[3] = "14";
-
 void __fastcall StubHook1_Unref_004016b0(uint32_t dwThreadId, HANDLE hThread) {
 
 }
