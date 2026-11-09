@@ -1646,7 +1646,7 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 //      VPSHAREDUI_HandleStashClick, drawn by VPSHAREDUI_DrawTab right after
 //      the gold-button draw. Since R75 the label is an OUTLINED composite:
 //      a 1-px black halo under the glyphs (owner: "give the current stash
-//      tab label an outline") plus a pager - < and > arrows step one page at
+//      tab label an outline") plus a pager - << and >> arrows step one page at
 //      a time between the personal page and the shared pages (two since R75
 //      - owner: "add a 2nd page and buttons/arrows to navigate pages" - ten
 //      since R82 - owner: "increase the shared stash pages to 10"), the
@@ -1760,12 +1760,22 @@ void __stdcall VPSHAREDUI_ResetForNewGame() {
 //        R69 down-walk class cannot re-open.
 // R75 composite (R82: ten pages, same shape): the label is one row-built
 // strip, right-aligned at the R66 anchor as R76 nudged it (the +0x140
-// art-seam rule is untouched) - on the personal page  "Shared >"  (the >
-// invites a step into shared page 1), on the shared pages  "< Shared N >"
-// (green, the active color; N = 1..10, and the last page drops the '>').
+// art-seam rule is untouched) - R145 (owner: "Can we make the navigation
+// label '<<' and '>>' instead of just < >, i find just one is a little
+// small to click on") doubles each arrow glyph, so on the personal page the
+// composite reads  "Shared >>"  (the >> invites a step into shared page 1),
+// on the shared pages  "<< Shared N >>"
+// (green, the active color; N = 1..10, and the last page drops the '>>').
 // The arrows step ONE page left/right; the word itself toggles
 // personal<->shared-1 - the R63-R74 click-for-the-tab muscle memory, and
-// always a way home from any shared page. Both element rects come from the
+// always a way home from any shared page. The composite stays
+// right-anchored, so the wider glyphs cost only leftward room on the R77
+// band - the row's left side is empty retail space out to the gold-area
+// hit rects (X +0x49..+0x96; the gold DISPLAY moved 0x2d BELOW the row at R77),
+// and each arrow's click band widens with its measured width: the owner's
+// actual complaint (the single glyph is a small click target) is answered
+// by the band doubling with the pixels - one layout, draw and hit test
+// alike (VPSHAREDUI_TabLayout). Both element rects come from the
 // same per-frame layout the draw uses (widths measured in font 1), so the
 // click bands can never drift from the pixels. The bands keep 2 px of
 // margin around each element and keep the old band's Y extent (nY-16..nY+6,
@@ -1828,10 +1838,10 @@ static void VPSHAREDUI_TabLayout(int * pnWordX, int * pnWordW,
                                  int * pnLeftX, int * pbHasLeft,
                                  int * pnRightX, int * pbHasRight, int * pnArrowW) {
     int nWordW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)VPSHAREDUI_PageWord());
-    int nArrowW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)L">");
+    int nArrowW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)L">>"); // R145: '<<'/'>>' - one measure feeds draw + click bands
     int nRightEdge = D2Client::UI::Inv::gnPanelOffsetX + VPSHAREDUI_TAB_RIGHT_EDGE;
-    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>' on personal + page 1
-    *pbHasLeft = gnVpSharedPage > 0;                      // '<' on shared pages
+    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>>' on personal + pages 1..9
+    *pbHasLeft = gnVpSharedPage > 0;                      // '<<' on shared pages
     int nWordR = nRightEdge - (*pbHasRight ? nArrowW + VPSHAREDUI_TAB_GAP : 0);
     *pnWordX = nWordR - nWordW;
     *pnWordW = nWordW;
@@ -1878,9 +1888,9 @@ BOOL __stdcall VPSHAREDUI_HandleStashClick(int nMouseX, int nMouseY) {
         // personal page; return home from any shared page).
         nNewPage = gnVpSharedPage ? 0 : 1;
     } else if (bHasLeft && nMouseX >= nLeftX - 2 && nMouseX <= nLeftX + nArrowW + 2) {
-        nNewPage = gnVpSharedPage - 1; // '<': one page left (page 1 -> personal)
+        nNewPage = gnVpSharedPage - 1; // '<<': one page left (page 1 -> personal)
     } else if (bHasRight && nMouseX >= nRightX - 2 && nMouseX <= nRightX + nArrowW + 2) {
-        nNewPage = gnVpSharedPage + 1; // '>': one page right
+        nNewPage = gnVpSharedPage + 1; // '>>': one page right
     }
 
     if (nNewPage < 0 || nNewPage > VPSHAREDUI_PAGE_COUNT || nNewPage == gnVpSharedPage) {
@@ -1913,11 +1923,11 @@ void __stdcall VPSHAREDUI_DrawTab() {
     VPSHAREDUI_TabLayout(&nWordX, &nWordW, &nLeftX, &bHasLeft, &nRightX, &bHasRight, &nArrowW);
     int nY = VPSHAREDUI_TabBaselineY();
     if (bHasLeft) {
-        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L"<", nLeftX, nY, 0);
+        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L"<<", nLeftX, nY, 0); // R145: was '<'
     }
     VPSHAREDUI_DrawOutlinedText(VPSHAREDUI_PageWord(), nWordX, nY, gnVpSharedPage ? 2 : 0);
     if (bHasRight) {
-        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L">", nRightX, nY, 0);
+        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L">>", nRightX, nY, 0); // R145: was '>' - same measured width the click band uses
     }
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }

@@ -494,7 +494,8 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 - **SHIPPED — field-proven end to end**: first in release **0.0.7** (cut at R66),
   grown to **ten** shared pages (R82); the as-built record — the outlined in-panel
-  tab, the `‹`/`›` pager, the `_d2vp_shared.sss` v2 header and the ten-page widening,
+  tab, the `<<`/`>>` pager (single-glyph `‹`/`›` through R144; R145 doubled the
+  glyphs for a bigger click target), the `_d2vp_shared.sss` v2 header and the ten-page widening,
   plus the SMOKE confirmations — lives in slate row 9 above and in
   [plans/SHARED-STASH-PLAN.md](plans/SHARED-STASH-PLAN.md). The design text below is the
   pre-implementation draft: its hotkey idea was superseded by the in-panel tab, and

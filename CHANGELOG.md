@@ -11,6 +11,12 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R145 — Shared Stash: the pager arrows read `<<` / `>>`** (owner ask: "Can we make
+  the navigation label '<<' and '>>' instead of just < >, i find just one is a little
+  small to click on"). Same outlined tab, same right-anchored spot, same one-page
+  stepping — the glyphs (and with them the click bands, which come from the same
+  measured layout) double in width; the composite still grows leftward into the empty
+  band above the gold display. Self-ID `Vanilla+0.0.8-R145`.
 - **R144 — Vanilla+ Options page: two columns + the interpolation row lands on the
   panel** (owner ask: "Is unlock_fps_interp on the Vanilla+ Options Panel? … Can we
   make the panel two column instead of one?"). The page was one column of eleven rows —
