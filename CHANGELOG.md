@@ -11,6 +11,15 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R146 — Shared Stash: 100 pages** (owner ask: "Good job, works. Let's increase the
+  Shared Stash pages to 100" — the "Then 100" leg of the original R63 roadmap). The
+  R82 design was built for this: the `.sss` v2 header grows to 812 bytes (one
+  size/checksum pair per page), only used pages cost file space, and narrower files
+  (pre-R75, pre-R82, ten-page) still load with the missing pages empty and rewrite as
+  a hundred on the next save. Labels `Shared 1`…`Shared 100`; a hundred-page file on
+  an older build is rejected whole (file untouched; the old build's save keeps the
+  full generation in `.bak`). Same `<<`/`>>` pager, one page per click. Self-ID
+  `Vanilla+0.0.8-R146`.
 - **R145 — Shared Stash: the pager arrows read `<<` / `>>`** (owner ask: "Can we make
   the navigation label '<<' and '>>' instead of just < >, i find just one is a little
   small to click on"). Same outlined tab, same right-anchored spot, same one-page

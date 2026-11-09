@@ -228,7 +228,8 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         "; Shared stash (single-player):\r\n"
         ";   0 = off                                        (vanilla behavior)\r\n"
         ";   1 = add a \"Shared\" tab to the stash panel. The shared stash is\r\n"
-        ";       ten extra stash pages (since R82) every character on this PC\r\n"
+        ";       one hundred extra stash pages (since R146; ten since R82) every\r\n"
+        ";       character on this PC\r\n"
         ";       shares: items and gold deposited there survive the\r\n"
         ";       character. Stored in its own file (_d2vp_shared.sss) next to\r\n"
         ";       the saves - character .d2s files stay retail-compatible, with\r\n"
@@ -1649,15 +1650,17 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 //      tab label an outline") plus a pager - << and >> arrows step one page at
 //      a time between the personal page and the shared pages (two since R75
 //      - owner: "add a 2nd page and buttons/arrows to navigate pages" - ten
-//      since R82 - owner: "increase the shared stash pages to 10"), the
-//      label reads Shared 1 .. Shared 10 on the shared pages. No hotkey:
+//      since R82 - owner: "increase the shared stash pages to 10" - a
+//      hundred since R146 - owner: "Good job, works. Let's increase the
+//      Shared Stash pages to 100"), the
+//      label reads Shared 1 .. Shared 100 on the shared pages. No hotkey:
 //      the tab is the only affordance (owner decision 2026-11-01);
 //   3. a per-game reset so entering a game always starts on the personal
 //      page (the server starts every game on the personal page too).
 //
 // Clicking the tab sends the C->S 0x4F Click-Button packet with the
 // out-of-retail-range button id 0x7D and the ABSOLUTE desired page in the
-// param word (0 personal / 1..10 shared-N). Everything else - the
+// param word (0 personal / 1..100 shared-N). Everything else - the
 // grid, the item moves, the gold buttons - is untouched retail; while a
 // shared page is active the server serves page 4 from that page's block and
 // the goldbank stat carries the shared gold, so the retail deposit/withdraw
@@ -1672,7 +1675,7 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 static int gbVpSharedStashMode = 0;   // 2 s ini gate cache
 static DWORD dwVpSharedStashGateTick = 0;
 static int gnVpSharedPage = 0;        // client mirror of the page toggle:
-                                      // 0 personal, 1..10 = shared pages 1..10
+                                      // 0 personal, 1..100 = shared pages 1..100
 
 // Options-page hook (D2VP_ConfigReloaded, R67): zero the gate tick so the
 // next VPSHAREDUI_FeatureActive() re-reads shared_stash - the "Shared" tab
@@ -1701,7 +1704,7 @@ BOOL __stdcall VPSHAREDUI_FeatureActive() {
 }
 
 int __stdcall VPSHAREDUI_IsSharedPage() {
-    return gnVpSharedPage; // 0 = personal; 1..10 = the shared page on screen
+    return gnVpSharedPage; // 0 = personal; 1..100 = the shared page on screen
 }
 
 void __stdcall VPSHAREDUI_ResetForNewGame() {
@@ -1765,7 +1768,7 @@ void __stdcall VPSHAREDUI_ResetForNewGame() {
 // small to click on") doubles each arrow glyph, so on the personal page the
 // composite reads  "Shared >>"  (the >> invites a step into shared page 1),
 // on the shared pages  "<< Shared N >>"
-// (green, the active color; N = 1..10, and the last page drops the '>>').
+// (green, the active color; N = 1..100, and the last page drops the '>>').
 // The arrows step ONE page left/right; the word itself toggles
 // personal<->shared-1 - the R63-R74 click-for-the-tab muscle memory, and
 // always a way home from any shared page. The composite stays
@@ -1789,13 +1792,14 @@ void __stdcall VPSHAREDUI_ResetForNewGame() {
 // start below the gold-max row, one pitch under this one.
 constexpr int VPSHAREDUI_TAB_RIGHT_EDGE = 0x130; // R66 0x130; R76 +0x0c off the gold amount text
 // Shared pages the pager steps through (the personal page is not one of
-// them): two since R75, TEN since R82 - the owner's "If that works we'll do
-// 10 pages. Then 100." roadmap. The composite stays right-anchored at
-// VPSHAREDUI_TAB_RIGHT_EDGE and grows leftward, so a wider word list costs
-// only leftward room on the R77 band (the gold display sits a full 0x2d
-// below the row; see the R76/R77 notes above) - "Shared 10" never outgrows
-// the R76-approved "< Shared 1 >" composite.
-constexpr int VPSHAREDUI_PAGE_COUNT = 10;
+// them): two since R75, TEN since R82, A HUNDRED since R146 - the owner's
+// "If that works we'll do 10 pages. Then 100." roadmap, completed. The
+// composite stays right-anchored at VPSHAREDUI_TAB_RIGHT_EDGE and grows
+// leftward, so a wider word list costs only leftward room on the R77 band
+// (the gold display sits a full 0x2d below the row; see the R76/R77 notes
+// above) - "Shared 100" is one glyph wider than the R82 "Shared 10", still
+// far right of the +0x96 gold-area hit rects.
+constexpr int VPSHAREDUI_PAGE_COUNT = 100;
 constexpr int VPSHAREDUI_TAB_GAP = 5;     // word <-> arrow gap
 
 // The tab row: R66-R76 shared the retail "Gold Max" text row (-0x19f/-0xdb);
@@ -1809,16 +1813,48 @@ static int VPSHAREDUI_TabBaselineY() {
     return D2Client::UI::Inv::gnPanelOffsetY - (bIsExpansion ? 0x1cc : 0x108) + D2Client::UI::Inv::ScreenSizeY;
 }
 
-// The word for the current client page (0 personal, 1..10 shared). A
+// The word for the current client page (0 personal, 1..100 shared). A
 // literal table - no runtime formatting - so the D2Win text measure/draw
 // sees plain static wide strings like every other call site; the bounds
 // guard only exists to keep a bad mirror from indexing past the table.
+// R146: the table grew to the hundred-page width (script-generated rows,
+// same shape R82 shipped at ten).
 static const uint16_t * VPSHAREDUI_PageWord() {
     static const uint16_t * const apWords[VPSHAREDUI_PAGE_COUNT + 1] = {
-        (const uint16_t *)L"Shared",   (const uint16_t *)L"Shared 1", (const uint16_t *)L"Shared 2",
+        (const uint16_t *)L"Shared", (const uint16_t *)L"Shared 1", (const uint16_t *)L"Shared 2",
         (const uint16_t *)L"Shared 3", (const uint16_t *)L"Shared 4", (const uint16_t *)L"Shared 5",
         (const uint16_t *)L"Shared 6", (const uint16_t *)L"Shared 7", (const uint16_t *)L"Shared 8",
-        (const uint16_t *)L"Shared 9", (const uint16_t *)L"Shared 10",
+        (const uint16_t *)L"Shared 9", (const uint16_t *)L"Shared 10", (const uint16_t *)L"Shared 11",
+        (const uint16_t *)L"Shared 12", (const uint16_t *)L"Shared 13", (const uint16_t *)L"Shared 14",
+        (const uint16_t *)L"Shared 15", (const uint16_t *)L"Shared 16", (const uint16_t *)L"Shared 17",
+        (const uint16_t *)L"Shared 18", (const uint16_t *)L"Shared 19", (const uint16_t *)L"Shared 20",
+        (const uint16_t *)L"Shared 21", (const uint16_t *)L"Shared 22", (const uint16_t *)L"Shared 23",
+        (const uint16_t *)L"Shared 24", (const uint16_t *)L"Shared 25", (const uint16_t *)L"Shared 26",
+        (const uint16_t *)L"Shared 27", (const uint16_t *)L"Shared 28", (const uint16_t *)L"Shared 29",
+        (const uint16_t *)L"Shared 30", (const uint16_t *)L"Shared 31", (const uint16_t *)L"Shared 32",
+        (const uint16_t *)L"Shared 33", (const uint16_t *)L"Shared 34", (const uint16_t *)L"Shared 35",
+        (const uint16_t *)L"Shared 36", (const uint16_t *)L"Shared 37", (const uint16_t *)L"Shared 38",
+        (const uint16_t *)L"Shared 39", (const uint16_t *)L"Shared 40", (const uint16_t *)L"Shared 41",
+        (const uint16_t *)L"Shared 42", (const uint16_t *)L"Shared 43", (const uint16_t *)L"Shared 44",
+        (const uint16_t *)L"Shared 45", (const uint16_t *)L"Shared 46", (const uint16_t *)L"Shared 47",
+        (const uint16_t *)L"Shared 48", (const uint16_t *)L"Shared 49", (const uint16_t *)L"Shared 50",
+        (const uint16_t *)L"Shared 51", (const uint16_t *)L"Shared 52", (const uint16_t *)L"Shared 53",
+        (const uint16_t *)L"Shared 54", (const uint16_t *)L"Shared 55", (const uint16_t *)L"Shared 56",
+        (const uint16_t *)L"Shared 57", (const uint16_t *)L"Shared 58", (const uint16_t *)L"Shared 59",
+        (const uint16_t *)L"Shared 60", (const uint16_t *)L"Shared 61", (const uint16_t *)L"Shared 62",
+        (const uint16_t *)L"Shared 63", (const uint16_t *)L"Shared 64", (const uint16_t *)L"Shared 65",
+        (const uint16_t *)L"Shared 66", (const uint16_t *)L"Shared 67", (const uint16_t *)L"Shared 68",
+        (const uint16_t *)L"Shared 69", (const uint16_t *)L"Shared 70", (const uint16_t *)L"Shared 71",
+        (const uint16_t *)L"Shared 72", (const uint16_t *)L"Shared 73", (const uint16_t *)L"Shared 74",
+        (const uint16_t *)L"Shared 75", (const uint16_t *)L"Shared 76", (const uint16_t *)L"Shared 77",
+        (const uint16_t *)L"Shared 78", (const uint16_t *)L"Shared 79", (const uint16_t *)L"Shared 80",
+        (const uint16_t *)L"Shared 81", (const uint16_t *)L"Shared 82", (const uint16_t *)L"Shared 83",
+        (const uint16_t *)L"Shared 84", (const uint16_t *)L"Shared 85", (const uint16_t *)L"Shared 86",
+        (const uint16_t *)L"Shared 87", (const uint16_t *)L"Shared 88", (const uint16_t *)L"Shared 89",
+        (const uint16_t *)L"Shared 90", (const uint16_t *)L"Shared 91", (const uint16_t *)L"Shared 92",
+        (const uint16_t *)L"Shared 93", (const uint16_t *)L"Shared 94", (const uint16_t *)L"Shared 95",
+        (const uint16_t *)L"Shared 96", (const uint16_t *)L"Shared 97", (const uint16_t *)L"Shared 98",
+        (const uint16_t *)L"Shared 99", (const uint16_t *)L"Shared 100"
     };
     int nPage = gnVpSharedPage;
     if (nPage < 0) {
@@ -1840,7 +1876,7 @@ static void VPSHAREDUI_TabLayout(int * pnWordX, int * pnWordW,
     int nWordW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)VPSHAREDUI_PageWord());
     int nArrowW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)L">>"); // R145: '<<'/'>>' - one measure feeds draw + click bands
     int nRightEdge = D2Client::UI::Inv::gnPanelOffsetX + VPSHAREDUI_TAB_RIGHT_EDGE;
-    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>>' on personal + pages 1..9
+    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>>' on personal + pages 1..99
     *pbHasLeft = gnVpSharedPage > 0;                      // '<<' on shared pages
     int nWordR = nRightEdge - (*pbHasRight ? nArrowW + VPSHAREDUI_TAB_GAP : 0);
     *pnWordX = nWordR - nWordW;
@@ -1899,7 +1935,7 @@ BOOL __stdcall VPSHAREDUI_HandleStashClick(int nMouseX, int nMouseY) {
 
     gnVpSharedPage = nNewPage;
     // C->S 0x4F Click Button, VP toggle id 0x7D, the ABSOLUTE desired page
-    // in the param word (0 personal / 1..10 shared-N). The send
+    // in the param word (0 personal / 1..100 shared-N). The send
     // helper packs the param word as (arg2 << 16) | (uint16)arg3, so the
     // page rides arg3 and the server activates exactly that page
     // (VanillaPlusStash.cpp; idempotent when the page is already active).

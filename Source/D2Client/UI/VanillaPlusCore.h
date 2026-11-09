@@ -243,7 +243,7 @@ void __stdcall D2VP_ConfigReloaded();                     // bust all 2 s gate c
 void __stdcall VANILLAPLUS_SelfCheck();
 // [vanilla-plus shared-stash] Client side of the shared stash (track N
 // round 1 = one page; two shared pages + an outlined pager label since R75,
-// TEN shared pages since R82; server half lives in
+// TEN shared pages since R82, A HUNDRED since R146; server half lives in
 // D2Game/PLAYER/VanillaPlusStash.cpp).
 // d2vp.ini next to d2.exe, [features] shared_stash=0|1 - default/missing
 // file/missing key/garbage = 0 = vanilla byte-for-byte (no tab pixels, no
@@ -251,21 +251,22 @@ void __stdcall VANILLAPLUS_SelfCheck();
 // text tab (top-right, no hotkey by owner decision): clicking the word
 // flips the visible stash page by sending the C->S 0x4F Click-Button packet
 // with the out-of-retail-range button id 0x7D and the ABSOLUTE desired page
-// in the param word (0 personal, 1..10 shared pages 1..10); the <
-// and > arrows beside the word step one page at a time. The server
+// in the param word (0 personal, 1..100 shared pages 1..100); the <<
+// and >> arrows beside the word step one page at a time. The server
 // materializes the requested shared page into the retail stash grid
 // (page 4) - every retail stash flow keeps working - and borrows the
 // goldbank stat for the shared gold pool while a shared page is active, so
 // the retail deposit/withdraw gold buttons move shared gold untouched. The
-// save flush (PlayerSave::SaveGameAllGameTypes VP site) parks all ten shared
-// pages into _d2vp_shared.sss (v2 format; pre-R82 two-page and pre-R75
-// one-page files read back - the pages the file doesn't carry start empty)
+// save flush (PlayerSave::SaveGameAllGameTypes VP site) parks all hundred
+// shared pages into _d2vp_shared.sss (v2 format; R82-R145 ten-page, pre-R82
+// two-page and pre-R75 one-page files read back - the pages the file
+// doesn't carry start empty)
 // and restores the personal page + personal gold before any .d2s is built
 // (I1: character saves stay retail-pure).
 BOOL __stdcall VPSHAREDUI_FeatureActive();   // config: shared_stash on?
-int __stdcall VPSHAREDUI_IsSharedPage();     // client mirror: 0 personal, 1..10 = shared page on screen
+int __stdcall VPSHAREDUI_IsSharedPage();     // client mirror: 0 personal, 1..100 = shared page on screen
 void __stdcall VPSHAREDUI_ResetForNewGame(); // entering a game starts personal
-// Hit-test + pager for the tab composite (word + < > arrows). TRUE = the
+// Hit-test + pager for the tab composite (word + << >> arrows). TRUE = the
 // click hit an element whose target differs from the current page: the
 // mirror is updated, the 0x4F/0x7D toggle is sent with the desired page,
 // and the caller must swallow the message (VP site in
