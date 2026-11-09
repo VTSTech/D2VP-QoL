@@ -4,6 +4,14 @@
 > per-row scoping, implementation notes, round records). Humans: the feature table and
 > status live in [README.md](README.md), per-release changes in [CHANGELOG.md](CHANGELOG.md).
 
+*v9, 2026-11-09. **Row 17 added on owner ask — PLANNED, not implemented**: the presentation-FPS
+unlock (`render_fps`, §17) — presents at 60 Hz while the simulation stays byte-exact retail
+25 Hz; the same-session recon found the cap is a single draw gate in `CLIENT_GameLoopFrame`,
+not a structural coupling, and flagged retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` QA path
+as the wrong tool (it speeds the server). Plan:
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md). Effort firms S–M for the v1 decoupled
+present; interpolation is the deliberate follow-on. Same day, earlier: v8.
+
 *v8, 2026-11-09. **Row 16 added on owner ask — PLANNED, not implemented**: inventory sort
 (`inventory_sort`, §16) — a Sort affordance for the personal inventory that replays the
 row 0c packet pair (`0x19` pick + `0x18` place) through a paced, abortable queue; zero
@@ -115,6 +123,7 @@ Every slate row must satisfy all of these before it ships:
 | 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
+| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `render_fps` — **PLANNED**, drafted 2026-11-09: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md) (decoupled present pacer in `CLIENT_GameLoopFrame`; sim stays 25 Hz byte-exact; retail's UNCAPPED game type rejected — it speeds the server; interpolation is the follow-on) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
@@ -125,7 +134,10 @@ mechanism — letting a class of items merge into stacks the way arrows/tomes al
 behind two separate gates, drafted together in §12/§13. Row 16 is **planned scope**
 (owner suggestion 2026-11-09, not yet implemented): a Sort affordance for the personal
 inventory — retail-packet replay, zero server changes; drafted in §16, full plan at
-[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Rows 14–15 **shipped** as the
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Row 17 is **planned scope**
+(owner ask 2026-11-09, not yet implemented): the presentation-FPS unlock — the sim stays
+25 Hz, only the present decouples; drafted in §17, full plan at
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md). Rows 14–15 **shipped** as the
 video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mode — the
 whole site-1..6 pipeline routes it (§14) —
 and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
@@ -981,6 +993,47 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 ---
 
+### 17. Presentation FPS unlock — `[features] render_fps` (PLANNED — owner ask 2026-11-09, not implemented)
+
+- **The ask** (owner, 2026-11-09, chat, no issue): "How can we unlock the FPS to 60 in D3D
+  fullscreen?", scoped by the follow-up: the 25 FPS is known to be tied to the game tick
+  rate — "can we maintain the default tick rate while unlocking the presentation FPS".
+  The same-session recon answered **yes**: the coupling is a draw gate, not a structural
+  one.
+- **The cap, mapped** (the recon's value — every site read this session): the simulation
+  paces itself — `SrvProcessAllGames` enforces its own 40 ms cadence internally
+  (`Frames_TimeBetweenFrames = 1000/25`) and runs every pump iteration regardless; the 25
+  FPS *presentation* exists only because `CLIENT_GameLoopFrame` gates
+  `CurrentDrawFunction(0)` behind the tick (`if (!gnFrameSkipCounter)`, one draw per
+  40 ms window). `D2GFX_EndScene`'s 5 ms budget is an anti-spin guard, and the D3D
+  fullscreen present (a DirectDraw `Flip`, vsync flag 1 / NOVSYNC 9 in
+  `D2Direct3D/Renderer/Direct3D.cpp`) flips whenever called — the flip is not the limiter.
+- **Mechanism (v1)**: keep the tick gate for the server tick + `ClientSideGameLoop`
+  byte-exact; move the draw behind a 60 Hz present pacer; pace the message-pump idle sleep
+  to the pacer deadline; drop the EndScene budget to 1 ms under the gate; split the
+  tick/present stats so field reports can *count* that the sim is unchanged. Renderer-
+  agnostic by construction (the pacer sits upstream of EndScene, shared by all backends).
+- **The trap, flagged**: retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` game type /
+  `CONNECTIONTYPE_SINGLEPLAYERUNCAPPED` connection looks like the hook for this — it is
+  not: it speeds the **server** (skips a 500 ms packet throttle, bypasses dispatch
+  gating), a game-speed unlock that changes gameplay. The plan touches none of it.
+- **Interpolation (deferred follow-on, not v1)**: `D2DynamicPathStrc` already carries
+  fixed-point per-tick velocity (`nVelocityX/Y`) beside `Coords`/`ScreenPos`, so sub-tick
+  render positions are `pos + velocity × α` on a render-time shadow — camera first (kills
+  most perceived judder), then missiles, then units; animation frames stay tick-locked.
+  Pulled into v1 only if the owner calls for it (§9 call 2 of the plan).
+- **Risk**: Med — ×~2.4 draw cost at 60 Hz (the renderer idles 37.5 of every 40 ms today;
+  skip-never-queue pacer bounds the overrun) and pacing wobble from Sleep granularity
+  (`timeBeginPeriod(1)` from the already-imported winmm — verify). **Exit**: tick-rate
+  identity proven by counting, `render_fps=0` byte-for-byte vanilla, 60 presents/s on a
+  60 Hz vsync panel, pause/cutscene/loading untouched.
+- **Full plan: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md)** — pillars, the
+  cap-site map with line anchors, the pacer design, the failure matrix, the three-round
+  roadmap and the four owner calls (bool vs numeric target; interpolation scope; vsync
+  default; options row now or ini-only).
+
+---
+
 ## Dropped candidates (and why)
 
 | Candidate | Verdict | Reason |
@@ -1018,7 +1071,8 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   now drop stacked gems and runes" in the patch notes linked above); inventory sort
   (2026-11-09 — no-parity row 16: D2R has no sort button; D3's stash anvil and the
   ATMA/GoMule re-arranging habit are the prior art, §16); Z-key camera zoom (2026-11-09 —
-  the row 0a Task C draft; D2R launch feature).
+  the row 0a Task C draft; D2R launch feature); presentation-FPS unlock (2026-11-09 —
+  row 17, the owner's 60 Hz ask with the tick-rate constraint).
 - Zoom prior art: D2R's launch camera zoom (Z / mouse wheel); d2dx/d2gl-class
   renderer-side dynamic zoom — projection scale + inverse cursor mapping, the class
   plans/CAMERA-ZOOM-PLAN.md follows; hackmap-era engine-side zoom (the rejected class —
