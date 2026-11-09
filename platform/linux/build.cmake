@@ -1,0 +1,504 @@
+# d2linux - native Linux build path (platform/linux).
+#
+# Included by the top-level CMakeLists when CMAKE_SYSTEM_NAME is Linux; the
+# parent returns right after, so none of the Windows/PE (d2.exe) logic runs.
+# The Windows line keeps its own charter, gates and CI job - this file is the
+# native-Linux track (docs/linux-port.md).
+#
+#   git submodule update --init --depth 1 external/SDL    # once per clone
+#   cmake -S . -B build-linux -G Ninja                    # i386 (default)
+#   cmake -S . -B build-linux -G Ninja -DD2LINUX_ARCH=native
+#
+# Arch: the game's decompiled logic assumes the 32-bit MSVC x86 ABI
+# (d2_platform.h models it; byte-matched struct offsets carry embedded
+# pointers), so i386 is the ship target for game code. `native` exists so the
+# host skeleton can be built without a multilib toolchain (CI, sandbox
+# verification) - until game TUs are included (M1), both produce the same
+# host-layer binary.
+if(NOT DEFINED D2LINUX_ARCH)
+    set(D2LINUX_ARCH "i386" CACHE STRING "d2linux arch: i386 (charter) or native")
+endif()
+
+message(STATUS "d2linux: arch=${D2LINUX_ARCH}")
+
+if(D2LINUX_ARCH STREQUAL "i386")
+    # The charter gate (PLAN.md §7 R1): a real -m32 compile+link probe.
+    # NOT check_cxx_compiler_flag: it routes the flag through the child's
+    # add_definitions() (Internal/CheckCompilerFlag sets
+    # CMAKE_REQUIRED_DEFINITIONS), which reaches the COMPILE step only - the
+    # child then links a 32-bit object against 64-bit crt objects and
+    # false-fails on every working multilib toolchain (observed on
+    # ubuntu-24.04 / cmake 3.28.3 / gcc 13.3, CI rounds 2026-11-04: the gate
+    # failed while a plain `gcc -m32` linked fine in the very same job). The
+    # CMAKE_FLAGS COMPILE_DEFINITIONS route used here seeds the child's
+    # CMAKE_CXX_FLAGS instead, which rides both compile and link - the ground
+    # truth. The game TUs are all C++; the SDL C TUs share this toolchain.
+    if(NOT DEFINED D2LINUX_HAVE_M32)
+        file(WRITE "${CMAKE_BINARY_DIR}/d2linux_m32_probe.cpp"
+            "int main() { return 0; }\n")
+        try_compile(D2LINUX_HAVE_M32
+            "${CMAKE_BINARY_DIR}/d2linux_m32_probe_build"
+            SOURCES "${CMAKE_BINARY_DIR}/d2linux_m32_probe.cpp"
+            CMAKE_FLAGS "-DCOMPILE_DEFINITIONS:STRING=-m32"
+            OUTPUT_VARIABLE D2LINUX_M32_LOG)
+        set(D2LINUX_HAVE_M32 "${D2LINUX_HAVE_M32}" CACHE INTERNAL
+            "d2linux: -m32 compile+link probe")
+    endif()
+    if(NOT D2LINUX_HAVE_M32)
+        # Show the compiler's own verdict (crt1.o vs 32-bit headers vs
+        # libgcc), not a bare flag result.
+        string(REPLACE "\n" "\n    " _d2l_m32_tail "${D2LINUX_M32_LOG}")
+        string(LENGTH "${_d2l_m32_tail}" _d2l_m32_len)
+        if(_d2l_m32_len GREATER 2200)
+            math(EXPR _d2l_m32_cut "${_d2l_m32_len} - 2200")
+            string(SUBSTRING "${_d2l_m32_tail}" ${_d2l_m32_cut} 2200 _d2l_m32_tail)
+        endif()
+        message(FATAL_ERROR
+            "d2linux: this toolchain cannot build/link -m32. Game code requires "
+            "i386 (32-bit pointers, MSVC x86 ABI model, PLAN.md §7 R1). The "
+            "compiler's own verdict:\n\n    ${_d2l_m32_tail}\n\n"
+            "Fix (Debian/Ubuntu): sudo apt-get install gcc-multilib g++-multilib "
+            "libc6-dev-i386, or configure a 32-bit cross toolchain. "
+            "-DD2LINUX_ARCH=native builds the host skeleton on the host arch "
+            "only (no game TUs).")
+    endif()
+    message(STATUS "d2linux: -m32 compile+link probe OK")
+    add_compile_options(-m32)
+    add_link_options(-m32)
+elseif(NOT D2LINUX_ARCH STREQUAL "native")
+    message(FATAL_ERROR "d2linux: D2LINUX_ARCH must be 'i386' or 'native', got '${D2LINUX_ARCH}'")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Build id (same scheme as the PE line's d2_crash bake): short hash baked at
+# configure time, overridable for local builds without git.
+if(NOT D2LINUX_BUILD_ID)
+    execute_process(COMMAND git rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE D2LINUX_BUILD_ID OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET RESULT_VARIABLE _d2l_git_rc)
+    if(NOT _d2l_git_rc EQUAL 0 OR NOT D2LINUX_BUILD_ID)
+        set(D2LINUX_BUILD_ID "unknown")
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
+# [d2linux] Which video backends did SDL actually configure? The answer is in
+# the generated SDL_build_config.h (SDL_VIDEO_DRIVER_*), and it is the
+# difference between a binary that opens a window and one that only ever
+# smokes headless. CI's i386 job is console-only BY DESIGN (no :i386 X11/
+# Wayland dev libraries exist); a local desktop build that lands dummy-only
+# is missing the dev libraries - say so at configure time, not at first
+# SDL_Init. The runtime twin of this report is `./d2linux --list-video`.
+# (System-package SDL3 is skipped: its backend set is the packager's choice
+# and the config header's location varies per distro; --list-video reports
+# it just as well at runtime.)
+# ---------------------------------------------------------------------------
+function(d2linux_report_video_backends _sdl3_binary_dir _context)
+    # SDL writes the config in two steps (CMakeLists: configure_file the
+    # intermediate during configure, file(GENERATE) the final per-config
+    # copy during generate) - at report time only the intermediate exists.
+    # The recursive glob is the fallback for an SDL that changes the scheme.
+    set(_d2l_cfg_h "${_sdl3_binary_dir}/CMakeFiles/SDL_build_config.h.intermediate")
+    if(NOT EXISTS "${_d2l_cfg_h}")
+        file(GLOB_RECURSE _d2l_cfgs "${_sdl3_binary_dir}/SDL_build_config.h")
+        if(NOT _d2l_cfgs)
+            return()
+        endif()
+        list(GET _d2l_cfgs 0 _d2l_cfg_h)
+    endif()
+    file(READ "${_d2l_cfg_h}" _d2l_cfg)
+    set(_d2l_found "")
+    foreach(_b X11 WAYLAND KMSDRM VIVANTE DIRECTFB RPI OFFSCREEN DUMMY)
+        if(_d2l_cfg MATCHES "#define SDL_VIDEO_DRIVER_${_b} 1")
+            string(TOLOWER "${_b}" _d2l_bl)
+            list(APPEND _d2l_found "${_d2l_bl}")
+        endif()
+    endforeach()
+    if(NOT _d2l_found)
+        return()
+    endif()
+    list(JOIN _d2l_found " " _d2l_found_s)
+    list(FIND _d2l_found "x11" _d2l_i_x11)
+    list(FIND _d2l_found "wayland" _d2l_i_wl)
+    if(_d2l_i_x11 GREATER -1 OR _d2l_i_wl GREATER -1)
+        message(STATUS "d2linux: SDL3 video backends (${_context}): ${_d2l_found_s}")
+    elseif(NOT SDL_X11 AND NOT SDL_WAYLAND)
+        # Both desktop options were explicitly turned off (CI's i386 job, the
+        # check script's console retry): by request, not a misconfiguration.
+        message(STATUS "d2linux: SDL3 video backends (${_context}): ${_d2l_found_s} "
+            "(console-only by request: SDL_X11=OFF SDL_WAYLAND=OFF - the binary "
+            "runs --smoke headless only)")
+    else()
+        message(WARNING
+            "d2linux: SDL3 configured WITHOUT a desktop video backend "
+            "(${_context}; compiled: ${_d2l_found_s}). d2linux builds but only "
+            "ever runs headless: ./d2linux dies with 'No available video device' "
+            "on any machine. If a desktop run is wanted: install the X11/Wayland "
+            "dev set (docs/linux-port.md, Build) and reconfigure on a FRESH "
+            "build dir (rm -rf), or pass the console flags knowingly "
+            "(-DSDL_X11=OFF -DSDL_WAYLAND=OFF, what CI does).")
+    endif()
+endfunction()
+
+# ---------------------------------------------------------------------------
+# SDL3. Resolution order:
+#   1. -DD2_SDL3_DIR=<path>  - a checkout to build in-tree (sandbox/verify)
+#   2. external/SDL          - the git submodule (preferred; see docs)
+#   3. find_package(SDL3)    - system package (Debian trixie+, current Fedora/Arch)
+# Static preferred: the PE line ships self-contained exes; d2linux follows
+# the same ethos. SDL is zlib-licensed, so static linking is unrestricted.
+# i386 builds REQUIRE 1 or 2: distros ship SDL3 x86_64-only (no :i386
+# libsdl3-dev anywhere), so a system package can never enter a 32-bit link —
+# gate that below, not at ld. In-tree vendoring compiles with the same
+# -m32 add_compile_options the rest of the tree gets.
+# ---------------------------------------------------------------------------
+set(D2_SDL3_SOURCE "")
+if(D2_SDL3_DIR AND EXISTS "${D2_SDL3_DIR}/CMakeLists.txt")
+    set(D2_SDL3_SOURCE "${D2_SDL3_DIR}")
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/external/SDL/CMakeLists.txt")
+    set(D2_SDL3_SOURCE "${CMAKE_SOURCE_DIR}/external/SDL")
+endif()
+
+if(D2_SDL3_SOURCE)
+    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDL_STATIC ON CACHE BOOL "" FORCE)
+    set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+    set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+    set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${D2_SDL3_SOURCE}" "${CMAKE_BINARY_DIR}/SDL3" EXCLUDE_FROM_ALL)
+    if(TARGET SDL3::SDL3-static)
+        set(D2_SDL3_TARGET SDL3::SDL3-static)
+    else()
+        set(D2_SDL3_TARGET SDL3::SDL3)
+    endif()
+    message(STATUS "d2linux: SDL3 vendored from ${D2_SDL3_SOURCE} -> ${D2_SDL3_TARGET}")
+    d2linux_report_video_backends(
+        "${CMAKE_BINARY_DIR}/SDL3" "vendored")
+else()
+    if(D2LINUX_ARCH STREQUAL "i386")
+        # [d2linux M2 round 3] gate at configure time, not at ld: with no
+        # vendored SDL, find_package hands the i386 link the system x86_64
+        # libSDL3.so and the build dies with "file in wrong format" only
+        # AFTER every game TU compiled clean (the owner's first local i386
+        # build, 2026-11-07 — a fresh clone skips the submodule, the check
+        # script inits it in its own temp clone so CI never met this).
+        message(FATAL_ERROR
+            "d2linux: arch=i386 needs a vendored SDL3 - the system package is "
+            "x86_64 and cannot enter a 32-bit link. Initialize the submodule, "
+            "wipe the build dir, reconfigure:\n"
+            "  git submodule update --init --depth 1 external/SDL\n"
+            "  rm -rf <build-dir>\n"
+            "  cmake -S . -B <build-dir> -DD2LINUX_ARCH=i386 "
+            "-DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF\n"
+            "(or point -DD2_SDL3_DIR= at any SDL checkout to build in-tree; "
+            "-DD2LINUX_ARCH=native keeps the system package usable)")
+    endif()
+    find_package(SDL3 CONFIG QUIET)
+    if(NOT SDL3_FOUND)
+        message(FATAL_ERROR
+            "d2linux: no SDL3 found. Vendor it as the submodule (preferred):\n"
+            "  git submodule add --depth 1 -b release-3.4.18 "
+            "https://github.com/libsdl-org/SDL external/SDL\n"
+            "or point -DD2_SDL3_DIR= at any SDL checkout to build in-tree; "
+            "-DD2LINUX_ARCH=native keeps the system package usable.")
+    endif()
+    set(D2_SDL3_TARGET SDL3::SDL3)
+    message(STATUS "d2linux: SDL3 system package -> ${D2_SDL3_TARGET}")
+endif()
+
+add_executable(d2linux
+    platform/linux/d2_linux_main.cpp
+    platform/linux/d2_linux_video.cpp
+    platform/linux/d2_linux_audio.cpp)
+target_compile_features(d2linux PRIVATE cxx_std_17)
+target_compile_definitions(d2linux PRIVATE D2LINUX_BUILD_ID="${D2LINUX_BUILD_ID}")
+target_link_libraries(d2linux PRIVATE ${D2_SDL3_TARGET})
+target_compile_options(d2linux PRIVATE -Wall -Wextra)
+
+# [d2linux M2 round 3] the smoke MPQ fixture rides NEXT TO THE BINARY: the
+# smoke's RunMpqFixtureSelfTest opens it through ARCHIVE_LoadMPQ's module-dir
+# fallback (GetModuleFileNameA + "\" + name), which is the exact path shape
+# the boot chain uses and the one that exercises the shim's Win32->POSIX
+# path translation. Generated by tools/gen-mpq-fixture.py (committed).
+configure_file("${CMAKE_SOURCE_DIR}/platform/linux/tests/d2vp_smoke.mpq"
+               "${CMAKE_BINARY_DIR}/d2vp_smoke.mpq" COPYONLY)
+# The case-fold leg of the same fixture: same bytes, the all-uppercase on-disk
+# name RunMpqCaseFoldSelfTest opens through the lowercase "d2vp_case.mpq"
+# request — the real-install shape (the PE's baked "patch_d2.mpq" vs the
+# shipped "Patch_D2.mpq") with a collision-proof d2vp name.
+configure_file("${CMAKE_SOURCE_DIR}/platform/linux/tests/d2vp_smoke.mpq"
+               "${CMAKE_BINARY_DIR}/D2VP_CASE.MPQ" COPYONLY)
+
+# ---------------------------------------------------------------------------
+# [d2linux M1] game logic joins the build (PLAN.md §5 M1): the Fog/Storm
+# foundation slice + PKWARE, compiled i386 against the shim layer. The slice
+# list is explicit, not globbed — the plan grows it 5-10 TUs per step, and an
+# explicit list is the step ledger. Each family has its named call sites in
+# the slice (inventory: platform/linux/INVENTORY.md).
+#   step 1 (M1): Fog foundation (memory/log/crash/registry/file),
+#   Storm foundation (registry/compression/system/window), PKWARE, the
+#   globals TU, the PE line's portable CRT impl/support, and the shim layer.
+#   step 2 (M2 round 3, this list): the archive rung — D2Hell (the archive
+#   layer: ARCHIVE_LoadMPQ / D2FILE_* / FaultError) + the D2Lang string
+#   layer (strtable/D2Lang/UNISYS) + the per-TU globals files that carry
+#   their data (globals/D2Lang.cpp, globals/D2Hell.cpp). D2Hell's
+#   D2BOOT_MarkFmt marks resolve to d2_linux_shim_crt.cpp's boot twins (the
+#   M1 shim CRT file) — support/d2_boot.cpp stays PE-only.
+#   next: the D2Win archive/forms rung (D2WinArchive pulls D2CMP/D2gfx),
+#   then globals.cpp with the D2Client boot chain.
+#
+# i386-only: game TUs assume the 32-bit MSVC x86 ABI (PLAN.md §7 R1 — the
+# decomp's casts treat pointers as 32-bit ints); a 64-bit build both fails to
+# compile and would corrupt game state. The `native` arch therefore builds the
+# host skeleton + shim layer only (the M0 shape), as the charter says.
+# ---------------------------------------------------------------------------
+set(D2LINUX_GAME_SOURCES
+    3rdparty/Storm/3rdparty/PKWARE/explode.cpp
+    3rdparty/Storm/3rdparty/PKWARE/implode.cpp
+    Source/Fog/SMem.cpp
+    Source/Fog/Memory.cpp
+    Source/Fog/BitBuffer.cpp
+    Source/Fog/File.cpp
+    Source/Fog/Fog.cpp
+    Source/Fog/Save.cpp
+    Source/Fog/Debug.cpp
+    Source/Fog/Src/DataArrays.cpp
+    Source/Fog/Src/ErrorManager.cpp
+    Source/Fog/Src/LogManager.cpp
+    Source/Fog/Src/String/FogString.cpp
+    Source/Fog/Src/AsyncData.cpp
+    Source/Fog/Src/Safesock.cpp
+    Source/Fog/Source/SFile.cpp
+    Source/Fog/Source/SSComp.cpp
+    3rdparty/Storm/Source/SSignature.cpp
+    3rdparty/crashy/crashy.cpp
+    3rdparty/Storm/Source/SReg.cpp
+    3rdparty/Storm/Source/SErr.cpp
+    3rdparty/Storm/Source/SComp.cpp
+    3rdparty/Storm/Source/SBig.cpp
+    3rdparty/Storm/Source/SMem.cpp
+    3rdparty/Storm/Source/SSTR.cpp
+    3rdparty/Storm/Source/SSystem.cpp
+    3rdparty/Storm/Source/SEVT.cpp
+    3rdparty/Storm/Source/SLog.cpp
+    3rdparty/Storm/Source/SFile.cpp
+    3rdparty/Storm/WindowHandle.cpp
+    3rdparty/Storm/3rdparty/zlib/adler32.cpp
+    3rdparty/Storm/3rdparty/zlib/crc32.cpp
+    3rdparty/Storm/3rdparty/zlib/deflate.cpp
+    3rdparty/Storm/3rdparty/zlib/inffast.cpp
+    3rdparty/Storm/3rdparty/zlib/inflate.cpp
+    3rdparty/Storm/3rdparty/zlib/inftrees.cpp
+    3rdparty/Storm/3rdparty/zlib/trees.cpp
+    3rdparty/Storm/3rdparty/zlib/uncompr.cpp
+    3rdparty/Storm/3rdparty/zlib/zutil.cpp
+    Redivivus/d2_crt_impl.cpp
+    Redivivus/d2_crt_support.cpp
+    Source/Game/Main.cpp
+    Source/D2Hell/D2Hell.cpp
+    Source/D2Lang/D2Lang.cpp
+    Source/D2Lang/StrTable/strtable.cpp
+    Source/D2Lang/Unicode/UNISYS.cpp
+    Source/globals/D2Lang.cpp
+    Source/globals/D2Hell.cpp
+    Source/globals/Fog.cpp
+    Source/globals/Storm.cpp
+    # globals/globals.cpp is STEP 2: the 39K-line central-data TU embeds the
+    # game's command dispatch tables (D2Client::CMD_* and friends), whose
+    # closure is the whole client. Step 1 links without it; the few symbols
+    # the foundation slice externs (ExceptionList, the s_* string constants)
+    # get weak definitions in platform/linux/d2_linux_globals_step1.cpp that
+    # yield to globals.cpp's strong ones when step 2 brings it in.
+)
+
+# The shim layer (this track's code) and the crash twin.
+set(D2LINUX_SHIM_SOURCES
+    platform/linux/d2_linux_shim_win32.cpp
+    platform/linux/d2_linux_shim_user32.cpp
+    platform/linux/d2_linux_shim_ddraw.cpp
+    platform/linux/d2_linux_shim_registry.cpp
+    platform/linux/d2_linux_globals_step1.cpp
+    platform/linux/d2_linux_shim_crt.cpp
+    platform/linux/d2_linux_crash.cpp
+    # [d2linux M2 round 3 fix] the linux twin of support/d2_static_init.cpp:
+    # the PE's pre-WinMain _initterm pass, subset to the slice's TUs. Without
+    # it Storm's complement-encoded list heads stay zeroed BSS and the first
+    # SFILE_AllocFileRecord writes through pointer 0 (the round-3 smoke's
+    # 0xC0000005 in SFILE_InsertFileRecordIntoList2). The TU body gates on
+    # D2LINUX_HAS_GAME_SLICE (below): its 18 StaticInit_* callees are defined
+    # in the i386-only game TUs, so native builds compile it empty instead of
+    # dangling at link.
+    platform/linux/d2_linux_static_init.cpp
+)
+
+# The platform shadow: d2_platform.h with the non-Windows stubs that clash
+# with the SDK-faithful compat layer removed (tools/syntax-check.sh's pattern;
+# the patch list lives in the script). Generated at configure time so an
+# upstream d2_platform.h regen re-applies the patches automatically.
+set(D2LINUX_PLATFORM_SHADOW_DIR "${CMAKE_BINARY_DIR}/platform-shadow")
+find_program(D2LINUX_SH sh)
+# The mk-platform-shadow.sh script expects d2_platform.h at the repo root.
+# Copy it there before running the script.
+add_custom_command(
+    OUTPUT "${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${D2LINUX_PLATFORM_SHADOW_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_platform.h" "${CMAKE_SOURCE_DIR}/d2_platform.h"
+    COMMAND ${D2LINUX_SH} "${CMAKE_SOURCE_DIR}/platform/linux/mk-platform-shadow.sh"
+            "${CMAKE_SOURCE_DIR}" "${D2LINUX_PLATFORM_SHADOW_DIR}"
+    DEPENDS "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_platform.h"
+            "${CMAKE_SOURCE_DIR}/platform/linux/mk-platform-shadow.sh"
+    COMMENT "d2linux: generating the platform shadow (d2_platform.h patches)"
+    VERBATIM)
+add_custom_target(d2linux_platform_shadow
+    DEPENDS "${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h")
+
+# Symbolization note: the vendored libbacktrace (thirdparty/libbacktrace) is
+# the PE line's i686-mingw configuration (pecoff.c, hand-written config.h) and
+# carries no ELF backend. The crash twin symbolizes through dladdr() against
+# the -rdynamic executable instead; an ELF libbacktrace configuration (its own
+# config.h + elf.c vendored) is the documented upgrade when the report needs
+# inlined/frame-precise DWARF names.
+
+# ---------------------------------------------------------------------------
+# Game TU flags: the PE charter's compile shape (-w, -fms-extensions, the
+# forced-include chain), plus the linux additions (-fshort-wchar: MSVC's
+# 16-bit wchar_t is part of the ABI the decomp models). D2LINUX_GAME marks
+# the guarded decomp edits (BnSend.h, d2_crt_impl.cpp, d2_crt_support.cpp).
+# ---------------------------------------------------------------------------
+target_sources(d2linux PRIVATE ${D2LINUX_SHIM_SOURCES})
+if(D2LINUX_ARCH STREQUAL "i386")
+    target_sources(d2linux PRIVATE ${D2LINUX_GAME_SOURCES})
+    # [d2linux M2 round 3] gates the host MPQ probe in d2_linux_main.cpp: the
+    # probe calls D2Hell::ARCHIVE_LoadMPQ / Storm::Source::SFile, which only
+    # exist in the i386 game-slice link (charter R1 keeps native out).
+    target_compile_definitions(d2linux PRIVATE D2LINUX_HAS_GAME_SLICE=1)
+else()
+    message(STATUS "d2linux: arch=native - game TUs stay out (i386 charter, PLAN.md R1); "
+                   "the skeleton + shim layer build and the smoke runs as in M0")
+endif()
+
+# [d2linux] The banner states TWO different facts, and the old single define
+# conflated them (owner round-3 finding): on every native build it printed
+# "milestone 0", which reads as the PROJECT being at M0 when it is the
+# BINARY that has no game TUs - the i386 charter (PLAN.md R1) keeps the game
+# slice out of the 64-bit binary forever, so that line could never change.
+# The project stage is hand-maintained and bumped every code round (the
+# linux twin of the PE-side version self-ID); the binary shape is computed.
+# BANNER-STRING RULE: no ';' anywhere in either string. CMake reads ';' as a
+# list separator, so a semicolon splits the value and target_compile_definitions
+# emits broken -D fragments ("missing terminating \"" character", "expected
+# unqualified-id before ':'") on every TU (owner round-4 build failure). The
+# guard below turns that into a configure-time FATAL_ERROR instead.
+list(LENGTH D2LINUX_GAME_SOURCES D2LINUX_GAME_TU_COUNT)
+set(D2LINUX_PROJECT_STAGE "project: M2 round 3 - Storm/MPQ file routing (the archive rung / first game data) / M0 window + M1 i386 slice + M2 user32 + M2 ddraw done / next: D2Win archive + forms rung, then globals.cpp + the D2Client boot chain")
+if(D2LINUX_ARCH STREQUAL "i386")
+    set(D2LINUX_BINARY_SHAPE "binary: i386 slice - skeleton + shims + game TUs (${D2LINUX_GAME_TU_COUNT})")
+else()
+    set(D2LINUX_BINARY_SHAPE "binary: native x86-64 skeleton - game TUs are i386-only (charter R1), the slice ships in the CI artifact")
+endif()
+if(D2LINUX_PROJECT_STAGE MATCHES ";" OR D2LINUX_BINARY_SHAPE MATCHES ";")
+    message(FATAL_ERROR
+        "d2linux: banner strings must not contain ';' - CMake list semantics "
+        "split the value into broken -D fragments. Use ' / ' as the "
+        "in-banner separator instead (see the BANNER-STRING RULE above).")
+endif()
+target_compile_definitions(d2linux PRIVATE
+    D2LINUX_PROJECT_STAGE="${D2LINUX_PROJECT_STAGE}"
+    D2LINUX_BINARY_SHAPE="${D2LINUX_BINARY_SHAPE}")
+
+# Create a filtered D2Headers directory at the expected location with d2_enums.h and a forwarding d2_platform.h
+set(D2LINUX_D2HEADERS_FILTERED "${CMAKE_BINARY_DIR}/Source/D2Headers")
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${D2LINUX_D2HEADERS_FILTERED}"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/Source/D2Headers/d2_enums.h" "${D2LINUX_D2HEADERS_FILTERED}/d2_enums.h"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+file(WRITE "${D2LINUX_D2HEADERS_FILTERED}/d2_platform.h" "#pragma once
+// Forward to platform shadow which has the real definitions
+#include \"platform-shadow/d2_platform.h\"
+")
+# Add build directory root to include path so platform shadow can find Source/D2Headers/d2_enums.h
+# The shadow dir leads the include path: game headers say #include
+# "d2_platform.h" and must resolve to the SAME file the forced include used
+# (#pragma once dedupes per path; the tree file would double-parse).
+# Explicit include paths for all include styles used in the codebase:
+# 1. platform-shadow (patched d2_platform.h)
+# 2. platform (for platform/linux includes)
+# 3. build-linux (for filtered D2Headers at build-linux/Source/D2Headers)
+# 3b. Source/ (for D2Client/Message.h, D2Hell/D2Hell.h, etc.)
+# 4. Repo root (for platform/linux/d2_linux_compat.h, Storm/...)
+# 5. 3rdparty/ (for Storm/ includes like Storm/D2ArchiveStrc.h)
+# 6. 3rdparty/Storm/Source (for SFile.h, etc.)
+# 7. Source/Fog/Source (for Fog/Source includes)
+# 8. 3rdparty/Storm/Source (for Storm/Source includes)
+# 9. 3rdparty/Storm/H (for Storm/H includes)
+# 10. 3rdparty/Storm/3rdparty/PKWARE (for PKWARE includes)
+# 11. 3rdparty/Storm/3rdparty/zlib (for zlib includes)
+# 10. 3rdparty/crashy (for crashy includes)
+# 11. 3rdparty/libbacktrace (for libbacktrace includes)
+set(D2LINUX_INCLUDE_DIRS
+    "${D2LINUX_PLATFORM_SHADOW_DIR}"
+    "${CMAKE_SOURCE_DIR}/platform"
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/Source"
+    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/3rdparty"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/Source"
+    "${CMAKE_SOURCE_DIR}/Source/Fog/Src"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/H"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/3rdparty/PKWARE"
+    "${CMAKE_SOURCE_DIR}/3rdparty/Storm/3rdparty/zlib"
+    "${CMAKE_SOURCE_DIR}/3rdparty/crashy"
+    "${CMAKE_SOURCE_DIR}/3rdparty/libbacktrace"
+)
+target_include_directories(d2linux PRIVATE ${D2LINUX_INCLUDE_DIRS})
+
+set(D2LINUX_GAME_FLAGS -w -fms-extensions -fshort-wchar)
+# The forced-include chain rides target_compile_options (which honors the
+# SHELL: prefix — set_property(SOURCE COMPILE_OPTIONS) would pass the spaces
+# through Ninja's response files as literal quotes). It applies to every
+# d2linux source: the host skeleton already lives with d2_platform's shapes
+# (the M0 binary did), and the FILE-guard trick in the compat header keeps
+# glibc's stdio compatible everywhere.
+target_compile_options(d2linux PRIVATE
+    "SHELL:-include ${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_compat.h"
+    "SHELL:-include ${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h"
+    "SHELL:-include ${CMAKE_SOURCE_DIR}/tools/vp_host_api.h"
+    "SHELL:-include ${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_api.h")
+
+foreach(src IN LISTS D2LINUX_GAME_SOURCES)
+    set_property(SOURCE "${src}" PROPERTY COMPILE_OPTIONS
+        ${D2LINUX_GAME_FLAGS} ${D2LINUX_FORCED_INCLUDES})
+    set_property(SOURCE "${src}" PROPERTY COMPILE_DEFINITIONS D2LINUX_GAME=1)
+    set_property(SOURCE "${src}" PROPERTY OBJECT_DEPENDS
+        "${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h"
+        "${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_compat.h"
+        "${CMAKE_SOURCE_DIR}/tools/vp_host_api.h"
+        "${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_api.h")
+endforeach()
+
+# The shim layer compiles with the same forced includes (its declarations live
+# there) but keeps -Wall -Wextra: this is house code, not decomp.
+foreach(src IN LISTS D2LINUX_SHIM_SOURCES)
+    set_property(SOURCE "${src}" PROPERTY COMPILE_OPTIONS ${D2LINUX_FORCED_INCLUDES})
+    set_property(SOURCE "${src}" PROPERTY OBJECT_DEPENDS
+        "${D2LINUX_PLATFORM_SHADOW_DIR}/d2_platform.h"
+        "${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_compat.h"
+        "${CMAKE_SOURCE_DIR}/tools/vp_host_api.h"
+        "${CMAKE_SOURCE_DIR}/platform/linux/d2_linux_api.h")
+endforeach()
+target_compile_definitions(d2linux PRIVATE D2LINUX_GAME=1)
+
+# support/d2_crt_impl.cpp + d2_crt_support.cpp are listed in the game sources;
+# d2_crt_impl's D2LINUX_GAME-gated filter block needs the define too (already
+# set target-wide above). The asm TU the PE build carries (d2_link_support.s)
+# is mingw-only: not in the linux source list.
+
+add_dependencies(d2linux d2linux_platform_shadow)
+target_link_libraries(d2linux PRIVATE pthread dl)
+# -rdynamic: dladdr() resolves the game's own symbols in the crash report.
+target_link_options(d2linux PRIVATE -rdynamic)
