@@ -189,6 +189,7 @@
 #include "Source/D2Common/Units.inline.h"
 #include "Source/D2Game/Monster/AI/AI.h"
 #include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [issue #26 / R95] no-panel-shift automap pan
+#include "Redivivus/d2_boot.h" // VP: [build-tag R139] the automap version line reads D2VP_BUILD_TAG
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -207,7 +208,7 @@ static_assert(sizeof(void*) != 4 || sizeof(::D2AutomapStrc) == 0x2804, "D2_NEW_A
 #endif
 // VP-BEGIN [automap tolerance]: fork-local spell of the upstream per-file
 // D2_FREE_AT macro (rule: code inside upstream files uses that file's
-// conventions; see docs/merge-upstream.md).
+// conventions; handoff.md §8).
 #ifndef D2_FREE
 #define D2_FREE(p) Fog::Memory::FreeClientMemory((p), __FILE__, __LINE__, 0)
 #endif
@@ -2460,7 +2461,10 @@ void __stdcall AUTOMAP_DrawVersion() {
       aWStack_130[i] = L'\0';
     }
 
-    Storm::Source::SSTR::SStrPrintf(szVersionUtf8, 100, "v %d.%d%c", 1, 0xe, 'd');
+    // VP-BEGIN [build-tag R139]: the automap version line shows the fork build tag
+    // (the same D2VP_BUILD_TAG the title screen reads) instead of the retail "v 1.14d".
+    Storm::Source::SSTR::SStrPrintf(szVersionUtf8, 100, "%s", D2VP_BUILD_TAG);
+    // VP-END [build-tag R139]
     D2Lang::UTF8_ConvertToWideChar(aWStack_130, szVersionUtf8, 100);
     int32_t nTextWidth = D2Win::Src::D2WinFont::DRAW_text0(aWStack_130);
     D2Win::Src::D2WinFont::DRAW_text(aWStack_130, SpellSel::WindowSizeX - nTextWidth - 0x10, AUTOMAP_TextHeightOffset, 4, 0);

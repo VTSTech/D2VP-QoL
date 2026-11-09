@@ -1,5 +1,5 @@
 // vanilla-plus core gates - implementation. Fork-owned TU; see VanillaPlusCore.h
-// for the charter and docs/merge-upstream.md for the merge playbook.
+// for the charter.
 // Include set mirrors D2Client.cpp's (the code moved verbatim from there).
 
 #include "Source/D2Client/D2Client.h"
@@ -136,6 +136,7 @@
 #include "Redivivus/d2_boot.h" // [vanilla-plus] self-check failures
 #include <stdlib.h> // exit (self-check halt)
 #include <cstddef> // offsetof (flag-store tripwire)
+#include <mmsystem.h> // [unlock-fps R142] timeBeginPeriod - 16 ms pacing needs 1 ms Sleep granularity (winmm is linked)
 
 // [vanilla-plus alt-toggle] Config-gated Alt-key ground-item-label toggle
 // (D2R "Show Items: Toggle" parity). d2vp.ini next to d2.exe:
@@ -227,7 +228,8 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         "; Shared stash (single-player):\r\n"
         ";   0 = off                                        (vanilla behavior)\r\n"
         ";   1 = add a \"Shared\" tab to the stash panel. The shared stash is\r\n"
-        ";       ten extra stash pages (since R82) every character on this PC\r\n"
+        ";       one hundred extra stash pages (since R146; ten since R82) every\r\n"
+        ";       character on this PC\r\n"
         ";       shares: items and gold deposited there survive the\r\n"
         ";       character. Stored in its own file (_d2vp_shared.sss) next to\r\n"
         ";       the saves - character .d2s files stay retail-compatible, with\r\n"
@@ -261,7 +263,36 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       slot. Works in the inventory, stash, cube, trade and at\r\n"
         ";       the vendor (your items and the shop stock). Side-by-side\r\n"
         ";       viewing only, like D2R's compare - no stat-delta lines.\r\n"
-        "shift_compare=0\r\n";
+        "shift_compare=0\r\n"
+        "\r\n"
+        "; Ctrl+Click stash transfer (D2R parity):\r\n"
+        ";   0 = off: Ctrl+Click does exactly retail           (vanilla behavior)\r\n"
+        ";   1 = with the stash panel open, Ctrl+Click moves an item in one\r\n"
+        ";       click: an inventory item goes to the stash, a stash item to\r\n"
+        ";       the inventory; the Shared tab behaves the same. A full\r\n"
+        ";       target plays the \"won't fit\" sound and nothing moves.\r\n"
+        ";       Ctrl+Click in an open shop still sells.\r\n"
+        "ctrl_click_xfer=0\r\n"
+        "\r\n"
+        "; Presentation FPS unlock (the Vanilla+ Options row is called\r\n"
+        "; \"Unlock FPS\"):\r\n"
+        ";   0 = the game presents at the classic 25 FPS    (vanilla behavior)\r\n"
+        ";   1 = the picture (cursor, tooltips, target highlights, alt labels)\r\n"
+        ";       refreshes at ~60 FPS while the game itself keeps the exact\r\n"
+        ";       retail speed: ticks, movement, animations and timers are\r\n"
+        ";       unchanged. Vsync behavior is untouched. d2boot.log carries a\r\n"
+        ";       presents/ticks-per-second pair once per 5 s while this is on,\r\n"
+        ";       as the proof the game speed is unchanged.\r\n"
+        "unlock_fps=0\r\n"
+        "\r\n"
+        "; Sub-tick interpolation (R143) - rides Unlock FPS; the Vanilla+\r\n"
+        "; Options row (R144) is called \"FPS Interpolation\":\r\n"
+        ";   1 = while Unlock FPS is on, the world scroll and everything in it\r\n"
+        ";       glide between game ticks at the present rate (the game speed is\r\n"
+        ";       still exactly retail - this is render smoothing only)\r\n"
+        ";   0 = the R142 look: the picture still refreshes at ~60 FPS but the\r\n"
+        ";       world and characters step at the classic 25 Hz cadence\r\n"
+        "unlock_fps_interp=1\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -628,6 +659,75 @@ BOOL __stdcall SHIFTCOMPARE_Active() {
     return gbShiftCompareMode;
 }
 
+// VP: [ctrl-click stash / R140] ctrl_click_xfer - the Ctrl+Click stash
+// transfer's gate, same 2 s hot-read shape as the gate above. Read per
+// Ctrl+Click rather than per frame, so the cache only saves ini opens; the
+// write bridge busts dwCtrlClickXferLastCheck (D2VP_ConfigReloaded), so a
+// flip in the Options page lands on the very next Ctrl+Click.
+static int gbCtrlClickXferMode = 0;
+static DWORD dwCtrlClickXferLastCheck = 0;   // 2 s ini re-read gate (row-28 pattern)
+
+BOOL __stdcall VPCTRLXFER_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwCtrlClickXferLastCheck || dwNow - dwCtrlClickXferLastCheck >= 2000) {
+        dwCtrlClickXferLastCheck = dwNow;
+        gbCtrlClickXferMode = D2VP_GetFeatureToggle("ctrl_click_xfer");
+    }
+    return gbCtrlClickXferMode;
+}
+
+// VP: [ctrl-click stash / R141] the deferred half of the transfer pair.
+// R141 field catch (owner, first field pass on the R140 build): "The items
+// move, but the slot they once occupied becomes unusable." Root cause: R140
+// sent 0x19 (pick) + 0x18 (place) back to back in one click, so the client
+// processed the pick echo and the place echo in the SAME packet drain - a
+// sequence no retail flow produces (a manual drag settles the pick on the
+// hand - item lifted out of the source grid - many frames before any place).
+// The target container is fine (D2Common PutItemInInventory unlinks-before-
+// relink, Inventory.cpp :755), but the source container's client-side grid
+// entry went stale: the slot the item left refused every later placement.
+// Fix, retail-shaped: the click sends 0x19 only and PARKS the place here;
+// the stash-panel draw (Inv.cpp, every frame the stash view is open) calls
+// VPCTRLXFER_TickPendingPlace, which releases the 0x18 on the second tick -
+// one full frame (one packet drain) after the pick, exactly a fast manual
+// drag. Drop conditions, both safe by construction:
+//  - panel closed inside the 1-frame window: the tick stops running, the
+//    0x18 never sends, and the item simply stays on the hand/cursor - the
+//    interrupted-drag state, legal and player-recoverable (place it
+//    manually, or drop it).
+//  - a new game joins with a stale stage: impossible in practice (the
+//    window is one frame), and if it ever fired the stale-GUID 0x18 is
+//    rejected server-side (the hand is empty) - the same harmless reject
+//    the R140 first build's lone 0x18 produced.
+static int gnVpXferPlacePending = 0;   // 0 idle; 1 parked this frame; 2 release on the next tick
+static int gnVpXferPlaceGuid = 0;
+static int gnVpXferPlaceX = 0;
+static int gnVpXferPlaceY = 0;
+static int gnVpXferPlacePageByte = 0;
+
+void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte) {
+    gnVpXferPlaceGuid = nGuid;
+    gnVpXferPlaceX = nX;
+    gnVpXferPlaceY = nY;
+    gnVpXferPlacePageByte = nPageByte;
+    gnVpXferPlacePending = 1;
+}
+
+void __stdcall VPCTRLXFER_TickPendingPlace() {
+    if (gnVpXferPlacePending == 1) {
+        gnVpXferPlacePending = 2;   // hold one full frame after the park
+        return;
+    }
+    if (gnVpXferPlacePending != 2) {
+        return;                     // idle
+    }
+    gnVpXferPlacePending = 0;
+    // Same two-packet pair a manual drag sends - now separated by one frame
+    // the way every retail item flow separates them.
+    D2Client::GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(0x18, gnVpXferPlaceGuid, gnVpXferPlaceX, gnVpXferPlaceY, gnVpXferPlacePageByte);
+}
+
+
 // The trigger read, retail's own idiom (UpdateMouseModifierKeyState,
 // Game.cpp:1193-1221): the key bound to cmd 0x24 in either binding slot,
 // GetAsyncKeyState(vk) < 0 = down. No CmdTbl entry, no latch, no keyup
@@ -856,6 +956,286 @@ uint32_t __stdcall PANELSHIFT_BorderForWorld(uint32_t eBorderType) {
     return eBorderType;
 }
 
+// ===== [vanilla-plus unlock-fps] R142 - presentation-FPS unlock =============
+// FEATURES.md row 17 / plans/FPS-UNLOCK-PLAN.md. See VanillaPlusCore.h for the
+// mechanism summary. This TU owns the pacer state and the gate; the three
+// upstream consumers are one-line sites: the draw dispatch
+// (Game.cpp CLIENT_GameLoopFrame), the pump idle sleep (Message.cpp
+// MessageGameLoop) and the EndScene budget (D2GFX.cpp, which keeps its own
+// reader - renderer boundary). Design points the code below must keep true:
+//   - Skip-never-queue (the frame-skip lesson, moved to the present side): at
+//     the deadline draw once and advance the deadline a full period; when the
+//     pump was away (message storm, loading, the SP pause path - none of them
+//     poll ShouldPresent) the anchor is >= 4 periods stale, so re-anchor
+//     instead of looping the backlog off. Small lateness (pump wake jitter,
+//     a few ms) stays on the absolute grid - the += keeps the average at
+//     exactly 16 ms/present instead of compounding wake jitter upward.
+//   - The pacer only decides when to DRAW, never when to poll: input rides
+//     the message pump exactly as retail.
+//   - Unanchor on gate-off and recency-out (menus/loading/pause stop polling
+//     ShouldPresent; after 100 ms the pump falls back to the retail Sleep(10)
+//     by itself, so those loops keep their vanilla pacing untouched).
+//   - Telemetry (pillar 1 of the plan - sim identity proven by counting, not
+//     eyeballing): while the gate is on, one d2boot mark per 5 s window pairs
+//     the present rate with the client-tick rate. Zero marks when off.
+
+static const DWORD UNLOCKFPS_PERIOD_MS = 16; // fixed 60 Hz v1 target (owner: bool for v1, numeric later)
+static const DWORD UNLOCKFPS_SIM_TICK_MS = 40; // [unlock-fps-interp R143] retail client world-update period (25 Hz) - the alpha clock base
+
+static int gbUnlockFpsMode = 0;
+static int gbUnlockFpsInterp = 0;           // [unlock-fps-interp R143] unlock_fps_interp sub-gate (default 1; ini-only through R143, the FPS Interpolation Options row since R144)
+static DWORD dwUnlockFpsLastCheck = 0;      // 2 s ini re-read gate (row-28 pattern)
+static DWORD dwUnlockFpsNextPresent = 0;    // pacer deadline (GetTickCount); 0 = unanchored
+static DWORD dwUnlockFpsLastPoll = 0;       // recency of the last ShouldPresent poll
+static DWORD dwUnlockFpsLastClientTick = 0; // [unlock-fps-interp R143] alpha clock anchor: GetTickCount at the last client world update
+// [unlock-fps-interp R143.1] two-sample interpolation state: the player's
+// draw-space position - the same D2Common::Units::GetTargetX/Y every consumer
+// site reads - snapshotted at each client world update. The render offset
+// glides the world from the previous sample to the current one (interpolation
+// between two real samples: continuous at every tick boundary by construction,
+// no velocity prediction to be wrong - R143's extrapolation snapped by its own
+// prediction error every tick, the field jitter the owner reported).
+static const int UNLOCKFPS_INTERP_SNAP_PX = 128; // per-tick displacement beyond this = teleport/level change: snap, don't glide
+static int gnUnlockFpsPrevPosX = 0;
+static int gnUnlockFpsPrevPosY = 0;
+static int gnUnlockFpsCurPosX = 0;
+static int gnUnlockFpsCurPosY = 0;
+static int gbUnlockFpsHaveSnap = 0;                 // prev/cur pair valid (player seen at least once)
+static int gnUnlockFpsOffsetX = 0;                  // per-present cache: one offset per frame,
+static int gnUnlockFpsOffsetY = 0;                  // shared by the camera and every sprite draw
+static DWORD dwUnlockFpsFrameId = 1;                // [R143.1] increments per present - the interp cache epoch (starts 1 so the 0 cache key never matches)
+static DWORD dwUnlockFpsOffsetFrame = 0;            // [R143.1] present epoch the cached offset was computed for
+static int sbUnlockFpsTimerRaised = 0;      // timeBeginPeriod(1) one-way latch
+static DWORD dwUnlockFpsStatsWindowTick = 0;
+static DWORD dwUnlockFpsPresentCount = 0;
+static DWORD dwUnlockFpsTickCount = 0;
+
+BOOL __stdcall UNLOCKFPS_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsLastCheck || dwNow - dwUnlockFpsLastCheck >= 2000) {
+        char szIniPath[260];
+        dwUnlockFpsLastCheck = dwNow;
+        if (ALTTOGGLE_BuildIniPath(szIniPath)) {
+            ALTTOGGLE_EnsureIni();
+            // Missing file/section/key or a non-numeric value = 0 = vanilla.
+            gbUnlockFpsMode = GetPrivateProfileIntA("features", "unlock_fps", 0, szIniPath) ? 1 : 0;
+            // [unlock-fps-interp R143] interpolation rides the gate; missing key = 1
+            // (the intended look). 0 restores the R142 step-cadence presentation.
+            gbUnlockFpsInterp = GetPrivateProfileIntA("features", "unlock_fps_interp", 1, szIniPath) ? 1 : 0;
+        } else {
+            gbUnlockFpsMode = 0;
+            gbUnlockFpsInterp = 0;
+        }
+    }
+    return gbUnlockFpsMode;
+}
+
+BOOL __stdcall UNLOCKFPS_ShouldPresent() {
+    if (!UNLOCKFPS_Active()) {
+        dwUnlockFpsNextPresent = 0; // gate off (or just flipped off): unanchor
+        return FALSE;
+    }
+    DWORD dwNow = GetTickCount();
+    dwUnlockFpsLastPoll = dwNow;
+    if (!sbUnlockFpsTimerRaised) {
+        sbUnlockFpsTimerRaised = 1;
+        timeBeginPeriod(1); // 16 ms pacing needs 1 ms Sleep granularity; one-way latch, never lowered
+        D2BOOT_MarkFmt("unlock-fps: [features] unlock_fps=1 - present pacer 60 Hz, sim stays 25 Hz (timeBeginPeriod(1))%s",
+                       gbUnlockFpsInterp ? " + sub-tick interp (two-sample)" : "");
+    }
+    if (!dwUnlockFpsNextPresent) {
+        // First activation this process (or the first poll after a re-anchor
+        // reset): present immediately, pace from here.
+        dwUnlockFpsNextPresent = dwNow + UNLOCKFPS_PERIOD_MS;
+        return TRUE;
+    }
+    if ((int32_t)(dwNow - dwUnlockFpsNextPresent) < 0) {
+        return FALSE; // before the deadline
+    }
+    if ((int32_t)(dwNow - dwUnlockFpsNextPresent) >= (int32_t)(UNLOCKFPS_PERIOD_MS * 4)) {
+        // The pump was away (menus / loading / SP pause path don't poll, or a
+        // stall longer than four periods): re-anchor - skip, never queue.
+        dwUnlockFpsNextPresent = dwNow + UNLOCKFPS_PERIOD_MS;
+        return TRUE;
+    }
+    // At/after the deadline, on the grid: consume the slot(s).
+    do {
+        dwUnlockFpsNextPresent += UNLOCKFPS_PERIOD_MS;
+    } while ((int32_t)(dwNow - dwUnlockFpsNextPresent) >= 0);
+    return TRUE;
+}
+
+static void UNLOCKFPS_StatsIfDue() {
+    if (!gbUnlockFpsMode) {
+        // Gate off: keep the counters zeroed so a later flip-on starts a clean
+        // window; no marks - the vanilla log stays vanilla.
+        dwUnlockFpsPresentCount = 0;
+        dwUnlockFpsTickCount = 0;
+        dwUnlockFpsStatsWindowTick = 0;
+        return;
+    }
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsStatsWindowTick) {
+        dwUnlockFpsStatsWindowTick = dwNow;
+        return;
+    }
+    DWORD dwWindowMs = dwNow - dwUnlockFpsStatsWindowTick;
+    if (dwWindowMs < 5000) {
+        return;
+    }
+    DWORD dwPresents = dwUnlockFpsPresentCount;
+    DWORD dwTicks = dwUnlockFpsTickCount;
+    dwUnlockFpsStatsWindowTick = dwNow;
+    dwUnlockFpsPresentCount = 0;
+    dwUnlockFpsTickCount = 0;
+    DWORD dwPresentsPerSec = dwPresents * 1000 / dwWindowMs;
+    DWORD dwTicksPerSec = dwTicks * 1000 / dwWindowMs;
+    D2BOOT_MarkFmt("unlock-fps: presents %u in %u ms (~%u/s), client ticks %u (~%u/s) - sim stays 25 Hz",
+                   (unsigned)dwPresents, (unsigned)dwWindowMs, (unsigned)dwPresentsPerSec,
+                   (unsigned)dwTicks, (unsigned)dwTicksPerSec);
+}
+
+void __stdcall UNLOCKFPS_NotePresent() {
+    dwUnlockFpsFrameId++; // [unlock-fps-interp R143.1] new present epoch: the next draw recomputes the shared offset
+    dwUnlockFpsPresentCount++;
+    UNLOCKFPS_StatsIfDue();
+}
+
+void __stdcall UNLOCKFPS_NoteClientTick() {
+    // [unlock-fps-interp R143.1] two-sample snapshot: capture the player's
+    // draw-space position right after a client world update moved it, shifting
+    // the previous sample aside. [R143.2] the CALL SITE moved before the draw
+    // block (Game.cpp) - on a tick+present iteration the draw reads this
+    // position live, so the pair must already describe it or the render
+    // sawtooths a full tick at every boundary (the residual field jitter).
+    // Kept fresh even with the gate off (two int reads) so a mid-session
+    // flip-on starts from a valid pair.
+    D2UnitStrc* pPlayer = D2Client::UNIT::Player::GetPlayerUnit_UI();
+    if (pPlayer) {
+        int nPosX = D2Common::Units::GetTargetX(pPlayer);
+        int nPosY = D2Common::Units::GetTargetY(pPlayer);
+        if (!gbUnlockFpsHaveSnap) {
+            gnUnlockFpsPrevPosX = nPosX; // first sample: no previous tick, no glide
+            gnUnlockFpsPrevPosY = nPosY;
+            gbUnlockFpsHaveSnap = 1;
+        } else if (nPosX - gnUnlockFpsCurPosX > UNLOCKFPS_INTERP_SNAP_PX
+                || gnUnlockFpsCurPosX - nPosX > UNLOCKFPS_INTERP_SNAP_PX
+                || nPosY - gnUnlockFpsCurPosY > UNLOCKFPS_INTERP_SNAP_PX
+                || gnUnlockFpsCurPosY - nPosY > UNLOCKFPS_INTERP_SNAP_PX) {
+            gnUnlockFpsPrevPosX = nPosX; // teleport / level change / resurrect:
+            gnUnlockFpsPrevPosY = nPosY; // discontinuity - snap, never glide it
+        } else {
+            gnUnlockFpsPrevPosX = gnUnlockFpsCurPosX;
+            gnUnlockFpsPrevPosY = gnUnlockFpsCurPosY;
+        }
+        gnUnlockFpsCurPosX = nPosX;
+        gnUnlockFpsCurPosY = nPosY;
+    } else {
+        gbUnlockFpsHaveSnap = 0; // out of game / loading: drop the stale pair
+    }
+    dwUnlockFpsLastClientTick = GetTickCount(); // alpha clock anchor (cheap; harmless when the gate is off)
+    dwUnlockFpsTickCount++;
+    UNLOCKFPS_StatsIfDue();
+}
+
+int __stdcall UNLOCKFPS_IdleSleepMs() {
+    if (!UNLOCKFPS_Active()) {
+        dwUnlockFpsNextPresent = 0;
+        return 0; // caller keeps the retail Sleep(10)
+    }
+    DWORD dwNow = GetTickCount();
+    if (!dwUnlockFpsNextPresent || dwNow - dwUnlockFpsLastPoll > 100) {
+        // No live pacer (gate on, but the draw site is not polling: menus,
+        // loading, the SP pause path): retail pacing - those loops own their
+        // own cadence.
+        return 0;
+    }
+    int32_t nUntilDeadline = (int32_t)(dwUnlockFpsNextPresent - dwNow) - 1;
+    if (nUntilDeadline < 1) {
+        return 1; // due: wake now, the next callback iteration draws
+    }
+    if (nUntilDeadline > (int32_t)UNLOCKFPS_PERIOD_MS) {
+        nUntilDeadline = (int32_t)UNLOCKFPS_PERIOD_MS; // stay responsive to a gate flip
+    }
+    return nUntilDeadline;
+}
+
+// [vanilla-plus unlock-fps-interp] R143.1 two-sample, R143.2 delivery fix -
+// sub-tick render delta (plan §4 Phase 2). R143 extrapolated the player's
+// position with PATH_GetScreenVelocity x alpha; a prediction is never exact
+// (quantized path velocity vs the real per-tick displacement, start/stop,
+// turns), so every tick boundary snapped by the prediction error - the field
+// jitter the owner reported ("jittery, looks better at 0"). R143.1
+// interpolates between two real samples instead: at each client world update
+// NoteClientTick snapshots the player's draw-space position (the same
+// GetTargetX/Y every consumer reads); the render offset glides the world from
+// the previous sample to the current one, renderPos = prev + (cur - prev) x
+// alpha with alpha = ms since that update / 40 clamped to one tick.
+// R143.2 (still "jittery at 1" in the field) fixed the delivery around that
+// math, which is only as continuous as its wiring:
+//   1. The snapshot must run BEFORE the draw. Consumers read GetTargetX/Y
+//      LIVE - on a tick+present iteration the draw sees the post-tick
+//      position while a pair caught up after the draw still described the
+//      previous segment, so renderPos leapt a full tick forward (offset ~0
+//      on the new base) and was pulled back the next present: a sawtooth at
+//      the tick rate. Game.cpp now calls NoteClientTick before the draw
+//      block, so the pair always matches the base the draws read.
+//   2. The sprite world offset (MouseXOffset/YOffset - shadows, state
+//      overlays, perspective sprite anchor, GFX_IsUnitOnScreen culling, the
+//      mouse world-pick) must get the delta unconditionally: R143.1 added it
+//      after DRAW_UpdateMouseWorldOffsets' shake early-return, dead in
+//      normal play, leaving that whole layer tick-locked against a gliding
+//      camera. Path.cpp now applies it before the shake check.
+//   3. The player-sprite cancel in Wall2 flips sign in perspective mode
+//      (MouseOffsets already carries the delta into projected coords).
+// With that wiring: just before a tick the offset reaches 0 (render = cur),
+// just after it is -(new cur - old cur) (render = the same point) -
+// continuous at every tick boundary by construction, whatever the step
+// shape. Standing still: delta 0, offset 0. A displacement over
+// UNLOCKFPS_INTERP_SNAP_PX px in one tick (teleport, level change,
+// resurrect) snaps instead of gliding across the map. The offset is
+// computed once per present (cache keyed on a dedicated present epoch, not
+// the stats counter - StatsIfDue resets that every 5 s window) and shared by
+// every consumer, so the camera and the player sprite ride the exact same
+// delta within a frame (per-site GetTickCount calls could straddle a 1 ms
+// boundary and break the glue). Write-nowhere by contract: consumers add this
+// to their draw position only; D2DynamicPathStrc is never touched. Fills 0
+// and returns FALSE whenever it should not apply (gate/interp off, no
+// snapshot yet, null out) so every site reduces to retail.
+BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY) {
+    if (pnOffsetX) {
+        *pnOffsetX = 0;
+    }
+    if (pnOffsetY) {
+        *pnOffsetY = 0;
+    }
+    if (!pnOffsetX || !pnOffsetY) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsMode || !gbUnlockFpsInterp) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsHaveSnap || !dwUnlockFpsLastClientTick) {
+        return FALSE; // no client world update seen yet this process
+    }
+    if (dwUnlockFpsOffsetFrame != dwUnlockFpsFrameId) {
+        // First consumer this present: compute the frame's offset once so the
+        // camera and every sprite draw share it.
+        dwUnlockFpsOffsetFrame = dwUnlockFpsFrameId;
+        DWORD dwSinceTick = GetTickCount() - dwUnlockFpsLastClientTick;
+        if (dwSinceTick >= UNLOCKFPS_SIM_TICK_MS) {
+            dwSinceTick = UNLOCKFPS_SIM_TICK_MS; // clamp at the sample: offset 0, render = cur
+        }
+        int nDeltaX = gnUnlockFpsCurPosX - gnUnlockFpsPrevPosX;
+        int nDeltaY = gnUnlockFpsCurPosY - gnUnlockFpsPrevPosY;
+        gnUnlockFpsOffsetX = nDeltaX * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS;
+        gnUnlockFpsOffsetY = nDeltaY * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS;
+    }
+    *pnOffsetX = gnUnlockFpsOffsetX;
+    *pnOffsetY = gnUnlockFpsOffsetY;
+    return TRUE;
+}
+
 // ===== [vanilla-plus options page] d2vp.ini feature toggle bridge ==========
 // The "Vanilla+ Options" page (D2Client/UI/VanillaPlusOptions.cpp) reads and
 // flips the same [features] keys the gates consume. Reads go through the
@@ -868,13 +1248,26 @@ uint32_t __stdcall PANELSHIFT_BorderForWorld(uint32_t eBorderType) {
 // exactly like an external editor that lost a race.
 
 int __stdcall D2VP_GetFeatureToggle(const char* szKey) {
+    return D2VP_GetFeatureToggleDefault(szKey, 0);
+}
+
+// R144: the options page's per-row read default. Every feature key is
+// 0-defaulted (missing/garbage = vanilla) except unlock_fps_interp - its
+// gate reads a missing key as 1 (UNLOCKFPS_Active: interp is the intended
+// look), and the row must display what the gate acts on: ALTTOGGLE_EnsureIni
+// writes the template only for a MISSING FILE and never backfills keys, so
+// a pre-R143 ini carries no unlock_fps_interp and a 0-default read would
+// show Off while the interp runs. The panel flips stay exact too: the page
+// toggle inverts the displayed default, so the first click on a default-on
+// row writes 0 (with a 0-default read it would write 1 - a silent no-op).
+int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault) {
     char szIniPath[260];
     ALTTOGGLE_EnsureIni();
     if (!szKey || !ALTTOGGLE_BuildIniPath(szIniPath)) {
-        return 0;
+        return nDefault ? 1 : 0;
     }
-    // Missing file/section/key or a non-numeric value = 0 = vanilla.
-    return GetPrivateProfileIntA("features", szKey, 0, szIniPath) ? 1 : 0;
+    // Missing file/section/key or a non-numeric value = nDefault.
+    return GetPrivateProfileIntA("features", szKey, nDefault ? 1 : 0, szIniPath) ? 1 : 0;
 }
 
 void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {
@@ -901,6 +1294,8 @@ void __stdcall D2VP_ConfigReloaded() {
     dwItemIlvlLastCheck = 0;      // next ITEMILVL_Active() re-reads item_ilvl
     dwNoPanelShiftLastCheck = 0;  // next PANELSHIFT_NoShiftWorld() re-reads no_panel_shift
     dwShiftCompareLastCheck = 0;  // next SHIFTCOMPARE_Active() re-reads shift_compare
+    dwCtrlClickXferLastCheck = 0; // next VPCTRLXFER_Active() re-reads ctrl_click_xfer
+    dwUnlockFpsLastCheck = 0;     // next UNLOCKFPS_Active() re-reads unlock_fps
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -1082,14 +1477,14 @@ int __stdcall VPRES_PickFontMatchingDC6(struct DC6* pTargetDC6) {
 //     of the extern declarations in globals/globals.h);
 //   - VANILLAPLUS_SelfCheck pins what only the runtime can see (values and
 //     wired callbacks), once per process from ALTTOGGLE_EnsureIni (boot).
-// Any failure means a merge edit was lost or upstream changed shape - audit
-// against docs/merge-upstream.md before changing these expectations.
+// Any failure means a fork edit was lost or the tree changed shape - audit
+// the VP markers before changing these expectations.
 static_assert(UI_VANILLAPLUS == 38,
     "vanilla-plus: UI_VANILLAPLUS moved - upstream added/changed a UI var; "
-    "re-audit the flag-38 count bumps (docs/merge-upstream.md)");
+    "re-audit the flag-38 count bumps (handoff.md §8)");
 static_assert(UI_RECIPESCROLL == 37,
     "vanilla-plus: upstream inserted a UI var before UI_VANILLAPLUS; "
-    "re-audit the flag-38 count bumps (docs/merge-upstream.md)");
+    "re-audit the flag-38 count bumps (handoff.md §8)");
 // VP: the gaEscMenuOptionsTable sizeof assert lived here until the row-10
 // table went TU-private (962f88d5); the self-check now runtime-checks the
 // count through EscMenu::VP_GetOptionsTable.
@@ -1111,12 +1506,12 @@ void __stdcall VANILLAPLUS_SelfCheck() {
     nDone = 1;
     if (gnUIFlagCount != 0x27) {
         D2BOOT_Fail("vanilla-plus self-check: gnUIFlagCount != 0x27 - a merge "
-                    "likely dropped the count bumps (see docs/merge-upstream.md)");
+                    "likely dropped the count bumps (see handoff.md §8)");
         exit(-1);
     }
     if (D2Client::UI::EscMenu::VP_GetHeaderOptions()->nItemCount != 0x6) {
         D2BOOT_Fail("vanilla-plus self-check: gaEscMenuHeaderOptions.nItemCount "
-                    "!= 6 - the row-10 esc-menu edit was lost (see docs/merge-upstream.md)");
+                    "!= 6 - the row-10 esc-menu edit was lost (see handoff.md §8)");
         exit(-1);
     }
     // The row-10 entry is INSERTED above "Previous Menu" (index 4 of 6, owner
@@ -1130,7 +1525,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
         if (kRow10Count != 6) {
             D2BOOT_Fail("vanilla-plus self-check: gaEscMenuOptionsTable count "
                         "!= 6 - the row-10 table edit or its home moved in a "
-                        "merge (see docs/merge-upstream.md)");
+                        "merge (see handoff.md §8)");
             exit(-1);
         }
         int nWired = 0;
@@ -1144,7 +1539,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
             D2BOOT_Fail("vanilla-plus self-check: gaEscMenuOptionsTable row-10 "
                         "click callback not wired (or duplicated) - the row-10 "
                         "table edit was lost or doubled in a merge "
-                        "(see docs/merge-upstream.md)");
+                        "(see handoff.md §8)");
             exit(-1);
         }
     }
@@ -1169,7 +1564,7 @@ void __stdcall VANILLAPLUS_SelfCheck() {
                 &D2Client::UI::EscMenu::UI_SLIDER_DrawResolutionValue) {
                 D2BOOT_Fail("vanilla-plus self-check: Resolution row draw "
                             "callback not wired - the resolution-mode "
-                            "globals.cpp edit was lost (see docs/merge-upstream.md)");
+                            "globals.cpp edit was lost (see handoff.md §8)");
                 exit(-1);
             }
         }
@@ -1177,14 +1572,14 @@ void __stdcall VANILLAPLUS_SelfCheck() {
             D2BOOT_Fail("vanilla-plus self-check: Resolution row init callback "
                         "not found (or duplicated) - the resolution-mode table "
                         "wiring was lost or doubled in a merge "
-                        "(see docs/merge-upstream.md)");
+                        "(see handoff.md §8)");
             exit(-1);
         }
     }
     if (gUIFlagDismissModeTable[38] !=
         (D2UIFlagDescStrc*)&gaUIFlagDescs[9].anDismissMode[0]) {
         D2BOOT_Fail("vanilla-plus self-check: gUIFlagDismissModeTable[38] alias "
-                    "missing - the dismiss-mode edit was lost (see docs/merge-upstream.md)");
+                    "missing - the dismiss-mode edit was lost (see handoff.md §8)");
         exit(-1);
     }
 }
@@ -1252,18 +1647,20 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 //      VPSHAREDUI_HandleStashClick, drawn by VPSHAREDUI_DrawTab right after
 //      the gold-button draw. Since R75 the label is an OUTLINED composite:
 //      a 1-px black halo under the glyphs (owner: "give the current stash
-//      tab label an outline") plus a pager - < and > arrows step one page at
+//      tab label an outline") plus a pager - << and >> arrows step one page at
 //      a time between the personal page and the shared pages (two since R75
 //      - owner: "add a 2nd page and buttons/arrows to navigate pages" - ten
-//      since R82 - owner: "increase the shared stash pages to 10"), the
-//      label reads Shared 1 .. Shared 10 on the shared pages. No hotkey:
+//      since R82 - owner: "increase the shared stash pages to 10" - a
+//      hundred since R146 - owner: "Good job, works. Let's increase the
+//      Shared Stash pages to 100"), the
+//      label reads Shared 1 .. Shared 100 on the shared pages. No hotkey:
 //      the tab is the only affordance (owner decision 2026-11-01);
 //   3. a per-game reset so entering a game always starts on the personal
 //      page (the server starts every game on the personal page too).
 //
 // Clicking the tab sends the C->S 0x4F Click-Button packet with the
 // out-of-retail-range button id 0x7D and the ABSOLUTE desired page in the
-// param word (0 personal / 1..10 shared-N). Everything else - the
+// param word (0 personal / 1..100 shared-N). Everything else - the
 // grid, the item moves, the gold buttons - is untouched retail; while a
 // shared page is active the server serves page 4 from that page's block and
 // the goldbank stat carries the shared gold, so the retail deposit/withdraw
@@ -1278,7 +1675,7 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 static int gbVpSharedStashMode = 0;   // 2 s ini gate cache
 static DWORD dwVpSharedStashGateTick = 0;
 static int gnVpSharedPage = 0;        // client mirror of the page toggle:
-                                      // 0 personal, 1..10 = shared pages 1..10
+                                      // 0 personal, 1..100 = shared pages 1..100
 
 // Options-page hook (D2VP_ConfigReloaded, R67): zero the gate tick so the
 // next VPSHAREDUI_FeatureActive() re-reads shared_stash - the "Shared" tab
@@ -1307,7 +1704,7 @@ BOOL __stdcall VPSHAREDUI_FeatureActive() {
 }
 
 int __stdcall VPSHAREDUI_IsSharedPage() {
-    return gnVpSharedPage; // 0 = personal; 1..10 = the shared page on screen
+    return gnVpSharedPage; // 0 = personal; 1..100 = the shared page on screen
 }
 
 void __stdcall VPSHAREDUI_ResetForNewGame() {
@@ -1366,12 +1763,22 @@ void __stdcall VPSHAREDUI_ResetForNewGame() {
 //        R69 down-walk class cannot re-open.
 // R75 composite (R82: ten pages, same shape): the label is one row-built
 // strip, right-aligned at the R66 anchor as R76 nudged it (the +0x140
-// art-seam rule is untouched) - on the personal page  "Shared >"  (the >
-// invites a step into shared page 1), on the shared pages  "< Shared N >"
-// (green, the active color; N = 1..10, and the last page drops the '>').
+// art-seam rule is untouched) - R145 (owner: "Can we make the navigation
+// label '<<' and '>>' instead of just < >, i find just one is a little
+// small to click on") doubles each arrow glyph, so on the personal page the
+// composite reads  "Shared >>"  (the >> invites a step into shared page 1),
+// on the shared pages  "<< Shared N >>"
+// (green, the active color; N = 1..100, and the last page drops the '>>').
 // The arrows step ONE page left/right; the word itself toggles
 // personal<->shared-1 - the R63-R74 click-for-the-tab muscle memory, and
-// always a way home from any shared page. Both element rects come from the
+// always a way home from any shared page. The composite stays
+// right-anchored, so the wider glyphs cost only leftward room on the R77
+// band - the row's left side is empty retail space out to the gold-area
+// hit rects (X +0x49..+0x96; the gold DISPLAY moved 0x2d BELOW the row at R77),
+// and each arrow's click band widens with its measured width: the owner's
+// actual complaint (the single glyph is a small click target) is answered
+// by the band doubling with the pixels - one layout, draw and hit test
+// alike (VPSHAREDUI_TabLayout). Both element rects come from the
 // same per-frame layout the draw uses (widths measured in font 1), so the
 // click bands can never drift from the pixels. The bands keep 2 px of
 // margin around each element and keep the old band's Y extent (nY-16..nY+6,
@@ -1385,13 +1792,14 @@ void __stdcall VPSHAREDUI_ResetForNewGame() {
 // start below the gold-max row, one pitch under this one.
 constexpr int VPSHAREDUI_TAB_RIGHT_EDGE = 0x130; // R66 0x130; R76 +0x0c off the gold amount text
 // Shared pages the pager steps through (the personal page is not one of
-// them): two since R75, TEN since R82 - the owner's "If that works we'll do
-// 10 pages. Then 100." roadmap. The composite stays right-anchored at
-// VPSHAREDUI_TAB_RIGHT_EDGE and grows leftward, so a wider word list costs
-// only leftward room on the R77 band (the gold display sits a full 0x2d
-// below the row; see the R76/R77 notes above) - "Shared 10" never outgrows
-// the R76-approved "< Shared 1 >" composite.
-constexpr int VPSHAREDUI_PAGE_COUNT = 10;
+// them): two since R75, TEN since R82, A HUNDRED since R146 - the owner's
+// "If that works we'll do 10 pages. Then 100." roadmap, completed. The
+// composite stays right-anchored at VPSHAREDUI_TAB_RIGHT_EDGE and grows
+// leftward, so a wider word list costs only leftward room on the R77 band
+// (the gold display sits a full 0x2d below the row; see the R76/R77 notes
+// above) - "Shared 100" is one glyph wider than the R82 "Shared 10", still
+// far right of the +0x96 gold-area hit rects.
+constexpr int VPSHAREDUI_PAGE_COUNT = 100;
 constexpr int VPSHAREDUI_TAB_GAP = 5;     // word <-> arrow gap
 
 // The tab row: R66-R76 shared the retail "Gold Max" text row (-0x19f/-0xdb);
@@ -1405,16 +1813,48 @@ static int VPSHAREDUI_TabBaselineY() {
     return D2Client::UI::Inv::gnPanelOffsetY - (bIsExpansion ? 0x1cc : 0x108) + D2Client::UI::Inv::ScreenSizeY;
 }
 
-// The word for the current client page (0 personal, 1..10 shared). A
+// The word for the current client page (0 personal, 1..100 shared). A
 // literal table - no runtime formatting - so the D2Win text measure/draw
 // sees plain static wide strings like every other call site; the bounds
 // guard only exists to keep a bad mirror from indexing past the table.
+// R146: the table grew to the hundred-page width (script-generated rows,
+// same shape R82 shipped at ten).
 static const uint16_t * VPSHAREDUI_PageWord() {
     static const uint16_t * const apWords[VPSHAREDUI_PAGE_COUNT + 1] = {
-        (const uint16_t *)L"Shared",   (const uint16_t *)L"Shared 1", (const uint16_t *)L"Shared 2",
+        (const uint16_t *)L"Shared", (const uint16_t *)L"Shared 1", (const uint16_t *)L"Shared 2",
         (const uint16_t *)L"Shared 3", (const uint16_t *)L"Shared 4", (const uint16_t *)L"Shared 5",
         (const uint16_t *)L"Shared 6", (const uint16_t *)L"Shared 7", (const uint16_t *)L"Shared 8",
-        (const uint16_t *)L"Shared 9", (const uint16_t *)L"Shared 10",
+        (const uint16_t *)L"Shared 9", (const uint16_t *)L"Shared 10", (const uint16_t *)L"Shared 11",
+        (const uint16_t *)L"Shared 12", (const uint16_t *)L"Shared 13", (const uint16_t *)L"Shared 14",
+        (const uint16_t *)L"Shared 15", (const uint16_t *)L"Shared 16", (const uint16_t *)L"Shared 17",
+        (const uint16_t *)L"Shared 18", (const uint16_t *)L"Shared 19", (const uint16_t *)L"Shared 20",
+        (const uint16_t *)L"Shared 21", (const uint16_t *)L"Shared 22", (const uint16_t *)L"Shared 23",
+        (const uint16_t *)L"Shared 24", (const uint16_t *)L"Shared 25", (const uint16_t *)L"Shared 26",
+        (const uint16_t *)L"Shared 27", (const uint16_t *)L"Shared 28", (const uint16_t *)L"Shared 29",
+        (const uint16_t *)L"Shared 30", (const uint16_t *)L"Shared 31", (const uint16_t *)L"Shared 32",
+        (const uint16_t *)L"Shared 33", (const uint16_t *)L"Shared 34", (const uint16_t *)L"Shared 35",
+        (const uint16_t *)L"Shared 36", (const uint16_t *)L"Shared 37", (const uint16_t *)L"Shared 38",
+        (const uint16_t *)L"Shared 39", (const uint16_t *)L"Shared 40", (const uint16_t *)L"Shared 41",
+        (const uint16_t *)L"Shared 42", (const uint16_t *)L"Shared 43", (const uint16_t *)L"Shared 44",
+        (const uint16_t *)L"Shared 45", (const uint16_t *)L"Shared 46", (const uint16_t *)L"Shared 47",
+        (const uint16_t *)L"Shared 48", (const uint16_t *)L"Shared 49", (const uint16_t *)L"Shared 50",
+        (const uint16_t *)L"Shared 51", (const uint16_t *)L"Shared 52", (const uint16_t *)L"Shared 53",
+        (const uint16_t *)L"Shared 54", (const uint16_t *)L"Shared 55", (const uint16_t *)L"Shared 56",
+        (const uint16_t *)L"Shared 57", (const uint16_t *)L"Shared 58", (const uint16_t *)L"Shared 59",
+        (const uint16_t *)L"Shared 60", (const uint16_t *)L"Shared 61", (const uint16_t *)L"Shared 62",
+        (const uint16_t *)L"Shared 63", (const uint16_t *)L"Shared 64", (const uint16_t *)L"Shared 65",
+        (const uint16_t *)L"Shared 66", (const uint16_t *)L"Shared 67", (const uint16_t *)L"Shared 68",
+        (const uint16_t *)L"Shared 69", (const uint16_t *)L"Shared 70", (const uint16_t *)L"Shared 71",
+        (const uint16_t *)L"Shared 72", (const uint16_t *)L"Shared 73", (const uint16_t *)L"Shared 74",
+        (const uint16_t *)L"Shared 75", (const uint16_t *)L"Shared 76", (const uint16_t *)L"Shared 77",
+        (const uint16_t *)L"Shared 78", (const uint16_t *)L"Shared 79", (const uint16_t *)L"Shared 80",
+        (const uint16_t *)L"Shared 81", (const uint16_t *)L"Shared 82", (const uint16_t *)L"Shared 83",
+        (const uint16_t *)L"Shared 84", (const uint16_t *)L"Shared 85", (const uint16_t *)L"Shared 86",
+        (const uint16_t *)L"Shared 87", (const uint16_t *)L"Shared 88", (const uint16_t *)L"Shared 89",
+        (const uint16_t *)L"Shared 90", (const uint16_t *)L"Shared 91", (const uint16_t *)L"Shared 92",
+        (const uint16_t *)L"Shared 93", (const uint16_t *)L"Shared 94", (const uint16_t *)L"Shared 95",
+        (const uint16_t *)L"Shared 96", (const uint16_t *)L"Shared 97", (const uint16_t *)L"Shared 98",
+        (const uint16_t *)L"Shared 99", (const uint16_t *)L"Shared 100"
     };
     int nPage = gnVpSharedPage;
     if (nPage < 0) {
@@ -1434,10 +1874,10 @@ static void VPSHAREDUI_TabLayout(int * pnWordX, int * pnWordW,
                                  int * pnLeftX, int * pbHasLeft,
                                  int * pnRightX, int * pbHasRight, int * pnArrowW) {
     int nWordW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)VPSHAREDUI_PageWord());
-    int nArrowW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)L">");
+    int nArrowW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t *)L">>"); // R145: '<<'/'>>' - one measure feeds draw + click bands
     int nRightEdge = D2Client::UI::Inv::gnPanelOffsetX + VPSHAREDUI_TAB_RIGHT_EDGE;
-    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>' on personal + page 1
-    *pbHasLeft = gnVpSharedPage > 0;                      // '<' on shared pages
+    *pbHasRight = gnVpSharedPage < VPSHAREDUI_PAGE_COUNT; // '>>' on personal + pages 1..99
+    *pbHasLeft = gnVpSharedPage > 0;                      // '<<' on shared pages
     int nWordR = nRightEdge - (*pbHasRight ? nArrowW + VPSHAREDUI_TAB_GAP : 0);
     *pnWordX = nWordR - nWordW;
     *pnWordW = nWordW;
@@ -1484,9 +1924,9 @@ BOOL __stdcall VPSHAREDUI_HandleStashClick(int nMouseX, int nMouseY) {
         // personal page; return home from any shared page).
         nNewPage = gnVpSharedPage ? 0 : 1;
     } else if (bHasLeft && nMouseX >= nLeftX - 2 && nMouseX <= nLeftX + nArrowW + 2) {
-        nNewPage = gnVpSharedPage - 1; // '<': one page left (page 1 -> personal)
+        nNewPage = gnVpSharedPage - 1; // '<<': one page left (page 1 -> personal)
     } else if (bHasRight && nMouseX >= nRightX - 2 && nMouseX <= nRightX + nArrowW + 2) {
-        nNewPage = gnVpSharedPage + 1; // '>': one page right
+        nNewPage = gnVpSharedPage + 1; // '>>': one page right
     }
 
     if (nNewPage < 0 || nNewPage > VPSHAREDUI_PAGE_COUNT || nNewPage == gnVpSharedPage) {
@@ -1495,7 +1935,7 @@ BOOL __stdcall VPSHAREDUI_HandleStashClick(int nMouseX, int nMouseY) {
 
     gnVpSharedPage = nNewPage;
     // C->S 0x4F Click Button, VP toggle id 0x7D, the ABSOLUTE desired page
-    // in the param word (0 personal / 1..10 shared-N). The send
+    // in the param word (0 personal / 1..100 shared-N). The send
     // helper packs the param word as (arg2 << 16) | (uint16)arg3, so the
     // page rides arg3 and the server activates exactly that page
     // (VanillaPlusStash.cpp; idempotent when the page is already active).
@@ -1519,11 +1959,11 @@ void __stdcall VPSHAREDUI_DrawTab() {
     VPSHAREDUI_TabLayout(&nWordX, &nWordW, &nLeftX, &bHasLeft, &nRightX, &bHasRight, &nArrowW);
     int nY = VPSHAREDUI_TabBaselineY();
     if (bHasLeft) {
-        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L"<", nLeftX, nY, 0);
+        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L"<<", nLeftX, nY, 0); // R145: was '<'
     }
     VPSHAREDUI_DrawOutlinedText(VPSHAREDUI_PageWord(), nWordX, nY, gnVpSharedPage ? 2 : 0);
     if (bHasRight) {
-        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L">", nRightX, nY, 0);
+        VPSHAREDUI_DrawOutlinedText((const uint16_t *)L">>", nRightX, nY, 0); // R145: was '>' - same measured width the click band uses
     }
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }

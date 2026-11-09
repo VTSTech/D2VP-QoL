@@ -4,6 +4,42 @@
 > per-row scoping, implementation notes, round records). Humans: the feature table and
 > status live in [README.md](README.md), per-release changes in [CHANGELOG.md](CHANGELOG.md).
 
+*v10, 2026-11-09. **Row 17 added on owner ask — IMPLEMENTED R142 (published, tag R142) + R143 sub-tick interpolation (plan Phase 2, `unlock_fps_interp` default 1; two-sample R143.1, delivery wiring R143.2 after the owner's jitter field reports; the owner field-accepted the R143.2 glide 2026-11-09: "Ok, I think it looks good now") + R144 Options-page rework — the page is two columns of six (box 0x1f1→0x151, fits 640x480 whole again) and `unlock_fps_interp` takes the twelfth row, **FPS Interpolation****; field pass GREEN on §S-61 (telemetry: presents ~60/s, client ticks ~25/s, /fps reads 60), the §S-64 mid-session menu flip (off→25, on→60, no restart) and the §S-65 glide look (owner: "looks good now"); items 62–64 + the R144 item 66 field pass pending**: the
+presentation-FPS unlock (`unlock_fps`, §17, option name **Unlock FPS**) — presents at
+~60 Hz while the simulation stays byte-exact retail 25 Hz; the same-session recon found
+the cap is a single draw gate in `CLIENT_GameLoopFrame`, not a structural coupling, and
+flagged retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` QA path as the wrong tool (it
+speeds the server). Owner scoped v1 same day: bool gate, fixed 60 Hz target, decoupled
+present only, vsync untouched. Plan: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md).
+Effort S–M as called; interpolation is the deliberate follow-on. Same day, earlier: v8.
+
+*v8, 2026-11-09. **Row 16 added on owner ask — PLANNED, not implemented**: inventory sort
+(`inventory_sort`, §16) — a Sort affordance for the personal inventory that replays the
+row 0c packet pair (`0x19` pick + `0x18` place) through a paced, abortable queue; zero
+server-side code; the one hard part is legal-move sequencing on a packed grid
+(scratch-cell cycle-breaking). Plan:
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). **Row 0a drafted the same
+day** on owner ask — the Z-key camera zoom plan
+([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)) — the Task C item finally on
+paper: renderer-side scale (the R117–R122 wide-reach arc is the zoom-out groundwork, the
+R112 stretch ladder the cursor-truth precedent), UI stays 1:1; effort firms M → M–L.
+Earlier same day: v7.*
+
+*v7, 2026-11-09. **Row 0c added and IMPLEMENTED the same round (R140)**: Ctrl+Click
+stash transfer (`ctrl_click_xfer`) — the slate's Ctrl+Click family gains its shipped
+member (§0c); the trade-screen variant stays Dropped. **Row 0b closed** (R125/R126,
+field-verified 2026-11-06). Status cells re-pinned to the field record: row 10 at ten
+Options rows (R125 ninth, R140 tenth), row 11 field-proven, row 14 field-proven (the
+R109–R122 wide arc + the R124 D3D fullscreen boot-crash fix), row 15 Implemented
+(R115). The gate suite is **RETIRED** (rev 152, 2026-11-09 — git history keeps the
+525-check script; the owner's Win11 MSYS2 build is the compile gate of record, CI
+builds every push/PR), so per-row "gate pending" tails are gone and the QA contract
+below names the Win11 build + the SMOKE-CHECKLIST field loop. The fix/merge rounds
+between slate work (R128–R135: the Gheed gamble fix, the ninth/tenth upstream syncs,
+the rollback + salvage) carry no slate rows — records in
+[CHANGELOG.md](CHANGELOG.md)/[HISTORY.md](HISTORY.md). **Shipped as of R140: ten
+features.**
+
 *v6, 2026-11-05. Rows 14–15 added on owner ask — **planned, not implemented**: resolution
 modes. Row 14 activates retail's own **dormant 1344x700** (mode 3 — wired in the binaries,
 never a UI stop); row 15 adds **1920x1080**. Video-options slider stops, not `[features]`
@@ -61,15 +97,17 @@ Every slate row must satisfy all of these before it ships:
    single hook all consumers route through over scatter-shot patches.
 5. **No balance, no save-format change.** Gold-only, display-only, or input-only
    behavior; `.d2s`/`.d2x` layouts stay untouched.
-6. **QA**: per-TU llvm-mingw compile of every touched TU + full gcc build (Win11 gate or
-   CI) + the §11 field loop; handoff ledger row + worklog entry per round.
+6. **QA**: the owner's Win11 MSYS2 build (the compile gate of record since the
+   gate suite retired, rev 152) + CI's mingw-i686 build + the SMOKE-CHECKLIST
+   field loop for the touched surface; handoff ledger row + worklog entry per round.
 
 ## The slate (ranked low-risk first)
 
 | # | Feature | Area | D2R parity source | Effort | Risk | Gate key |
 |---|---|---|---|---|---|---|
-| 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M | Med | `camera_zoom` |
-| 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; llvm-mingw gate + field QA pending) |
+| 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **PLANNED**, drafted 2026-11-09: [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md) (renderer-side scale, UI stays 1:1, cursor truth; the R117–R122 reach arc is the zoom-out groundwork) |
+| 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
+| 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
 | 1 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
 | 2 | Clock / game-timer overlay | HUD | D2R Tab-screen game timer; BH wall-clock | S | Low | `clock_overlay` |
 | 3 | Item ilvl on tooltips | Loot | D2R 2.5 display-item-level toggle | S–M | Low | **Shipped** (R55 standalone line → R56 name-suffix → R57 bare digits → R59 single-space trim — `item_ilvl`, see §3; first shipped in release 0.0.7) |
@@ -78,25 +116,37 @@ Every slate row must satisfy all of these before it ships:
 | 6 | Auto gold pickup | Loot | D2R "Gold Pickup" gameplay option | M | Med | **Shipped 0.0.4** (2026-10-29: ledger row 33; field-verified — "Auto-Gold Pickup works!" — coexists with alt_toggle) |
 | 7 | Automap scale + position | HUD | D2R larger overlay map | M | Med | `automap_scale` |
 | 8 | Quick-cast keys | Controls | D2R-adjacent (PD2 quick cast) | M–L | Med–High | `quick_cast` |
-| 9 | Shared side-file stash | Stash | None — owner suggestion (PlugY-style side file) | L | Med–High | **Round 1 FIELD-PROVEN (R63, Rev 82; build-fix R64, Rev 83; tab-anchor fixes R65+R66, Revs 84-85; owner on R66: "Great job. I see it. It works.")** — 1 retail-shaped page via a stash-panel "Shared" tab (no hotkey), items + gold, own `_d2vp_shared.sss` file, `.d2s` retail-pure (save-flush design); SP-only v1; mechanism field-proven on the R65 build blind (page swap + cross-char item/gold round trip), tab visibility confirmed on R66. First shipped in release **0.0.7** (cut at R66); in-game **Shared Stash** row on the Vanilla+ Options page added R67 (no longer ini-only). **R75 (Rev 97): a SECOND shared page + pager** (owner: "give the current stash tab label an outline" + "add a 2nd page and buttons/arrows to navigate pages") — the label draws with a 1-px black halo on all four sides, `<`/`>` arrows beside the word step personal → Shared 1 → Shared 2, the word itself toggles back to personal, `_d2vp_shared.sss` v2 stores both pages (v1 files load as page 1), the 0x4F/0x7D param word carries the absolute desired page. (The R68–R71 tab polish — Font24, floating row, backdrop pill — was rolled back by owner decision at `59ff645`; R75 builds on the R66 in-panel tab.) **R82 (Rev 105): TEN shared pages** (owner: "increase the shared stash pages to 10") — the planned v2-header widening: same magic + version, `pageCount` 10 (header 28 → 92 bytes), pre-R82 two-page files read back with pages 3-10 empty (next save rewrites ten), labels `Shared 1`…`Shared 10`, arrows still step one page, one gold pool across all ten. SMOKE debts cleared: §H items 25 (`.d2s` in retail) + 27 (degrade drill) confirmed in the R83 full-belt pass ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24), 2026-11-02), the ten-page items 33-35 rode the R104 full pass ([#28](https://github.com/VTSTech/D2VP-QoL/issues/28), 2026-11-04); the "Then 100" leg widens the same two constants. Plan: plans/SHARED-STASH-PLAN.md |
-| 10 | Vanilla+ Options menu page | UI | None — owner suggestion 2026-10-29; in-game settings surface for the gated features | M | Med→Low | **Shipped** (landed 2026-10-30, ledger row 34; first release **0.0.6**); **eight rows as of R108** — the slate's five shipped keys + Shared Stash (R67: the row busts the client stash gate cache too, so the tab follows the toggle the same frame) + No Panel World Shift (R101, issue #26 round 9: the write bridge already busts the PANELSHIFT cache, so the flip applies same-frame; the seventh row moved the Previous Menu row down one pitch, 0x124→0x144) + Mana Burn Fix (R108: the R106 combat gate joins the panel — the eighth row moved the Previous Menu row down one pitch again, 0x144→0x164, and grew the box 0x171→0x191; the server gate keeps its 2 s poll by design, so a flip lands on the next drain roll within 2 s while the panel shows it same-frame) |
-| 11 | Mana Burn fix (melee drain 256x bug) | Combat (D2Game) | D2R 2.4 patch notes ("fixed melee hits draining 256 times too much") + Basin wiki Mana Burn | S | Low | **Implemented** (R106 — `mana_burn_fix`; ini-only at ship, in-game **Mana Burn Fix** row on the Vanilla+ Options page since R108; server-side gate TU + VP-marked drain-roll shim in SUnitDmg.cpp; field QA + llvm-mingw gate pending) |
+| 9 | Shared side-file stash | Stash | None — owner suggestion (PlugY-style side file) | L | Med–High | **Round 1 FIELD-PROVEN (R63, Rev 82; build-fix R64, Rev 83; tab-anchor fixes R65+R66, Revs 84-85; owner on R66: "Great job. I see it. It works.")** — 1 retail-shaped page via a stash-panel "Shared" tab (no hotkey), items + gold, own `_d2vp_shared.sss` file, `.d2s` retail-pure (save-flush design); SP-only v1; mechanism field-proven on the R65 build blind (page swap + cross-char item/gold round trip), tab visibility confirmed on R66. First shipped in release **0.0.7** (cut at R66); in-game **Shared Stash** row on the Vanilla+ Options page added R67 (no longer ini-only). **R75 (Rev 97): a SECOND shared page + pager** (owner: "give the current stash tab label an outline" + "add a 2nd page and buttons/arrows to navigate pages") — the label draws with a 1-px black halo on all four sides, `<`/`>` arrows beside the word step personal → Shared 1 → Shared 2, the word itself toggles back to personal, `_d2vp_shared.sss` v2 stores both pages (v1 files load as page 1), the 0x4F/0x7D param word carries the absolute desired page. (The R68–R71 tab polish — Font24, floating row, backdrop pill — was rolled back by owner decision at `59ff645`; R75 builds on the R66 in-panel tab.) **R82 (Rev 105): TEN shared pages** (owner: "increase the shared stash pages to 10") — the planned v2-header widening: same magic + version, `pageCount` 10 (header 28 → 92 bytes), pre-R82 two-page files read back with pages 3-10 empty (next save rewrites ten), labels `Shared 1`…`Shared 10`, arrows still step one page, one gold pool across all ten. SMOKE debts cleared: §H items 25 (`.d2s` in retail) + 27 (degrade drill) confirmed in the R83 full-belt pass ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24), 2026-11-02), the ten-page items 33-35 rode the R104 full pass ([#28](https://github.com/VTSTech/D2VP-QoL/issues/28), 2026-11-04); the "Then 100" leg widens the same two constants. **R146: A HUNDRED shared pages** (owner: "Good job, works. Let's increase the Shared Stash pages to 100") — that leg arrived: `VPSTASH_PAGE_COUNT`/`VPSTASH_PAGES` 10 → 100 (v2 header 92 → 812 bytes; per-page records only for used pages), the client word table grew to 101 script-generated labels `Shared 1`…`Shared 100`, narrower files (v1 / pre-R82 two-page / R82-R145 ten-page) load with the missing pages empty and rewrite as a hundred on the next save, a wider file (pageCount > 100) is still rejected whole, the `<<`/`>>` pager, the word toggle and the 0x4F/0x7D packet are untouched. Plan: plans/SHARED-STASH-PLAN.md |
+| 10 | Vanilla+ Options menu page | UI | None — owner suggestion 2026-10-29; in-game settings surface for the gated features | M | Med→Low | **Shipped** (landed 2026-10-30, ledger row 34; first release **0.0.6**); **ten rows as of R140** — the slate's five shipped keys + Shared Stash (R67: the row busts the client stash gate cache too, so the tab follows the toggle the same frame) + No Panel World Shift (R101, issue #26 round 9: the write bridge already busts the PANELSHIFT cache, so the flip applies same-frame; the seventh row moved the Previous Menu row down one pitch, 0x124→0x144) + Mana Burn Fix (R108: the R106 combat gate joins the panel — the eighth row moved the Previous Menu row down one pitch again, 0x144→0x164, and grew the box 0x171→0x191; the server gate keeps its 2 s poll by design, so a flip lands on the next drain roll within 2 s while the panel shows it same-frame) + Shift Item Compare (R125: the ninth row — Previous Menu moved 0x164→0x184, box 0x171→0x1b1) + Ctrl Click Transfer (R140: the tenth row — Previous Menu moved 0x184→0x1a4, box 0x1b1→0x1d1; the flip lands on the very next Ctrl+Click) |
+| 11 | Mana Burn fix (melee drain 256x bug) | Combat (D2Game) | D2R 2.4 patch notes ("fixed melee hits draining 256 times too much") + Basin wiki Mana Burn | S | Low | **Implemented** (R106 — `mana_burn_fix`; ini-only at ship, in-game **Mana Burn Fix** row on the Vanilla+ Options page since R108; server-side gate TU + VP-marked drain-roll shim in SUnitDmg.cpp; **field-proven** — daily play + the handoff field table) |
 | 12 | Stackable gems | Inventory | None — owner suggestion 2026-11-05; PD2 stacks gems in its currency tab | M | Med | `stack_gems` |
 | 13 | Stackable runes | Inventory | None — owner suggestion 2026-11-05; PD2 stacks runes in its currency tab | M | Med | `stack_runes` |
-| 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432; llvm-mingw gate + D3D re-test pending (owner); plan: plans/1344x700-PLAN.md §10) |
-| 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | video-options slider stop 6 / mode 6 (not `[features]`-gated; slot bookkeeping after R112 — see §15) |
+| 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
+| 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
+| 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
+| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
 
-Rows 0a/0b are **Task C** (handoff §9 item 3) — already scoped, awaiting go; they are
+Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
+2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
+shipped (R125, field-verified R126) and row 0c shipped (R140) — they are
 the slate's head, not new scope. Rows 1–9 were the new candidates; row 6 shipped for 0.0.4, and row 1 shipped as the orb-face readout and was repurposed post-release (see §1).
 Rows 12–13 are **planned scope** (owner suggestion 2026-11-05, not yet implemented): one
 mechanism — letting a class of items merge into stacks the way arrows/tomes already do —
-behind two separate gates, drafted together in §12/§13. Rows 14–15 are planned scope too
-(owner ask 2026-11-05): 1344x700 activates a retail-dormant engine mode — the whole
-site-1..6 pipeline already routes it, three gaps close it (§14, [plans/1344x700-PLAN.md](plans/1344x700-PLAN.md)) —
-and 1920x1080 is one full site-1..6 round on the 720p playbook (§15).
-**Shipped as of R108**: rows 1, 3, 6, 9, 10 and 11 — plus, outside this slate, the
-pre-slate pair `alt_toggle`/`portable_save` (handoff ledger rows 28–31, releases
-0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). As-built docs for
+behind two separate gates, drafted together in §12/§13. Row 16 is **planned scope**
+(owner suggestion 2026-11-09, not yet implemented): a Sort affordance for the personal
+inventory — retail-packet replay, zero server changes; drafted in §16, full plan at
+[plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md). Row 17 **implemented R142**
+(owner ask 2026-11-09): the presentation-FPS unlock — the sim stays 25 Hz, only the
+present decouples; scoped in §17, full plan at
+[plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md), field pass green on §S-61 + the §S-64 menu flip + the §S-65 glide look (62–64 and the R144 item 66 field pass pending; R143 shipped the Phase 2 interpolation, R144 put it on the panel). Rows 14–15 **shipped** as the
+video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mode — the
+whole site-1..6 pipeline routes it (§14) —
+and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
+**Shipped as of R144**: rows 0b (R125/R126), 0c (R140), 17 (R142 + the R143 interpolation + the R144 panel row), plus rows 1, 3, 6, 9, 10
+and 11 — and, outside this slate, the pre-slate pair
+`alt_toggle`/`portable_save` (handoff ledger rows 28–31, releases
+0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Twelve features
+ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 
 ---
@@ -178,6 +228,75 @@ slot preference (Slot rules above), +1 `shiftcmp:` gate (shield-kind slot pick) 
 `Vanilla+0.0.8-R126` (509/509 after the R127 vpdiag retirement, 510/510 with the
 docs-budget gate). **FIELD-VERIFIED 2026-11-06** ("Great job, works" — the shield
 slot legs ran on the owner builds). Nothing owed.
+
+### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35)
+
+**The ask** (owner, 2026-11-09, no issue): "Can we make Ctrl+Click put/remove items from
+Stash when Stash is open?" — D2R PC parity (Ctrl+Click moves an item with a container
+open).
+
+**The defect underneath.** Retail wires Ctrl+Click to the sell-to-shop path only
+(`Inv.cpp` `ClickItemLeft`, empty-hand branch, `GetAsyncKeyState(0x11)`): with an NPC
+interacted it sells (`0x33`) or refuses (player sound 0x13); with **no shop open** —
+stash, cube, trade — the decompiled shape fell through to a bare
+`ITEM_RemoveClientSide(pCursorItem)` with **no packet**: the clicked item vanished
+client-side until the next inventory sync. A dead click; the vanish is the tell.
+
+**The fix — re-express the dead branch as the transfer** (one VP block, `Inv.cpp`,
+marks `// VP-BEGIN/END [ctrl-click stash R140]`). The clicked item's containing page
+(`ITEM_GetContainingInventoryPage`) picks the direction — `INVPAGE_INVENTORY` → stash
+(target buffer byte 4), `INVPAGE_STASH` → inventory (byte 0) — and the move rides the
+**same two-packet pair a manual drag sends, back to back**: `0x19` remove-from-buffer
+(pick to cursor) then `0x18` insert-into-buffer at the free cell the **same
+`INVENTORY_FindItemGridPosition` the put-in-cube branch uses** (out-params column/row;
+page via `GetInventoryPage(pUnit, byte, LoD)`). The `0x19` pick is mandatory: the
+server's `0x18` handler (`SCMD_0x18_ItemToInventory`) opens with
+`SERVER_IsItemOnCursor` and rejects the insert otherwise — which is why the first R140
+field build (`0x18` alone) silently did nothing: sound played, item stayed. Success =
+`ITEM_RemoveClientSide` + the item sound, `return 1` — the server broadcasts the
+placement exactly like a drag-drop. Full target = the cube path's refuse sound (0x13),
+`return 0`. The stash UI's personal (`0xc`) and shared (`0xd`) views are both page-4
+content (the fork's shared pages are page-4 content swaps), so the Shared tab works
+unchanged. Untouched on purpose (the retail fall-through keeps their shape): belt
+items, the cube-open panel, the trade-open panel, and the shop sell/refuse path.
+
+**Gate**: `[features] ctrl_click_xfer` default 0 — the Vanilla+ Options page's **"Ctrl
+Click Transfer"** row (the tenth; `VPCTRLXFER_Active` hot-reads per click and the write
+bridge busts its cache tick, so a flip lands on the very next Ctrl+Click — no restart,
+no panel reopen). Off = the retail dead click, byte-for-byte pre-R140. The ini template
+block ships in the same round: a fresh `d2vp.ini` carries the key; an ini from before
+R140 reads 0 until the row is flipped once.
+
+**Verification + field**: sandbox call-shape audit against every sibling send in the
+function + brace/flow review of the whole hunk (no cross toolchain this round); compile
+gate of record = the owner's Win11 MSYS2 build. Self-ID → **`Vanilla+0.0.8-R140`** —
+the first ride of the R139 one-line round-bump define (`D2VP_ROUND "140"` in
+`Redivivus/d2_boot.h`; the title-screen and automap tags follow automatically). Field
+ask: **SMOKE §R items 57–58** (put + take, shared-page ride-alongs, full-target
+refuse — **not yet field-run**). Record: [HISTORY.md](HISTORY.md) **H60**. Files:
+`Inv.cpp` (the branch), `VanillaPlusCore.{h,cpp}` (gate + ini template),
+`VanillaPlusOptions.cpp` (row 10 — box height 0x1b1→0x1d1, Previous Menu row
+0x184→0x1a4).
+
+**R141 field catch + fix** (owner, first field pass on the R140 build: "The items move,
+but the slot they once occupied becomes unusable."): the R140 pair went out back to back,
+so the client processed the **pick echo and the place echo in the same packet drain** —
+a sequence no retail flow produces (a manual drag settles the pick on the hand, lifting
+the item out of the source grid, frames before any place), and the **source container's
+client-side grid entry went stale**: the emptied slot refused every later placement.
+Server side was clean (the item did move; the target insert is unlink-before-relink —
+D2Common `PutItemInInventory`, `Inventory.cpp` :755). Fix, retail-shaped: the click sends
+the `0x19` and **parks** the `0x18` (`VPCTRLXFER_ParkPlace`, VanillaPlusCore.cpp); the
+stash-panel draw releases it **one full frame later** (`VPCTRLXFER_TickPendingPlace`,
+called beside `VPSHAREDUI_DrawTab` at the Inv.cpp stash draw site) — a fast manual drag.
+Panel closed inside the 1-frame window = the interrupted-drag state (item stays on the
+hand/cursor, player-recoverable). Self-ID → **`Vanilla+0.0.8-R141`**. Field ask: re-run
+SMOKE §R 57–58 + the new **60** (the emptied slot accepts a placement immediately after
+the transfer, both directions). **FIELD-VERIFIED 2026-11-09** — owner: "R141 confirmed
+closes #35": the emptied slot takes placements, both directions, transfers still
+complete; owner-closed ([#35](https://github.com/VTSTech/D2VP-QoL/issues/35)); standing
+regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + the tick call),
+`VanillaPlusCore.{h,cpp}` (park + tick), `Redivivus/d2_boot.h` (round bump).
 
 ### 1. Persistent globe text (was: HP/MP globe hover values) — `[features] globe_persistent`
 
@@ -374,8 +493,9 @@ slot legs ran on the owner builds). Nothing owed.
 ### 9. Shared side-file stash — `[features] shared_stash`
 
 - **SHIPPED — field-proven end to end**: first in release **0.0.7** (cut at R66),
-  grown to **ten** shared pages (R82); the as-built record — the outlined in-panel
-  tab, the `‹`/`›` pager, the `_d2vp_shared.sss` v2 header and the ten-page widening,
+  grown to **100** shared pages (ten R82, a hundred R146); the as-built record — the outlined in-panel
+  tab, the `<<`/`>>` pager (single-glyph `‹`/`›` through R144; R145 doubled the
+  glyphs for a bigger click target), the `_d2vp_shared.sss` v2 header and the ten-page widening,
   plus the SMOKE confirmations — lives in slate row 9 above and in
   [plans/SHARED-STASH-PLAN.md](plans/SHARED-STASH-PLAN.md). The design text below is the
   pre-implementation draft: its hotkey idea was superseded by the in-panel tab, and
@@ -455,8 +575,9 @@ slot legs ran on the owner builds). Nothing owed.
   chain-break) → rev 3 = Route B label + 3-entry input batch + baseline-anchored
   page text. **Shipped in 0.0.6** (2026-10-30, ledger row 34); field-proven since
   via the R83 and R104 full smoke belts ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24),
-  [#28](https://github.com/VTSTech/D2VP-QoL/issues/28)); the page carries eight rows
-  as of R108 (slate row 10 above).
+  [#28](https://github.com/VTSTech/D2VP-QoL/issues/28)); the page carries **ten rows**
+  as of R140 (R125 added the ninth, Shift Item Compare; R140 the tenth, Ctrl Click
+  Transfer — slate row 10 above).
 - **Risk**: Med→Low. Novel Route A synthesis retired; everything now mirrors
   proven in-tree patterns (ControlConfig text/rows, esc-menu row callbacks, blank
   placeholder = the byte shape field-proven in round 1). Zero D2Game/D2Common
@@ -581,7 +702,7 @@ slot legs ran on the owner builds). Nothing owed.
   class) consumes 3 off a stack of N without dupe or loss, and two of the same rune in one
   container always end as one stack with the right count.
 
-### 14. 1344x700 resolution — activate retail's dormant mode 3 (IMPLEMENTED R109 — code in tree; llvm-mingw gate + field QA pending)
+### 14. 1344x700 resolution — activate retail's dormant mode 3 (IMPLEMENTED R109; FIELD-PROVEN — the R109–R122 wide arc + the R124 D3D fullscreen boot-crash fix, field-verified 2026-11-06)
 
 - **As-built (R109, the three-gap round)**: **Gap A** — `CLIENT_SetScreenResolution`
   case 3 sets ScreenSize 1344x700 + `nScreenMode = 1`, riding the same retail downstream
@@ -735,14 +856,15 @@ slot legs ran on the owner builds). Nothing owed.
   implemented or shipped") matches the mechanism half: wired, never exposed. The
   classic-D2 community has played on it for years via patches (D2MultiRes 2009-era;
   SlashDiablo HD1 "up to 1344x700"; Puppeteer's "1344x700 and 1068x600" dlls).
-- **Why it is cheap**: the 1280x720 round (sites 1–6,
-  [docs/resolution-widelayout-audit.md](docs/resolution-widelayout-audit.md)) built the
+- **Why it was cheap**: the 1280x720 round (sites 1–6,
+  `docs/resolution-widelayout-audit.md` — left the tree at the 2026-11-08 cleanup,
+  git history keeps it) built the
   wide-UI class generically and reserved mode 3 everywhere — `VPRES_IsWideLayoutMode`
   includes 3, offsets compute themselves (X 272 / Y 100), and every renderer dispatch and
-  dims guard already lists (1344,700). Three gaps close it: the missing `case 3` in
+  dims guard already lists (1344,700). Three gaps closed it: the missing `case 3` in
   `CLIENT_SetScreenResolution`, the slider's missing fourth stop, and the mini-panel's own
   position→mode re-apply (`SetupMiniPanel` — runs at every game-enter and cutscene-exit).
-  Plan: [plans/1344x700-PLAN.md](plans/1344x700-PLAN.md).
+  Plan doc: `plans/1344x700-PLAN.md` — left the tree at the same cleanup (git history keeps it).
 - **Proposed**: append a fourth slider stop mapping to mode 3. Existing registry positions
   0–2 keep their meaning (720p users unaffected); not `[features]`-gated — opt-in by
   picking the stop, same as 720p.
@@ -843,6 +965,111 @@ slot legs ran on the owner builds). Nothing owed.
 
 ---
 
+### 16. Inventory sort — `[features] inventory_sort` (PLANNED — owner suggestion 2026-11-09, not implemented)
+
+- **The ask** (owner, 2026-11-09, chat, no issue): "How hard would it be to add an
+  inventory sort?" — assessed **Medium, easier than row 9**: unlike the shared stash it
+  needs zero server-side code, because every move is a packet a manual drag also sends.
+- **No D2R parity** (D2R never shipped a sort button, through 2.7); the sort/arrange
+  button is a modern-ARPG staple (D3's stash anvil) and replaces the ATMA/GoMule
+  one-cell-at-a-time re-arranging habit. Same framing as rows 4, 9 and 12/13
+  (owner suggestion, no-parity).
+- **Behavior (v1)**: a Sort affordance on the personal inventory panel sorts the personal
+  inventory grid only — potions, then keys/tomes/scrolls, then gems/runes/jewels, then
+  charms, then rings/amulets, then the rest — shelf-packed top-left, bigger footprints
+  first. Equipped, belt, cube contents and the stash are untouched; the sort is a
+  **visible sequence of real moves** (~3–5 s paced), not an instant rearrange.
+- **Mechanism**: snapshot the grid → score + shelf-pack the target layout → diff into a
+  legal move list → replay as the row 0c `0x19`+`0x18` packet pairs through
+  `NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT`, paced ~100–150 ms. The one hard part is
+  legal-move sequencing on a packed grid (scratch-cell cycle-breaking); the abort surface
+  (user click wins, panel close/death/TP/game-leave kill the queue, refuse-don't-retry)
+  is must-have, not polish. `.d2s`/`.d2x` untouched; realm-safe in principle.
+- **Risk**: Med — the first slate row that streams a scripted input sequence
+  (desync-adjacent races, bounded by the abort surface). **Exit**: determinism, the
+  3-free-cells scratch-cell case, no residual cursor item after any abort, `0` = vanilla
+  byte-for-byte, retail-load `.d2s` clean.
+- **Full plan: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md)** — pillars,
+  tree-verify anchors, the sequencer, the failure matrix, the three-round roadmap and the
+  four owner calls (trigger; category order; size- vs name-first; stash affordance in v1).
+
+---
+
+### 17. Presentation FPS unlock — `[features] unlock_fps` (Implemented R142 published + R143 interpolation + R144 panel row — owner ask 2026-11-09; field green on §S-61 + §S-64 flip + the §S-65 glide look, 62–64 + item 66 field pass pending)
+
+- **The ask** (owner, 2026-11-09, chat, no issue): "How can we unlock the FPS to 60 in D3D
+  fullscreen?", scoped by the follow-up: the 25 FPS is known to be tied to the game tick
+  rate — "can we maintain the default tick rate while unlocking the presentation FPS".
+  The same-session recon answered **yes**: the coupling is a draw gate, not a structural
+  one. Owner set the v1 scope the same day: **bool gate, fixed 60 Hz target, decoupled
+  present only, vsync untouched, option named Unlock FPS** (§9 of the plan).
+- **The cap, mapped** (the recon's value — every site read this session): the simulation
+  paces itself — `SrvProcessAllGames` enforces its own 40 ms cadence internally
+  (`Frames_TimeBetweenFrames = 1000/25`) and runs every pump iteration regardless; the 25
+  FPS *presentation* exists only because `CLIENT_GameLoopFrame` gates
+  `CurrentDrawFunction(0)` behind the tick (`if (!gnFrameSkipCounter)`, one draw per
+  40 ms window). `D2GFX_EndScene`'s 5 ms budget is an anti-spin guard, and the D3D
+  fullscreen present (a DirectDraw `Flip`, vsync flag 1 / NOVSYNC 9 in
+  `D2Direct3D/Renderer/Direct3D.cpp`) flips whenever called — the flip is not the limiter.
+- **Mechanism (v1, shipped R142)**: keep the tick gate for the server tick +
+  `ClientSideGameLoop` byte-exact; the draw moved behind a 60 Hz present pacer
+  (`UNLOCKFPS_ShouldPresent`, VanillaPlusCore.cpp — skip-never-queue, >= 4 periods stale
+  re-anchors); the message-pump idle sleep paces to the pacer deadline
+  (`UNLOCKFPS_IdleSleepMs`); the EndScene budget dropped 5→1 ms under the gate (D2gfx
+  keeps its own 2 s-poll reader — no D2Client imports across the renderer boundary);
+  tick/present stats split — a presents/ticks-per-second pair goes to d2boot.log every
+  5 s so field reports can *count* that the sim is unchanged. Renderer-agnostic by
+  construction (the pacer sits upstream of EndScene, shared by all backends).
+  `timeBeginPeriod(1)` raised once on first activation (one-way latch).
+- **The trap, flagged**: retail's own `GAMETYPE_SINGLEPLAYER_UNCAPPED` game type /
+  `CONNECTIONTYPE_SINGLEPLAYERUNCAPPED` connection looks like the hook for this — it is
+  not: it speeds the **server** (skips a 500 ms packet throttle, bypasses dispatch
+  gating), a game-speed unlock that changes gameplay. The plan touches none of it.
+- **Interpolation (Phase 2 — shipped R143, two-sample R143.1, delivery wiring R143.2)**: the draw-time offset is
+  now **interpolated between two real position samples**: `UNLOCKFPS_NoteClientTick`
+  snapshots the player's draw-space position (the same `GetTargetX/Y` every consumer
+  reads live — hence the R143.2 call site BEFORE the draw block) at each client world
+  update, and `UNLOCKFPS_GetPlayerRenderOffset`
+  returns `offset = −(cur − prev) × (1 − α)` (`α = ms since that update / 40`, clamped
+  to one tick) at five draw-time sites, all write-nowhere: the view center
+  (`InGameDraw`), the sprite world offset (`DRAW_UpdateMouseWorldOffsets` — floor and
+  sprites scroll together, mouse pick stays consistent; R143.2: the delta applies
+  BEFORE the shake early-return, so unit shadows, state overlays, `GFX_IsUnitOnScreen`
+  culling and the pick really ride it in normal play), the player's sprite (its delta
+  cancels the camera's, so the character keeps its retail screen-fixed position while the
+  WORLD glides; R143.2: adds top-down, subtracts in perspective), and the player's shadow
+  + state overlays (stay glued). Continuous at
+  every tick boundary by construction; computed once per present and shared by all sites
+  (dedicated epoch counter); a >128 px/tick jump (teleport, level change) snaps. The
+  original R143 form extrapolated retail's `PATH_GetScreenVelocity` (the Charge-trail
+  primitive) — its prediction error snapped the picture every tick boundary (the owner's
+  "jittery, looks better at 0" field report), hence the R143.1 revision; R143.1 still
+  kicked in the field ("still looks jittery at 1, looks better at 0") because the
+  delivery around the math was broken — the snapshot ran after the draw (a full-tick
+  sawtooth at every tick+present boundary) and the sprite-world offset's delta was dead
+  behind the shake early-return — hence R143.2. Monsters,
+  missiles, items ride the world offset unchanged — they glide with the floor.
+  Animations stay tick-locked. Sub-gate **`[features] unlock_fps_interp`** (default 1;
+  ini-only through R143 — since R144 the twelfth Vanilla+ Options row, **FPS
+  Interpolation**, directly under its owner; the row rides the same write bridge as the
+  others and reads a missing key as 1 through the per-row read default
+  `D2VP_GetFeatureToggleDefault`, matching the gate — a pre-R143 ini without the key
+  displays On, which is what the gate acts on; 0 = the R142 look, hot-read either way). Known minor: the automap
+  arrow and the player's overhead label keep tick positions (≤ one tick of travel).
+  Harness: R143.1 34/34 unit green, superseded R143.2 by the loop-order wiring sim
+  10/10 green (sawtooth reproduction + monotone bounded glide + kick-free stop/turn).
+- **Risk**: Med — ×~2.4 draw cost at 60 Hz (the renderer idles 37.5 of every 40 ms today;
+  skip-never-queue pacer bounds the overrun) and pacing wobble from Sleep granularity
+  (`timeBeginPeriod(1)` from the already-imported winmm — verify). **Exit**: tick-rate
+  identity proven by counting, `unlock_fps=0` byte-for-byte vanilla, 60 presents/s on a
+  60 Hz vsync panel, pause/cutscene/loading untouched.
+- **Full plan: [plans/FPS-UNLOCK-PLAN.md](plans/FPS-UNLOCK-PLAN.md)** — pillars, the
+  cap-site map with line anchors, the pacer design, the failure matrix, the three-round
+  roadmap and the four owner calls, all resolved same day (bool v1 at a fixed 60;
+  decoupled first; vsync untouched; option named **Unlock FPS**, ini key `unlock_fps`).
+
+---
+
 ## Dropped candidates (and why)
 
 | Candidate | Verdict | Reason |
@@ -853,16 +1080,17 @@ slot legs ran on the owner builds). Nothing owed.
 | Loot filter | **Parked** | Its own project (filter language + UI + config surface) — PD2 ships BH wholesale; would dominate the roadmap. Not a "backport", a subsystem. |
 | Buff timers with icons | **Parked** | Icon assets violate code-only; text-only timers possible later if wanted (reuses row-2 overlay pattern). |
 | Keybind remapping UI | **Dropped** | Vanilla 1.14 already ships customize-keys; D2R's delta is small. |
-| Ctrl+click in trade screens | **Dropped** | A forum request, not a shipped D2R feature; trade screens are BNet-adjacent and upstream-locked. |
+| Ctrl+click in trade screens | **Dropped** | A forum request, not a shipped D2R feature; trade screens are BNet-adjacent and upstream-locked. (The stash/inventory sibling is NOT dropped — it shipped as row 0c, R140.) |
 
 ## How a slate row becomes a shipped feature
 
 1. **Tree-verify** the row: exact anchors + grep gates (Task-C detail, handoff row-28
    style), TU list.
 2. **Implement** against the feature contract above; one row per round.
-3. **QA**: per-TU llvm-mingw + full gcc build gate + §11 field loop.
+3. **QA**: the Win11 MSYS2 build (compile gate of record) + the SMOKE-CHECKLIST
+   field loop for the touched surface.
 4. **Land**: handoff ledger row (`vanilla-plus feature: ...`), ini template entry,
-   VANILLA-PLUS.md Features section, release note at the next tag.
+   the README feature-table row, release note at the next tag.
 
 ## Sources
 
@@ -876,14 +1104,25 @@ slot legs ran on the owner builds). Nothing owed.
   stackable gems + runes (2026-11-05 — no-parity rows 12–13: D2R never shipped stacking —
   2021 petitions, the "Really? 2023 and no stackable runes/gems?" Blizzard forum thread,
   "they did nothing" replies on the 2.7 notes thread — while PD2 ships it, "Hellforge will
-  now drop stacked gems and runes" in the patch notes linked above).
+  now drop stacked gems and runes" in the patch notes linked above); inventory sort
+  (2026-11-09 — no-parity row 16: D2R has no sort button; D3's stash anvil and the
+  ATMA/GoMule re-arranging habit are the prior art, §16); Z-key camera zoom (2026-11-09 —
+  the row 0a Task C draft; D2R launch feature); presentation-FPS unlock (2026-11-09 —
+  row 17, the owner's 60 Hz ask with the tick-rate constraint).
+- Zoom prior art: D2R's launch camera zoom (Z / mouse wheel); d2dx/d2gl-class
+  renderer-side dynamic zoom — projection scale + inverse cursor mapping, the class
+  plans/CAMERA-ZOOM-PLAN.md follows; hackmap-era engine-side zoom (the rejected class —
+  it fights the game's own click mapping).
 - Engine grounding: Phrozen Keep draw-mode documentation (25%/50% stipple, color
   blends; 1.10/1.13-era threads) — the paletted transparency family row 4 mode 2 uses.
 - Resolution prior art: retail's dormant mode 3 (in-tree: size-table case, DDraw sentinel
   slot, GDI `0x540` branches); D2MultiRes (moddb, 2009 — "resolutions other than 640x480
   and 800x600"); SlashDiablo HD (slashdiablo.net/about — "HD1 with up to 1344x700");
   Puppeteer extended-resolution dlls ("1344x700 and 1068x600"); SGD2FreeRes
-  (github mir-diablo-ii-tools — arbitrary-resolution backport project).
+  (github mir-diablo-ii-tools — arbitrary-resolution backport project). (The in-tree
+  grounding docs — `docs/resolution-widelayout-audit.md`, `plans/1344x700-PLAN.md` —
+  left the tree at the 2026-11-08 cleanup; git history keeps them.)
 - In-tree grounding: handoff.md rows 28–31 (the feature-era map), fix-14 Drop.cpp map;
   FEATURES row-4 scan of `D2Client/UI/Panel.cpp` (2026-10-29); resolution site-1..6 record
-  (docs/resolution-widelayout-audit.md) + the mode-3 recon in plans/1344x700-PLAN.md §3.
+  (docs/resolution-widelayout-audit.md) + the mode-3 recon in plans/1344x700-PLAN.md §3
+  (both docs left the tree at the 2026-11-08 cleanup — git history keeps them).

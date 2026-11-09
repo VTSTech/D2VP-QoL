@@ -1,6 +1,8 @@
+<img width="1916" height="1078" alt="image" src="https://github.com/user-attachments/assets/e66eb061-1a2e-49f0-8a13-4d7dadf2a59d" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/bd850c32-2a98-477f-bda9-a22e41d18bbd" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/999da238-d2f1-4c83-9a01-910daeea65a2" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/fb46e254-b1ce-44b7-a59c-0736af6ce05d" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b90c086e-189a-4d0c-950a-97a2b3e79ab9" />
+
 
 # D2VP Vanilla+QoL
 
@@ -9,8 +11,8 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R137-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
-[![Gates](https://img.shields.io/badge/vanilla%2B%20gates-524%2F524-2ea043)](tools/check-vanilla-plus.sh)
+[![Release](https://img.shields.io/badge/release-0.0.8--R144-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -47,20 +49,25 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | Auto Gold Pickup | `[features] auto_gold` | Gold piles in pickup range are collected when you walk over them, via the game's own server-side pickup path. Gold only; never moves your character. |
 | Persistent Globe Text | `[features] globe_persistent` | Retail's above-orb Life/Mana readout stays visible without hovering. Pure display. |
 | Item Level Tooltips | `[features] item_ilvl` | Appends ` (N)` to the item name on every item tooltip. |
-| Shared Stash | `[features] shared_stash` | An outlined "Shared" tab over **ten** retail-shaped stash pages every character on the PC shares (items + one gold pool survive the character), with `‹`/`›` pager arrows; stored in its own `_d2vp_shared.sss` — character `.d2s` files stay retail-compatible. |
+| Shared Stash | `[features] shared_stash` | An outlined "Shared" tab over **100** retail-shaped stash pages (ten since R82, a hundred since R146) every character on the PC shares (items + one gold pool survive the character), with `<<`/`>>` pager arrows; stored in its own `_d2vp_shared.sss` — character `.d2s` files stay retail-compatible. |
 | No Panel World Shift | `[features] no_panel_shift` | With one panel open at the wide layouts the world stays exactly where it was — the panel floats over an unmoved camera instead of the vanilla quarter-screen slide. |
 | Mana Burn Fix | `[features] mana_burn_fix` | Repairs retail's Mana Burn bug (256x the intended mana drain, 512x in Hell) to the designed 66–100% of monster-level damage, matching D2R post-2.4. |
 | Shift Item Compare | `[features] shift_compare` | Hold **Shift** over an equippable item and a second tooltip draws beside it: the item you have equipped for that body slot (D2R hover-compare parity) — inventory, stash, cube, trade, vendor; shield/quiver hovers compare the off-hand, weapons the primary. |
+| Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. |
+| Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. |
+| FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. Off = the classic 25 Hz step cadence at ~60 presents. |
 
 No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
-every feature ships OFF. The wider candidate slate is scoped in
+every feature ships OFF (the one deliberate exception: `unlock_fps_interp` — the
+Unlock FPS sub-gate — ships On; it is the look R143 shipped, and `0` restores the
+step-cadence presentation). The wider candidate slate is scoped in
 [FEATURES.md](FEATURES.md); nothing lands without a config gate.
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R137`** (line 1 of `d2boot.log` pins any build); the
-latest shipped release is tag
-**[`R137`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R137)**, 2026-11-06.
+Current build: **`Vanilla+0.0.8-R144`** (line 1 of `d2boot.log` pins any build); the
+latest release tag is
+**[`R144`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R144)**, 2026-11-09.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -70,26 +77,44 @@ latest shipped release is tag
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R137, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R144, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
-  [#29](https://github.com/VTSTech/D2VP-QoL/issues/29), field-verified 2026-11-08)
-  and the **proc-tooltip fix** (R137,
+  [#29](https://github.com/VTSTech/D2VP-QoL/issues/29), field-verified 2026-11-08),
+  the **proc-tooltip fix** (R137,
   [#33](https://github.com/VTSTech/D2VP-QoL/issues/33) — "x% Chance to Cast Level 0"
-  lines now read the real level and skill name; field-verified 2026-11-08).
+  lines now read the real level and skill name; field-verified 2026-11-08), the
+  **windowed-1080p crash fix** (R138,
+  [#31](https://github.com/VTSTech/D2VP-QoL/issues/31) — selecting 1920x1080 while
+  running windowed no longer crashes on the first frame; field-verified 2026-11-09),
+  the **on-screen build tag** (R139 — the title screen and the automap overlay
+  show **`D2VP-R139`** instead of the retail "v 1.14d"; one define —
+  `Redivivus/d2_boot.h` `D2VP_ROUND` — feeds the tag and the build self-ID, so a
+  round bump is one line) and the **Ctrl+Click stash transfer** (R140 — one-click
+  inventory ↔ stash move with the stash open, shared pages included,
+  `[features] ctrl_click_xfer`; the R141 follow-up fixed the vacated-slot field catch —
+  field-verified 2026-11-09, [#35](https://github.com/VTSTech/D2VP-QoL/issues/35) closed,
+  SMOKE §R), the **Unlock FPS** feature (R142 — the presentation-FPS unlock:
+  `[features] unlock_fps`, ~60 FPS present on a 25 Hz sim) with its **sub-tick
+  interpolation** (R143/R143.1/R143.2 — `[features] unlock_fps_interp`, default On: the
+  world scroll glides between ticks at the present rate while the sim stays byte-exact
+  25 Hz; two jitter field reports later, the delivery fix landed and the glide was
+  field-accepted 2026-11-09) and the **two-column Vanilla+ Options page** (R144 — the
+  panel split into two columns of six so it fits whole again down to 640x480, and the
+  interpolation knob took the twelfth row, **FPS Interpolation** — the README gallery
+  screenshot shows it in game; field ask SMOKE §S).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
   ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24),
   [#28](https://github.com/VTSTech/D2VP-QoL/issues/28)); `d2vp.exe` is field-played
   daily.
-- **Open issues (3)**: the 1080p D3D-windowed crash
-  ([#31](https://github.com/VTSTech/D2VP-QoL/issues/31), filed 2026-11-06 — fullscreen
-  is fine), the Refilling Shrine XP buff
+- **Open issues (2)**: the Refilling Shrine XP buff
   ([#25](https://github.com/VTSTech/D2VP-QoL/issues/25)) and the intermittent
   attribute-point crash ([#18](https://github.com/VTSTech/D2VP-QoL/issues/18)) — triage
-  pending. Recently closed: #33 (proc tooltips read "Level 0", fixed R137), #29
+  pending. Recently closed: #31 (1080p windowed select crash, fixed R138), #33 (proc
+  tooltips read "Level 0", fixed R137), #29
   (post-Countess crash, fixed R136), #32 (Gheed gamble crash, fixed R128), #26 (720p
   panel margins + `no_panel_shift`), #22 (Bloodraven turn-in), #8 (necro skeleton
   tint).
@@ -170,20 +195,22 @@ protocol) · [SMOKE-CHECKLIST.md](SMOKE-CHECKLIST.md) (the in-game test pass).
 **For agents (verbose by design):** [FEATURES.md](FEATURES.md) (the feature slate + house
 feature contract) · [handoff.md](handoff.md) (live work log) ·
 [HISTORY.md](HISTORY.md) (the verbatim archive) · [plans/](plans/) ·
-[docs/merge-upstream.md](docs/merge-upstream.md) · [docs/building.md](docs/building.md).
+[docs/building.md](docs/building.md).
 
 ## Contributing
 
-Changes are welcome as pull requests or patches against a release tag. Run
-[`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh) before opening a PR — it is
-the suite CI enforces, and green is the bar.
+Changes are welcome as pull requests or patches against a release tag. CI builds every
+push and PR with the mingw-i686 toolchain
+([`tools/check-build.sh`](tools/check-build.sh) is the same build locally) — a clean
+build is the bar. (The old vanilla-plus gate suite — `tools/check-vanilla-plus.sh`,
+525 checks — was retired 2026-11-09; the script lives in git history, and the Win11
+MSYS2 build stays the compile gate of record for release rounds.)
 
 [CONTRIBUTING.md](CONTRIBUTING.md) routes every kind of finding: Vanilla+ improvements
 belong in this repository; fixes to the recovered source itself belong upstream at
-[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are paused for now
-(owner, 2026-11-08, after the failed eleventh sync) — upstream material is hand-ported
-one commit at a time instead, ranked in
-[plans/ELEVENTH-SYNC-SALVAGE.md](plans/ELEVENTH-SYNC-SALVAGE.md).
+[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are **retired**
+(owner, 2026-11-09: unlikely to resume) — the fork maintains its source directly, and
+the merge-era tooling and plans have left the tree (recoverable from git history).
 
 ## Credits
 

@@ -9216,6 +9216,7 @@ void __stdcall DRAW_UI_Inventory() {
         D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nDrawTextWidth, INV_GetGoldButtonY(), -1, eDrawMode, pPalette);
         DRAW_UI_INVENTORY_Gold(0);
         VPSHAREDUI_DrawTab(); // VP: site-N [vanilla-plus shared-stash] "Shared" page tab (no-op when gated off)
+        VPCTRLXFER_TickPendingPlace(); // VP: [ctrl-click stash R141] releases the parked 0x18 one frame after the pick (no-op when idle)
         bIsTwoHandedEquipped = Cursor::GetMouseX();
         nTradeNameWidth = Cursor::GetMouseY();
         bIsExpansion = GAME::Game::CLIENT_CheckExpansion();
@@ -9729,6 +9730,76 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
             return 1;
           }
         }
+
+        // VP-BEGIN [ctrl-click stash R140]: Ctrl+Click moves an item between the
+        // inventory and the open stash (D2R parity, owner ask). Retail wires
+        // Ctrl+Click to the sell-to-shop path only; with no shop open this
+        // branch fell through to the pick-up tail without the 0x19 send - the
+        // item got the brief ITEM_RemoveClientSide lock, never reached the
+        // cursor, and no packet left the client: a dead click. Re-expressed as
+        // the real transfer: the clicked item's containing page picks the
+        // direction (INVENTORY -> STASH, STASH -> INVENTORY), the free cell
+        // comes from the same INVENTORY_FindItemGridPosition the put-in-cube
+        // branch below uses, and the move rides the SAME TWO-PACKET PAIR a
+        // manual drag sends: 0x19 remove-from-buffer (pick up to
+        // cursor) then 0x18 insert-into-buffer. The 0x18 server handler
+        // (SCMD_0x18_ItemToInventory) opens with SERVER_IsItemOnCursor and
+        // rejects the insert unless the item is already the player's hand
+        // item, so the 0x19 pick is mandatory - sending 0x18 alone was the
+        // first R140 field build's defect (sound played, item never moved).
+        // R141 field catch (owner: "the items move, but the slot they once
+        // occupied becomes unusable"): sending the pair BACK TO BACK made the
+        // client process the pick echo and the place echo in the same packet
+        // drain - no retail flow does that (a drag settles the pick on the
+        // hand, lifting the item out of the source grid, many frames before
+        // any place), and the source container's client-side grid entry went
+        // stale. Fix: the 0x18 is PARKED (VPCTRLXFER_ParkPlace) and released
+        // one full frame later by VPCTRLXFER_TickPendingPlace from the
+        // stash-panel draw site - a fast manual drag, the retail shape.
+        // Buffer = the UI page byte the place path puts on the wire: 4 =
+        // stash, 0 = inventory; the stash UI's two views, personal 0xc and
+        // shared 0xd, are both page-4 content (the shared stash swaps page-4
+        // content server-side), so the shared stash pages work unchanged. The
+        // hand is empty here by construction (this whole path only runs from
+        // the empty-hand branch), which is the 0x19 handler's precondition.
+        // A full target container plays the same refuse sound the cube path
+        // plays. Everything else - belt items, the cube-open and trade-open
+        // panels - keeps the old fall-through shape. The whole branch is
+        // gated on [features] ctrl_click_xfer (d2vp.ini / the Options page's
+        // "Ctrl Click Transfer" row, via VPCTRLXFER_Active's 2 s hot-read):
+        // off = the retail dead click, byte-for-byte pre-R140.
+        if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+          eInventoryPage eClickedFromPage;
+          int nExpansionFlag;
+          int nTargetPage;
+          int nTargetPageByte;
+          int nTargetCellX;
+          int nTargetCellY;
+          eClickedFromPage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
+          if (eClickedFromPage == INVPAGE_INVENTORY || eClickedFromPage == INVPAGE_STASH) {
+            nTargetPageByte = (eClickedFromPage == INVPAGE_INVENTORY) ? 4 : 0;
+            nExpansionFlag = GAME::Game::CLIENT_CheckExpansion();
+            nTargetPage = (int)D2Common::Units::GetInventoryPage(pUnit, (uint8_t)nTargetPageByte, nExpansionFlag);
+            nTargetCellX = 0;
+            nTargetCellY = 0;
+            if (D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInvWork, pCursorItem_lcl, nTargetPage, &nTargetCellX, &nTargetCellY, (uint8_t)nTargetPageByte)) {
+              /* Remove item from buffer 19 [DWORD item] - pick up to cursor; the
+                 parked 0x18 below is rejected unless the item is the hand item */
+              GAME::Msg::NET_D2GS_CLIENT_Send_INT(0x19, pCursorItem_lcl->nUnitGUID);
+              /* R141: the 0x18 place is parked, not sent - the stash-panel draw
+                 releases it one frame later (VPCTRLXFER_TickPendingPlace), so the
+                 pick echo settles before the place echo, exactly a manual drag */
+              VPCTRLXFER_ParkPlace(pCursorItem_lcl->nUnitGUID, nTargetCellX, nTargetCellY, nTargetPageByte);
+              UNIT::ITEM_RemoveClientSide(pCursorItem_lcl);
+              Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(pCursorItem_lcl), nullptr, 0, 0, 0);
+              return 1;
+            }
+
+            UNIT::UnitSnd::UNITSND_PlayPlayerSound(pUnit, 0x13);
+            return 0;
+          }
+        }
+        // VP-END [ctrl-click stash R140]
       } else {
         if ((uint32_t)targetItem & 4) {
           nTxCost = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_beltable(pCursorItem_lcl);
