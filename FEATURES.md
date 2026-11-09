@@ -1,4 +1,4 @@
-*v11, 2026-11-10. **Row 18 added and IMPLEMENTED the same round (R147) on owner ask** ("Let's add an in game clock to the Automap. Session Time and System Time"): the automap clock (`automap_clock`, §18, option **Automap Clock**) — **Session** (real time since game entry, `H:MM:SS`, one `GetTickCount()` anchor per game at the UI reset — pause menus and cutscenes count) + **System** (the PC's local clock, `HH:MM` 24-hour, per-frame `GetLocalTime`) on the retail automap text-overlay stack directly under the build tag; display-only, the gate charter (default off, 2 s hot-read, the Options-page write bridge), the Options page two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144). **Thirteen features ship.** R146 (the shared stash at a hundred pages) added no row. Field ask: §T 67–71.*
+*v12, 2026-11-10. **Row 18 added and IMPLEMENTED the same round (R147) on owner ask** ("Let's add an in game clock to the Automap. Session Time and System Time"): the automap clock (`automap_clock`, §18, option **Automap Clock**) — since R148 ONE line on the retail automap text-overlay stack directly under the build tag (**SESS:** real time since game entry, `hh:mm:ss`, one `GetTickCount()` anchor per game at the UI reset — pause menus and cutscenes count + **SYS:** the PC's local clock, 12-hour with a trailing AM/PM, per-frame `GetLocalTime`); display-only, the gate charter (default off, 2 s hot-read, the Options-page write bridge), the Options page two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144). R148 (owner ask) also put the area's effective level on the automap's level-name line — `Blood Moor (3)`, the same MonLvl/MonLvlEx lookup the drop code uses, always-on with no row and no toggle, plain name in town. **Thirteen features ship.** R146 (the shared stash at a hundred pages) added no row. Field ask: §T 67–72.*
 
 # FEATURES.md — D2R backport slate (vanilla-plus)
 
@@ -127,7 +127,7 @@ Every slate row must satisfy all of these before it ships:
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
 | 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
-| 18 | Automap clock (Session + System time) | HUD | None — owner suggestion 2026-11-10 ("Let's add an in game clock to the Automap. Session Time and System Time"); speedrun/PD2 overlay staple | S | Low | `automap_clock` — **Implemented** (R147 — option **Automap Clock**; display-only: two lines on the retail automap text-overlay stack directly under the build tag, right-aligned with the level name/difficulty family — **Session** = real time since game entry, `H:MM:SS`, anchored by one `GetTickCount()` capture in `InitializeUI`'s per-game reset (pause menus and cutscenes count — a desk stopwatch, not a play-time meter), **System** = the PC's local clock via `GetLocalTime`, `HH:MM` 24-hour, re-read every frame; the same 2 s gate charter, a **Automap Clock** row took the thirteenth Options slot and the page went to two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144, still whole at 640x480); no server half, no packets, no files) |
+| 18 | Automap clock (Session + System time) | HUD | None — owner suggestion 2026-11-10 ("Let's add an in game clock to the Automap. Session Time and System Time"); speedrun/PD2 overlay staple | S | Low | `automap_clock` — **Implemented** (R147 — option **Automap Clock**; R148 merged it to ONE line on the retail automap text-overlay stack directly under the build tag, right-aligned with the level name/difficulty family — **SESS:** = real time since game entry, `hh:mm:ss`, anchored by one `GetTickCount()` capture in `InitializeUI`'s per-game reset (pause menus and cutscenes count — a desk stopwatch, not a play-time meter), **SYS:** = the PC's local clock via `GetLocalTime`, 12-hour with a trailing AM/PM, re-read every frame; the same 2 s gate charter, a **Automap Clock** row took the thirteenth Options slot and the page went to two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144, still whole at 640x480); R148 also appended the area's effective level to the level-name line (always-on, no row/toggle — `Blood Moor (3)`, plain in town); no server half, no packets, no files) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
@@ -152,7 +152,7 @@ and 11 — and, outside this slate, the pre-slate pair
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 **R146/R147 updates**: row 9's stash went to a hundred pages (see the row + §9);
-row 18 (**Automap Clock**, `automap_clock`) shipped R147 — **thirteen features ship**.
+row 18 (**Automap Clock**, `automap_clock`) shipped R147 — one line + the area-level level-name suffix since R148 — **thirteen features ship**.
 
 ---
 
@@ -1075,29 +1075,40 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
 
 ---
 
-### 18. Automap clock (Session + System time) — `[features] automap_clock` (Implemented R147 — owner ask 2026-11-10)
+### 18. Automap clock (Session + System time) — `[features] automap_clock` (Implemented R147; one line + the area level R148 — owner asks 2026-11-10)
 
-- **Behavior (owner ask: "Let's add an in game clock to the Automap. Session Time and
-  System Time")**: with the gate on, the automap's text overlay — the font-1 stack
+- **Behavior (owner ask R147: "Let's add an in game clock to the Automap. Session Time
+  and System Time"; R148: "lets change the Automap clock display to 1 line instead of
+  2. SESS: hh:mm:ss SYS: 12:01PM. Also for the first line, Area Name, Can we also add
+  (aLvl) as well?")**: with the gate on, the automap's text overlay — the font-1 stack
   retail right-aligns at `WindowSizeX − width − 0x10` (game password, level name,
   version line, difficulty, server IP, expansion tag, one `0x10` row each) — gains
-  two lines directly under the build tag:
-  - **`Session H:MM:SS`** — real time elapsed since the current game was entered
-    (hours unpadded). Anchored by one `GetTickCount()` capture per game in
+  ONE line directly under the build tag:
+  - **`SESS: hh:mm:ss`** — real time elapsed since the current game was entered
+    (zero-padded). Anchored by one `GetTickCount()` capture per game in
     `InitializeUI`'s wholesale UI reset (`VPCLOCK_ResetSession` — the same site that
     starts the stash page mirror on the personal page). Wall-clock elapsed, not
     tick-counted play time: pause menus and cutscenes count — a desk stopwatch, the
     honest "how long have I been in this game" reading. `GetTickCount` wraps at
     49.7 days; unsigned subtraction is wrap-correct for any shorter session.
-  - **`System HH:MM`** — the PC's local wall clock (Win32 `GetLocalTime`), 24-hour,
-    read fresh every frame the automap draws, so it is always current.
+  - **`SYS: h:MMAM`** — the PC's local wall clock (Win32 `GetLocalTime`), 12-hour
+    with a trailing AM/PM and no space (`12:01PM`, `1:05AM`; midnight reads
+    `12:xxAM`, noon `12:xxPM`), read fresh every frame the automap draws, so it is
+    always current.
+- **R148 also — the area level on the level-name line (always-on, no row, no
+  toggle)**: `AUTOMAP_DrawLevelName` appends ` (N)` — N = `TXT_Levels_GetMonLvlForDifficulty`
+  for the current difficulty (the same levels.txt MonLvl/MonLvlEx lookup the drop code
+  uses), e.g. `Blood Moor (3)`; the suffix is suppressed where the table reads ≤ 0
+  (towns keep the plain retail name). Drawn with the clock gate on OR off (the R145
+  pager precedent — always-on display QoL).
 - **Implementation (display-only — no server half, no packets, no files)**: the VP
   helper `VPCLOCK_Draw(&AUTOMAP_TextHeightOffset, SpellSel::WindowSizeX)` rides
   inside `AUTOMAP_Draw`'s font-1 window (VP site right after `AUTOMAP_DrawVersion`,
   so the stack reads version, clock, difficulty); it reads and advances the shared
-  offset one `0x10` row per line, color 4, and draws nothing (offset untouched) with
-  the gate off. Lines are pure-ASCII char buffers through `SStrPrintf` (the item-ilvl
-  digit idiom) widened 1:1 into the `uint16_t` buffers `DRAW_text` takes.
+  offset one `0x10` row, color 4, and draws nothing (offset untouched) with
+  the gate off. Text is pure-ASCII char buffers through `SStrPrintf` (the item-ilvl
+  digit idiom) widened 1:1 into the `uint16_t` buffers `DRAW_text` takes; the
+  area-level tail composes the same way and rides the level-name line's own buffer.
 - **Gate charter, unchanged**: `[features] automap_clock`, missing
   file/section/key/garbage = 0 = vanilla byte-for-byte; the shared 2 s hot-read cache
   (busted by `D2VP_ConfigReloaded`, so an Options-page flip or an external ini edit
@@ -1110,8 +1121,10 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   bottom margin, and every video stop still fits whole, 640x480 included
   ((480−369)/2 = 55 top margin).
 - **QA contract**: the Win11 MSYS2 build (compile gate of record) + the SMOKE §T
-  loop (tab on/off, line contents vs the PC clock, per-game reset, 640x480 fit of
-  the reflowed Options page, gate-off byte-for-byte).
+  loop (tab on/off, the one-line SESS/SYS contents vs the PC clock incl. the AM/PM
+  flip, per-game reset, the area-level suffix on the level-name line + the plain
+  town name, 640x480 fit of the reflowed Options page, gate-off retail minus the
+  always-on suffix).
 
 ---
 

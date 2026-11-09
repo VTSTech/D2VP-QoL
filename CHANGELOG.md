@@ -11,6 +11,15 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R148 — Automap clock on one line; the area level joins the level-name line**
+  (owner ask: "lets change the Automap clock display to 1 line instead of 2. SESS:
+  hh:mm:ss SYS: 12:01PM. Also for the first line, Area Name, Can we also add (aLvl)
+  as well?"). The clock overlay is now a single line — **`SESS:`** the session
+  stopwatch (`hh:mm:ss`, zero-padded, same per-game anchor as R147) and **`SYS:`**
+  the PC's local clock in 12-hour form with a trailing AM/PM (`12:01PM`, `1:05AM`).
+  The automap's level-name line gains the area's effective level — `Blood Moor (3)`
+  style, the same levels.txt MonLvl/MonLvlEx-per-difficulty lookup the drop code
+  uses; always-on (no toggle), plain name in town. Self-ID `Vanilla+0.0.8-R148`.
 - **R147 — Automap clock: Session + System time** (owner ask: "Let's add an in game
   clock to the Automap. Session Time and System Time"). With `automap_clock=1` the
   automap overlay gains two lines under the build tag, right-aligned with the other

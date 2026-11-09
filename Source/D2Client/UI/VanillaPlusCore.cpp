@@ -2036,7 +2036,7 @@ BOOL __stdcall VPNOINTRO_IsRequested() {
 // Session/System clock on the automap overlay (owner ask 2026-11-10: "Let's
 // add an in game clock to the Automap. Session Time and System Time"). A
 // display-only client feature - no server half, no packets, no files. The
-// lines ride the retail automap text-overlay stack (AUTOMAP_Draw's font-1
+// line rides the retail automap text-overlay stack (AUTOMAP_Draw's font-1
 // family: right-aligned at WindowSizeX - width - 0x10, one 0x10 row per
 // line, color 4) exactly like the level name, the build tag, the difficulty
 // and the server IP; the VP site sits right after the build-tag line, so the
@@ -2046,15 +2046,19 @@ BOOL __stdcall VPNOINTRO_IsRequested() {
 // cache every gate uses, busted by the Options-page write bridge
 // (D2VP_ConfigReloaded) so a flip lands on the next automap frame.
 //
-//   Session - real time elapsed since the current game was entered. The
+//   One line (R148, owner ask: "change the Automap clock display to 1 line
+//   instead of 2. SESS: hh:mm:ss SYS: 12:01PM") - the R147 pair merged:
+//   SESS - real time elapsed since the current game was entered. The
 //      anchor is taken in InitializeUI's VP site (the same wholesale UI
 //      reset that starts the stash page mirror on the personal page) via
 //      VPCLOCK_ResetSession: one GetTickCount() capture per game. Wall-clock
 //      elapsed, not tick-counted play time: pause menus and cutscenes count,
 //      exactly like a stopwatch on the desk - the honest "how long have I
-//      been in this game" reading. Format H:MM:SS (hours unpadded).
-//   System - the PC's local wall clock (Win32 GetLocalTime), HH:MM 24-hour,
-//      read fresh every frame the automap draws, so it is always current.
+//      been in this game" reading. Format hh:mm:ss (zero-padded).
+//   SYS - the PC's local wall clock (Win32 GetLocalTime) in 12-hour form
+//      with a trailing AM/PM and no space (12:01PM, 1:05AM; midnight reads
+//      12AM, noon 12PM), read fresh every frame the automap draws, so it is
+//      always current.
 //
 // Text building: pure-ASCII char buffers through SStrPrintf (the item-ilvl
 // digit idiom) widened 1:1 into the uint16_t buffers D2WinFont draws - no
@@ -2077,46 +2081,43 @@ void __stdcall VPCLOCK_ResetSession() {
     dwVpClockSessionStartTick = GetTickCount();
 }
 
-// The two overlay lines. Called from AUTOMAP_Draw inside its font-1 window,
-// right after the build-tag line: reads and advances *pnTextHeightOffset by
-// one 0x10 row per line drawn, right-aligns at nScreenX - width - 0x10 (the
-// family's right edge), color 4. Gate off = nothing drawn, offset untouched.
+// The one overlay line (R148 merged the R147 Session/System pair). Called
+// from AUTOMAP_Draw inside its font-1 window, right after the build-tag
+// line: reads and advances *pnTextHeightOffset by one 0x10 row, right-aligns
+// at nScreenX - width - 0x10 (the family's right edge), color 4. Gate off =
+// nothing drawn, offset untouched.
 void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX) {
     if (!pnTextHeightOffset || !VPCLOCK_GateActive()) {
         return;
     }
 
-    char szLine[40];
-    uint16_t wLine[40];
-    for (int i = 0; i < 40; i++) {
+    char szLine[48];
+    uint16_t wLine[48];
+    for (int i = 0; i < 48; i++) {
         wLine[i] = L'\0';
     }
 
-    // Session: real elapsed since game entry, H:MM:SS.
+    // Session stopwatch + the PC's local wall clock, one line:
+    // "SESS: hh:mm:ss SYS: h:MMAM".
     DWORD dwSeconds = (GetTickCount() - dwVpClockSessionStartTick) / 1000;
-    Storm::Source::SSTR::SStrPrintf(szLine, sizeof(szLine), "Session %u:%02u:%02u",
-                                    (unsigned)(dwSeconds / 3600),
+    SYSTEMTIME sTime;
+    GetLocalTime(&sTime);
+    unsigned uHour12 = sTime.wHour % 12u;
+    if (!uHour12) {
+        uHour12 = 12u; // midnight reads 12AM, noon reads 12PM
+    }
+    Storm::Source::SSTR::SStrPrintf(szLine, sizeof(szLine),
+                                    "SESS: %02u:%02u:%02u SYS: %u:%02u%s",
+                                    (unsigned)((dwSeconds / 3600) % 100),
                                     (unsigned)((dwSeconds / 60) % 60),
-                                    (unsigned)(dwSeconds % 60));
-    for (int i = 0; i < 40 && szLine[i]; i++) {
+                                    (unsigned)(dwSeconds % 60),
+                                    uHour12,
+                                    (unsigned)sTime.wMinute,
+                                    sTime.wHour < 12 ? "AM" : "PM");
+    for (int i = 0; i < 48 && szLine[i]; i++) {
         wLine[i] = (uint16_t)(uint8_t)szLine[i]; // pure ASCII, 1:1 widen
     }
     int nWidth = D2Win::Src::D2WinFont::DRAW_text0(wLine);
-    D2Win::Src::D2WinFont::DRAW_text(wLine, nScreenX - nWidth - 0x10, *pnTextHeightOffset, 4, 0);
-    *pnTextHeightOffset += 0x10;
-
-    // System: the PC's local wall clock, HH:MM 24-hour.
-    SYSTEMTIME sTime;
-    GetLocalTime(&sTime);
-    Storm::Source::SSTR::SStrPrintf(szLine, sizeof(szLine), "System %02u:%02u",
-                                    (unsigned)sTime.wHour, (unsigned)sTime.wMinute);
-    for (int i = 0; i < 40; i++) {
-        wLine[i] = L'\0';
-    }
-    for (int i = 0; i < 40 && szLine[i]; i++) {
-        wLine[i] = (uint16_t)(uint8_t)szLine[i];
-    }
-    nWidth = D2Win::Src::D2WinFont::DRAW_text0(wLine);
     D2Win::Src::D2WinFont::DRAW_text(wLine, nScreenX - nWidth - 0x10, *pnTextHeightOffset, 4, 0);
     *pnTextHeightOffset += 0x10;
 }

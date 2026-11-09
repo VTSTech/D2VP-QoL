@@ -348,30 +348,33 @@ int __stdcall UNLOCKFPS_IdleSleepMs();     // pump idle: ms to sleep (<= 0 = ret
 // retail; standing still returns 0 offsets.
 BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY);
 
-// [vanilla-plus automap-clock R147] Session/System clock on the automap
-// overlay (owner ask: "Let's add an in game clock to the Automap. Session
-// Time and System Time"). Display-only client feature - no server half, no
-// packets, no files. Two lines that ride the retail automap text-overlay
-// stack (AUTOMAP_Draw's font-1 family - right-aligned at WindowSizeX -
-// width - 0x10, one 0x10 row per line, color 4) directly under the build-tag
-// line, so the stack reads version, clock, difficulty. Gate
+// [vanilla-plus automap-clock R147/R148] Session/System clock on the automap
+// overlay (owner ask R147: "Let's add an in game clock to the Automap. Session
+// Time and System Time"; R148: "change the Automap clock display to 1 line
+// instead of 2. SESS: hh:mm:ss SYS: 12:01PM"). Display-only client feature -
+// no server half, no packets, no files. One line that rides the retail
+// automap text-overlay stack (AUTOMAP_Draw's font-1 family - right-aligned at
+// WindowSizeX - width - 0x10, one 0x10 row, color 4) directly under the
+// build-tag line, so the stack reads version, clock, difficulty. Gate
 // [features] automap_clock (default/missing = 0 = vanilla byte-for-byte, no
 // pixels), the shared 2 s hot-read shape, busted by the Options-page write
 // bridge (D2VP_ConfigReloaded) so a flip lands on the next automap frame;
 // the thirteenth Vanilla+ Options row (Automap Clock) since R147 - the page
 // went to two columns of SEVEN (box 0x151 -> 0x171, back row 0x124 ->
 // 0x144, still whole at 640x480).
-//   Session - real time elapsed since the current game was entered,
-//      H:MM:SS (hours unpadded). Wall-clock elapsed, not tick-counted play
+//   SESS - real time elapsed since the current game was entered,
+//      hh:mm:ss (zero-padded). Wall-clock elapsed, not tick-counted play
 //      time: pause menus and cutscenes count - the honest stopwatch
 //      reading. GetTickCount wraps at 49.7 days; unsigned subtraction is
 //      wrap-correct for any session shorter than that.
-//   System - the PC's local wall clock (Win32 GetLocalTime), HH:MM
-//      24-hour, read fresh every frame the automap draws.
+//   SYS - the PC's local wall clock (Win32 GetLocalTime) in 12-hour form
+//      with a trailing AM/PM and no space (12:01PM, 1:05AM), read fresh
+//      every frame the automap draws.
 // Text building: pure-ASCII char buffers through SStrPrintf widened 1:1
 // into the uint16_t buffers D2WinFont draws.
 void __stdcall VPCLOCK_ResetSession(); // game entry: anchor the session clock
-// Draw the two lines. pnTextHeightOffset = AUTOMAP_TextHeightOffset (read +
-// advanced one 0x10 row per line drawn); nScreenX = SpellSel::WindowSizeX
-// (the family's right-edge base). Draws nothing with the gate off.
+// Draw the one line (the R147 pair merged). pnTextHeightOffset =
+// AUTOMAP_TextHeightOffset (read + advanced one 0x10 row); nScreenX =
+// SpellSel::WindowSizeX (the family's right-edge base). Draws nothing with
+// the gate off.
 void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX);

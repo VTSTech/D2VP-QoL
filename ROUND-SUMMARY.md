@@ -1,97 +1,79 @@
-# Round summary — R147 (rev 163, 2026-11-10): the automap gains a Session/System clock
+# Round summary — R148 (rev 164, 2026-11-10): one-line automap clock + the area level
 
-Owner field: **"Good job. works."** (R146 confirmed) followed by **"Let's add an in
-game clock to the Automap. Session Time and System Time"** — a display-only HUD ask,
-the speedrun/PD2-overlay staple.
+Owner field: **"lets change the Automap clock display to 1 line instead of 2. SESS:
+hh:mm:ss SYS: 12:01PM. Also for the first line, Area Name, Can we also add (aLvl) as
+well ?"** — two display tweaks on top of the not-yet-field-tested R147 clock.
 
 ## What changed
 
-1. **The overlay lines** (`Automap.cpp` + the clock block in `VanillaPlusCore.cpp`):
-   `AUTOMAP_Draw` calls `VPCLOCK_Draw(&AUTOMAP_TextHeightOffset, SpellSel::WindowSizeX)`
-   right after `AUTOMAP_DrawVersion` — the retail automap text-overlay stack (font 1,
-   color 4, one 0x10 row per line, right-aligned at WindowSizeX − width − 0x10) gains
-   two lines under the build tag: **Session** `H:MM:SS` (hours unpadded) and **System**
-   `HH:MM` 24-hour. Strictly insert-after: gate off = nothing drawn, the offset
-   untouched; on, the stack reads version → clock → difficulty.
-2. **Session anchor** (`Draw.cpp`): `InitializeUI`'s wholesale per-game UI reset (the
-   same site that starts the stash page mirror on the personal page) takes ONE
-   `GetTickCount()` capture per game via `VPCLOCK_ResetSession`. Real elapsed
-   wall-clock, not play-time: pause menus and cutscenes count — a desk stopwatch.
-   GetTickCount's 49.7-day wrap is unsigned-subtraction-correct.
-3. **System line**: Win32 `GetLocalTime` re-read every drawn frame — always current;
-   a paused menu holding the map frozen is fine to lag.
-4. **Gate = the charter**: `[features] automap_clock`, default 0, missing
-   file/section/key or garbage = 0 = vanilla byte-for-byte; the same 2 s hot-read
-   cache every gate uses (`dwAutomapClockLastCheck`), busted by the Options-page
-   write bridge (`D2VP_ConfigReloaded`) — a flip lands on the next automap frame,
-   no restart, no map toggle.
-5. **Options page**: the **Automap Clock** row takes the thirteenth slot; the page
-   reflows to two columns of SEVEN (`VPP_ROWS_PER_COL` 6 → 7: col 0 = Show Items
-   Toggle … No Panel World Shift, col 1 = Mana Burn Fix … Automap Clock), back row
-   0x124 → 0x144, box height 0x151 → 0x171 (369 px, the same 0x13 bottom margin —
-   every stop fits whole, 640x480 included, top margin ≈ 55 there). Col 1's empty
-   band 6 stays dead — the hit-test only accepts bands rows actually occupy.
-6. **Ini template**: the `automap_clock` block ships in the same round (fresh inis
-   carry the key; a pre-R147 ini reads 0 until the row flips once).
-7. **Text path**: pure-ASCII `SStrPrintf` into char buffers widened 1:1 into the
-   uint16_t buffers D2WinFont draws (the item-ilvl digit idiom — no locale, no
-   wide-format pitfalls).
-8. **Round bookkeeping**: `D2VP_ROUND "146" → "147"` — self-ID
-   **`Vanilla+0.0.8-R147`**, title screen + automap tag `D2VP-R147`.
+1. **The clock merged to one line** (`VanillaPlusCore.cpp`, `VPCLOCK_Draw`): the
+   R147 `Session …` / `System …` pair is now **`SESS: hh:mm:ss SYS: h:MMAM`** —
+   one draw, one `0x10` row advanced (with the gate on, the stack below sits one
+   row higher than R147). Session keeps the per-game `GetTickCount()` anchor in
+   `InitializeUI`'s wholesale UI reset and goes zero-padded `hh:mm:ss` per the
+   ask's literal sketch (hours wrap at 100, `% 100`); System is `GetLocalTime`
+   converted to 12-hour with a trailing AM/PM and no space — `h % 12`, `0 → 12`
+   (midnight `12:xxAM`, noon `12:xxPM`), minutes padded, re-read every drawn
+   frame. Gate untouched: `[features] automap_clock` (default 0), the 2 s
+   hot-read cache busted by the Options write bridge, strictly insert-after.
+2. **The area level on the level-name line** (`Automap.cpp`,
+   `AUTOMAP_DrawLevelName`, VP-marked): the overlay's first line appends
+   ` (N)` — N = `TXT_Levels_GetMonLvlForDifficulty(eLevel, difficulty,
+   expansion)`, the same levels.txt MonLvl/MonLvlEx-per-difficulty lookup the
+   drop code uses (D2Game already calls it cross-DLL; D2Client now imports it
+   too — `LvlTbls.h` include added). The tail is pure ASCII widened 1:1 into a
+   composed name buffer (the item-ilvl digit idiom; bounds-guarded, name + 8 <
+   0x60), then the line measures and draws as one string. **Always-on — no
+   toggle, no ini key, no Options row** (the R145 pager precedent); suppressed
+   where the table reads ≤ 0, so towns keep the plain retail name. Works with
+   the clock gate on or off.
+3. `Redivivus/d2_boot.h` — `D2VP_ROUND "148"` (title + automap tag `D2VP-R148`).
+   Options page untouched (two columns of seven, thirteen rows).
 
-## R147 files (5 code + 1 define + 5 tools + docs)
+## R148 files (2 code + 1 define + docs)
 
-- `Source/D2Client/UI/Automap.cpp` — the gated `VPCLOCK_Draw` site in `AUTOMAP_Draw`
-  (between the build tag and the difficulty line).
-- `Source/D2Client/UI/Draw.cpp` — `VPCLOCK_ResetSession()` in `InitializeUI`'s
-  per-game reset.
-- `Source/D2Client/UI/VanillaPlusCore.cpp` — the clock block (gate + reset + draw,
-  the statics above `D2VP_ConfigReloaded`, the reload bust) + the ini template block.
-- `Source/D2Client/UI/VanillaPlusCore.h` — the two declarations.
-- `Source/D2Client/UI/VanillaPlusOptions.cpp` — the thirteenth row + the 7/6 reflow
-  (box 0x151→0x171, back row 0x124→0x144).
-- `Redivivus/d2_boot.h` — `D2VP_ROUND "147"`.
-- `tools/` — the five round-tooling scripts join the repo and ship in
-  the overlay: `docs_gate.py` (one-shot docs/consistency gate), `overlay.py`
-  (zip pack/verify), `smoke_sync.py` (checklist↔template sync),
-  `round_bump.py` (mechanical round bump + live-doc census),
-  `handoff_offload.py` (the rev-header offload). Path defaults derive from
-  each script's own location, so they run unchanged on the Win11 side.
+- `Source/D2Client/UI/VanillaPlusCore.cpp` — the one-line clock (format string,
+  12-hour fixup, single draw pair, single `0x10` advance) + comment sync.
+- `Source/D2Client/UI/VanillaPlusCore.h` — declaration comments only.
+- `Source/D2Client/UI/Automap.cpp` — the ` (aLvl)` suffix block in
+  `AUTOMAP_DrawLevelName` + the `LvlTbls.h` include.
+- `Redivivus/d2_boot.h` — `D2VP_ROUND "148"`.
 
-Docs: CHANGELOG (R147 entry), README (the Automap Clock feature row), FEATURES (row
-18 + §18, thirteen ship), SMOKE §T (items 67–71; issue template synced verbatim),
-handoff rev 163 (the rev-162 R146 header offloaded verbatim to **H66**), ROUND-SUMMARY
-(this file).
+Docs: CHANGELOG (R148 bullet), README (feature row + note), FEATURES (v12
+header, row 18, §18), SMOKE §T rewritten (items 67–72) with the issue template
+synced verbatim (`smoke_sync copy --section T`), handoff rev 164 (the rev-163
+R147 header offloaded verbatim to **H67**), ROUND-SUMMARY (this file).
 
 ## Verification
 
-- Sandbox static checks (the compile gate of record stays your Win11 MSYS2 build —
-  `tools/check-build.sh` stops at the sandbox's missing cmake as documented): 13
-  rows keyed + 3-field init'd, keys unique, all 13 keys present in the ini template;
-  the geometry arithmetic re-derived (col-0 band 6 = 0x110..0x12a, back row
-  0x12a+0x1a = 0x144, back bottom 0x15e, box 0x15e+0x13 = 0x171 = 369 px, 480p top
-  margin (480−369)/2 = 55); braces/parens balanced in all five touched files; the
-  gate/reset/draw/bridge call sites grepped; no stale `"146"` round literal.
-- Behavior invariants: strictly insert-after (gate off = the overlay stack draws
-  every line at its retail spot); the session anchor rides an existing per-game
-  reset (no new game-state hooks); display-only — no packets, no files, no server
-  half, no d2boot marks.
-- The five `tools/` scripts ship smoke-tested from their new home: path
-  derivation plus `docs_gate --round 147`, `smoke_sync check`,
-  `round_bump --report`, `handoff_offload --dry-run`, and this round's
-  `overlay pack`/`verify` all ran from `tools/`.
+- Sandbox static checks (the compile gate of record stays your Win11 MSYS2
+  build — `tools/check-build.sh`): the 35-check R148 suite — boot define + note,
+  the new format string with the old `Session %u` / `System %02u` strings gone,
+  the 12-hour modulo + midnight/noon fixup + AM/PM ternary, exactly one
+  `DRAW_text` pair and one `0x10` advance in `VPCLOCK_Draw`, the MonLvl call
+  site with `GetDificulity` + `CLIENT_CheckExpansion`, the compose guards
+  (`> 0`, name length, `+ 8 < 0x60`), VP markers paired, the version → clock →
+  difficulty order intact, the two-columns-of-seven Options geometry + the 2 s
+  gate cache + reload bridge regressed green, braces/parens balanced; docs_gate
+  `--round 148` green (round identity, 16 KB handoff gate, smoke-sync contract,
+  options page, feature counts, zip byte-identity).
+- Behavior invariants: gate off = no clock line and the offset untouched (the
+  ONLY always-on delta is the level-name suffix, called out in item 71); the
+  session anchor rides the existing per-game reset; display-only — no packets,
+  no files, no server half, no d2boot marks.
 
 ## Field state + asks
 
-- GREEN (standing): §S-61 telemetry, §S-64's mid-session menu flip, §S-65's glide
-  look; R145/R146 confirmed by the owner ("Good job, works" / "Good job. works.").
+- GREEN (standing): §S-61 telemetry, §S-64's mid-session menu flip, §S-65's
+  glide look; R145/R146 confirmed by the owner ("Good job, works" / "Good job.
+  works.").
 - Open: §S 62–64, §S-65's d2boot tick-count + boundary sub-checks, §S-66's
   behavioral remainder, §H items 33–35 (the hundred-page walk).
-- New field asks for R147 (SMOKE §T): **item 67** — the two lines appear under the
-  `D2VP-R147` tag, right-aligned, Session counting from ~0:00:00 and System
-  matching the taskbar clock; **item 68** — Session resets per game (new game →
-  ~0:00:00) but NOT on automap toggle within one game; **item 69** — System tracks
-  the wall clock across a minute boundary; **item 70** — the 7/6 reflow (Automap
-  Clock last in the right column, Previous Menu below, nothing clipped at
-  640x480) and the same-frame Options flip; **item 71** — gate off = the retail
-  overlay, every other line in its retail spot.
+- New field asks for R148 (SMOKE §T 67–72): **67** — ONE line under the
+  `D2VP-R148` tag reading `SESS: 00:00:12 SYS: 12:01PM`-style; **68** — SESS
+  resets per game, not on map toggle; **69** — SYS tracks the wall clock in
+  12-hour form across a minute boundary and flips AM/PM (and `12:xx`) at
+  noon/midnight; **70** — the 7/6 Options reflow still whole at 640x480, the
+  same-frame flip; **71** — gate off = retail except the level-name suffix;
+  **72** — the level-name line reads `Name (N)` per difficulty, plain name in
+  town, gate-independent.

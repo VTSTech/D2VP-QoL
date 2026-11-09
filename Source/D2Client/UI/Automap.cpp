@@ -10,6 +10,7 @@
 #include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/D2RosterStrc.h"
+#include "Source/D2Common/DATATBLS/LvlTbls.h" // VP: TXT_Levels_GetMonLvlForDifficulty (area-level R148)
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Roster.h"
 #include "Source/D2Client/GAME/RosterPets.h"
@@ -2445,6 +2446,35 @@ void __stdcall AUTOMAP_DrawLevelName() {
 
     eD2LevelId eLevel = D2Common::DUNGEON::Dungeon::DRLGROOM_GetLevelIdFromRoom(pRoom);
     uint16_t* wMessage = ui::CLIENT_GetLevelNameByLevelId(eLevel);
+    // VP-BEGIN [area-level R148]: the level-name line gains the area's
+    // effective level - TXT_Levels_GetMonLvlForDifficulty is the same
+    // levels.txt MonLvl/MonLvlEx-per-difficulty lookup the drop code uses.
+    // Always-on display QoL (the R145 pager precedent - no toggle, no ini
+    // key); suppressed where the table reads <= 0 (towns) so those lines
+    // stay retail. Tail composed as pure ASCII and widened 1:1 (the
+    // item-ilvl digit idiom).
+    uint16_t wNameBuf[0x60];
+    int nNameLen = wMessage ? D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wMessage) : 0;
+    int nAreaLevel = D2Common::DATATBLS::LvlTbls::TXT_Levels_GetMonLvlForDifficulty(
+        eLevel, (eD2Difficulty)GAME::Game::GetDificulity(),
+        GAME::Game::CLIENT_CheckExpansion());
+    if (nAreaLevel > 0 && nNameLen > 0 && nNameLen + 8 < 0x60) {
+        char szTail[16];
+        Storm::Source::SSTR::SStrPrintf(szTail, sizeof(szTail), " (%d)", nAreaLevel);
+        int nTail = 0;
+        while (nTail < 15 && szTail[nTail]) {
+            nTail++;
+        }
+        for (int i = 0; i < nNameLen; i++) {
+            wNameBuf[i] = wMessage[i];
+        }
+        for (int i = 0; i < nTail; i++) {
+            wNameBuf[nNameLen + i] = (uint16_t)(uint8_t)szTail[i];
+        }
+        wNameBuf[nNameLen + nTail] = L'\0';
+        wMessage = wNameBuf;
+    }
+    // VP-END [area-level R148]
     BOOL bMultiLineCenter = 0;
     int32_t dwColor = 4;
     int nY = AUTOMAP_TextHeightOffset;
@@ -3147,8 +3177,8 @@ void __stdcall AUTOMAP_Draw() {
     AUTOMAP_DrawGamePassword();
     AUTOMAP_DrawLevelName();
     AUTOMAP_DrawVersion();
-    // VP-BEGIN [automap-clock R147]: the gated Session/System clock lines
-    // ride this same font-1 overlay stack - the helper advances
+    // VP-BEGIN [automap-clock R147]: the gated Session/System clock line
+    // rides this same font-1 overlay stack - the helper advances
     // AUTOMAP_TextHeightOffset by one 0x10 row per line it draws (nothing,
     // offset untouched, with the [features] automap_clock gate off).
     VPCLOCK_Draw(&AUTOMAP_TextHeightOffset, SpellSel::WindowSizeX);
