@@ -63,6 +63,12 @@ struct JPEG_CORE_PROPERTIES {
 #endif // D2_MODULE_D2Win
 #ifndef _WIN32  // provided by the Win32 SDK / CRT on Windows
 
+// [d2linux M2 round 3] the linux build supplies these through the forced
+// include d2_linux_compat.h (real winuser.h layouts, shared by every TU);
+// these fallbacks stand down the same way Fog/Src/Safesock.h's do under
+// D2_LINUX_WINSOCK_SUPPLIED. PE path identical (never compiled there).
+#ifndef D2_LINUX_SDK_WINDOW_SUPPLIED
+
 struct tagMONITORINFO {
     /* 0x00 */ DWORD cbSize;
     /* 0x04 */ RECT rcMonitor;
@@ -76,6 +82,8 @@ struct tagTRACKMOUSEEVENT {
     /* 0x08 */ HWND hwndTrack;
     /* 0x0C */ DWORD dwHoverTime;
 };
+
+#endif  // D2_LINUX_SDK_WINDOW_SUPPLIED
 
 #endif // _WIN32
 

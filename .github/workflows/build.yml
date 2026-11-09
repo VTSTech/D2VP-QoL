@@ -2,10 +2,10 @@ name: build
 
 on:
   push:
-    branches: [main, vanilla-plus-port]
-    paths-ignore: ['**.md']
+    branches: [main, vanilla-plus-port, linux]
+    paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
   pull_request:
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', '.recomp.json', 'progress/**', '.github/workflows/progress.yml']
   workflow_dispatch:
 
 # A newer push makes an older build of the same ref pointless.
@@ -14,14 +14,106 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # [d2linux] native Linux track (branch `linux`, docs/linux-port.md). Builds
+  # d2linux and runs its headless --smoke self-test. This is the only CI job
+  # on the linux branch; on main it runs alongside the mingw-i686 PE job.
+  #
+  # M1 (game TUs join the build): the job builds the charter arch, i386 —
+  # the decomp assumes the 32-bit MSVC x86 ABI (PLAN.md §7 R1) — with the
+  # multilib toolchain. The game slice list lives in platform/linux/build.cmake;
+  # the forced-include chain + -fshort-wchar are applied there per source.
+  linux-native:
+    runs-on: ubuntu-24.04
+    env:
+      # check-build-linux.sh builds the default arch (i386 since M1); CI
+      # verifies exactly what ships.
+      D2LINUX_ARCH: i386
+      # Under i386 the SDL X11/Wayland checks can never pass on a runner:
+      # the dev libraries are x86-64-only (no libx11-dev:i386 multiarch
+      # here), so the full-configure attempt would deterministically fatal
+      # in sdlchecks.cmake and the console retry would rescue it every run.
+      # Go console-only up front - the smoke forces the SDL dummy drivers
+      # anyway. (Real backend configure stays the default for anyone
+      # building the native arch locally; the script keeps that contract.)
+      D2LINUX_SDL_FLAGS: "-DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install the toolchain
+        run: |
+          sudo apt-get update -qq
+          # gcc-multilib g++-multilib: -m32 codegen + the 32-bit libgcc/libstdc++
+          # (M1's i386 charter; PLAN.md §7 R5). libc6-dev-i386 is listed
+          # explicitly: it is the actual provider of the 32-bit crt objects and
+          # headers (crt1.o, /usr/include/i386-linux-gnu) - pulled in by the
+          # multilib metapackage, but named here so a partial install can't
+          # masquerade as a working one. SDL3 hard-errors at configure time on
+          # Linux without X11 or Wayland dev libraries - the runner can afford
+          # the real backends.
+          sudo apt-get install -y -qq cmake ninja-build gcc-multilib g++-multilib \
+            libc6-dev-i386 \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev \
+            libdecor-0-dev libegl1-mesa-dev libasound2-dev
+          # libxtst-dev: XTEST — SDL3 hard-errors at configure time without it
+          # (sdlchecks.cmake CheckX11); the rest of the family is above, EGL +
+          # ALSA below, matching SDL3's README-linux build-deps list.
+          # libdecor-0-dev: Wayland decorations are a SOFT dep — without it
+          # configure only WARNs and the binary ships without decoration
+          # support: bare windows on GNOME/Weston Wayland at runtime
+          # (sdlchecks.cmake CheckWayland; field-proven on the owner's VM).
+
+      - name: Verify the i386 toolchain (fail fast, gcc's own verdict)
+        # CI round 2026-11-04: the first i386 run died in configure with a bare
+        # "cannot build -m32" while the apt step above reported success - and
+        # the script had discarded attempt 1's log. This step gates the job on
+        # a real 32-bit compile+link BEFORE cmake runs; if multilib is broken
+        # or half-installed, gcc's raw error lands here, not inside a probe.
+        run: |
+          set -e
+          printf 'int main() { return 0; }\n' > /tmp/d2l_m32.c
+          echo '--- gcc -m32 (C) ---'
+          gcc -m32 /tmp/d2l_m32.c -o /tmp/d2l_m32_c
+          echo 'i386 C compile+link: OK'
+          echo '--- c++ -m32 (C++) ---'
+          c++ -m32 -x c++ /tmp/d2l_m32.c -o /tmp/d2l_m32_cxx
+          echo 'i386 C++ compile+link: OK'
+          echo '--- multilib packages on the runner ---'
+          dpkg -l gcc-multilib g++-multilib libc6-dev-i386 2>/dev/null | grep '^ii' || true
+
+      - name: Build d2linux from a clean clone + headless smoke
+        # bash prefix: runs regardless of the git exec bit (the bit cannot be
+        # set from a Windows checkout; also record it via
+        # git update-index --chmod=+x tools/check-build-linux.sh).
+        run: bash tools/check-build-linux.sh "$GITHUB_WORKSPACE" "$GITHUB_SHA"
+
+      # check-build-linux.sh builds in a temp clone and deletes it, so build
+      # in-tree too and keep the binary as an artifact.
+      - name: Build in-tree
+        # Same console-only SDL options as the check job (D2LINUX_SDL_FLAGS
+        # above): under i386 the X11/Wayland checks cannot pass without the
+        # :i386 multiarch dev libraries.
+        run: |
+          cmake -S . -B build-linux -G Ninja -DD2LINUX_ARCH=i386 \
+            -DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF
+          cmake --build build-linux -j "$(getconf _NPROCESSORS_ONLN)" --target d2linux
+
+      - name: Upload d2linux-<commit>
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2linux-${{ github.sha }}
+          path: build-linux/d2linux
+
   mingw-i686:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      # NOTE: the vanilla-plus gates (tools/check-vanilla-plus.sh) are
+      # NOTE: the vanilla-plus merge gates (tools/check-vanilla-plus.sh) are
       # deliberately NOT run here — a gate failure must not halt the build.
-      # They are a manual audit step:
+      # They are a manual audit step (see docs/merge-upstream.md, step 4):
       #   tools/check-vanilla-plus.sh "$GITHUB_WORKSPACE"
 
       - name: Install the toolchain

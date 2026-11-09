@@ -385,4 +385,74 @@ void __stdcall SetCurrentThreadId() {
     dwCurrentThreadId = GetCurrentThreadId();
 }
 
+::Report * __thiscall Constructor(::Report * pThis) {
+    if (!pThis) return nullptr;
+    pThis->_vfptr = nullptr;
+    pThis->pFile = nullptr;
+    pThis->szFilePath[0] = '\0';
+    pThis->szReportDir[0] = '\0';
+    pThis->nAttachmentCount = 0;
+    memset(pThis->aszAttachmentPaths, 0, sizeof(pThis->aszAttachmentPaths));
+    return pThis;
+}
+
+::Report * __thiscall ScalarDeletingDestructor(::Report * pThis, uint32_t nFlags) {
+    if (pThis) {
+        Destructor(pThis);
+        if (nFlags & 1) {
+            // Scalar delete - not implemented for Report
+        }
+    }
+    return pThis;
+}
+
+void __thiscall Destructor(::Report * pThis) {
+    if (!pThis) return;
+    if (pThis->pFile) {
+        fclose(pThis->pFile);
+        pThis->pFile = nullptr;
+    }
+}
+
+int8_t __thiscall Open(::Report * pThis, char * szFileName) {
+    if (!pThis || !szFileName) return 0;
+    pThis->pFile = fopen(szFileName, "wb");
+    if (!pThis->pFile) return 0;
+    strncpy(pThis->szFilePath, szFileName, sizeof(pThis->szFilePath) - 1);
+    pThis->szFilePath[sizeof(pThis->szFilePath) - 1] = '\0';
+    return 1;
+}
+
+int8_t __thiscall Close(::Report * pThis) {
+    if (!pThis || !pThis->pFile) return 0;
+    fclose(pThis->pFile);
+    pThis->pFile = nullptr;
+    return 1;
+}
+
+bool __thiscall IsOpen(::Report * pThis) {
+    return pThis && pThis->pFile != nullptr;
+}
+
+int8_t __thiscall AddAttachment(::Report * pThis, char * szPath, int8_t bCopyToReportDir) {
+    if (!pThis || !szPath || pThis->nAttachmentCount >= 16) return 0;
+    strncpy(pThis->aszAttachmentPaths[pThis->nAttachmentCount], szPath, 1023);
+    pThis->aszAttachmentPaths[pThis->nAttachmentCount][1023] = '\0';
+    pThis->nAttachmentCount++;
+    return 1;
+}
+
+int32_t Printf(::Report * pThis, char * szFormat, ...) {
+    if (!pThis || !pThis->pFile || !szFormat) return 0;
+    va_list args;
+    va_start(args, szFormat);
+    int result = vfprintf(pThis->pFile, szFormat, args);
+    va_end(args);
+    return result;
+}
+
+// Global variables
+
+uint32_t dwCurrentThreadId = 0;
+
 } // namespace Fog::_3rdparty::crashy

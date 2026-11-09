@@ -96,6 +96,16 @@ namespace D2Launch::CharSel {
 
 namespace D2Lang::StrTable::strtable {
 
+// String literals referenced by global pointers
+static const char s_data_local_lng__s_string_tbl_006e02f8[] = "Data\\local\\lng\\%s\\string.tbl";
+static const char s_data_local_font__s_default_map_006e02d8[] = "Data\\local\\font\\%s\\default.map";
+static const char s_data_local_lng__s_patchstring_tbl_006e02b4[] = "Data\\local\\lng\\%s\\patchstring.tbl";
+static const char s_data_local_lng__s_expansionstring_006e028c[] = "Data\\local\\lng\\%s\\expansionstring.tbl";
+static const char s_data_local_font__s_default_map_006e02d8[] = "Data\\local\\font\\%s\\default.map";
+static const char s_d2data_mpq_006dc770[] = "d2data.mpq";
+static const char s_patch_d2_mpq_006dc728[] = "patch_d2.mpq";
+static const char s_d2exp_mpq_006cd3a0[] = "d2exp.mpq";
+
 // =============================================================================
 // Initialized data (arrays, structs, tables)
 // =============================================================================
@@ -110,13 +120,13 @@ char gaLanguageCodeLookup[4] = { 'E', 'N', 'U', '\x00' }; D2_GLOBAL_GUARD(gaLang
 // Initialized scalars
 // =============================================================================
 
-char * gpszStringTblPathFormat = s_data_local_lng__s_string_tbl_006e02f8; D2_GLOBAL_GUARD(gpszStringTblPathFormat, "D2Lang::StrTable::strtable::gpszStringTblPathFormat");
-char * gpszFontMapPathFormat = s_data_local_font__s_default_map_006e02d8; D2_GLOBAL_GUARD(gpszFontMapPathFormat, "D2Lang::StrTable::strtable::gpszFontMapPathFormat");
-char * gpszPatchStringTblPathFormat = s_data_local_lng__s_patchstring_tbl_006e02b4; D2_GLOBAL_GUARD(gpszPatchStringTblPathFormat, "D2Lang::StrTable::strtable::gpszPatchStringTblPathFormat");
-char * gpszExpansionStringTblPathFormat = s_data_local_lng__s_expansionstring_006e028c; D2_GLOBAL_GUARD(gpszExpansionStringTblPathFormat, "D2Lang::StrTable::strtable::gpszExpansionStringTblPathFormat");
-char * gpszD2DataMpqName = s_d2data_mpq_006dc770; D2_GLOBAL_GUARD(gpszD2DataMpqName, "D2Lang::StrTable::strtable::gpszD2DataMpqName");
-char * gpszPatchD2MpqName = s_patch_d2_mpq_006dc728; D2_GLOBAL_GUARD(gpszPatchD2MpqName, "D2Lang::StrTable::strtable::gpszPatchD2MpqName");
-char * gpszD2ExpMpqName = s_d2exp_mpq_006cd3a0; D2_GLOBAL_GUARD(gpszD2ExpMpqName, "D2Lang::StrTable::strtable::gpszD2ExpMpqName");
+char * gpszStringTblPathFormat = (char*)s_data_local_lng__s_string_tbl_006e02f8; D2_GLOBAL_GUARD(gpszStringTblPathFormat, "D2Lang::StrTable::strtable::gpszStringTblPathFormat");
+char * gpszFontMapPathFormat = (char*)s_data_local_font__s_default_map_006e02d8; D2_GLOBAL_GUARD(gpszFontMapPathFormat, "D2Lang::StrTable::strtable::gpszFontMapPathFormat");
+char * gpszPatchStringTblPathFormat = (char*)s_data_local_lng__s_patchstring_tbl_006e02b4; D2_GLOBAL_GUARD(gpszPatchStringTblPathFormat, "D2Lang::StrTable::strtable::gpszPatchStringTblPathFormat");
+char * gpszExpansionStringTblPathFormat = (char*)s_data_local_lng__s_expansionstring_006e028c; D2_GLOBAL_GUARD(gpszExpansionStringTblPathFormat, "D2Lang::StrTable::strtable::gpszExpansionStringTblPathFormat");
+char * gpszD2DataMpqName = (char*)s_d2data_mpq_006dc770; D2_GLOBAL_GUARD(gpszD2DataMpqName, "D2Lang::StrTable::strtable::gpszD2DataMpqName");
+char * gpszPatchD2MpqName = (char*)s_patch_d2_mpq_006dc728; D2_GLOBAL_GUARD(gpszPatchD2MpqName, "D2Lang::StrTable::strtable::gpszPatchD2MpqName");
+char * gpszD2ExpMpqName = (char*)s_d2exp_mpq_006cd3a0; D2_GLOBAL_GUARD(gpszD2ExpMpqName, "D2Lang::StrTable::strtable::gpszD2ExpMpqName");
 
 } // namespace D2Lang::StrTable::strtable
 

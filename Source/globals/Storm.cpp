@@ -311,21 +311,32 @@ char szOOGPasswordDialogTimeFmt = '\x0d'; D2_GLOBAL_GUARD(szOOGPasswordDialogTim
 
 namespace Storm::_3rdparty::zlib::deflate {
 
+// String literals for zlib error messages
+static const char s_need_dictionary_006d3838[] = "need dictionary";
+static const char s_stream_end_006d382c[] = "stream end";
+static const char lpDefault_006cc837[] = "";
+static const char s_file_error_006d3820[] = "file error";
+static const char s_stream_error_006d3810[] = "stream error";
+static const char s_data_error_006d3804[] = "data error";
+static const char s_insufficient_memory_006d37f0[] = "insufficient memory";
+static const char s_buffer_error_006d37e0[] = "buffer error";
+static const char s_incompatible_version_006d37c8[] = "incompatible version";
+
 // =============================================================================
 // Initialized data (arrays, structs, tables)
 // =============================================================================
 
 char * z_errmsg[10] = {
-    s_need_dictionary_006d3838,
-    s_stream_end_006d382c,
-    lpDefault_006cc837,
-    s_file_error_006d3820,
-    s_stream_error_006d3810,
-    s_data_error_006d3804,
-    s_insufficient_memory_006d37f0,
-    s_buffer_error_006d37e0,
-    s_incompatible_version_006d37c8,
-    lpDefault_006cc837
+    (char*)s_need_dictionary_006d3838,
+    (char*)s_stream_end_006d382c,
+    (char*)lpDefault_006cc837,
+    (char*)s_file_error_006d3820,
+    (char*)s_stream_error_006d3810,
+    (char*)s_data_error_006d3804,
+    (char*)s_insufficient_memory_006d37f0,
+    (char*)s_buffer_error_006d37e0,
+    (char*)s_incompatible_version_006d37c8,
+    (char*)lpDefault_006cc837
 }; D2_GLOBAL_GUARD(z_errmsg, "Storm::_3rdparty::zlib::deflate::z_errmsg");
 
 } // namespace Storm::_3rdparty::zlib::deflate

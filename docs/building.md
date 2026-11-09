@@ -35,7 +35,8 @@ That produces `build/d2.exe`, a 32-bit Windows executable. `tools/check-build.sh
 the same from a clean clone and checks the result; CI runs it on every push. On Windows,
 `tools/build-local-win11.cmd` runs the same configure and build natively plus the gates:
 it checks the PE, writes `build/d2exe.map` (crash addresses resolve against it) and
-strips a play-sized `build/d2s-<sha>.exe`.
+strips a play-sized `build/d2s-<sha>.exe`. CI on the `linux` branch builds the native `d2linux`
+instead — see [linux-port.md](linux-port.md).
 
 Each module under `Source/` and `3rdparty/` builds into its own static library, and the
 executable links them whole in the order of the 1.14d link. `-DREDIVIVUS_MODULE_LIBRARIES=OFF`
