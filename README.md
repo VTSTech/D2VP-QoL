@@ -11,7 +11,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R140-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R142-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -67,7 +67,7 @@ step-cadence presentation). The wider candidate slate is scoped in
 
 Current build: **`Vanilla+0.0.8-R144`** (line 1 of `d2boot.log` pins any build); the
 latest release tag is
-**[`R140`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R140)**, 2026-11-09.
+**[`R142`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R142)**, 2026-11-09.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -77,7 +77,7 @@ latest release tag is
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R142, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R144, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
@@ -95,8 +95,15 @@ latest release tag is
   inventory ↔ stash move with the stash open, shared pages included,
   `[features] ctrl_click_xfer`; the R141 follow-up fixed the vacated-slot field catch —
   field-verified 2026-11-09, [#35](https://github.com/VTSTech/D2VP-QoL/issues/35) closed,
-  SMOKE §R) and the **Unlock FPS** feature (R142 — the presentation-FPS unlock:
-  `[features] unlock_fps`, ~60 FPS present on a 25 Hz sim; field ask SMOKE §S).
+  SMOKE §R), the **Unlock FPS** feature (R142 — the presentation-FPS unlock:
+  `[features] unlock_fps`, ~60 FPS present on a 25 Hz sim) with its **sub-tick
+  interpolation** (R143/R143.1/R143.2 — `[features] unlock_fps_interp`, default On: the
+  world scroll glides between ticks at the present rate while the sim stays byte-exact
+  25 Hz; two jitter field reports later, the delivery fix landed and the glide was
+  field-accepted 2026-11-09) and the **two-column Vanilla+ Options page** (R144 — the
+  panel split into two columns of six so it fits whole again down to 640x480, and the
+  interpolation knob took the twelfth row, **FPS Interpolation** — the README gallery
+  screenshot shows it in game; field ask SMOKE §S).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
