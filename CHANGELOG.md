@@ -17,7 +17,9 @@ its source round. Per-tag notes: the
   overlay text: **Session** (real time since you entered the current game, `H:MM:SS`)
   and **System** (your PC's local clock, `HH:MM` 24-hour). Opt-in (default off), a
   **Automap Clock** row joins the Vanilla+ Options page (the page is two columns of
-  seven now, box 0x151→0x171 — still whole at 640x480). Self-ID `Vanilla+0.0.8-R147`.
+  seven now, box 0x151→0x171 — still whole at 640x480). The five round-tooling scripts (docs gate, overlay
+  pack/verify, smoke sync, round bump, handoff offload) move into `tools/` and
+  ship in the overlay. Self-ID `Vanilla+0.0.8-R147`.
 - **R146 — Shared Stash: 100 pages** (owner ask: "Good job, works. Let's increase the
   Shared Stash pages to 100" — the "Then 100" leg of the original R63 roadmap). The
   R82 design was built for this: the `.sss` v2 header grows to 812 bytes (one

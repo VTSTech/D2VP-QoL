@@ -39,7 +39,7 @@ the speedrun/PD2-overlay staple.
 8. **Round bookkeeping**: `D2VP_ROUND "146" → "147"` — self-ID
    **`Vanilla+0.0.8-R147`**, title screen + automap tag `D2VP-R147`.
 
-## R147 files (5 code + 1 define + docs)
+## R147 files (5 code + 1 define + 5 tools + docs)
 
 - `Source/D2Client/UI/Automap.cpp` — the gated `VPCLOCK_Draw` site in `AUTOMAP_Draw`
   (between the build tag and the difficulty line).
@@ -51,6 +51,12 @@ the speedrun/PD2-overlay staple.
 - `Source/D2Client/UI/VanillaPlusOptions.cpp` — the thirteenth row + the 7/6 reflow
   (box 0x151→0x171, back row 0x124→0x144).
 - `Redivivus/d2_boot.h` — `D2VP_ROUND "147"`.
+- `tools/` — the five round-tooling scripts join the repo and ship in
+  the overlay: `docs_gate.py` (one-shot docs/consistency gate), `overlay.py`
+  (zip pack/verify), `smoke_sync.py` (checklist↔template sync),
+  `round_bump.py` (mechanical round bump + live-doc census),
+  `handoff_offload.py` (the rev-header offload). Path defaults derive from
+  each script's own location, so they run unchanged on the Win11 side.
 
 Docs: CHANGELOG (R147 entry), README (the Automap Clock feature row), FEATURES (row
 18 + §18, thirteen ship), SMOKE §T (items 67–71; issue template synced verbatim),
@@ -70,6 +76,10 @@ handoff rev 163 (the rev-162 R146 header offloaded verbatim to **H66**), ROUND-S
   every line at its retail spot); the session anchor rides an existing per-game
   reset (no new game-state hooks); display-only — no packets, no files, no server
   half, no d2boot marks.
+- The five `tools/` scripts ship smoke-tested from their new home: path
+  derivation plus `docs_gate --round 147`, `smoke_sync check`,
+  `round_bump --report`, `handoff_offload --dry-run`, and this round's
+  `overlay pack`/`verify` all ran from `tools/`.
 
 ## Field state + asks
 
