@@ -1,3 +1,5 @@
+*v18, 2026-11-11. R154 (**Transparent HUD**, the owner ask "it is just the bottom bar i want to make transparent, and even then, not the globes, belt bar or skill buttons", then the XP/stamina keep and "fully transparent") — with `transparent_hud` the bottom bar's console frame art, the run button, the menu button and the hostile indicator are not drawn at all; everything functional keeps its vanilla draw and hit areas (plan at plans/TRANSPARENT-HUD-PLAN.md). R155 (**Camera Zoom**, the owner ask + the four owner calls settled 2026-11-11 — in-steps only, Z only, D3D only first, level 0 each join) — **Z** steps the world zoom 1.0 → 1.25 → 1.5 → 1.0 anchored on the character, the UI stays pixel-1:1 behind the world-phase bracket, the cursor is inverse-mapped (D3D first; DDraw/Gdi clamp to 1.0 with a `d2boot.log` note). R156 (the **Glide port**, owner-ordered the moment the R155 D3D build field-verified) — the D3D site set mirrored into `Glide.cpp`; both renderers **FIELD-VERIFIED 2026-11-11** ("z to zoom works as intended in D3D" / "Z to Zoom working as intended in Glide R156"). **Fifteen features ship.**
+
 *v17, 2026-11-10. R153 (**#37 choke-point fix**, on the owner's field crash on the R152 build — the SAME
 read `[null+0xC]` AV at `DRAW_UI_InventoryContent+0x9A`, ~5 s after the last page flip; paired-crash
 frame-shift analysis against the owner's `d2exe.map` pinned the same 15-frame draw chain on a build
@@ -122,12 +124,14 @@ Every slate row must satisfy all of these before it ships:
 | # | Feature | Area | D2R parity source | Effort | Risk | Gate key |
 |---|---|---|---|---|---|---|
 | 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **PLANNED**, drafted 2026-11-09: [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md) (renderer-side scale, UI stays 1:1, cursor truth; the R117–R122 reach arc is the zoom-out groundwork) |
+| 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **Implemented** (R155 D3D + R156 Glide port — option **Camera Zoom**, the fifteenth Options row; **Z** steps 1.0 → 1.25 → 1.5 → 1.0 anchored on the character, the UI stays pixel-1:1, the cursor is inverse-mapped; DDraw/Gdi clamp to 1.0 with a `d2boot.log` note; plan at [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md); **FIELD-VERIFIED 2026-11-11** — "z to zoom works as intended in D3D" / "Z to Zoom working as intended in Glide R156" — see §0a) |
 | 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
 | 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; R149 pair serialization + R150 round-trip window closed the deterministic deposit-leg crash; R152 #37 root fix — the surviving intermittent crash was the page-switch remove storm freeing client units without unlinking them from the inventory chain, fixed by unlink-before-free in the REMOVED echo; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
 | 1 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
 | 2 | Clock / game-timer overlay | HUD | D2R Tab-screen game timer; BH wall-clock | S | Low | `clock_overlay` |
 | 3 | Item ilvl on tooltips | Loot | D2R 2.5 display-item-level toggle | S–M | Low | **Shipped** (R55 standalone line → R56 name-suffix → R57 bare digits → R59 single-space trim — `item_ilvl`, see §3; first shipped in release 0.0.7) |
 | 4 | Transparent bottom bar | HUD | None — owner suggestion; see-through-HUD staple elsewhere | S–M | Low–Med | `transparent_hud` |
+| 4 | Transparent bottom bar | HUD | None — owner suggestion; see-through-HUD staple elsewhere | S–M | Low–Med | `transparent_hud` — **Implemented** (R154 — option **Transparent HUD**, the fourteenth Options row; the console frame art + run/menu buttons + hostile indicator skip drawing, everything functional untouched, zero renderer code — see §4) |
 | 5 | Monster HP bar on hover | HUD | D2R enemy health bar (PC) | M | Low–Med | `monster_hp_bar` |
 | 6 | Auto gold pickup | Loot | D2R "Gold Pickup" gameplay option | M | Med | **Shipped 0.0.4** (2026-10-29: ledger row 33; field-verified — "Auto-Gold Pickup works!" — coexists with alt_toggle) |
 | 7 | Automap scale + position | HUD | D2R larger overlay map | M | Med | `automap_scale` |
@@ -145,6 +149,8 @@ Every slate row must satisfy all of these before it ships:
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
 2026-11-09 ([plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md)); row 0b
+Row 0a **shipped** (R155 D3D + R156 Glide port, field-verified 2026-11-11 — §0a);
+row 0b
 shipped (R125, field-verified R126) and row 0c shipped (R140) — they are
 the slate's head, not new scope. Rows 1–9 were the new candidates; row 6 shipped for 0.0.4, and row 1 shipped as the orb-face readout and was repurposed post-release (see §1).
 Rows 12–13 are **planned scope** (owner suggestion 2026-11-05, not yet implemented): one
@@ -160,17 +166,21 @@ video-options stops (R109–R115): 1344x700 activates a retail-dormant engine mo
 whole site-1..6 pipeline routes it (§14) —
 and 1920x1080 rode the 720p playbook (§15); slider stops, not `[features]` gates.
 **Shipped as of R144**: rows 0b (R125/R126), 0c (R140), 17 (R142 + the R143 interpolation + the R144 panel row), plus rows 1, 3, 6, 9, 10
+**Shipped as of R156**: rows 0a (R155/R156), 0b (R125/R126), 0c (R140), 4 (R154), 17 (R142 + the R143 interpolation + the R144 panel row), 18 (R147/R148), plus rows 1, 3, 6, 9, 10
 and 11 — and, outside this slate, the pre-slate pair
 `alt_toggle`/`portable_save` (handoff ledger rows 28–31, releases
 0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Twelve features
+0.0.2/0.0.3) and `no_panel_shift` (born from issue #26, R95–R101). **Fifteen features
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 **R146/R147 updates**: row 9's stash went to a hundred pages (see the row + §9);
 row 18 (**Automap Clock**, `automap_clock`) shipped R147 — one line + the area-level level-name suffix since R148 — row 4 (**Transparent HUD**, `transparent_hud`) shipped R154 — **fifteen features ship** (row 0a, **Camera Zoom** `camera_zoom`, shipped R155; the Glide renderer port shipped R156).
+row 18 (**Automap Clock**, `automap_clock`) shipped R147 — one line + the area-level level-name suffix since R148 — row 4 (**Transparent HUD**, `transparent_hud`) shipped R154.
 
 ---
 
 ### 0a. Camera Zoom — `[features] camera_zoom` (IMPLEMENTED R155 D3D + R156 Glide; plan at `plans/CAMERA-ZOOM-PLAN.md`, Glide field QA pending)
+### 0a. Camera Zoom — `[features] camera_zoom` (IMPLEMENTED R155 D3D + R156 Glide; plan at `plans/CAMERA-ZOOM-PLAN.md`; D3D + Glide FIELD-VERIFIED 2026-11-11)
 
 **What.** With the gate on, **Z** steps the world zoom **1.0 → 1.25 → 1.5 → 1.0** while you play (D2R parity: the launch feature — Z toggles between zoom steps). The zoom anchors on the character — they hold their screen spot while the world scales around them. Steps only (owner call: no free-form zoom), the Z key only (no wheel), the **D3D and Glide renderers** (the R156 Glide port mirrors the D3D site set into `Glide.cpp`: the two helpers, the two perspective funnels, the top-down sprite quads, the two flat subtile builders; DDraw/Gdi still clamp to 1.0 with a one-way `d2boot.log` mark), and the level resets to 1.0 every join.
 
@@ -1318,4 +1328,4 @@ boot lockstep) + docs_gate green (compile gate: the owner's Win11 build). Field 
 - In-tree grounding: handoff.md rows 28–31 (the feature-era map), fix-14 Drop.cpp map;
   FEATURES row-4 scan of `D2Client/UI/Panel.cpp` (2026-10-29); resolution site-1..6 record
   (docs/resolution-widelayout-audit.md) + the mode-3 recon in plans/1344x700-PLAN.md §3
-  (both docs left the tree at the 2026-11-08 cleanup — git history keeps them).
+  (both docs left the tree at the 2026-11-08 cleanup — git history keeps them). 

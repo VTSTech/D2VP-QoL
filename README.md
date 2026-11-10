@@ -13,6 +13,7 @@
 </a>
 
 [![Release](https://img.shields.io/badge/release-0.0.8--R153-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R156-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -70,8 +71,10 @@ step-cadence presentation). The wider candidate slate is scoped in
 ## Status
 
 Current build: **`Vanilla+0.0.8-R153`** (line 1 of `d2boot.log` pins any build); the
+Current build: **`Vanilla+0.0.8-R156`** (line 1 of `d2boot.log` pins any build); the
 latest release tag is
 **[`R153`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R153)**, 2026-11-09.
+**[`R156`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R156)**, 2026-11-11.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -82,6 +85,7 @@ latest release tag is
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 - **In the working build since the R128 tag** (rounds R135–R144, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R156, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
@@ -113,6 +117,21 @@ latest release tag is
   the **automap clock** (R147, merged to one line in R148 — `[features]
   automap_clock`: `SESS: hh:mm:ss SYS: 12:01PM` under the build tag; R148 also
   put the area's level on the level-name line, always-on; field ask SMOKE §T).
+  put the area's level on the level-name line, always-on; field ask SMOKE §T), the
+  **#37/#38 field-crash arc** (R149–R153 — the Ctrl+Click pick/place pair
+  serialization and the full pick→place round-trip window, then the
+  unlink-before-free root fix that moved to the `CUnit::RemoveObject` choke
+  point and closed the whole crash family; plus the #38 second half — the
+  perspective camera glides its warp origin and the character rides the same
+  glide, so perspective mode is smooth end to end), the **Transparent HUD**
+  (R154 — `[features] transparent_hud`: the bottom bar's console frame art, the
+  run/menu buttons and the hostile indicator skip drawing entirely so the world
+  shows through; globes, belt, skill buttons, XP/stamina bars, panels and
+  tooltips keep their vanilla draw and hit areas) and the **Camera Zoom**
+  (R155 D3D + R156 Glide — `[features] camera_zoom`: **Z** steps the world
+  zoom 1.0 → 1.25 → 1.5 → 1.0 anchored on your character, the UI stays
+  pixel-1:1, the cursor is inverse-mapped so clicks land where the zoomed world
+  shows them; field-verified on both renderers 2026-11-11).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
@@ -235,4 +254,4 @@ the merge-era tooling and plans have left the tree (recoverable from git history
 MIT, see [LICENSE](LICENSE). Code under `thirdparty/` keeps its own license.
 
 Diablo and Blizzard Entertainment are trademarks of Blizzard Entertainment, Inc. This
-project is not affiliated with or endorsed by Blizzard.
+project is not affiliated with or endorsed by Blizzard. 
