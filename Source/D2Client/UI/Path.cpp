@@ -209,8 +209,10 @@ void __fastcall TypeOfUiOverlayOverWorld(uint32_t eBorderType) {
           GAME::Game::D2GameView->rcExtendedView.right += nViewOffsetX; // DrawFloorTile rejects outside this rect
           return;
         }
+        // VP-END [issue #26 / R92]
         GAME::View::SetViewRectangleSize(GAME::Game::D2GameView, -nViewOffsetX, 0, SpellSel::WindowSizeX - nViewOffsetX, ui::WindowSizeY);
       return;
+      // VP-END [issue #26 / R95]
       case 2:
         // VP-BEGIN [issue #26 / R95]: no-panel-shift - mirror of the case-1
         // guard above: border-0 view rect verbatim, no rcExtendedView
@@ -237,8 +239,10 @@ void __fastcall TypeOfUiOverlayOverWorld(uint32_t eBorderType) {
           GAME::Game::D2GameView->rcExtendedView.left -= nViewOffsetX;
           return;
         }
+        // VP-END [issue #26 / R92+R93]
         GAME::View::SetViewRectangleSize(GAME::Game::D2GameView, nViewOffsetX, 0, SpellSel::WindowSizeX + nViewOffsetX, ui::WindowSizeY);
       return;
+      // VP-END [issue #26 / R95]
       case 3:
         GAME::View::SetViewRectangleSize(GAME::Game::D2GameView, 0, 0, SpellSel::WindowSizeX, ui::WindowSizeY);
       GAME::Game::GAMEDATA_ClearQueuedClicks();
@@ -447,10 +451,17 @@ void __stdcall DRAW_UpdateMouseWorldOffsets() {
     // stayed tick-locked while the camera glided - the residual field
     // jitter). Applied before the shake check so it is unconditional;
     // shake then adds on top exactly as retail. Off: 0 delta, byte-for-byte
-    // retail.
+    // retail. [R149, issue #38] top-down only now: the perspective pipeline
+    // anchors every layer on the warp origin (SetPerspectiveScale), which
+    // glides on its own (View.cpp), and the perspective sprite path
+    // neutralizes MouseOffsets by construction (Wall2 pre-adds it, the unit
+    // draw subtracts it) - a delta here would only skew the mouse world-pick
+    // against the gliding visual.
     int nVpInterpDx = 0;
     int nVpInterpDy = 0;
-    UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    if (!D2gfx::D2GFX::D2GFX_IsPerspectiveActive()) {
+        UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    }
     MouseXOffset += nVpInterpDx;
     MouseYOffset += nVpInterpDy;
     // VP-END [unlock-fps-interp R143.2]

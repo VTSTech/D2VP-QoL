@@ -229,6 +229,8 @@ BOOL __stdcall SHIFTCOMPARE_Active();      // config: shift_compare on?
 BOOL __stdcall VPCTRLXFER_Active();        // config: ctrl_click_xfer on?
 void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte); // R141: park the 0x18 half of the pair (Inv.cpp click branch)
 void __stdcall VPCTRLXFER_TickPendingPlace(); // R141: release the parked 0x18 one frame later (Inv.cpp stash draw site)
+BOOL __stdcall VPCTRLXFER_PairInFlight(); // R149 #37, R150 round-trip window: TRUE from the park stamp until 500 ms - the click branch consumes the click while a pair's pick+place+echoes settle
+BOOL __stdcall VPCTRLXFER_EchoSuppressHand(int nItemGuid); // R150 #37: TRUE while nItemGuid is the pair's picked item inside the round-trip window - Item.cpp's 0x19 echo skips the client-hand set (the item stays in its source cell; the hand never fills; see PairInFlight)
 void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp after the LoadItemDesc publish
 // [vanilla-plus options page] d2vp.ini feature-toggle bridge (row 10). The
 // page reads/flips the same [features] keys the gates consume; writes use
@@ -321,11 +323,22 @@ BOOL __stdcall VPNOINTRO_IsRequested();
 // DRAW_UpdateMouseWorldOffsets' shake early-return, so shadows/state
 // overlays/culling stayed tick-locked while the camera glided), and the
 // player-sprite cancel flips sign in perspective (MouseOffsets already
-// carries the delta into projected coords). UNLOCKFPS_GetPlayerRenderOffset
-// feeds the camera, the sprite world offset and the player's
-// sprite/shadow/states one frame-shared delta interpolated between two real
-// position samples taken at each client world update (unlock_fps_interp,
-// default on; ini-only through R143, a Vanilla+ Options row since R144).
+// carries the delta into projected coords). R149 (#38, perspective still
+// jittery) re-derived the perspective half: the perspective pipeline anchors
+// EVERY layer (floor/wall tiles, sprites, shadows) on the warp origin
+// D2GFX_SetPerspectiveScale - the player's live precision position - so the
+// screen-unit delta never reaches those layers (the sprite path's WorldOffset
+// pre-add/internal-subtract neutralizes it) and the R143.2 perspective cancel
+// was the only moving thing on screen. R149 glides the ORIGIN instead
+// (UNLOCKFPS_GetPlayerRenderOffsetOrigin, the same two samples in 16.16
+// precision units, added at ViewDraw2's SetPerspectiveScale) and keeps the
+// screen-unit delta top-down-only (camera/MouseOffsets/Wall2-cancel all
+// !perspective-gated; the cancel is a plain ADD in both modes).
+// UNLOCKFPS_GetPlayerRenderOffset feeds the top-down camera, the sprite world
+// offset and the player's sprite/shadow/state draws one frame-shared delta
+// interpolated between two real position samples taken at each client world
+// update (unlock_fps_interp, default on; ini-only through R143, a Vanilla+
+// Options row since R144).
 BOOL __stdcall UNLOCKFPS_Active();         // config: unlock_fps on? (2 s hot-read)
 BOOL __stdcall UNLOCKFPS_ShouldPresent();  // pacer: draw now? (FALSE when gate off)
 void __stdcall UNLOCKFPS_NotePresent();    // telemetry: a present actually happened
@@ -347,6 +360,14 @@ int __stdcall UNLOCKFPS_IdleSleepMs();     // pump idle: ms to sleep (<= 0 = ret
 // (gate/interp off, no snapshot yet, null out) so every site reduces to
 // retail; standing still returns 0 offsets.
 BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOffsetY);
+// R149 #38: the same two-sample delta in the path's 16.16 precision units,
+// for the PERSPECTIVE warp origin - ViewDraw2 adds it to the player precision
+// position it hands D2GFX_SetPerspectiveScale, so the perspective camera
+// (the warp anchor every perspective layer - floor/wall tiles, sprites,
+// shadows - projects around) glides between the same two samples the top-down
+// consumers interpolate. One call site per frame; same gating and zero-fills
+// as the screen-unit accessor (gate/interp off = byte-for-byte retail).
+BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t* pnOffsetY);
 
 // [vanilla-plus automap-clock R147/R148] Session/System clock on the automap
 // overlay (owner ask R147: "Let's add an in game clock to the Automap. Session

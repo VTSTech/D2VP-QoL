@@ -1041,9 +1041,15 @@ void __fastcall InGameDraw(int32_t bSkipCursor) {
     // sim stays byte-exact 25 Hz - render-time only, nothing is written back to
     // the path (the weather per-draw camera delta below gets the smooth motion
     // for free). Gate/interp off: both offsets 0, byte-for-byte retail.
+    // [R149, issue #38] top-down only: in perspective the camera is the warp
+    // origin (SetPerspectiveScale), which glides on its own (View.cpp) - the
+    // center here only feeds tile-walk/cull bounds, and gliding it against a
+    // gliding warp would skew the walk window for nothing.
     int nVpInterpDx = 0;
     int nVpInterpDy = 0;
-    UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    if (!D2gfx::D2GFX::D2GFX_IsPerspectiveActive()) {
+        UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
+    }
     myCenterX += nVpInterpDx;
     myCenterY += nVpInterpDy;
     // VP-END [unlock-fps-interp R143]
@@ -1096,6 +1102,7 @@ void __fastcall InGameDraw(int32_t bSkipCursor) {
     if (eBorderType != 3 || VPRES_IsWideLayoutMode(D2gfx::D2GFX::D2GFX_GetResolutionMode())) {
       View::ViewDraw2(D2GameView);
     }
+    // VP-END [issue #26 / R94]
 
     UI::Draw::DRAW_UI(D2GameView);
     D2Win::Src::D2WinMain::RENDERER_DrawOutOfGameScene();

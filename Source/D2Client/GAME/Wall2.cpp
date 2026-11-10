@@ -409,6 +409,30 @@ void __fastcall DRAW_WORLD_Unit(D2UnitStrc * pUnit, uint32_t nGamma, uint32_t nD
         }
       }
 
+      // VP-BEGIN [unlock-fps-interp R150, issue #38]: the local player's
+      // warp input rides its own glide. R149 glides the warp ORIGIN
+      // (View.cpp SetPerspectiveScale), so every world position projects
+      // through world-minus-glided-origin - but this input was still the
+      // player's raw tick-snapped precision position, so the character's
+      // projected spot was (P_cur - origin): a full step at every tick
+      // gliding back to zero - the character (and the ground right under
+      // it) seesawed at the tick rate while the distant world scrolled
+      // smoothly. THE JITTER THE OWNER STILL SAW ON R149. Feeding the
+      // sprite the SAME two-sample precision delta the origin rides makes
+      // (input - origin) identically zero: the character sits at the warp
+      // anchor - screen-fixed, exactly its retail spot - while the world
+      // glides, matching the field-accepted top-down pipeline (there the
+      // camera delta moves the camera AND the character's draw together).
+      // Other units keep their raw positions: their true 25 Hz cadence,
+      // same as top-down. Off/interp off/still: 0 delta, retail.
+      if (pUnit && pUnit == UNIT::Player::GetPlayerUnit_UI()) {
+        int nVpOriginDx = 0;
+        int nVpOriginDy = 0;
+        UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+        nPrecisionX += nVpOriginDx;
+        nYpos += nVpOriginDy;
+      }
+      // VP-END [unlock-fps-interp R150, issue #38]
       D2gfx::D2GFX::D2GFX_PerspecitveScalePosition(nPrecisionX, nYpos, 0x60, (int*)&nDrawLayer, (int*)&nDrawX, bOrder);
       nPrecisionX = UI::Path::DRAW_GetWorldOffsetX();
       nDrawLayer += nPrecisionX;
@@ -460,23 +484,30 @@ void __fastcall DRAW_WORLD_Unit(D2UnitStrc * pUnit, uint32_t nGamma, uint32_t nD
       // retail screen position - in D2 the camera follows the player 1:1, the
       // character is screen-fixed and the WORLD glides (feet stay planted on
       // the gliding ground because the cancel rides the same shared offset).
-      // Sign depends on the branch that produced the coords above: top-down
-      // coords are world-space and the view center carries +delta, so the
-      // cancel ADDS it; perspective coords are screen-space and MouseOffsets
-      // (R143.2: now unconditional, see Path.cpp) already carries +delta into
-      // them, so adding again would double the delta - there the cancel
-      // SUBTRACTS. R143.1 added unconditionally: double delta in perspective,
-      // correct only top-down. Off: 0 delta, retail in both modes.
+      // Top-down coords are world-space and the view center carries +delta,
+      // so the cancel ADDS it. [R149, issue #38] perspective needs NO cancel
+      // at all - and R143.1/R143.2 proved it the hard way: the perspective
+      // pipeline anchors EVERY layer (floor tiles Draw.cpp:614, unit sprites
+      // here :412, shadows Gfx.cpp AdjustPerspectivePosition) on the warp
+      // origin SetPerspectiveScale (View.cpp, the player's tick-snapped
+      // precision position), and this sprite path NEUTRALIZES MouseOffsets by
+      // construction (the += DRAW_GetWorldOffset below, undone by the unit
+      // draw's own subtraction) - so the R143.2 screen-unit delta never moved
+      // the world in perspective and the "cancel" was the ONLY thing on
+      // screen that moved: the character wobbled -delta against a 25 Hz
+      // stepping world (R143.1's unconditional add wobbled it +2x delta - the
+      // "double delta"). R149 glides the warp ORIGIN instead (View.cpp,
+      // UNLOCKFPS_GetPlayerRenderOffsetOrigin): every perspective layer rides
+      // the same gliding warp, the character stays warp-anchored (delta 0
+      // here, byte-for-byte retail), and the screen-unit delta below is
+      // top-down-only (Path.cpp/Game.cpp gate it the same way).
       int nVpInterpDx = 0;
       int nVpInterpDy = 0;
-      UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
-      if (bPerspective) {
-        nDrawLayer -= nVpInterpDx;
-        nDrawX -= nVpInterpDy;
-      } else {
-        nDrawLayer += nVpInterpDx;
-        nDrawX += nVpInterpDy;
+      if (!bPerspective) {
+        UNLOCKFPS_GetPlayerRenderOffset(&nVpInterpDx, &nVpInterpDy);
       }
+      nDrawLayer += nVpInterpDx;
+      nDrawX += nVpInterpDy;
       // VP-END [unlock-fps-interp R143.2]
       bOrder = Engine::Gfx::DRAW_WORLD_Unit_1(pUnit, nGamma, nDrawLayer, nDrawX, nullptr, 1);
       if (bOrder && pUnit) {

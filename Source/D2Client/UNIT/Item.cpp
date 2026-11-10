@@ -15,6 +15,7 @@
 #include "Source/D2Client/UI/Inv.h"
 #include "Source/D2Client/UI/Panel.h"
 #include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [ctrl-click stash R150, issue #37] VPCTRLXFER_EchoSuppressHand at the 0x19 echo
 #include "Source/D2Client/UI/npcmenu.h"
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
@@ -1883,11 +1884,38 @@ void __fastcall HandleItemRemoveFromContainer(uint8_t * pBytes) {
             pOwnerUnit = pOwnerUnitSaved;
           }
 
-          D2Common::ITEMS::Items::ITEM_SetItemData_ePage(pItem, INVPAGE_None);
           pErrorLineOrInv = pInventory2;
-          D2Common::INVENTORY::Inventory::CopyInventoryOfPlayerOrFree(pInventory2, pItem);
-          pBelongsResult = D2Common::INVENTORY::Inventory::INVENTORY_GetHandItem(pErrorLineOrInv);
-          Cursor::ITEM_SetItemOnHand(pBelongsResult);
+          // VP-BEGIN [ctrl-click stash R150, issue #37]: the retail pick echo
+          // HANDS the item (page=None so the source grid stops drawing it,
+          // CopyInventoryOfPlayerOrFree sets pInventory->pCursorItem,
+          // ITEM_SetItemOnHand draws it under the cursor) - right for a
+          // manual drag, wrong for the R140 Ctrl+Click transfer pair: the
+          // hand-full dispatch then eats the user's next Ctrl+Click (place/
+          // swap with a mid-flight locked item - the desync the #37 crash
+          // rides; the R149 park-window guard never saw these clicks). While
+          // the echoed item is the pair's picked item
+          // (VPCTRLXFER_EchoSuppressHand, same 500 ms round-trip window as
+          // the click guard), skip ALL of it - the page=None included, or
+          // the item would flicker invisible in its cell (and a pair
+          // stranded by a panel close would strand it INVISIBLE): the item
+          // stays exactly where it is client-side - node-linked, drawn in
+          // its source cell (the ITEM_DropItemToGroundWithMode bookkeeping
+          // above re-asserted the source placement and page) - until the
+          // parked 0x18's echo relinks it into the target grid the normal
+          // PutItemInInventory way (that echo sets the target page itself,
+          // Item.cpp :1780). The hand never fills, so every click during
+          // the round trip still dispatches empty-hand into the guarded
+          // xfer branch; a stranded pair leaves the item visible and
+          // unlocked in its cell (better recovery than the R141 on-hand
+          // strand). Retail echoes never match the parked GUID:
+          // byte-for-byte retail here.
+          if (!VPCTRLXFER_EchoSuppressHand(pItem->nUnitGUID)) {
+            D2Common::ITEMS::Items::ITEM_SetItemData_ePage(pItem, INVPAGE_None);
+            D2Common::INVENTORY::Inventory::CopyInventoryOfPlayerOrFree(pInventory2, pItem);
+            pBelongsResult = D2Common::INVENTORY::Inventory::INVENTORY_GetHandItem(pErrorLineOrInv);
+            Cursor::ITEM_SetItemOnHand(pBelongsResult);
+          }
+          // VP-END [ctrl-click stash R150, issue #37]
           ITEM_RemoveUninterruptableState(pItem);
         } else {
           CUnit::RemoveObjectFromServerObjectTable(pItem->nUnitGUID, UNIT_ITEM);

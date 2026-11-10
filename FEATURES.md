@@ -1,4 +1,4 @@
-*v12, 2026-11-10. **Row 18 added and IMPLEMENTED the same round (R147) on owner ask** ("Let's add an in game clock to the Automap. Session Time and System Time"): the automap clock (`automap_clock`, §18, option **Automap Clock**) — since R148 ONE line on the retail automap text-overlay stack directly under the build tag (**SESS:** real time since game entry, `hh:mm:ss`, one `GetTickCount()` anchor per game at the UI reset — pause menus and cutscenes count + **SYS:** the PC's local clock, 12-hour with a trailing AM/PM, per-frame `GetLocalTime`); display-only, the gate charter (default off, 2 s hot-read, the Options-page write bridge), the Options page two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144). R148 (owner ask) also put the area's effective level on the automap's level-name line — `Blood Moor (3)`, the same MonLvl/MonLvlEx lookup the drop code uses, always-on with no row and no toggle, plain name in town. **Thirteen features ship.** R146 (the shared stash at a hundred pages) added no row. Field ask: §T 67–72.*
+*v14, 2026-11-10. R150 (the R149 field pass): **#37** — the crash's real window was the ROUND TRIP, not the 2-frame park: the 0x19 pick echo hands the item client-side until the 0x18 place echo lands, so deposit-direction clicks in that window took the retail hand-full path with a mid-flight locked item (the deterministic deposit crash). The echo no longer hands the pair's item (`VPCTRLXFER_EchoSuppressHand`: it stays visible in its source cell until the place echo relinks it) and `VPCTRLXFER_PairInFlight` spans the whole 500 ms round trip (§0c); **#38** — the local player's sprite, shadow and state overlays ride the origin glide (`UNLOCKFPS_GetPlayerRenderOffsetOrigin` at Wall2/Gfx) — the character is screen-fixed at its retail spot while the perspective world glides (§17). R149 (smoke-test fallout on the R148 build): **#37** — the Ctrl+Click transfer serializes its pick+place pair (`VPCTRLXFER_PairInFlight`: a click inside the ~2-frame flight window is consumed — no second `0x19` against an occupied server hand, no overwritten parked `0x18`, the intermittent-crash desync gone, §0c); **#38** — the interpolation glide reaches perspective mode by gliding the warp origin `D2GFX_SetPerspectiveScale` itself (the perspective camera every perspective layer — floor/wall tiles, sprites, shadows — projects around; the screen-unit delta is top-down-only now, §17). Row 18's header note (R147/R148, below) unchanged. **Thirteen features ship.** Field asks: §T 67–72 + §U 73–74.*
 
 # FEATURES.md — D2R backport slate (vanilla-plus)
 
@@ -126,7 +126,7 @@ Every slate row must satisfy all of these before it ships:
 | 14 | 1344x700 resolution (retail's dormant mode 3) + 1366x768 fifth stop | Video / renderers | Retail-dormant engine mode — the binaries carry the tables, no UI stop ever shipped; D2MultiRes-era community prior art; 1366x768 is the panel-standard the field box letterboxes onto | S–M | Low–Med | **Implemented** (R109 — Gap A `case 3` + Gap B slider stop 3 + Gap C mini-panel mapping; field: Glide GREEN, D3D switch crash fixed in-round via mode-list probe + host-mode letterbox ladder; field round 2 (R111): D3D borderless-window look fixed — probe-first presentation + host-sized window; field round 3 (R112): hosted stops STRETCH the frame over the host mode + **1366x768 joins as the slider's fifth stop (mode 5)**, gates 432/432 (the suite since retired); **field-proven** — the R109–R122 wide-view arc plus the R124 D3D fullscreen boot-crash fix (field-verified 2026-11-06, "d3d fullscreen works again"); the plan doc left the tree at the 2026-11-08 cleanup — git history keeps it) |
 | 15 | 1920x1080 resolution | Video / renderers | None — owner suggestion 2026-11-05; SGD2FreeRes/D2DX-class arbitrary-res prior art | M | Med | **Implemented** (R115 — video-options slider stop 6 / mode 6, not `[features]`-gated; slot bookkeeping after R112 — see §15) |
 | 16 | Inventory sort button | Inventory | No D2R parity — owner suggestion 2026-11-09; sort-button staple (D3's stash anvil) | M | Med | `inventory_sort` — **PLANNED**: [plans/INVENTORY-SORT-PLAN.md](plans/INVENTORY-SORT-PLAN.md) (retail `0x19`+`0x18` pair replay, zero server changes) |
-| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
+| 17 | Presentation FPS unlock (60 Hz present, 25 Hz sim) | Video / frame loop | Presentation-rate parity — D2R presents above the classic 25; the smoothing class is d2dx motion-sync | S–M (v1) | Med | `unlock_fps` — **Implemented** (R142 — option **Unlock FPS**; bool gate, fixed 60 Hz target; the draw moved onto a 60 Hz present pacer in `CLIENT_GameLoopFrame` (skip-never-queue), the pump idle sleep paces to the deadline, EndScene budget 5→1 ms under the gate; sim stays 25 Hz byte-exact with a presents/ticks pair in d2boot.log every 5 s as the proof; retail's UNCAPPED game type rejected — it speeds the server; vsync untouched; interpolation followed R143 — the world scroll + everything world-anchored glides between ticks at the present rate (render-time two-sample interpolation between the last two tick samples, R143.1 revision then the R143.2 delivery fix — snapshot before the draw, sprite-world offset unconditional, perspective cancel sign — after the owner's jitter field reports; R149 #38 re-derivation: the perspective cancel was the only mover on screen (the perspective pipeline anchors every layer on the warp origin and neutralizes the screen-unit delta) — the ORIGIN now glides instead (View.cpp `SetPerspectiveScale` + the precision-unit two-sample pair) and the screen-unit delta is top-down-only; R150 field pass: the local player's warp input rides the SAME precision pair (Wall2 body, Gfx shadow + state overlays) — input − origin ≡ 0, the character screen-fixed while the world glides; write-nowhere; `unlock_fps_interp` sub-gate default 1, 0 = the R142 step-cadence look; R144: the sub-gate left ini-only for the twelfth Options row **FPS Interpolation**, and the page reflowed to two columns of six — box 0x1f1→0x151); field 2026-11-09: §S-61 green — presents 292/300/299 per ~5 s (~58→60/s) against client ticks 125/126/125 (~25/s), retail /fps reads 60 — the §S-64 menu flip green (off→25, on→60) and the §S-65 glide look owner-accepted ("Ok, I think it looks good now"); §S 62–64 + the R144 item 66 field pass pending) |
 | 18 | Automap clock (Session + System time) | HUD | None — owner suggestion 2026-11-10 ("Let's add an in game clock to the Automap. Session Time and System Time"); speedrun/PD2 overlay staple | S | Low | `automap_clock` — **Implemented** (R147 — option **Automap Clock**; R148 merged it to ONE line on the retail automap text-overlay stack directly under the build tag, right-aligned with the level name/difficulty family — **SESS:** = real time since game entry, `hh:mm:ss`, anchored by one `GetTickCount()` capture in `InitializeUI`'s per-game reset (pause menus and cutscenes count — a desk stopwatch, not a play-time meter), **SYS:** = the PC's local clock via `GetLocalTime`, 12-hour with a trailing AM/PM, re-read every frame; the same 2 s gate charter, a **Automap Clock** row took the thirteenth Options slot and the page went to two columns of SEVEN (box 0x151→0x171, back row 0x124→0x144, still whole at 640x480); R148 also appended the area's effective level to the level-name line (always-on, no row/toggle — `Blood Moor (3)`, plain in town); no server half, no packets, no files) |
 
 Row 0a is **Task C** (handoff §9 item 3) — already scoped, awaiting go, and drafted
@@ -234,7 +234,7 @@ slot preference (Slot rules above), +1 `shiftcmp:` gate (shield-kind slot pick) 
 docs-budget gate). **FIELD-VERIFIED 2026-11-06** ("Great job, works" — the shield
 slot legs ran on the owner builds). Nothing owed.
 
-### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35)
+### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35; R149 pair serialization + R150 round-trip window for #37)
 
 **The ask** (owner, 2026-11-09, no issue): "Can we make Ctrl+Click put/remove items from
 Stash when Stash is open?" — D2R PC parity (Ctrl+Click moves an item with a container
@@ -271,6 +271,20 @@ bridge busts its cache tick, so a flip lands on the very next Ctrl+Click — no 
 no panel reopen). Off = the retail dead click, byte-for-byte pre-R140. The ini template
 block ships in the same round: a fresh `d2vp.ini` carries the key; an ini from before
 R140 reads 0 until the row is flipped once.
+
+**R149 (issue #37, "Intermittent Crash when Ctrl+Click Xfer very fast"): the pair is
+serialized.** The R141 park window is ~2 frames wide (park this frame, the stash-draw
+tick releases the `0x18` the next), and a second Ctrl+Click inside it passed the
+empty-hand test — the pick echo had not drained yet — so the branch sent a second
+`0x19` the server rejects (the server hand still holds item 1) while re-parking over
+the stage and losing the first `0x18` outright: a lost place packet, items vanished
+client-side, and a client/server state no retail flow ever produces — the desync the
+intermittent crash rode. `VPCTRLXFER_PairInFlight()` (the stage + a park timestamp) now
+heads the branch: while a pair is mid-flight the click is consumed (`return 1`, silent,
+no packets) and the next click after the pair settles transfers normally. A 500 ms
+staleness cap self-clears a stage stranded by a panel closed inside the window (the
+tick site only runs while the stash view draws) — the interrupted-drag state, legal and
+player-recoverable, same as the R141 panel-close case.
 
 **Verification + field**: sandbox call-shape audit against every sibling send in the
 function + brace/flow review of the whole hunk (no cross toolchain this round); compile
@@ -1054,7 +1068,29 @@ regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + t
   sawtooth at every tick+present boundary) and the sprite-world offset's delta was dead
   behind the shake early-return — hence R143.2. Monsters,
   missiles, items ride the world offset unchanged — they glide with the floor.
-  Animations stay tick-locked. Sub-gate **`[features] unlock_fps_interp`** (default 1;
+  Animations stay tick-locked.
+  **R149 (issue #38, "FPS Interpolation with Perspective Mode still jittery"): the
+  glide reaches perspective mode — through the camera it already has.** Re-derivation:
+  every perspective layer (floor tiles via `D2GFX_AdjustPerspectivePosition`, unit
+  sprites via `D2GFX_PerspecitveScalePosition`, shadows likewise) projects
+  world-minus-origin through one warp whose origin is `D2GFX_SetPerspectiveScale` —
+  `ViewDraw2` sets it from the player's LIVE tick-snapped precision position — and the
+  perspective sprite path neutralizes MouseOffsets by construction (Wall2 pre-adds it,
+  the unit draw subtracts it), so the R143.2 screen-unit delta never reached the
+  perspective world and the "cancel" was the ONLY thing on screen that moved (the
+  character wobbling −delta against a 25 Hz stepping world; R143.1's unconditional add
+  wobbled it +2x — the "double delta"). The fix: `UNLOCKFPS_NoteClientTick` also
+  snapshots the player's 16.16 precision pair (same snap rules),
+  `UNLOCKFPS_GetPlayerRenderOffsetOrigin` returns the same two-sample alpha in those
+  units, and `ViewDraw2` adds it to `SetPerspectiveScale` — the perspective camera
+  glides itself, floor/walls/sprites/shadows ride the warp they already share, and the
+  character (the anchor) needs no cancel. The screen-unit delta sites (camera center,
+  MouseOffsets, the Wall2 cancel — now a plain top-down ADD) are `!perspective`-gated:
+  in perspective a gliding center/MouseOffsets would only skew the tile walk and the
+  mouse world-pick against the gliding warp. Transients worth knowing: the mouse
+  world-pick maps against the tick-snapped anchor, so during fast motion a click can
+  read ≤ a tick's step (a few px) off the gliding visual — retail-pick quantization
+  class, self-corrects at every tick. Sub-gate **`[features] unlock_fps_interp`** (default 1;
   ini-only through R143 — since R144 the twelfth Vanilla+ Options row, **FPS
   Interpolation**, directly under its owner; the row rides the same write bridge as the
   others and reads a missing key as 1 through the per-row read default

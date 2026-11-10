@@ -712,13 +712,92 @@ static int gnVpXferPlaceGuid = 0;
 static int gnVpXferPlaceX = 0;
 static int gnVpXferPlaceY = 0;
 static int gnVpXferPlacePageByte = 0;
+static DWORD dwVpXferPlaceParkTick = 0; // [R149] when the stage was parked (the staleness cap below)
 
 void __stdcall VPCTRLXFER_ParkPlace(int nGuid, int nX, int nY, int nPageByte) {
     gnVpXferPlaceGuid = nGuid;
     gnVpXferPlaceX = nX;
     gnVpXferPlaceY = nY;
     gnVpXferPlacePageByte = nPageByte;
+    dwVpXferPlaceParkTick = GetTickCount();
     gnVpXferPlacePending = 1;
+}
+
+// [R149, issue #37] TRUE while a pick+place pair is mid-flight. The server
+// hand holds the picked item from the 0x19 until our parked 0x18 lands, so a
+// second Ctrl+Click transfer inside the park window would send a 0x19 the
+// server rejects (hand occupied) AND overwrite the parked 0x18 (one stage,
+// lost packet) - the client/server desync the very-fast-click crash rides.
+// The click branch consumes the click instead (Inv.cpp).
+//
+// [R150, issue #37 field pass] the window is the ROUND TRIP, not the park.
+// The R149 build shipped with the guard spanning only the 2-frame park
+// (pending 1->2->0), and the owner's field pass still crashed - worse, now
+// DETERMINISTICALLY on the deposit leg ("crash as soon as I ctrl+click the
+// first item that was just withdrawn"). Re-derivation found the real hazard
+// window: HandleItemRemoveFromContainer (the 0x19 echo) places the picked
+// item ON THE CLIENT HAND (CopyInventoryOfPlayerOrFree sets
+// pInventory->pCursorItem, ITEM_SetItemOnHand sets the cursor) and it stays
+// there until the 0x18 echo lands - several frames, latency-dependent, far
+// past the 2-frame park. A Ctrl+Click inside THAT window never reaches the
+// empty-hand xfer branch at all (ClickItemLeft dispatches on the hand item
+// first): it takes the retail hand-full path - place/swap with mid-flight,
+// locked items and hover-context globals from another panel - the desync the
+// crash rides. Two halves, this file + Item.cpp:
+//   - EchoSuppressHand (below) keeps the pair's item OFF the client hand
+//     (Item.cpp skips the hand-set on the 0x19 echo), so every click during
+//     the round trip still dispatches empty-hand and reaches the guard;
+//   - THIS guard spans the whole round trip: TRUE from the park stamp until
+//     500 ms have elapsed - park + 0x18 send + both echoes + the server-side
+//     hand window, with 3-5x margin over a 25 Hz SP tick and enough for
+//     ~200 ms TCP. Cost: transfers throttle to ~2/s (consumed clicks are
+//     silent no-ops, the pre-R140 retail dead click); correctness over mash
+//     speed. The 500 ms cap keeps the R149 recovery semantics: a stage
+//     stranded by a mid-window panel close self-clears WITHOUT sending (and
+//     with the suppress in place the stranded item never left its cell - it
+//     is still visible, unlocked by its 0x19 echo, and a later click just
+//     re-attempts the transfer).
+BOOL __stdcall VPCTRLXFER_PairInFlight() {
+    if (!dwVpXferPlaceParkTick) {
+        return 0;
+    }
+    if (GetTickCount() - dwVpXferPlaceParkTick > 500) {
+        dwVpXferPlaceParkTick = 0; // stale round trip: recover, send nothing
+        gnVpXferPlacePending = 0;
+        return 0;
+    }
+    return 1;
+}
+
+// [R150, issue #37] TRUE while the named item is a Ctrl+Click transfer pair's
+// picked item inside the round-trip window. Item.cpp's 0x19 echo handler asks
+// this before placing the item on the client hand: the retail pick echo
+// hands the item (CopyInventoryOfPlayerOrFree -> pInventory->pCursorItem,
+// ITEM_SetItemOnHand -> the cursor sprite), which is exactly right for a
+// manual drag and exactly wrong for our programmatic pair - the hand-full
+// dispatch would eat the user's next Ctrl+Click (see VPCTRLXFER_PairInFlight
+// above). With the suppress, the pair's item simply stays where it is
+// client-side - still node-linked and drawn in its source cell (the page
+// re-assert from the echo's own ITEM_DropItemToGroundWithMode bookkeeping
+// keeps it there), not on the hand - until the 0x18 echo relinks it into the
+// target grid the normal way (PutItemInInventory unlink-before-relink). The
+// hand never fills, so the click branch's empty-hand precondition holds for
+// the whole round trip and the guard alone owns the serialization. Retail
+// echoes (a manual drag, a vendor flow) never match the parked GUID and are
+// byte-for-byte unaffected.
+BOOL __stdcall VPCTRLXFER_EchoSuppressHand(int nItemGuid) {
+    if (!nItemGuid || nItemGuid != gnVpXferPlaceGuid) {
+        return 0;
+    }
+    if (!dwVpXferPlaceParkTick) {
+        return 0;
+    }
+    if (GetTickCount() - dwVpXferPlaceParkTick > 500) {
+        dwVpXferPlaceParkTick = 0; // same staleness recovery as the guard
+        gnVpXferPlacePending = 0;
+        return 0;
+    }
+    return 1;
 }
 
 void __stdcall VPCTRLXFER_TickPendingPlace() {
@@ -1008,6 +1087,19 @@ static int gnUnlockFpsPrevPosX = 0;
 static int gnUnlockFpsPrevPosY = 0;
 static int gnUnlockFpsCurPosX = 0;
 static int gnUnlockFpsCurPosY = 0;
+// [R149, issue #38] the same two samples in the path's 16.16 fixed-point
+// precision units (DynamicPath Coords.tFixed / static pos << 16). The
+// PERSPECTIVE pipeline anchors every layer - floor tiles, wall tiles, unit
+// sprites, shadows - on the warp origin D2GFX_SetPerspectiveScale, which
+// ViewDraw2 sets from the player's LIVE precision position, so the origin is
+// the perspective camera: gliding IT glides every perspective layer together
+// through the same warp (screen-unit offsets cannot - they reach only some
+// consumers, and the sprite path's WorldOffset pre-add/internal-subtract
+// neutralizes the rest). Same snap rules as the screen pair.
+static int gnUnlockFpsPrevPrecX = 0;
+static int gnUnlockFpsPrevPrecY = 0;
+static int gnUnlockFpsCurPrecX = 0;
+static int gnUnlockFpsCurPrecY = 0;
 static int gbUnlockFpsHaveSnap = 0;                 // prev/cur pair valid (player seen at least once)
 static int gnUnlockFpsOffsetX = 0;                  // per-present cache: one offset per frame,
 static int gnUnlockFpsOffsetY = 0;                  // shared by the camera and every sprite draw
@@ -1122,9 +1214,15 @@ void __stdcall UNLOCKFPS_NoteClientTick() {
     if (pPlayer) {
         int nPosX = D2Common::Units::GetTargetX(pPlayer);
         int nPosY = D2Common::Units::GetTargetY(pPlayer);
+        // [R149, issue #38] the same sample in precision units for the
+        // perspective warp origin (View.cpp ViewDraw2 -> SetPerspectiveScale).
+        int nPrecX = D2Common::Units::GetPrecisionX(pPlayer);
+        int nPrecY = D2Common::Units::GetPrecisionY(pPlayer);
         if (!gbUnlockFpsHaveSnap) {
             gnUnlockFpsPrevPosX = nPosX; // first sample: no previous tick, no glide
             gnUnlockFpsPrevPosY = nPosY;
+            gnUnlockFpsPrevPrecX = nPrecX;
+            gnUnlockFpsPrevPrecY = nPrecY;
             gbUnlockFpsHaveSnap = 1;
         } else if (nPosX - gnUnlockFpsCurPosX > UNLOCKFPS_INTERP_SNAP_PX
                 || gnUnlockFpsCurPosX - nPosX > UNLOCKFPS_INTERP_SNAP_PX
@@ -1132,12 +1230,18 @@ void __stdcall UNLOCKFPS_NoteClientTick() {
                 || gnUnlockFpsCurPosY - nPosY > UNLOCKFPS_INTERP_SNAP_PX) {
             gnUnlockFpsPrevPosX = nPosX; // teleport / level change / resurrect:
             gnUnlockFpsPrevPosY = nPosY; // discontinuity - snap, never glide it
+            gnUnlockFpsPrevPrecX = nPrecX;
+            gnUnlockFpsPrevPrecY = nPrecY;
         } else {
             gnUnlockFpsPrevPosX = gnUnlockFpsCurPosX;
             gnUnlockFpsPrevPosY = gnUnlockFpsCurPosY;
+            gnUnlockFpsPrevPrecX = gnUnlockFpsCurPrecX;
+            gnUnlockFpsPrevPrecY = gnUnlockFpsCurPrecY;
         }
         gnUnlockFpsCurPosX = nPosX;
         gnUnlockFpsCurPosY = nPosY;
+        gnUnlockFpsCurPrecX = nPrecX;
+        gnUnlockFpsCurPrecY = nPrecY;
     } else {
         gbUnlockFpsHaveSnap = 0; // out of game / loading: drop the stale pair
     }
@@ -1168,8 +1272,9 @@ int __stdcall UNLOCKFPS_IdleSleepMs() {
     return nUntilDeadline;
 }
 
-// [vanilla-plus unlock-fps-interp] R143.1 two-sample, R143.2 delivery fix -
-// sub-tick render delta (plan §4 Phase 2). R143 extrapolated the player's
+// [vanilla-plus unlock-fps-interp] R143.1 two-sample, R143.2 delivery fix,
+// R149 perspective re-derivation (#38) - sub-tick render delta (plan §4
+// Phase 2). R143 extrapolated the player's
 // position with PATH_GetScreenVelocity x alpha; a prediction is never exact
 // (quantized path velocity vs the real per-tick displacement, start/stop,
 // turns), so every tick boundary snapped by the prediction error - the field
@@ -1196,6 +1301,25 @@ int __stdcall UNLOCKFPS_IdleSleepMs() {
 //      camera. Path.cpp now applies it before the shake check.
 //   3. The player-sprite cancel in Wall2 flips sign in perspective mode
 //      (MouseOffsets already carries the delta into projected coords).
+// R149 (issue #38, "FPS Interpolation with Perspective Mode still jittery")
+// replaced item 3 wholesale after re-reading the perspective pipeline: every
+// perspective layer - floor tiles (Draw.cpp:614), unit sprites (Wall2:412),
+// shadows (Gfx.cpp) - projects world-minus-origin through ONE warp whose
+// origin is D2GFX_SetPerspectiveScale (View.cpp ViewDraw2, the player's live
+// tick-snapped precision position), and the perspective sprite path
+// neutralizes MouseOffsets by construction (Wall2 pre-adds it, the unit draw
+// subtracts it) - so the screen-unit delta never reached the perspective
+// world and the R143.2 "cancel" was the only thing on screen that moved (the
+// character wobbling against a 25 Hz stepping world). The perspective camera
+// now glides ITSELF: UNLOCKFPS_GetPlayerRenderOffsetOrigin returns the same
+// two-sample alpha in the path's 16.16 precision units and ViewDraw2 adds it
+// to SetPerspectiveScale's anchor, so floor, walls, sprites and shadows glide
+// together through the warp they already share; the character (the anchor)
+// needs no cancel. The screen-unit delta of items 1-2 is top-down-only now
+// (Game.cpp camera, Path.cpp MouseOffsets, the Wall2 cancel all
+// !perspective-gated) - in perspective a gliding center/MouseOffsets would
+// only skew the walk window and the mouse world-pick against the gliding
+// warp.
 // With that wiring: just before a tick the offset reaches 0 (render = cur),
 // just after it is -(new cur - old cur) (render = the same point) -
 // continuous at every tick boundary by construction, whatever the step
@@ -1241,6 +1365,45 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOf
     }
     *pnOffsetX = gnUnlockFpsOffsetX;
     *pnOffsetY = gnUnlockFpsOffsetY;
+    return TRUE;
+}
+
+// [R149, issue #38] the two-sample delta in the path's 16.16 precision units,
+// same alpha clock as UNLOCKFPS_GetPlayerRenderOffset - but for the
+// PERSPECTIVE warp origin: ViewDraw2 adds it to the player precision position
+// it hands D2GFX_SetPerspectiveScale, so the perspective camera (the warp
+// anchor every perspective layer projects around) glides from the previous
+// tick sample to the current one exactly like the top-down camera does.
+// offset = (curPrec - prevPrec) x (since - 40) / 40: at the tick it reads
+// -(cur - prev) (render = previous sample, continuous with the last frame),
+// just before the next tick it reads 0 (render = current sample). One call
+// site per frame (ViewDraw2) - no present-epoch cache needed. Fills 0 and
+// returns FALSE whenever it should not apply, exactly like the screen-unit
+// accessor, so the origin is byte-for-byte retail with the gate/interp off.
+BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t* pnOffsetY) {
+    if (pnOffsetX) {
+        *pnOffsetX = 0;
+    }
+    if (pnOffsetY) {
+        *pnOffsetY = 0;
+    }
+    if (!pnOffsetX || !pnOffsetY) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsMode || !gbUnlockFpsInterp) {
+        return FALSE;
+    }
+    if (!gbUnlockFpsHaveSnap || !dwUnlockFpsLastClientTick) {
+        return FALSE; // no client world update seen yet this process
+    }
+    DWORD dwSinceTick = GetTickCount() - dwUnlockFpsLastClientTick;
+    if (dwSinceTick >= UNLOCKFPS_SIM_TICK_MS) {
+        dwSinceTick = UNLOCKFPS_SIM_TICK_MS; // clamp at the sample: offset 0, render = cur
+    }
+    int64_t nDeltaX = (int64_t)gnUnlockFpsCurPrecX - (int64_t)gnUnlockFpsPrevPrecX;
+    int64_t nDeltaY = (int64_t)gnUnlockFpsCurPrecY - (int64_t)gnUnlockFpsPrevPrecY;
+    *pnOffsetX = (int32_t)(nDeltaX * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
+    *pnOffsetY = (int32_t)(nDeltaY * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
     return TRUE;
 }
 

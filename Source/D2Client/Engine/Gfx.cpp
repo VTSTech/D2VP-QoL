@@ -765,7 +765,22 @@ void __stdcall DRAW_UNIT_States(D2UnitStrc * pUnit, int32_t nBlendMode, int32_t 
     } else {
       pAdjustY = &nScreenY;
       pAdjustX = &nScreenX;
-      D2gfx::D2GFX::D2GFX_AdjustPerspectivePosition(D2Common::Units::GetPrecisionX(pUnit), D2Common::Units::GetPrecisionY(pUnit), 0, pAdjustX, pAdjustY);
+      // VP-BEGIN [unlock-fps-interp R150, issue #38]: the local player's
+      // state overlays (auras, buffs) ride the same glide as the body
+      // (Wall2) and the warp origin (View.cpp) so they stay glued above a
+      // screen-fixed character. Other units keep their raw positions.
+      // Off/interp off/still: 0 delta, retail.
+      int nVpOrigStateX = D2Common::Units::GetPrecisionX(pUnit);
+      int nVpOrigStateY = D2Common::Units::GetPrecisionY(pUnit);
+      if (pUnit && pUnit == UNIT::Player::GetPlayerUnit_UI()) {
+        int nVpOriginDx = 0;
+        int nVpOriginDy = 0;
+        UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+        nVpOrigStateX += nVpOriginDx;
+        nVpOrigStateY += nVpOriginDy;
+      }
+      D2gfx::D2GFX::D2GFX_AdjustPerspectivePosition(nVpOrigStateX, nVpOrigStateY, 0, pAdjustX, pAdjustY);
+      // VP-END [unlock-fps-interp R150, issue #38]
       bPerspective = PANELSHIFT_BorderForWorld(UI::Path::DRAW_GetTypeOfBorder()); // VP: [issue #26 / R100] no-panel-shift - unit sprite path rides the border-0 camera
       switch (bPerspective) {
         case 1:
@@ -3333,6 +3348,19 @@ int32_t __fastcall DrawUnitShadows(D2UnitStrc * pUnit) {
       nPrecisionX = nCoordTmp - nTmp / 2;
       nTmp = D2Common::Units::GetPrecisionY(pUnit);
       nResult = nTmp - (int)pZHalfOffset;
+      // VP-BEGIN [unlock-fps-interp R150, issue #38]: the local player's
+      // shadow rides the same glide as the body (Wall2) and the warp origin
+      // (View.cpp) - raw precision input here would sawtooth the shadow
+      // under a screen-fixed character. Other units keep their raw
+      // positions. Off/interp off/still: 0 delta, retail.
+      if (pUnit && pUnit == UNIT::Player::GetPlayerUnit_UI()) {
+        int nVpOriginDx = 0;
+        int nVpOriginDy = 0;
+        UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+        nPrecisionX += nVpOriginDx;
+        nResult += nVpOriginDy;
+      }
+      // VP-END [unlock-fps-interp R150, issue #38]
       nCallResult2 = D2gfx::D2GFX::D2GFX_IsInPerspectiveBounds(nPrecisionX, nResult);
       if (!nCallResult2) {
         if (!bPerspToggled) {

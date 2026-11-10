@@ -208,6 +208,17 @@ Setup: `[features] automap_clock=1` in `d2vp.ini` (hot-re-reads within ~2 s — 
 
 ---
 
+## U. R149 smoke-test fallout, closed by R150 — the Ctrl+Click round-trip window (#37) + the perspective character glide (#38)
+
+Setup: `ctrl_click_xfer=1` for items 73, 75, 76; `unlock_fps=1` + `unlock_fps_interp=1` (defaults) and perspective mode ON (video options) for item 74. The asks rode the owner's R148 field pass ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37) intermittent crash on very fast Ctrl+Click; [#38](https://github.com/VTSTech/D2VP-QoL/issues/38) interpolation still jittery in perspective) and the R149 field pass (the crash turned deterministic on the deposit leg; the perspective world still jittered). Log chain: none — both fixes are silent by design; a crash, if one still happens, brings its own `d2crash-*.txt`.
+
+- [ ] **73. Very fast Ctrl+Click mashing (#37, R150):** with the stash open, Ctrl+Click across different items as fast as the mouse allows (double-click speed and faster, both directions, personal and Shared pages) — **no crash**, every completed transfer moves exactly one item, no vanished items, no dead slots afterwards. The transferred item stays in its source cell until it appears in the target (**no cursor hop** — the R150 echo suppress). Clicks inside the 500 ms round-trip window are silently consumed (nothing moves, no sound; ~2 transfers/sec while mashing is expected) and the next click transfers normally. Close the stash panel immediately after a Ctrl+Click, wait a second, reopen → transfers still work, and the clicked item is still sitting in its source cell (the R150 strand keeps it visible and unlocked).
+- [ ] **74. Perspective mode glides (#38, R150):** Unlock FPS + FPS Interpolation on, perspective ON — walk and run: the whole perspective world (floor, walls, sprites, shadows) scrolls smoothly at the present rate with **no tick-rate stutter**, and **the character holds its screen spot** — the R149 character/ground seesaw is gone; feet planted, the shadow and buff icons glued to the character — in every movement direction; stop/turn is kick-free; teleport and level changes snap instead of gliding. Click-to-move while running still lands on the clicked spot (transient pick skew is bounded by one tick's step, self-corrects at every tick). Top-down (perspective OFF) behaves exactly as the field-accepted R143.2 glide.
+- [ ] **75. The deposit rhythm = the exact #37 repro (R150):** withdraw an item from the stash, then promptly Ctrl+Click it back into the stash from the inventory panel — repeat at every rhythm from slow to double-click-fast, alternating directions, personal and Shared pages — **no crash at any rhythm** (the R149 build crashed here on the first deposit of a just-withdrawn item). The item never teleports onto the cursor mid-transfer.
+- [ ] **76. Deposit into a Shared stash page (R150):** open a Shared page (any of the 100), Ctrl+Click an inventory item into it — the item lands on the shared page; switch pages and come back, the item is still there; withdraw it back the same way. (The deposit direction into Shared pages was never explicitly field-tested before R150.)
+
+---
+
 ## Evidence to keep if anything breaks
 
 | Artifact | Comes from | Tells us |

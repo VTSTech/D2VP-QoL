@@ -430,7 +430,7 @@ static void VP_SHIFT_InvBodyCoords(D2InventoryEntryStrc* pCoords) {
     pCoords->nTop += nOffsetY;
     pCoords->nBottom += nOffsetY;
 }
-// VP-END [resolution site-5]
+// VP-END [resolution site-5/site-6]
 void __stdcall InitializeiInventoryPages() {
     // Static local variables (originally global data)
     static D2GridScreenCoordinates pTrophyCasePageGridCoordinates = {}; D2_STATIC_GUARD(pTrophyCasePageGridCoordinates, "D2Client::UI::Inv::InitializeiInventoryPages::pTrophyCasePageGridCoordinates");
@@ -9769,6 +9769,26 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         // "Ctrl Click Transfer" row, via VPCTRLXFER_Active's 2 s hot-read):
         // off = the retail dead click, byte-for-byte pre-R140.
         if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+          // R149 (issue #37, "Intermittent Crash when Ctrl+Click Xfer very
+          // fast"): a second Ctrl+Click while a pick+place pair is settling
+          // sent a second 0x19 the server rejects (the hand still holds item
+          // 1) AND re-parked over the stage, losing the first 0x18 outright:
+          // the client/server desync the crash rides. Consume the click,
+          // start nothing.
+          // R150 (field pass on the R149 build: the crash turned
+          // DETERMINISTIC on the deposit leg): the real window is the ROUND
+          // TRIP, not the park - the 0x19 echo hands the item client-side
+          // until the 0x18 echo lands, and hand-full clicks never even reach
+          // this branch (they take the retail place/swap path with mid-
+          // flight items - the desync). Two halves fix it: the echo no
+          // longer hands OUR pair's item (VPCTRLXFER_EchoSuppressHand,
+          // Item.cpp), so every click still dispatches empty-hand here, and
+          // THIS guard now spans the whole 500 ms round trip - park + send +
+          // both echoes + the server hand window. A click inside the window
+          // is a silent no-op; the next one transfers.
+          if (VPCTRLXFER_PairInFlight()) {
+            return 1;
+          }
           eInventoryPage eClickedFromPage;
           int nExpansionFlag;
           int nTargetPage;

@@ -11,6 +11,44 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R150 — the R149 field pass: the deposit crash closed for real, the perspective glide's second half**
+  ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37),
+  [#38](https://github.com/VTSTech/D2VP-QoL/issues/38), owner field pass on the R149
+  build). **#37 — the real window was the round trip, not the park:** the 0x19 pick echo
+  hands the item client-side until the 0x18 place echo lands, so a Ctrl+Click in that
+  window never reached the R149 guard at all — it took the retail hand-full path
+  (place/swap with a mid-flight locked item), the desync that turned the intermittent
+  crash deterministic on the deposit leg. The echo no longer hands the transfer's item
+  (it stays in its source cell until the place echo relinks it — no cursor hop), and the
+  click guard now spans the whole 500 ms round trip. A click inside the window is a
+  silent no-op; the next one transfers. **#38 — the character rides its own glide:**
+  R149 glided the perspective warp origin, but the character sprite still projected from
+  its raw tick-snapped position — it (and the ground under it) seesawed at the tick rate
+  while the world scrolled smoothly. The local player's sprite, shadow and state
+  overlays now share the origin's glide: the character sits screen-fixed (its exact
+  retail spot) while the perspective world glides. Self-ID `Vanilla+0.0.8-R150`.
+- **R149 — smoke-test fallout: the fast-Ctrl+Click crash and the perspective jitter**
+  ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37),
+  [#38](https://github.com/VTSTech/D2VP-QoL/issues/38), owner field pass on the R148
+  build). **#37 — Ctrl+Click transfer, very fast clicks:** a second Ctrl+Click inside
+  the R141 park window (the ~2 frames a pick+place pair is mid-flight) passed the
+  empty-hand test — the pick echo had not drained yet — and sent a second `0x19` the
+  server rejects (the hand still holds item 1) while **overwriting the parked `0x18`**:
+  a lost place packet, a client/server desync, and the intermittent crash the echo
+  handlers ride. A pair is serialized now — `VPCTRLXFER_PairInFlight` makes the click
+  branch consume the click while a pair is in flight (a 500 ms staleness cap
+  self-clears a stage stranded by a mid-window panel close). **#38 — FPS Interpolation
+  in perspective mode still jittery:** re-derivation found the perspective pipeline
+  anchors **every** layer (floor tiles, wall tiles, unit sprites, shadows) on the warp
+  origin `D2GFX_SetPerspectiveScale` — the player's tick-snapped precision position —
+  and the sprite path neutralizes the screen-unit delta by construction, so R143.2's
+  perspective "cancel" was the only thing on screen that moved (the character wobbling
+  against a 25 Hz stepping world). The perspective camera now **glides itself**: the
+  same two-sample alpha rides the warp origin in 16.16 precision units
+  (`UNLOCKFPS_GetPlayerRenderOffsetOrigin` → `SetPerspectiveScale`), floor/walls/
+  sprites/shadows glide together through the warp they already share, the character
+  needs no cancel, and the screen-unit delta (camera, MouseOffsets, the Wall2 cancel)
+  is top-down-only. Self-ID `Vanilla+0.0.8-R149`.
 - **R148 — Automap clock on one line; the area level joins the level-name line**
   (owner ask: "lets change the Automap clock display to 1 line instead of 2. SESS:
   hh:mm:ss SYS: 12:01PM. Also for the first line, Area Name, Can we also add (aLvl)

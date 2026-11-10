@@ -205,6 +205,11 @@ def check_stale_rounds(repo, n, handoff):
 
 
 def check_markers_and_balance(repo, changed):
+    # [R149] markers pair as a MULTISET (the tree's established idiom nests
+    # VP blocks — Path.cpp's case guards share spans — so file-order list
+    # equality false-positived); balance strips comments and string/char
+    # literals first (retail code legally contains lone parens inside
+    # strings — Inv.cpp's strcat(..., ")") UTF-8 builders).
     for rel in changed:
         if not (rel.endswith('.cpp') or rel.endswith('.h')):
             continue
@@ -215,10 +220,13 @@ def check_markers_and_balance(repo, changed):
         begins = re.findall(r'VP-BEGIN \[([^\]]+)\]', txt)
         ends = re.findall(r'VP-END \[([^\]]+)\]', txt)
         if begins or ends:
-            chk(f'markers: {rel} VP-BEGIN/VP-END paired', begins == ends)
-        if rel.endswith(('.cpp', '.h')):
-            chk(f'balance: {rel} braces', txt.count('{') == txt.count('}'))
-            chk(f'balance: {rel} parens', txt.count('(') == txt.count(')'))
+            chk(f'markers: {rel} VP-BEGIN/VP-END paired', sorted(begins) == sorted(ends))
+        stripped = re.sub(r'//[^\n]*', '', txt)
+        stripped = re.sub(r'/\*.*?\*/', '', stripped, flags=re.S)
+        stripped = re.sub(r'"(\\.|[^"\\\n])*"', '""', stripped)
+        stripped = re.sub(r"'(\\.|[^'\\\n])*'", "''", stripped)
+        chk(f'balance: {rel} braces', stripped.count('{') == stripped.count('}'))
+        chk(f'balance: {rel} parens', stripped.count('(') == stripped.count(')'))
 
 
 def check_zip(repo, n, changed, download_dir):

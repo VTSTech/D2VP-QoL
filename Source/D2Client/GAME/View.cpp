@@ -590,6 +590,7 @@ void __fastcall GAMEVIEW_PrepareScene(D2GameViewStrc * pGameView, uint32_t nFlag
       // through to its full-width no-pan clip, so the standard build is the
       // whole fix. Retail modes keep the skip (byte-identical + fill rate).
       Wall2::WALL2_BuildSceneDrawList(pGameView, nFlags);
+      // VP-END [issue #26 / R93]
     }
 
     pGameView->nFlags &= -2;
@@ -1062,6 +1063,24 @@ void __fastcall ViewDraw2(D2GameViewStrc * pGameView) {
       pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_UI();
       nXScale = D2Common::Units::GetPrecisionX(pPlayerUnit_lcl);
       nYScale = D2Common::Units::GetPrecisionY(pPlayerUnit_lcl);
+      // VP-BEGIN [unlock-fps-interp R149]: the perspective warp
+      // origin IS the perspective camera - every perspective layer (floor
+      // tiles via AdjustPerspectivePosition, unit sprites via
+      // PerspecitveScalePosition, shadows) projects world-minus-THIS-anchor,
+      // and retail steps it once per tick with the player. Gliding it with
+      // the same two-sample alpha the top-down camera rides (the player's
+      // precision-unit pair, snap rules included) makes the whole perspective
+      // world scroll at the present rate through the ONE warp it already
+      // shares - no per-layer screen-unit deltas (those never reached these
+      // layers anyway, and the character needs no cancel: it is the anchor,
+      // delta 0, byte-for-byte its retail screen spot). Gate/interp off:
+      // offsets 0, byte-for-byte retail.
+      int nVpOriginDx = 0;
+      int nVpOriginDy = 0;
+      UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+      nXScale += nVpOriginDx;
+      nYScale += nVpOriginDy;
+      // VP-END [unlock-fps-interp R149]
       nShakeOffsetX = 0;
       nShakeOffsetY = 0;
       if (SHAKE_Amplitude) {
