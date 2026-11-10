@@ -1,7 +1,8 @@
 <img width="1916" height="1078" alt="image" src="https://github.com/user-attachments/assets/e66eb061-1a2e-49f0-8a13-4d7dadf2a59d" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/bd850c32-2a98-477f-bda9-a22e41d18bbd" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/999da238-d2f1-4c83-9a01-910daeea65a2" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b90c086e-189a-4d0c-950a-97a2b3e79ab9" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/e89db5ba-6a2e-4deb-ac63-d1c5a7ff6bd0" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/51e5fb86-371d-4da7-98dc-ff525903bf1d" />
 
 
 # D2VP Vanilla+QoL
@@ -11,7 +12,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R144-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R148-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -66,9 +67,9 @@ step-cadence presentation). The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R144`** (line 1 of `d2boot.log` pins any build); the
+Current build: **`Vanilla+0.0.8-R148`** (line 1 of `d2boot.log` pins any build); the
 latest release tag is
-**[`R144`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R144)**, 2026-11-09.
+**[`R148`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R148)**, 2026-11-09.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
