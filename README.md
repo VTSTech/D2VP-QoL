@@ -79,7 +79,6 @@ latest release tag is
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R144, overlay-delivered —
 - **In the working build since the R128 tag** (rounds R135–R156, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
@@ -111,7 +110,6 @@ latest release tag is
   target, then the page count went 10 → 100; field-confirmed "Good job, works") and
   the **automap clock** (R147, merged to one line in R148 — `[features]
   automap_clock`: `SESS: hh:mm:ss SYS: 12:01PM` under the build tag; R148 also
-  put the area's level on the level-name line, always-on; field ask SMOKE §T).
   put the area's level on the level-name line, always-on; field ask SMOKE §T), the
   **#37/#38 field-crash arc** (R149–R153 — the Ctrl+Click pick/place pair
   serialization and the full pick→place round-trip window, then the
