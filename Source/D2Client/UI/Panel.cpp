@@ -2246,13 +2246,29 @@ void __stdcall DRAW_UI_BordersAndOrbsAndFillers() {
       }
     }
 
-    PANEL_DrawCharacterInfo((uint32_t)(eRendererMode == RENDERED_DirectDraw));
+    // VP-BEGIN [transparent-hud R154]: with [features] transparent_hud=1 the
+    // three skip-set draws below render nothing - the console frame art (the
+    // CtrlPnl7/800CtrlPnl7 stone behind the globes and belt, incl. the chat
+    // background and the orb sockets/button wells baked into the frame DC6s),
+    // the run button and the menu button are skipped; the world shows through.
+    // The keep-list around them is untouched: globes, gold readout, stamina
+    // bar, belt internals, skill icons, XP bar all draw retail, and the
+    // hidden buttons keep their hit areas/tooltips (input paths untouched).
+    // Gate off (or ini missing) = every call executes exactly as retail.
+    if (!VANILLAPLUS_HudBarTransparent()) {
+      PANEL_DrawCharacterInfo((uint32_t)(eRendererMode == RENDERED_DirectDraw));
+    }
     PANEL_DrawHealthOrb();
     PANEL_DrawManaOrb();
     PANEL_DrawGoldAmount();
-    PANEL_DrawRunButton();
+    if (!VANILLAPLUS_HudBarTransparent()) { // VP: [transparent-hud R154] skip-set draw
+      PANEL_DrawRunButton();
+    }
     PANEL_DrawStaminaBar();
-    PANEL_DrawMenuButton();
+    if (!VANILLAPLUS_HudBarTransparent()) { // VP: [transparent-hud R154] skip-set draw
+      PANEL_DrawMenuButton();
+    }
+    // VP-END [transparent-hud R154]
     PANEL_DrawBottomPanel();
     PANEL_DrawSkillIcons();
     PANEL_DrawExperienceBar();

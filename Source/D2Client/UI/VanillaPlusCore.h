@@ -401,3 +401,30 @@ void __stdcall VPCLOCK_ResetSession(); // game entry: anchor the session clock
 // SpellSel::WindowSizeX (the family's right-edge base). Draws nothing with
 // the gate off.
 void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX);
+
+// [transparent-hud R154] fully-transparent bottom bar (FEATURES.md row 4,
+// owner asks 2026-11-11, plans/TRANSPARENT-HUD-PLAN.md). With
+// [features] transparent_hud=1 the bottom bar's background frame art
+// (PANEL_DrawCharacterInfo's CtrlPnl7 / 800CtrlPnl7 DRAW_SOLID pieces -
+// the console stone behind the globes and belt, including the chat area
+// background and the orb sockets / button wells baked into the frame DC6s)
+// plus the run button, the menu button and the hostile indicator are NOT
+// drawn - the world shows through where they were. Everything functional
+// keeps its vanilla draw and stays interactive: the globes (+ orb text and
+// gold amount), the belt (slots, pop-belt art, item sprites, hotkey
+// labels), the skill buttons, the XP bar, the stamina bar - and every
+// panel, tooltip, the automap and chat text are never touched. The hidden
+// run/menu buttons keep their hit areas and tooltips (input paths
+// untouched: invisible is not intangible). Display-only, no renderer code:
+// the skip is at the four D2Client UI call sites, upstream of every
+// renderer. Gate = the charter: missing file/section/key or garbage = 0 =
+// vanilla byte-for-byte; the shared 2 s hot-read cache, busted by the
+// Options-page write bridge (D2VP_ConfigReloaded) so a flip lands on the
+// next frame that draws the bar; one d2boot.log mark on first activation
+// (the unlock-fps one-way latch shape). The fourteenth Vanilla+ Options
+// row (Transparent HUD).
+//   Call sites (the only consumers):
+//     Panel.cpp  DRAW_UI_BordersAndOrbsAndFillers - the PANEL_DrawCharacter
+//                Info / PANEL_DrawRunButton / PANEL_DrawMenuButton calls
+//     Draw.cpp   DRAW_UI - the PANEL_DrawHostileIndicator call
+BOOL __stdcall VANILLAPLUS_HudBarTransparent(); // per-frame, 2 s hot-read

@@ -166,7 +166,7 @@ and 11 — and, outside this slate, the pre-slate pair
 ship** (the README table). As-built docs for
 everything shipped: [README.md](README.md) (feature table) + the sections here.
 **R146/R147 updates**: row 9's stash went to a hundred pages (see the row + §9);
-row 18 (**Automap Clock**, `automap_clock`) shipped R147 — one line + the area-level level-name suffix since R148 — **thirteen features ship**.
+row 18 (**Automap Clock**, `automap_clock`) shipped R147 — one line + the area-level level-name suffix since R148 — **fourteen features ship** (row 4, **Transparent HUD** `transparent_hud`, shipped R154).
 
 ---
 
@@ -457,8 +457,20 @@ boot lockstep) + docs_gate green (compile gate: the owner's Win11 build). Field 
 - **Prior art**: D2R 2.5; BH ilvl display; hackmap.
 - **Exit**: ilvl matches ATMA/goMule-reported values on a sample, `0` = vanilla.
 
-### 4. Transparent bottom bar — `[features] transparent_hud`
+### 4. Transparent bottom bar — `[features] transparent_hud` (IMPLEMENTED R154 — fully transparent, owner-scope revision 2026-11-11; plan at `plans/TRANSPARENT-HUD-PLAN.md`, field QA pending)
 
+- **As built (R154)**: with the gate on, the bar's console frame art
+  (`PANEL_DrawCharacterInfo`'s six `CtrlPnl7`/`800CtrlPnl7` `DRAW_SOLID` pieces — the stone
+  behind the globes and belt, including the chat area background and the orb sockets/button
+  wells baked into the frame DC6s), the run button, the menu button and the hostile indicator
+  are **not drawn at all** (the owner's "fully transparent" — value 2's stipple mode below was
+  not shipped; it remains the follow-up design for a future "faded HUD"). The skip set is four
+  guarded call sites in `Panel.cpp`/`Draw.cpp` — zero renderer code, upstream of every renderer.
+  The owner's scope revision extended the skip set beyond the original suggestion below (the
+  stone only): the run/menu buttons and hostile indicator go too, while the globes, belt,
+  skill buttons, XP bar and stamina bar stay opaque and interactive (the owner's keep-list).
+  Gate/Options row/ini template = the shared charter; one `hud-transparent:` d2boot.log mark
+  on first activation.
 - **Behavior (owner suggestion, 2026-10-29 — not a D2R option)**: the bottom control
   panel's stone texture is not rendered — the game world shows through the band it
   used to cover. Everything drawn on top keeps rendering: orb fills, gold readout,

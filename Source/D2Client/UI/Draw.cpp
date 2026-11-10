@@ -839,7 +839,12 @@ void __fastcall DRAW_UI(D2GameViewStrc * pGameView) {
       ui::DRAW_UI_CASH();
     }
 
-    Panel::PANEL_DrawHostileIndicator();
+    // VP: [transparent-hud R154] the hostile indicator is a skip-set draw -
+    // not drawn with [features] transparent_hud=1 (the message log text below
+    // is a separate call and keeps drawing). Gate off = retail.
+    if (!VANILLAPLUS_HudBarTransparent()) {
+      Panel::PANEL_DrawHostileIndicator();
+    }
     Text::TEXT_DrawMessageLogAndOverhead(pGameView);
     D2Win::Src::D2WinFont::Draw_UnitNameUnderCursor();
     // VP: [shift-compare] the equipped-item compare box draws right after the

@@ -1,217 +1,201 @@
 # Transparent HUD — feature plan
 
 *Drafted 2026-11-11 on owner ask ("Lets draft a plan for transparent_hud"); scope revised
-same day on owner corrections — **the panels stay untouched**, this is **the bottom bar
-only**, and within the bar the functional elements stay opaque: **globes, belt slots,
-skill buttons, XP bar, stamina bar**. Only "everything else" in the bar goes translucent.
-Owner calls also made: **fixed ~70% alpha**, **always-on when toggled** (no fade/idle),
-key = **`[features] transparent_hud`**. The remaining open calls are §9.
-Status: **PLANNED — no code yet.**
+same day on owner corrections — **bottom bar only**, panels untouched, keep-list opaque
+(globes, belt slots, skill buttons, XP bar, stamina bar); then finalized: the translucent
+set goes **fully transparent (invisible)**, not ~70%. Owner calls made: scope, alpha =
+0 (skip the draw), always-on when toggled, key = **`[features] transparent_hud`**.
+**Round 1 (tree-verify) is complete** — the pins below are read off this tree, and the
+design collapsed to call-site draw skips with **zero renderer code**. The remaining open
+calls are §9. Status: **ROUND 1 DONE — ready to implement (Round 2).**
 
 ---
 
 ## 1. Goal and non-goals (v1)
 
 **Goal.** With `[features] transparent_hud=1`, the bottom HUD bar's **frame/background
-art** (the big panel graphic, including the chat/message area's frame) and its small
-auxiliary buttons render at a fixed ~70% opacity so the world shows through the empty
-parts of the bar. Every functional element of the bar keeps its vanilla opaque draw:
-the Life and Mana globes, the belt potion slots, the skill buttons, the experience bar
-and the stamina bar. Open panels (inventory, stash, cube, vendor, quest log, skill tree,
-party, waypoint) are **not part of this feature at all** — they draw byte-identically
-whether the gate is on or off. Pure display: every hover, tooltip, drag and click lands
-exactly where it does in vanilla, because nothing but the blend changes.
+art** (the `CtrlPnl7`/`800CtrlPnl7` console pieces — which includes the chat/message area
+background) and the run button, menu button and hostile indicator are **not drawn at
+all**: the world shows through where they used to be. Every functional element keeps its
+vanilla opaque draw and remains fully interactive: the Life and Mana globes (+ their
+readout text and gold amount), the belt (slots, pop-belt art, item sprites, hotkey
+labels), the skill buttons, the experience bar and the stamina bar. Open panels,
+tooltips, the automap, chat text and the cursor are not part of this feature — they draw
+byte-identically whether the gate is on or off. Display-only: nothing hit-test-related
+changes — the hidden run/menu buttons stay exactly as clickable as before.
 
 **Non-goals for v1** (each is a clean follow-up, deliberately deferred):
-- **No panel transparency** — the panel set is untouched code; a future "transparent
-  panels" feature would be a separate plan riding the same mechanism.
-- No 8-bit DDraw path (D2DDraw / D2Gdi) — v1 targets the two wide-class renderers the
-  resolution work already covers (Glide + Direct3D), same scope discipline as the
-  camera-zoom plan; 8-bit blend tables are a follow-on.
-- No configurable opacity — one fixed literal (§9 call 1), not an ini value, not a slider.
-- No fade-on-idle / combat-aware behavior — the toggle is a plain always-on gate.
-- No automap, tooltip or chat-text changes — text and overlays draw exactly as vanilla.
-- No out-of-game (OOG) menu transparency.
+- **No panel transparency** — a future "transparent panels" feature is a separate plan
+  (the blend-mode machinery research in the first draft of this file is its starting
+  point; it is unnecessary for draw-skip).
+- No partial alpha — the set is invisible, not faded (owner call). If field QA ever
+  wants ~70% back, the renderer-side constant-alpha path documented in §3 is the
+  follow-up design.
+- No 8-bit DDraw concern — draw-skip is renderer-agnostic by construction.
+- No configurable element list, no fade/idle behavior — one gate, one fixed set.
+- No automap, tooltip or chat-text changes; no OOG changes.
 - Nothing in any save file; no state to persist; display-only, no input changes.
 
 ## 2. The hard invariants (pillars)
 
 1. **Default OFF = vanilla byte-for-byte.** With `transparent_hud=0` (or a missing
-   ini/section/key) every touched site takes its vanilla branch; the frame path is
-   byte-identical at every resolution, both renderers.
-2. **The keep-list is inviolable.** Globes, belt slots, skill buttons, XP bar, stamina
-   bar — and all open panels — draw through their vanilla paths even with the gate on.
-   The translucent set is an explicit allow-list of specific draw sites (§3), never a
-   blanket phase rewrite: if a draw site is not on the allow-list, it is untouched.
-3. **Cursor truth.** The cursor is never translucent and never re-routed. Alpha changes
-   nothing hit-test-wise — this feature cannot lie about geometry because it never
-   touches geometry, only how the bar's background pixels blend.
-4. **Text stays opaque by construction.** Because the rewrite is per-site (frame art and
-   buttons, not the whole UI pass), font/text draws are not wrapped — chat text and
-   tooltips keep full contrast over the now-translucent bar automatically. No carve-out
-   logic needed.
-5. **Renderer parity.** Glide and D3D ship the same alpha in the same round (the R109
-   field-matrix-fork lesson: one renderer first is how a round dies).
-6. **One choke point.** The gate is read per frame through the shared 2 s hot-read idiom;
-   the per-draw rewrite happens at one published flag + one mode-rewrite site (§4), not
-   per renderer per panel.
+   ini/section/key) every touched call site draws exactly as retail.
+2. **The keep-list is inviolable.** Globes, belt, skill buttons, XP bar, stamina bar —
+   and all panels — are never wrapped: their call sites are untouched code. The skip set
+   is an explicit allow-list of four call sites (§4), never a blanket phase rewrite.
+3. **Invisible ≠ intangible.** The hidden buttons keep their hit areas and behaviors
+   (input paths untouched); tooltips that name them (`PANEL_ShowRunButtonTooltip`,
+   `PANEL_DrawLife`) still work. A hidden HUD must not become a broken HUD.
+4. **Text survives.** The skip set contains no text draws: orb readouts, gold amount,
+   belt hotkeys, chat input/message log all draw on their vanilla paths over the now
+   empty bar region.
+5. **Renderer parity for free.** No renderer code ships — the skip happens at the D2Client
+   UI call sites, upstream of every renderer. There is no Glide/D3D parity surface, no
+   8-bit exception, nothing to walk per renderer.
 
-## 3. Where things live today (recon, this tree — the engine already does the hard part)
+## 3. Where things live today (Round 1 pins — read off this tree, 2026-11-11)
 
-**The engine already renders translucent sprites.** The whole feature rides an existing
-path — no new blending is invented:
+**The parent dispatch.** The in-game UI pass is `DRAW_UI` (`Source/D2Client/UI/Draw.cpp`,
+decl `Draw.h:53`; the pass that also hosts the `AUTO_GOLD_Tick` hook). The bar block:
 
-- **Glide draw-mode dispatch**: `RENDERER_GLIDE_SetDrawMode` (`Source/D2Glide/Renderer/
-  Glide.cpp:2285`) maps `nDrawMode` → blend: **5/7 → alpha-blend mode 1 (opaque
-  chromakey — what UI art uses)**; 3 → 2 (additive); 4 → 3 (modulate); **0/1/2 →
-  alpha-blend mode 4 + `grConstantColorValue` 0x40/0x80/0xc0 (25%/50%/75% constant
-  alpha)**. `RENDERER_GLIDE_SetAlphaBlendMode` (`Glide.cpp:1282`) is the blend-state
-  setter it feeds.
-- **D3D draw-mode dispatch**: `SetDrawModeAndGetAlpha` (`Source/D2Direct3D/Renderer/
-  Direct3D.cpp:3986`) is the symmetric twin — 5/7 → `SetBlendMode(1)` + alpha 0xff;
-  **0/1/2 → `SetBlendMode(4)` + per-draw alpha 0x40/0x80/0xc0**. `SetBlendMode`
-  (`Direct3D.cpp:689`) mode 4 = SRCALPHA/INVSRCALPHA. The alpha byte rides into the quad
-  draw — no texture-format change is needed (the RGB565 paletted-conversion path has no
-  alpha channel; the constant comes from the draw-mode resolver, not the texture — Round
-  1 verifies the byte's final consumer).
-- **The 2×5 site table.** Both renderers implement the same five entry points, each
-  resolving `nDrawMode` locally: `DrawImage` (Glide.cpp:2414 / Direct3D.cpp:4122),
-  `DrawShiftedImage` (:2453 / :4144), `DrawVerticalCropImage` (:2471 / :4182),
-  `DrawClippedImage` (:2599 / :4279), `DrawSolidRectEx` (:3105 / :4667). A rewrite at the
-  D2GFX dispatch layer upstream (the `fpDrawShiftedImage` funnel, `Source/D2gfx/D2GFX.h:
-  132`, export-table slot at :305) covers both renderers at once — the zero-renderer-touch
-  variant rewrites mode 5 → mode 2 (75%); the exact-70% variant adds one VP case per
-  renderer's mode resolver (§4).
-- **The bar is already decomposed into named draw functions** — the recon gift that makes
-  the keep-list enforceable (`Source/D2Client/UI/Panel.h`): `PANEL_DrawPanelLayout()` (the
-  bar frame/layout art), `PANEL_DrawHealthOrb()` / `PANEL_DrawManaOrb()` (globes — keep
-  opaque), `PANEL_DrawBeltSlots(nFrameNumber)` (belt — keep opaque), `PANEL_DrawSkill
-  Icons()` / `SPELLSEL_DrawSkillIcon` (skill buttons — keep opaque), `PANEL_Draw
-  ExperienceBar()` (XP — keep opaque, owner call), `PANEL_DrawStaminaBar()` (stamina —
-  keep opaque, owner call), `PANEL_DrawRunButton()` / `PANEL_DrawMenuButton()` (auxiliary
-  buttons — translucent set), `PANEL_DrawHostileIndicator()` (translucent set),
-  `LoadPanelImages()` / `FreePanelImages()` (the bar's DC6 handles). The per-frame call
-  sequence that invokes these — the parent UI draw dispatch (the pass that also hosts the
-  `AUTO_GOLD_Tick` hook, `VanillaPlusCore.h`) — is the Round 1 pin that fixes the
-  allow-list in code order.
-- **Gate + surface plumbing** (the shared idiom this feature copies): `D2VP_GetFeature
-  Toggle("transparent_hud")` (`VanillaPlusCore.cpp:1440`) behind a 2 s hot-read cache
-  (the `VANILLAPLUS_GlobeTextPersistent` shape, `VanillaPlusCore.cpp:533-540`), the
-  auto-created documented ini template (`VanillaPlusCore.cpp:146-151`), `D2VP_Config
-  Reloaded()` cache-bust (`:1476-1489`), and a Vanilla+ Options row through the
-  `gaVanillaPlusRows` bridge (`VanillaPlusCore.cpp:1429-1438`, rows in
-  `VanillaPlusOptions.cpp` — docs gate check 5 then requires the ini template to cover
-  the new key).
+- `Draw.cpp:720` — `Panel::DRAW_UI_BordersAndOrbsAndFillers()` (`Panel.cpp:2230`), which
+  draws, in order:
+  | # | Call (site) | What it is | Set |
+  |---|---|---|---|
+  | 1 | `DRAW_UI_BorderLeft/Right` (:2240/:2245) | Act side borders, only when a border type is active — not the bottom bar | untouched |
+  | 2 | `PANEL_DrawCharacterInfo` (:2249) | **The bar frame art**: `Panel\CtrlPnl7` (640/narrow) or `Panel\800CtrlPnl7` (800/wide), frames 0–5, each `D2GFX_DrawImage(..., DRAW_SOLID, ...)` — the six console pieces spanning the bar, incl. the chat-area background and the orb sockets / button wells | **SKIP** |
+  | 3 | `PANEL_DrawHealthOrb` (:2250) | Life globe | keep |
+  | 4 | `PANEL_DrawManaOrb` (:2251) | Mana globe | keep |
+  | 5 | `PANEL_DrawGoldAmount` (:2252) | Gold readout text over the left orb | keep |
+  | 6 | `PANEL_DrawRunButton` (:2253) | Run/walk toggle button | **SKIP** |
+  | 7 | `PANEL_DrawStaminaBar` (:2254) | Stamina bar | keep (owner call) |
+  | 8 | `PANEL_DrawMenuButton` (:2255) | Menu (ESC) button | **SKIP** |
+  | 9 | `PANEL_DrawBottomPanel` (:2256) | Belt internals: pop-belt rows (`ctrlpnl_popbelt`, :2137), belt item sprites (:2191), slot highlight rects, hotkey labels | keep |
+  | 10 | `PANEL_DrawSkillIcons` (:2257) | Skill buttons | keep |
+  | 11 | `PANEL_DrawExperienceBar` (:2258) | XP bar | keep (owner call) |
+  | 12 | `PANEL_DrawLife` (:2268) | Life tooltip | keep |
+- `Draw.cpp:746` — `PANEL_DrawPanelLayout()` — **misleading name**: it draws the orb
+  hover/persistent HP/MP readout text (the `globe_persistent` site), not the bar layout.
+  Keep.
+- `Draw.cpp:747-749` — `MiniPanel::DRAW_UI_MiniPanel()` — the mini-panel strip; default
+  untouched (§9 call 2).
+- `Draw.cpp:750-752` — `Chat::DRAW_UI_ChatInput()` — text/IME only; the chat background
+  is part of the CtrlPnl7 center console art, so skipping the frame already clears the
+  chat area. Text stays.
+- `Draw.cpp:842` — `Panel::PANEL_DrawHostileIndicator()` (near the pass's end, over the
+  message log; the log text at :843 is a separate call) — **SKIP**.
 
-## 4. Design (recommended shape)
+**Everything the skip set draws goes through `D2GFX_DrawImage` with `DRAW_SOLID`** (the
+opaque chromakey mode; both renderers resolve it in `RENDERER_GLIDE_SetDrawMode`,
+`Glide.cpp:2285`, and `SetDrawModeAndGetAlpha`, `Direct3D.cpp:3986`) — but with
+fully-transparent the skip upstream of `D2GFX_DrawImage` needs none of that machinery;
+it is recorded here as the follow-up design for a future partial-alpha variant.
 
-**State**: none, beyond the gate cache. "Always-on when toggled" (owner call) means no
-timers, no hover tracking, nothing to unwind.
+**Keep-list separability — verified.** Every keep element is its own function called at
+its own site in `DRAW_UI_BordersAndOrbsAndFillers` (table above); nothing shares a draw
+call with the frame art. The one coupling is *visual*, not structural: the orb sockets
+and button wells are baked into the CtrlPnl7 frame pieces, so they vanish with the frame
+— opaque orbs/belt/skills/XP/stamina float on the world. That is the intended
+fully-transparent look (confirmed by the owner's "fully transparent"); field QA checks
+it reads well.
+
+**Gate + surface plumbing** (the shared idiom this feature copies): `D2VP_GetFeature
+Toggle("transparent_hud")` (`VanillaPlusCore.cpp:1440`) behind a 2 s hot-read cache
+(the `VANILLAPLUS_GlobeTextPersistent` shape, `VanillaPlusCore.cpp:533-540`), the
+auto-created documented ini template (`VanillaPlusCore.cpp:146-151`), `D2VP_Config
+Reloaded()` cache-bust (`:1476-1489`), and a Vanilla+ Options row through the
+`gaVanillaPlusRows` bridge (`VanillaPlusCore.cpp:1429-1438`, rows in
+`VanillaPlusOptions.cpp` — docs gate check 5 then requires the ini template to cover
+the new key).
+
+## 4. Design (final shape)
+
+**State**: none, beyond the gate cache. No timers, no hover tracking, nothing to unwind.
 
 **Gate**: `[features] transparent_hud`, read through the shared toggle idiom (2 s
 hot-read, template auto-create, `D2VP_ConfigReloaded()` bust), plus a Vanilla+ Options
 page row and a documented key in the ini template.
 
-**Per frame, in the parent UI draw dispatch** (Round 1 pin): a tiny flag
-`gbVPHudBarTranslucent` is set immediately before the **translucent-set** draws and
-cleared immediately after them — draft membership, §9 call 2:
+**The implementation is four guarded call sites** — draft predicate
+`VANILLAPLUS_HudBarTransparent()` (the same per-frame accessor shape as
+`VANILLAPLUS_GlobeTextPersistent`):
 
-- `PANEL_DrawPanelLayout()` — the bar frame/background, including the chat/message area
-  frame (the orb sockets and button wells are part of the frame art; the orb/belt/button
-  art drawn *over* it stays opaque — the visual result is checked in field QA).
-- `PANEL_DrawRunButton()` / `PANEL_DrawMenuButton()`.
-- `PANEL_DrawHostileIndicator()`.
+- `Panel.cpp:2249` — `PANEL_DrawCharacterInfo` call wrapped: gate on → skipped (the
+  whole console frame disappears).
+- `Panel.cpp:2253` — `PANEL_DrawRunButton` call wrapped.
+- `Panel.cpp:2255` — `PANEL_DrawMenuButton` call wrapped.
+- `Draw.cpp:842` — `PANEL_DrawHostileIndicator` call wrapped.
 
-Everything else — globes, belt slots, skill icons, XP bar, stamina bar, chat text, all
-panels, tooltips, automap, cursor — draws on its vanilla path with the flag never set.
+Gate off (or ini missing) → each call executes exactly as retail. There is no renderer
+code, no draw-mode rewrite, no blend state, no per-frame flag around a region — the
+draw simply does not happen. The wrapper is one `if` per site, so the diff is a handful
+of lines in two TUs plus the gate accessor, ini template key, and Options row.
 
-**Per draw** (the one choke point): the same single resolver as the wide-scope draft —
-`VPHUD_TranslateDrawMode(nDrawMode)` — consulted where image draws resolve their mode:
-
-- Flag clear (or gate off): `nDrawMode` passes through untouched — byte-identical.
-- Flag set + `nDrawMode == 5` (DRAW_SOLID): render translucent at the fixed alpha instead
-  of opaque chromakey. Two implementations, Round 1 picks:
-  - **(a) zero-renderer-touch**: rewrite 5 → 2 at the D2GFX dispatch — both renderers
-    then take their existing 75% constant-alpha path (0xc0). Cost: the alpha is 75%, not
-    ~70%.
-  - **(b) exact alpha** (recommended): keep mode 5 flowing but add one VP case per
-    renderer's mode resolver (Glide `SetDrawMode`, D3D `SetDrawModeAndGetAlpha`) that
-    takes the existing alpha-blend path with `0xb3` (~70%). Both files are fork-owned;
-    the diff is a handful of lines each, and the alpha stays a named literal.
-
-**Interaction to verify**: retail dims the world when a panel opens; the bar is drawn
-over that dim regardless. No interplay expected — the dim is world-side and the bar
-rewrite is bar-side (verify in the field matrix with inventory open + gate on).
+**Interaction to verify in QA only**: retail dims the world when a panel opens; the bar
+block runs the same with the frame skipped — no interplay expected (the dim is world-side).
 
 ## 5. Failure and recovery matrix (degrade to mark, never halt)
 
 | Event | Behavior |
 |---|---|
-| Renderer has no VP draw-mode case (old binary / future renderer) | Mode 5 passes through opaque — vanilla rendering, no crash; log mark |
-| Gate flipped OFF mid-session (ini edit or Options row) | Next 2 s poll re-reads; the very next bar draw is opaque again — no state to unwind |
-| A non-allow-listed draw lands inside the flag window (misordering) | That sprite renders translucent — visible immediately in QA; the flag wraps whole named functions, not a wide bracket, so the blast radius is the bar itself; kill-switch is the ini key |
-| Gate on at 640x480 / 800x600 | Same rewrite applies (resolution-independent); both narrow stops walked in the field matrix |
-| Death / TP / area transition / lag | Nothing to recover — per-draw rewrite, no state |
+| Any renderer (old binary, future renderer, 8-bit DDraw) | Unaffected — the skip is upstream of the renderer; there is no renderer surface |
+| Gate flipped OFF mid-session (ini edit or Options row) | Next 2 s poll re-reads; the very next frame draws the full bar again — no state to unwind |
+| A call site outside the allow-list gets wrapped by mistake | The element vanishes — visible immediately in QA; the allow-list is four named sites, reviewed in the diff; kill-switch is the ini key |
+| Hidden buttons confuse a field user | Buttons still work (hit areas untouched); the plan ships them hidden by design — §9 call 3 can revisit per-element membership |
+| Gate on at 640x480 / 800x600 / wide | Same skip applies (resolution-independent); all stops walked in the field matrix |
+| Death / TP / area transition / lag | Nothing to recover — per-draw skip, no state |
 | Save → load, character swap | Unaffected — render-side only, nothing in any save file |
 
-## 6. Roadmap — three code rounds, each field-verifiable
+## 6. Roadmap
 
-- **Round 1 — tree-verify (pins)**: the parent UI draw dispatch and its call order for
-  the `PANEL_*` functions pinned; the frame-art draw sites inside `PANEL_DrawPanelLayout`
-  enumerated (mode-5 image draws + any solid-rect backings); the chat/message frame site
-  pinned; the keep-list functions confirmed separable (each is its own call site —
-  verify nothing shares a draw call with the frame art); the alpha byte's final consumer
-  verified in the D3D quad path; variant (a) vs (b) decided; TU list frozen.
-- **Round 2 — implement**: gate + cache + template key + Options row
-  (`gaVanillaPlusRows` — docs gate check 5 follows); the flag around the translucent-set
-  call sites + the mode rewrite at the chosen choke point, both renderers in the same
-  commit family; d2boot.log mark on gate flips; FEATURES row lands when it ships (docs
-  gate check 6 tracks the count).
+- **Round 1 — tree-verify: DONE** (this file, §3). The parent dispatch pinned
+  (`DRAW_UI`); the bar block enumerated call-by-call with the allow-list and keep-list
+  assigned; keep-list separability verified (per-function call sites, no shared draws);
+  the frame-art contents confirmed (`CtrlPnl7`/`800CtrlPnl7` frames 0–5, sockets/wells
+  included); the chat area confirmed frame-only (text draws elsewhere); hostile
+  indicator site pinned (`Draw.cpp:842`). Design collapsed to draw-skip: the 2×5
+  renderer table and blend machinery are no longer in scope.
+- **Round 2 — implement**: gate accessor + cache bust + template key + Options row
+  (`gaVanillaPlusRows` — docs gate check 5 follows); the four guarded call sites;
+  d2boot.log mark on gate flips; FEATURES row lands when it ships (docs gate check 6
+  tracks the count).
 - **Round 3 — field QA**: the exit loop (§8) on the owner's Win11 build; SMOKE-CHECKLIST
-  rows land with this round; the matrix walked once — {Glide, D3D} × {640, 800, wide} ×
-  {bar alone, each keep-list element hovered/used, chat open, panel open + bar, cursor
-  over bar} — then spot-checked.
+  rows land with this round; the matrix walked once — {640, 800, wide} × {bar alone,
+  each keep-list element hovered/used, chat open, belt expanded, panel open, cursor over
+  the empty bar region} — then spot-checked. No renderer axis.
 
-## 7. Risks — mapped to the class lessons already on the books
+## 7. Risks
 
-- **Frame-vs-function coupling** (the one real recon risk): if an excluded element's art
-  is drawn *inside* `PANEL_DrawPanelLayout` (e.g. the orb socket rims or button wells are
-  part of the frame DC6 rather than separate draws), the keep-list can't separate them at
-  call granularity — the translucent set then either includes those art pixels (accepted,
-  QA-visible) or Round 1 splits the draw inside the function (bigger diff). Bounded by
-  the Round 1 enumeration before any code.
-- **Legibility of the translucent frame's contents**: text is not wrapped (pillar 4), but
-  the chat entry line and the button glyphs sit on the frame — field QA reads them over a
-  moving world; the §9 call 1 alpha value is the tuning knob if they wash out.
-- **Renderer drift** (the R109 lesson): both renderers in one round, parity rows in the
-  field matrix; a renderer missing the VP case degrades to opaque, never to a crash.
-- **D3D alpha consumer** (the one unknown): the mode resolver returns the alpha byte, but
-  where it lands in the 16-bit quad path is verified in Round 1 before any code — the
-  additive/modulate modes already consume the same machinery, so the risk is containment,
-  not invention.
+- **Floating-element look** (the resolved coupling): sockets/wells vanish with the frame;
+  the orbs and buttons render over bare world. Intended per the owner's call; field QA
+  judges readability of the keep-list elements without their wells (belt slots have their
+  own highlight rects and item sprites, so they carry their own contrast).
+- **Hidden-but-clickable confusion**: the run/menu buttons respond to clicks on empty
+  world pixels. Bounded by pillar 3 (this is the retail behavior set, minus the pixels)
+  and §9 call 3 (per-element membership can change in one line).
 - **Options-page geometry** (docs gate check 5): one more row must fit the 480p band
   arithmetic and the ini template — mechanical, but it gates the build.
+- **Diff discipline**: the skip wrappers touch `Panel.cpp` and `Draw.cpp`, both already
+  VP-annotated TUs; keep the `VP:` comment markers per house rule (docs gate check 8).
 
 ## 8. Exit (all must hold on the field build)
 
-- With `transparent_hud=1`: the bar frame/background (and chat area frame) and the
-  run/menu buttons + hostile indicator render translucent at the fixed alpha; the world
-  is visible through the bar's empty regions; Glide and D3D look the same.
-- Globes, belt slots, skill buttons, XP bar, stamina bar pixel-identical to vanilla with
-  the gate on.
+- With `transparent_hud=1`: the console frame (incl. chat background), run button, menu
+  button and hostile indicator are invisible; the world shows through; every renderer.
+- Globes (+ readouts, gold), belt (all states, expanded included), skill buttons, XP bar,
+  stamina bar pixel-identical to vanilla with the gate on — and fully interactive.
+- Hidden buttons remain clickable and their tooltips appear; belt/skill/orb hit tests
+  unchanged.
 - Every open panel, tooltip, the automap, chat text and the cursor pixel-identical to
   vanilla with the gate on; cursor truthful and drawn last.
-- Bar buttons and belt/skill interactions behave exactly as vanilla (click truth).
 - `transparent_hud=0` from a fresh start = vanilla byte-for-byte; hot-reload honored
   (ini edit and Options row both flip it live, ≤ 2 s); save → load unaffected.
 
 ## 9. The remaining owner calls
 
-1. **The alpha literal** — `0xb3` (~70%, draft default, one VP case per renderer) or
-   reuse mode 2's `0xc0` (75%) for the zero-renderer-touch variant (a)? The delta is one
-   hex value vs one dispatch-layer rewrite.
-2. **The translucent-set membership** — draft: bar frame/background incl. chat frame,
-   run button, menu button, hostile indicator. Confirm, or name anything else in the bar
-   ("everything else") that belongs in or out.
-3. **8-bit DDraw follow-up** — explicitly deferred in v1; confirm it stays a non-goal
-   until the wide-class pair proves out in the field. 
+1. **Mini-panel membership** — `MiniPanel::DRAW_UI_MiniPanel` (Draw.cpp:747-749) is
+   default untouched (it is a separate strip, not the bar). In or out?
+2. **Hostile indicator** — currently in the skip set ("everything else"); it is the tiny
+   red PvP marker, easy to lose. Confirm, or move it to the keep-list (one line).
+3. **Future partial alpha** — the renderer-side constant-alpha path (§3) is recorded for
+   a possible "faded HUD" sibling feature; no action needed now.

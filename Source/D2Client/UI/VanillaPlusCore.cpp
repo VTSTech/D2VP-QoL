@@ -300,7 +300,20 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       with the other overlay text: Session (real time since you\r\n"
         ";       entered the current game, H:MM:SS - pause menus and cutscenes\r\n"
         ";       count) and System (your PC's local clock, HH:MM 24-hour).\r\n"
-        "automap_clock=0\r\n";
+        "automap_clock=0\r\n"
+        "\r\n"
+        "; Transparent HUD (R154):\r\n"
+        ";   0 = off: the bottom bar exactly as retail        (vanilla behavior)\r\n"
+        ";   1 = the bottom bar's background frame art (the console stone that\r\n"
+        ";       runs behind the globes and belt, including the chat area\r\n"
+        ";       background) plus the run button, the menu button and the\r\n"
+        ";       hostile indicator are not drawn at all - the world shows\r\n"
+        ";       through where they were. The globes, belt slots, skill\r\n"
+        ";       buttons, XP bar and stamina bar draw exactly as retail and\r\n"
+        ";       keep working; the hidden run/menu buttons still respond to\r\n"
+        ";       clicks, tooltips included. Panels, the automap and chat text\r\n"
+        ";       are never touched.\r\n"
+        "transparent_hud=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -1483,6 +1496,10 @@ static void VPSHAREDUI_FlushGateCache(); // defined in the shared-stash block be
 static int gbAutomapClockMode = 0;
 static DWORD dwAutomapClockLastCheck = 0;   // 2 s ini re-read gate (row-28 pattern)
 static DWORD dwVpClockSessionStartTick = 0; // GetTickCount() captured at game entry
+// [transparent-hud R154] the gate cache lives here so the reload bust below
+// sees it; the accessor is in the feature block at the end of the TU.
+static int gbHudBarTransparentMode = 0;
+static DWORD dwHudBarTranslucentLastCheck = 0; // 2 s ini re-read gate (row-28 pattern)
 void __stdcall D2VP_ConfigReloaded() {
     dwAltToggleLastCheck = 0;     // next ALTTOGGLE_Active() re-reads alt_toggle
     dwAutoGoldLastCheck = 0;      // next AUTO_GOLD_Active() re-reads auto_gold
@@ -1493,6 +1510,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwCtrlClickXferLastCheck = 0; // next VPCTRLXFER_Active() re-reads ctrl_click_xfer
     dwUnlockFpsLastCheck = 0;     // next UNLOCKFPS_Active() re-reads unlock_fps
     dwAutomapClockLastCheck = 0;  // next VPCLOCK_Draw() re-reads automap_clock (R147)
+    dwHudBarTranslucentLastCheck = 0; // next VANILLAPLUS_HudBarTransparent() re-reads transparent_hud (R154)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -2302,4 +2320,54 @@ void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX) {
     int nWidth = D2Win::Src::D2WinFont::DRAW_text0(wLine);
     D2Win::Src::D2WinFont::DRAW_text(wLine, nScreenX - nWidth - 0x10, *pnTextHeightOffset, 4, 0);
     *pnTextHeightOffset += 0x10;
+}
+
+// ===== [vanilla-plus transparent-hud R154] ==================================
+// The bottom bar's background goes fully transparent on ask (owner ask
+// 2026-11-11: "thats not exactly what i want transparent hud to be ... it is
+// just the bottom bar ... not the globes, belt bar or skill buttons", then
+// the XP/stamina keep and "fully transparent" - plans/TRANSPARENT-HUD-PLAN.md,
+// slate row 4). Display-only client feature - no server half, no packets, no
+// files, no renderer code: the skip happens at the D2Client UI call sites,
+// upstream of every renderer, so there is no Glide/D3D surface at all.
+//
+//   Skip set (the four guarded call sites):
+//     PANEL_DrawCharacterInfo      - the console frame art: the six
+//        CtrlPnl7 / 800CtrlPnl7 DRAW_SOLID pieces that run behind the
+//        globes and belt, including the chat area background and the orb
+//        sockets / button wells baked into the frame DC6s
+//     PANEL_DrawRunButton          - the run/walk toggle button
+//     PANEL_DrawMenuButton         - the menu (ESC) button
+//     PANEL_DrawHostileIndicator   - the tiny red PvP marker
+//   Keep list (untouched code, byte-identical with the gate on): the Life
+//   and Mana globes (+ the orb readout text and the gold amount), the belt
+//   (slots, pop-belt art, item sprites, hotkey labels), the skill buttons,
+//   the XP bar, the stamina bar, PANEL_DrawPanelLayout's orb text (a
+//   misnomer - it draws text, not the layout), every panel, tooltip,
+//   automap and the chat input text. The hidden run/menu buttons keep their
+//   hit areas and tooltips - input paths are untouched, so invisible does
+//   not mean intangible.
+//
+// Gate = the charter every feature keeps: [features] transparent_hud,
+// missing file/section/key or garbage = 0 = vanilla byte-for-byte, the same
+// 2 s hot-read cache every gate uses, busted by the Options-page write
+// bridge (D2VP_ConfigReloaded) so a flip lands on the next frame that draws
+// the bar. One d2boot.log mark on first activation (the unlock-fps one-way
+// latch shape) - field reports carry the mark as the proof the gate is live.
+
+static int sbHudBarTransMarkRaised = 0; // one-way d2boot.log mark latch
+
+BOOL __stdcall VANILLAPLUS_HudBarTransparent() {
+    DWORD dwNow = GetTickCount();
+    if (!dwHudBarTranslucentLastCheck || dwNow - dwHudBarTranslucentLastCheck >= 2000) {
+        dwHudBarTranslucentLastCheck = dwNow;
+        gbHudBarTransparentMode = D2VP_GetFeatureToggle("transparent_hud");
+        if (gbHudBarTransparentMode && !sbHudBarTransMarkRaised) {
+            sbHudBarTransMarkRaised = 1;
+            D2BOOT_MarkFmt("hud-transparent: [features] transparent_hud=1 - the bottom-bar "
+                           "console frame + run/menu buttons + hostile indicator are skipped; "
+                           "globes, belt, skill buttons, XP/stamina bars and all panels draw retail");
+        }
+    }
+    return gbHudBarTransparentMode;
 }

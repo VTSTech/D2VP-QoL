@@ -11,6 +11,24 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R154 — Transparent HUD: the bottom bar's background goes fully transparent on ask**
+  (FEATURES.md row 4, owner ask 2026-11-11 — "it is just the bottom bar i want to make
+  transparent, and even then, not the globes, belt bar or skill buttons", then the XP/stamina
+  keep and "fully transparent"; plan at `plans/TRANSPARENT-HUD-PLAN.md`, Round 1 pinned in-tree):
+  with `[features] transparent_hud=1` the bar's console frame art (`PANEL_DrawCharacterInfo`'s
+  six `CtrlPnl7`/`800CtrlPnl7` `DRAW_SOLID` pieces — the stone behind the globes and belt,
+  including the chat area background and the orb sockets/button wells baked into the frame DC6s),
+  the run button, the menu button and the hostile indicator are **not drawn at all** — the world
+  shows through. Everything functional keeps its vanilla draw and stays interactive: globes
+  (+ orb text + gold), belt (all states), skill buttons, XP bar, stamina bar; every panel,
+  tooltip, the automap and chat text are untouched; the hidden run/menu buttons keep their hit
+  areas and tooltips (invisible is not intangible). Zero renderer code — the skip is four guarded
+  call sites in `Panel.cpp`/`Draw.cpp`, upstream of every renderer, so there is no Glide/D3D
+  axis and 8-bit DDraw needs no exception. Gate = the charter: missing ini/section/key/garbage
+  = 0 = vanilla byte-for-byte; 2 s hot-read busted by the Options-page write bridge; ini template
+  key + the fourteenth Options row (**Transparent HUD** — the page stays two columns of seven,
+  col 1 fills its last band, geometry unchanged); one `hud-transparent:` d2boot.log mark on
+  first activation. Self-ID `Vanilla+0.0.8-R154`. Field QA (Round 3) pending.
 - **R153 — the #37 choke-point fix: every client-side item-unit free unlinks first**
   ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37), owner field crash on the R152 build — the SAME
   AV read `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`, ~5 s after the last page flip; paired-crash

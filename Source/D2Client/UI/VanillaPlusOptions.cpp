@@ -156,7 +156,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[13] = {
+static const VPPFeatureRow gaVanillaPlusRows[14] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -230,10 +230,22 @@ static const VPPFeatureRow gaVanillaPlusRows[13] = {
     // on the automap (Session H:MM:SS since game entry + System HH:MM),
     // FEATURE row 18.
     { "automap_clock", L"Automap Clock", 0 },
+    // VP: [transparent-hud R154] transparent_hud - the fourteenth row
+    // (FEATURES.md row 4, plans/TRANSPARENT-HUD-PLAN.md). Label = the
+    // owner's wording ("Transparent HUD"). The gate VANILLAPLUS_HudBar
+    // Transparent (VanillaPlusCore.cpp) is 2 s hot-read and the write bridge
+    // busts dwHudBarTranslucentLastCheck (D2VP_ConfigReloaded), so a flip
+    // here lands on the next frame that draws the bottom bar - no restart,
+    // no panel reopen. Display-only: the bar's console frame art + the
+    // run/menu buttons + the hostile indicator are skipped when the gate is
+    // on; globes, belt, skill buttons, XP and stamina bars draw retail and
+    // the hidden buttons stay clickable. No renderer code ships - the skip
+    // is upstream of every renderer, so there is no Glide/D3D axis.
+    { "transparent_hud", L"Transparent HUD", 0 },
 };
-static const int VPP_ROW_COUNT = 13;
-static const int VPP_ROW_BACK = 13; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 7; // R147: was 6 - two columns of seven (thirteen rows: col 0 bands 0-6, col 1 bands 0-5)
+static const int VPP_ROW_COUNT = 14;
+static const int VPP_ROW_BACK = 14; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 7; // R147: was 6 - two columns of seven (fourteen rows: col 0 bands 0-6, col 1 bands 0-6)
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
