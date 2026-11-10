@@ -489,6 +489,17 @@ static void __stdcall GetIntensityFlagsForTile(int32_t nTileX, int32_t nTileY, i
 
 // Fills a 6×6 grid of D2GfxLightExStrc entries with full-white (RGB 0xFF, intensity 0xFF) light positions for roof/ortho lighting. When bBorderOnly is set, only the border cells are written. nSplitSide (1=left, 2=right) shifts nScreenX by ±UI::ui::ScreenSizeX/4 for split-screen support. Each cell position is computed from the (col, row) index and the base screen coords.
 static void __stdcall DRAW_CalcRoofLightGridOrtho(D2GfxLightExStrc * pLightEntry, int32_t nScreenX, int32_t nScreenY, int32_t bBorderOnly, int32_t nSplitSide) {
+    // VP-BEGIN [camera-zoom R155]: top-down floor light grid. These cell
+    // positions ARE the ground-tile quads' vertex positions (DrawGroundTile
+    // writes them straight into the floor VB), so scaling them here scales
+    // the top-down floor about the player anchor. Perspective mode scales
+    // through the AdjustPerspectivePosition funnel instead. World-phase
+    // gated; factor 1.0 = byte-for-byte retail.
+    uint32_t nVPZoomFactor = 0x100;
+    if (D2gfx::D2GFX::D2GFX_GetCameraZoomWorldPass()) {
+        nVPZoomFactor = (uint32_t)D2gfx::D2GFX::D2GFX_GetCameraZoomFactor();
+    }
+    // VP-END [camera-zoom R155]
     int nHalfWidthAdj;
     switch (nSplitSide) {
       case 1:
@@ -518,6 +529,13 @@ static void __stdcall DRAW_CalcRoofLightGridOrtho(D2GfxLightExStrc * pLightEntry
           pLightEntry->sLight.nIntensity = 0xff;
           pLightEntry->nX = (nCol - nHalfWidthAdj) * 0x10 + nScreenX;
           pLightEntry->nY = nScreenY + (nCol + nHalfWidthAdj) * 8;
+          // VP: [camera-zoom R155] scale the cell about the player's screen
+          // anchor (the Draw.cpp MouseOffsets anchor; matches the renderer
+          // sites and the cursor inverse).
+          if (nVPZoomFactor != 0x100) {
+              pLightEntry->nX = UI::ui::ScreenSizeX / 2 + (pLightEntry->nX - UI::ui::ScreenSizeX / 2) * (int)nVPZoomFactor / 0x100;
+              pLightEntry->nY = UI::Inv::ScreenSizeY / 2 - 0x10 + (pLightEntry->nY - (UI::Inv::ScreenSizeY / 2 - 0x10)) * (int)nVPZoomFactor / 0x100;
+          }
           pLightEntry->sLight.nRed = 0xff;
           pLightEntry->sLight.nBlue = 0xff;
           pLightEntry->sLight.nGreen = 0xff;
@@ -533,6 +551,13 @@ static void __stdcall DRAW_CalcRoofLightGridOrtho(D2GfxLightExStrc * pLightEntry
 
 // Populates a 6×6 grid of D2GfxLightExStrc entries for orthographic roof lighting. Reads the act's ambient light intensity and RGB color via DRLGENV_GetIntensityFromAct / DRLGENV_GetLightColorFromAct. Adjusts nScreenX by ±UI::ui::ScreenSizeX/4 for split-screen sides (nSplitSide 1/2). For each grid cell (skipping interior cells when bBorderOnly), sets screen-space X/Y position and either samples dynamic light (outdoor: DRAW_CoordIsInCoord) or fills with the flat ambient color (indoor). Output is written into the pParam array.
 void __stdcall DRAW_CalcRoofLightOrtho(D2GfxLightExStrc * pLightGrid, int32_t nScreenX, int32_t nScreenY, int32_t nTileX, int32_t nTileY, int32_t nIndoorFlag, int32_t nSplitSide, int32_t bBorderOnly) {
+    // VP-BEGIN [camera-zoom R155]: top-down roof light grid - mirror of the
+    // floor grid above (these cell positions are the roof quads' vertices).
+    uint32_t nVPZoomFactor = 0x100;
+    if (D2gfx::D2GFX::D2GFX_GetCameraZoomWorldPass()) {
+        nVPZoomFactor = (uint32_t)D2gfx::D2GFX::D2GFX_GetCameraZoomFactor();
+    }
+    // VP-END [camera-zoom R155]
     int nHalfWidthAdj;
     D2GfxLightExStrc* pCurLight;
     uint32_t dwLightColor;
@@ -569,6 +594,12 @@ void __stdcall DRAW_CalcRoofLightOrtho(D2GfxLightExStrc * pLightGrid, int32_t nS
         if (!bBorderOnly || (!nCol || nCol == 5) && (!nHalfWidthAdj || nHalfWidthAdj == 5)) {
           pCurLight->nX = (nCol - nHalfWidthAdj) * 0x10 + nScreenX;
           pCurLight->nY = nScreenY + (nCol + nHalfWidthAdj) * 8;
+          // VP: [camera-zoom R155] scale the cell about the player's screen
+          // anchor - mirror of the floor grid above.
+          if (nVPZoomFactor != 0x100) {
+              pCurLight->nX = UI::ui::ScreenSizeX / 2 + (pCurLight->nX - UI::ui::ScreenSizeX / 2) * (int)nVPZoomFactor / 0x100;
+              pCurLight->nY = UI::Inv::ScreenSizeY / 2 - 0x10 + (pCurLight->nY - (UI::Inv::ScreenSizeY / 2 - 0x10)) * (int)nVPZoomFactor / 0x100;
+          }
           if (nIndoorFlag) {
             pCurLight->sLight.nIntensity = *(uint8_t*)((char*)&dwLightColor + 3);
             pCurLight->sLight.nRed = *(uint8_t*)((char*)&dwLightColor + 2);

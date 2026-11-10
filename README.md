@@ -1,7 +1,8 @@
 <img width="1916" height="1078" alt="image" src="https://github.com/user-attachments/assets/e66eb061-1a2e-49f0-8a13-4d7dadf2a59d" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/bd850c32-2a98-477f-bda9-a22e41d18bbd" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/999da238-d2f1-4c83-9a01-910daeea65a2" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b90c086e-189a-4d0c-950a-97a2b3e79ab9" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6fad0226-8a6e-401a-9f4b-ad5268d97b58" />
+
 
 
 # D2VP Vanilla+QoL
@@ -58,6 +59,7 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. R149 (#38): the glide works in perspective mode too (the warp origin glides — the perspective camera). R150: the character rides it as well — sprite, shadow and state overlays share the origin's glide, so the character holds its screen spot while the world scrolls. R151: the hover selection shape and the Whirlwind spin sprite join the ride, and the shared delta is computed once per frame. Off = the classic 25 Hz step cadence at ~60 presents. |
 | Automap Clock | `[features] automap_clock` | The automap overlay gains one line under the build tag, right-aligned with the other overlay text: **SESS:** (real time since you entered the current game, `hh:mm:ss`) + **SYS:** (your PC's local clock, 12-hour with a trailing AM/PM, e.g. `12:01PM`). The level-name line also carries the area's level (`Blood Moor (3)`) — always-on, R148. Pure display. |
 | Transparent HUD | `[features] transparent_hud` | The bottom bar's background frame art — the console stone behind the globes and belt, including the chat area background — plus the run button, the menu button and the hostile indicator are **not drawn** (R154; owner ask: "fully transparent"): the world shows through. The globes, belt slots, skill buttons, XP bar and stamina bar draw exactly as retail and keep working; the hidden run/menu buttons still respond to clicks (tooltips included). Panels, the automap and chat text are never touched. Zero renderer code — the skip is upstream of every renderer. Display-only. |
+| Camera Zoom | `[features] camera_zoom` | Press **Z** to step the world zoom 1.0 → 1.25 → 1.5 → 1.0 while you play (D2R parity; R155). The zoom anchors on your character; the UI, panels, tooltips and the cursor stay pixel-1:1, and the cursor is inverse-mapped so clicks, walks and casts land exactly where the zoomed world shows them. D3D renderer only (other renderers clamp to 1.0 with a `d2boot.log` note); the level resets to 1.0 each join. Each step and the activation leave one `camera-zoom:` line in `d2boot.log`. |
 
 No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
 every feature ships OFF (the one deliberate exception: `unlock_fps_interp` — the

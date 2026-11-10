@@ -508,7 +508,14 @@ static IDirectDrawSurface7 * gpD3DSmackerVideoSurface0[2] = {}; D2_STATIC_GUARD(
 static IDirect3DTexture2 * gpD3DSmackerVideoTexture0[2] = {}; D2_STATIC_GUARD(gpD3DSmackerVideoTexture0, "gpD3DSmackerVideoTexture0");
 
 namespace D2Direct3D::Renderer {
-
+// VP-BEGIN [camera-zoom R155]: forward decls - the definitions live near the
+// file bottom (next to the perspective funnels), but the top-down quad and
+// tile-build call sites above use them first. Must stay inside this
+// namespace: the call sites resolve here, global-scope decls would mangle
+// differently and fail to link (R155 build fix).
+static uint32_t RENDERER_D3D_VPZoomFactor();
+static void RENDERER_D3D_VPZoomScalePoint(int * pX, int * pY, uint32_t nFactor);
+// VP-END [camera-zoom R155]
 // [vanilla-plus fix 24 superseded in R90 by upstream 03877005/57380e21:] the retail
 // ground-tile index buffers are rebuilt upstream-side (stack aStripIndices prefilled
 // into a properly-extent gpD3DGroundTileVertexBuffer, low-quality fan gdwRendererMode
@@ -3852,6 +3859,21 @@ static void __stdcall RENDERER_D3D_DrawShadowQuad(D2D3DSpriteInfoStrc * pTexture
       nHalfHeight = (int)(g_aSmackerSurfaceArray * nHalfHeight + (g_aSmackerSurfaceArray * nHalfHeight >> 0x1f & 0xffU)) >> 8;
     }
 
+    // VP-BEGIN [camera-zoom R155]: top-down world shadows - scale the local
+    // sprite geometry and the anchor position about the window anchor, the
+    // same shape as the perspective smacker-scale block above. Perspective
+    // mode skips this: there the position arrives pre-scaled through the
+    // perspective funnel and retail's depth-size factor is left untouched
+    // (v1: blob shadows keep retail size - plans/CAMERA-ZOOM-PLAN.md).
+    uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+    if (!bPerspectiveEnabled && nVPZoomFactor != 0x100) {
+      nCenterX = nCenterX * (int)nVPZoomFactor >> 8;
+      nTopYOffset = nTopYOffset * (int)nVPZoomFactor >> 8;
+      nQuadWidth = nQuadWidth * (int)nVPZoomFactor >> 8;
+      nHalfHeight = nHalfHeight * (int)nVPZoomFactor >> 8;
+      RENDERER_D3D_VPZoomScalePoint(&nPosX, &nPosY, nVPZoomFactor);
+    }
+    // VP-END [camera-zoom R155]
     fQuadTopY = (float)(nTopYOffset + nPosY);
     nCenterX += nPosX;
     fQuadBottomY = (float)(nTopYOffset + nPosY + nHalfHeight);
@@ -3920,6 +3942,21 @@ static void __stdcall RENDERER_DIRECT3D_DrawPalettedQuad(D2D3DSpriteInfoStrc * p
       nScaledHeight = (int)(g_aSmackerSurfaceArray * nScaledHeight + (g_aSmackerSurfaceArray * nScaledHeight >> 0x1f & 0xffU)) >> 8;
     }
 
+    // VP-BEGIN [camera-zoom R155]: top-down world sprite quads - the four
+    // local geometry quantities ride the factor and the anchor position
+    // scales about the window anchor, the same shape as the perspective
+    // smacker-scale block above. Perspective mode skips this: there the
+    // position arrives pre-scaled through the perspective funnel and the
+    // sizes ride retail's depth factor untouched.
+    uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+    if (!bPerspective && nVPZoomFactor != 0x100) {
+      nLockResult = nLockResult * (int)nVPZoomFactor >> 8;
+      nScaledWidth = nScaledWidth * (int)nVPZoomFactor >> 8;
+      nScaledOffsetX = nScaledOffsetX * (int)nVPZoomFactor >> 8;
+      nScaledHeight = nScaledHeight * (int)nVPZoomFactor >> 8;
+      RENDERER_D3D_VPZoomScalePoint(&nPosX, &nPosY, nVPZoomFactor);
+    }
+    // VP-END [camera-zoom R155]
     float fQuadLeftX = (float)(nLockResult + nPosX);
     float fQuadRightX = (float)(nLockResult + nPosX + nScaledOffsetX);
     float fQuadTopY = (float)(nScaledWidth + nPosY);
@@ -5084,6 +5121,10 @@ static void __thiscall RENDERER_D3D_CalculateViewportRect(RECT * pRect, int nScr
         return;
       }
     }
+    // VP-END [issue #26 / R92] [R155: the END marker lands with this round - the begin
+    // shipped at R112 without its pair in this TU and the docs gate only audits
+    // changed files; the span covers the wide-UI cull openings above, exactly the
+    // View.cpp R92 shape]
 }
 
 // Initializes perspective rendering system. Builds 3x6 vertex grid at 0x00971630 with texture coordinates for ground tile cache. Transforms coordinate lookup table at 0x0074c110 (shifts all entries left 16 bits for fixed-point math). Sets up identity matrices and default vertex colors.
@@ -5216,13 +5257,23 @@ int32_t __fastcall RENDERER_D3D_BuildShadowTileVertices(D2TileLibraryEntryStrc *
         pSubtileCoords = &pTileLibraryEntryStrc->pSubTiles[nScreenSplitIndex].nOffsetX;
         nSubtileX = *pSubtileCoords + nTilePosX;
         nSubtileY = (int)pSubtileCoords[1] + nTilePosY + 0x20;
+        // VP-BEGIN [camera-zoom R155]: mirror of the flat wall builder -
+        // scale the subtile quad (position + 32 px span) about the window
+        // anchor before the cull. plans/CAMERA-ZOOM-PLAN.md.
+        uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+        int nVPSpan = 0x20;
+        if (nVPZoomFactor != 0x100) {
+          RENDERER_D3D_VPZoomScalePoint(&nSubtileX, &nSubtileY, nVPZoomFactor);
+          nVPSpan = 0x20 * (int)nVPZoomFactor >> 8;
+        }
+        // VP-END [camera-zoom R155]
         if (nSubtileX >= nPanelXOffset && nSubtileX < nPanelWidth && nSubtileY >= 0 && nSubtileY < nSubtileIter) {
           _bRendered = 1;
           d3dFloorCache::D3D_RenderSubtileToTexture(&pTileLibraryEntryStrc->pSubTiles[nScreenSplitIndex]);
           gaD3DPerspectiveVertices[0].fX = (float)nSubtileX;
-          gaD3DPerspectiveVertices[0].fY = (float)(nSubtileY - 0x20);
+          gaD3DPerspectiveVertices[0].fY = (float)(nSubtileY - nVPSpan);
           gaD3DPerspectiveVertices[1].fY = (float)nSubtileY;
-          gaD3DPerspectiveVertices[2].fX = (float)(nSubtileX + 0x20);
+          gaD3DPerspectiveVertices[2].fX = (float)(nSubtileX + nVPSpan);
           gaD3DPerspectiveVertices[1].fX = gaD3DPerspectiveVertices[0].fX;
           gaD3DPerspectiveVertices[2].fY = gaD3DPerspectiveVertices[1].fY;
           gaD3DPerspectiveVertices[3].fX = gaD3DPerspectiveVertices[2].fX;
@@ -5430,6 +5481,18 @@ BOOL __thiscall RENDERER_D3D_BuildWallTileVerticesNoPerspective(void * pThis, D2
         nViewportBottom = (int)*psSubtileCoords;
         nSubtileScreenX = (int)psSubtileCoords[1] + nPosY + 0x20;
         nSubtileX = nPosX + nViewportBottom;
+        // VP-BEGIN [camera-zoom R155]: scale the subtile quad about the
+        // window anchor before the cull - position and the 32 px span both
+        // ride the factor, so the wall grid stays seamless under the zoom.
+        // Cull runs on the scaled coords (zoom-in only moves tiles away
+        // from the anchor, so nothing retail drew inside stays culled).
+        uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+        int nVPSpan = 0x20;
+        if (nVPZoomFactor != 0x100) {
+          RENDERER_D3D_VPZoomScalePoint(&nSubtileX, &nSubtileScreenX, nVPZoomFactor);
+          nVPSpan = 0x20 * (int)nVPZoomFactor >> 8;
+        }
+        // VP-END [camera-zoom R155]
         if (nSubtileX >= nPanelXOffset && nSubtileX < nPanelWidth && nSubtileScreenX >= 0 && nSubtileScreenX < nSubtileScreenY) {
           nViewportBottom >>= 5;
           nTexColor0 = *(uint32_t*)(pTexColorTable + nViewportBottom * 4);
@@ -5437,9 +5500,9 @@ BOOL __thiscall RENDERER_D3D_BuildWallTileVerticesNoPerspective(void * pThis, D2
           bRendered = 1;
           d3dFloorCache::D3D_RenderSubtileToTexture((D2GroundSubTileStrc*)((uintptr_t)&pTile->pSubTiles->nOffsetX + nSubtileByteOffset));
           gaD3DPerspectiveVertices[0].fX = (float)nSubtileX;
-          gaD3DPerspectiveVertices[0].fY = (float)(nSubtileScreenX - 0x20);
+          gaD3DPerspectiveVertices[0].fY = (float)(nSubtileScreenX - nVPSpan);
           gaD3DPerspectiveVertices[1].fY = (float)nSubtileScreenX;
-          gaD3DPerspectiveVertices[2].fX = (float)(nSubtileX + 0x20);
+          gaD3DPerspectiveVertices[2].fX = (float)(nSubtileX + nVPSpan);
           gaD3DPerspectiveVertices[1].fX = gaD3DPerspectiveVertices[0].fX;
           gaD3DPerspectiveVertices[2].fY = gaD3DPerspectiveVertices[1].fY;
           gaD3DPerspectiveVertices[3].fX = gaD3DPerspectiveVertices[2].fX;
@@ -5970,6 +6033,28 @@ BOOL __stdcall RENDERER_D3D_IsPerspectiveEnabled() {
     return pD2GFXRenderedDataStrc->bPerspectiveEnabled;
 }
 
+// VP-BEGIN [camera-zoom R155]: the D3D zoom read-point. Factor = the
+// published 8.8 world scale while the world-phase bracket (ViewDraw2) is
+// open, retail 0x100 otherwise - UI phase, panels, cursor and out-of-game
+// scenes are exempt by construction. plans/CAMERA-ZOOM-PLAN.md.
+static uint32_t RENDERER_D3D_VPZoomFactor() {
+    if (!D2gfx::D2GFX::D2GFX_GetCameraZoomWorldPass()) {
+      return 0x100;
+    }
+    return (uint32_t)D2gfx::D2GFX::D2GFX_GetCameraZoomFactor();
+}
+
+// Scales one screen-space point about the D3D window anchor - the player's
+// retail screen spot (the top-down MouseOffsets anchor and the perspective
+// position funnel's H/2-0x10 constant agree on it).
+static void RENDERER_D3D_VPZoomScalePoint(int * pX, int * pY, uint32_t nFactor) {
+    int nAnchorX = RENDERER_nWindowWidth / 2;
+    int nAnchorY = RENDERER_nWindowHeight / 2 - 0x10;
+    *pX = nAnchorX + (*pX - nAnchorX) * (int)nFactor / 0x100;
+    *pY = nAnchorY + (*pY - nAnchorY) * (int)nFactor / 0x100;
+}
+// VP-END [camera-zoom R155]
+
 void __fastcall SetPerspectiveScale(int nScaleX, int nScaleY) {
     gnPerspectiveScaleY = nScaleX;
     gnPerspectiveScaleZ = nScaleY;
@@ -5982,6 +6067,22 @@ void __fastcall AdjustPerspectivePosition(int nPosX, int nPosY, int nBais, int *
     uint32_t nZDivisionScale = g_aPerspectiveZDivisionTable[(nDepthIndex * 0x9c9b8 + nBais * 0x99800 >> 0x14) - 0x1000U & 0x1fff];
     *pXAdjust = ((int)((nRotatedY - nRotatedX) * nZDivisionScale * 0x2d4) >> 0x14) + RENDERER_nWindowWidth / 2;
     *pYAdjust = ((int)((nBais * 0x109a08 + nDepthIndex * -0x5a800 >> 10) * nZDivisionScale) >> 0x14) - 0x20 + RENDERER_nWindowHeight / 2;
+    // VP-BEGIN [camera-zoom R155]: scale the projected screen offsets about
+    // this funnel's own anchor (W/2, H/2 - 0x20). Every perspective layer
+    // projects through here during the world pass - floor/roof light grids,
+    // wall/shadow/ground fans, unit sprite quads (DrawPerspectiveImage),
+    // shadows and weather - so positions AND fan/quad geometry scale in one
+    // place. World-phase gated: the same funnel also serves input-side math
+    // outside the bracket (hit rects), which stays retail for the cursor
+    // inverse to map into.
+    uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+    if (nVPZoomFactor != 0x100) {
+      int nVPAnchorX = RENDERER_nWindowWidth / 2;
+      int nVPAnchorY = RENDERER_nWindowHeight / 2 - 0x20;
+      *pXAdjust = nVPAnchorX + (*pXAdjust - nVPAnchorX) * (int)nVPZoomFactor / 0x100;
+      *pYAdjust = nVPAnchorY + (*pYAdjust - nVPAnchorY) * (int)nVPZoomFactor / 0x100;
+    }
+    // VP-END [camera-zoom R155]
 }
 
 void __fastcall PerspectiveScalePosition(int nPosX, int nPosY, int nAngle, int * pXAdjust, int * pYAdjust, BOOL bOrder) {
@@ -5997,10 +6098,34 @@ void __fastcall PerspectiveScalePosition(int nPosX, int nPosY, int nAngle, int *
     int nScaleDelta = nYAdjust - ((int)((nRawYOffset + 0x37400) * g_aPerspectiveZDivisionTable[nZTableIndex - 0xf80U & 0x1fff]) >> 0x14);
     if (bOrder) {
       g_aSmackerSurfaceArray = nScaleDelta * 0x4cc >> 10;
+      // VP-BEGIN [camera-zoom R155]: scale this funnel's output about its own
+      // anchor (W/2, H/2 - 0x10) - the unit-position funnel the input side's
+      // hit-rect math mirrors. Retail's depth sprite-size factor (g_aSmacker
+      // SurfaceArray) is deliberately NOT zoomed: it is read outside the
+      // world bracket too (stale between frames), so folding the factor in
+      // would leak the zoom onto UI quads. v1: depth-shrink quads keep
+      // retail size, positions scale (plans/CAMERA-ZOOM-PLAN.md).
+      uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+      if (nVPZoomFactor != 0x100) {
+        int nVPAnchorX = RENDERER_nWindowWidth / 2;
+        int nVPAnchorY = RENDERER_nWindowHeight / 2 - 0x10;
+        *pXAdjust = nVPAnchorX + (*pXAdjust - nVPAnchorX) * (int)nVPZoomFactor / 0x100;
+        *pYAdjust = nVPAnchorY + (*pYAdjust - nVPAnchorY) * (int)nVPZoomFactor / 0x100;
+      }
+      // VP-END [camera-zoom R155]
       return;
     }
 
     g_aSmackerSurfaceArray = nScaleDelta * 0x466 >> 10;
+    // VP-BEGIN [camera-zoom R155]: mirror of the bOrder branch above.
+    uint32_t nVPZoomFactor = RENDERER_D3D_VPZoomFactor();
+    if (nVPZoomFactor != 0x100) {
+      int nVPAnchorX = RENDERER_nWindowWidth / 2;
+      int nVPAnchorY = RENDERER_nWindowHeight / 2 - 0x10;
+      *pXAdjust = nVPAnchorX + (*pXAdjust - nVPAnchorX) * (int)nVPZoomFactor / 0x100;
+      *pYAdjust = nVPAnchorY + (*pYAdjust - nVPAnchorY) * (int)nVPZoomFactor / 0x100;
+    }
+    // VP-END [camera-zoom R155]
 }
 
 void __fastcall SetDefaultPerspectiveFactor() {

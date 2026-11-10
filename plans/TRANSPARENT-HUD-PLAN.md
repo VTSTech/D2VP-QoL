@@ -5,9 +5,12 @@ same day on owner corrections — **bottom bar only**, panels untouched, keep-li
 (globes, belt slots, skill buttons, XP bar, stamina bar); then finalized: the translucent
 set goes **fully transparent (invisible)**, not ~70%. Owner calls made: scope, alpha =
 0 (skip the draw), always-on when toggled, key = **`[features] transparent_hud`**.
-**Round 1 (tree-verify) is complete** — the pins below are read off this tree, and the
+**STATUS: ROUND 2 SHIPPED AT R154** (commit `a4c74a1`, 2026-11-11) — **field-verified
+working as intended on the owner's build the same day** ("Good job, transparent_hud
+working as intended"); the keep-list and the D3D cross-check passed on the field
+screenshots. **Round 1 (tree-verify) is complete** — the pins below are read off this tree, and the
 design collapsed to call-site draw skips with **zero renderer code**. The remaining open
-calls are §9. Status: **ROUND 1 DONE — ready to implement (Round 2).**
+calls are §9. Status: **SHIPPED @ R154 — field QA closed by the owner the same day.**
 
 ---
 

@@ -1086,6 +1086,11 @@ void __fastcall InGameDraw(int32_t bSkipCursor) {
 
     D2Win::Src::D2WinPalette::DRAW_SetOrReloadPalleteMain();
     UI::Path::DRAW_UpdateMouseWorldOffsets();
+    // VP-BEGIN [camera-zoom R155]: per-frame poll - gate hot-read, non-D3D
+    // clamp, Z edge poll, factor publish - runs every in-game frame right
+    // before the world pass it feeds (plans/CAMERA-ZOOM-PLAN.md).
+    VANILLAPLUS_CameraZoomFrame();
+    // VP-END [camera-zoom R155]
     uint32_t eBorderType = UI::Path::DRAW_GetTypeOfBorder();
     // VP-BEGIN [issue #26 / R94]: wide-UI layouts draw the world with both
     // panels open too. Retail skips the whole ViewDraw2 pass for border 3
@@ -1100,7 +1105,16 @@ void __fastcall InGameDraw(int32_t bSkipCursor) {
     // pass that consumes that list (underfloor/floors/shadows/walls/roofs
     // all gate on the pass mask the build sets). Retail modes keep the skip.
     if (eBorderType != 3 || VPRES_IsWideLayoutMode(D2gfx::D2GFX::D2GFX_GetResolutionMode())) {
+      // VP-BEGIN [camera-zoom R155] the world-phase bracket - the renderer scales
+      // only while this flag is open, so the world pass scales and the UI
+      // phase below (DRAW_UI, cursor) stays 1:1 by construction. Input and
+      // selection run outside this bracket and see retail geometry; the
+      // cursor inverse (VANILLAPLUS_CameraZoomUnproject) is what maps the
+      // pixel back into that space.
+      D2gfx::D2GFX::D2GFX_SetCameraZoomWorldPass(1);
       View::ViewDraw2(D2GameView);
+      D2gfx::D2GFX::D2GFX_SetCameraZoomWorldPass(0);
+      // VP-END [camera-zoom R155]
     }
     // VP-END [issue #26 / R94]
 

@@ -428,3 +428,29 @@ void __stdcall VPCLOCK_Draw(int* pnTextHeightOffset, int nScreenX);
 //                Info / PANEL_DrawRunButton / PANEL_DrawMenuButton calls
 //     Draw.cpp   DRAW_UI - the PANEL_DrawHostileIndicator call
 BOOL __stdcall VANILLAPLUS_HudBarTransparent(); // per-frame, 2 s hot-read
+
+// [camera-zoom R155] Z-key camera zoom (plans/CAMERA-ZOOM-PLAN.md; FEATURES
+// row 15). With [features] camera_zoom=1, Z steps the world zoom
+// 1.0 -> 1.25 -> 1.5 -> 1.0 while the world is on screen; the UI, panels,
+// tooltips and the cursor stay 1:1 and clicks land where the zoomed world
+// shows them. D3D renderer only this round - other renderers clamp to 1.0
+// with a one-way d2boot.log mark. The zoom level resets to 1.0 each join
+// (VPCLOCK_ResetSession slot). State publishes through D2GFX
+// (SetCameraZoomFactor + SetCameraZoomWorldPass - the world-phase bracket
+// opens around the ViewDraw2 call, so the renderer scales only world-phase
+// draws); the cursor pixel is inverse-zoomed before the retail projection
+// (SELECT_HandleMouseInput / ClickMap), so hit rects, walk targets and the
+// SCmd packets stay byte-retail. Gate = the charter: missing
+// file/section/key or garbage = 0 = vanilla byte-for-byte; 2 s hot-read,
+// busted by the Options-page write bridge (D2VP_ConfigReloaded); one
+// d2boot.log mark on first activation + one per level change. The fifteenth
+// Vanilla+ Options row (Camera Zoom).
+//   Call sites (the only consumers):
+//     Game.cpp    InGameDraw          - VANILLAPLUS_CameraZoomFrame + the
+//                                       world bracket around ViewDraw2
+//     Select.cpp  SELECT_HandleMouseInput - the cursor inverse (hover/click)
+//     Player.cpp  ClickMap            - the cursor inverse (walk/cast)
+BOOL __stdcall VANILLAPLUS_CameraZoomActive();  // 2 s hot-read gate
+void __stdcall VANILLAPLUS_CameraZoomFrame();   // per-frame poll + publish
+void __stdcall VANILLAPLUS_CameraZoomUnproject(int* pnX, int* pnY); // cursor inverse
+void __stdcall VPCAMERAZOOM_ResetForJoin();     // level 0 each join (internal)

@@ -117,6 +117,7 @@
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/PlrSkills.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [camera-zoom R155] cursor inverse
 #include "Source/D2Client/Warden/WardenClient.h"
 #include "Source/D2Common/COMPOSIT/Composit.h"
 #include "Source/D2Common/D2Common.globals.h"
@@ -2190,7 +2191,16 @@ int __fastcall ClickMap(int32_t clickType, int32_t nX, int32_t nY, uint16_t mous
     }
 
     bRecursionClick = 1;
+    // VP-BEGIN [camera-zoom R155] cursor inverse - the message-space pixel
+    // maps back into the retail (unscaled) world-screen space BEFORE the
+    // retail projection (the R112 hosted-stop lesson: message pixels ride
+    // the space the game's mapping speaks). Walk targets, spell ground
+    // targets and attacks resolve through here, so with the world zoomed a
+    // click means exactly the world point the zoomed draw shows under the
+    // cursor. Factor 1.0 = no-op byte-for-byte retail.
+    VANILLAPLUS_CameraZoomUnproject(&nXConverted, &nY);
     UI::Path::ConvertCoordToPerspectiveView(&nXConverted, &nY);
+    // VP-END [camera-zoom R155]
     D2UnderMouseStrc mouse = {0};
     mouse.flags = 0;
     mouse.pPlayer = GetPlayerUnit_UI();

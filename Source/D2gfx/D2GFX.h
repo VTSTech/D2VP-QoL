@@ -409,6 +409,14 @@ void __stdcall D2GFX_DrawImageColoredShape(struct D2GfxDataStrc * pDC6Context, i
 void __stdcall D2GFX_UpdateScaleFactor();
 int32_t __stdcall D2GFX_GetScaleFactor();
 void __stdcall D2GFX_SetDefaultScaleFactor();
+// VP: [camera-zoom R155] the zoom publish point (D2GFX.cpp for the why) -
+// one factor (8.8, 0x100 = retail) + one world-phase bracket flag; read by
+// the D3D world draw sites and the D2Client cursor inverse, written by the
+// D2Client gate/frame poll. See plans/CAMERA-ZOOM-PLAN.md.
+void __stdcall D2GFX_SetCameraZoomFactor(int32_t nFactor8Dot8);
+int32_t __stdcall D2GFX_GetCameraZoomFactor();
+void __stdcall D2GFX_SetCameraZoomWorldPass(int32_t bActive);
+int32_t __stdcall D2GFX_GetCameraZoomWorldPass();
 void __stdcall D2GFX_SetPerspectiveScale(int32_t nXScale, int32_t nYScale);
 uint32_t __stdcall D2GFX_IsInPerspectiveBounds(int32_t nXpos, int32_t nYpos);
 void __stdcall D2GFX_AdjustPerspectivePosition(int32_t nXpos, int32_t nYpos, int32_t nBais, int * pXAdjust, int * pYAdjust);

@@ -313,7 +313,16 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       keep working; the hidden run/menu buttons still respond to\r\n"
         ";       clicks, tooltips included. Panels, the automap and chat text\r\n"
         ";       are never touched.\r\n"
-        "transparent_hud=0\r\n";
+        "transparent_hud=0\r\n"
+        "; ------------------------------------------------------------------------\r\n"
+        "; camera_zoom (R155, plans/CAMERA-ZOOM-PLAN.md) - Z steps the world\r\n"
+        ";       camera zoom 1.0 -> 1.25 -> 1.5 -> 1.0 while you play. The UI,\r\n"
+        ";       panels, tooltips and the cursor stay 1:1; clicks land where\r\n"
+        ";       the zoomed world shows them. D3D renderer only - other\r\n"
+        ";       renderers clamp to 1.0 (a one-line note lands in d2boot.log\r\n"
+        ";       when that happens). The zoom level resets to 1.0 each time\r\n"
+        ";       you join a game.\r\n"
+        "camera_zoom=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -1500,6 +1509,10 @@ static DWORD dwVpClockSessionStartTick = 0; // GetTickCount() captured at game e
 // sees it; the accessor is in the feature block at the end of the TU.
 static int gbHudBarTransparentMode = 0;
 static DWORD dwHudBarTranslucentLastCheck = 0; // 2 s ini re-read gate (row-28 pattern)
+// [camera-zoom R155] the gate cache lives here so the reload bust below
+// sees it; the accessors are in the feature block at the end of the TU.
+static int gbCameraZoomMode = 0;
+static DWORD dwCameraZoomLastCheck = 0; // 2 s ini re-read gate (row-28 pattern)
 void __stdcall D2VP_ConfigReloaded() {
     dwAltToggleLastCheck = 0;     // next ALTTOGGLE_Active() re-reads alt_toggle
     dwAutoGoldLastCheck = 0;      // next AUTO_GOLD_Active() re-reads auto_gold
@@ -1511,6 +1524,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwUnlockFpsLastCheck = 0;     // next UNLOCKFPS_Active() re-reads unlock_fps
     dwAutomapClockLastCheck = 0;  // next VPCLOCK_Draw() re-reads automap_clock (R147)
     dwHudBarTranslucentLastCheck = 0; // next VANILLAPLUS_HudBarTransparent() re-reads transparent_hud (R154)
+    dwCameraZoomLastCheck = 0;    // next VANILLAPLUS_CameraZoomActive() re-reads camera_zoom (R155)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -2279,7 +2293,14 @@ static BOOL VPCLOCK_GateActive() {
 // - the same site that starts the stash page mirror on the personal page).
 void __stdcall VPCLOCK_ResetSession() {
     dwVpClockSessionStartTick = GetTickCount();
+    // [camera-zoom R155] owner call: the zoom level resets to 1.0 each join.
+    // The level/factor statics live in the camera-zoom block at the TU tail.
+    VPCAMERAZOOM_ResetForJoin();
 }
+
+// [camera-zoom R155] forward decl - defined in the camera-zoom block at the
+// TU tail; VPCLOCK_ResetSession rides the same game-entry slot.
+void __stdcall VPCAMERAZOOM_ResetForJoin();
 
 // The one overlay line (R148 merged the R147 Session/System pair). Called
 // from AUTOMAP_Draw inside its font-1 window, right after the build-tag
@@ -2370,4 +2391,134 @@ BOOL __stdcall VANILLAPLUS_HudBarTransparent() {
         }
     }
     return gbHudBarTransparentMode;
+}
+
+// ===== [vanilla-plus camera-zoom R155] ======================================
+// Z-key camera zoom (plans/CAMERA-ZOOM-PLAN.md, owner asks 2026-11-09 + the
+// four owner calls settled 2026-11-11: in-steps only {1.0, 1.25, 1.5}, Z
+// only, D3D renderer only this round, level 0 each join). D2R parity: Z
+// toggles between zoom steps while the world scales and the UI stays 1:1.
+//
+//   State: gnCameraZoomLevel 0/1/2 -> factor 0x100/0x140/0x180 (8.8 fixed,
+//   the same units D2GFX's own scale-factor plumbing speaks). Z is an
+//   EDGE-poll (GetAsyncKeyState high bit, SHIFTCOMPARE_ClickModifierDown's
+//   shape) - retail shipped no zoom CmdTbl command id, so there is no
+//   command bind to ride; vk 0x5A is polled once per frame from
+//   VANILLAPLUS_CameraZoomFrame (Game.cpp InGameDraw, right before the
+//   world bracket).
+//
+//   Publish point: D2GFX_SetCameraZoomFactor + D2GFX_SetCameraZoomWorldPass
+//   (D2gfx - below both D2Client and D2Direct3D, so no module imports UI
+//   state). The world bracket opens around the ViewDraw2 call in Game.cpp
+//   and closes right after: the renderer scales only world-phase draws, so
+//   UI chrome, panels, tooltips, the cursor and out-of-game scenes are
+//   exempt by construction (the UI 1:1 pillar, no per-call classification).
+//
+//   Cursor truth (the R112 hosted-stop lesson: message-space pixels must
+//   map into the space the game's mapping speaks): the raw cursor pixel is
+//   inverse-zoomed about the player's screen anchor BEFORE the retail
+//   projection runs - VANILLAPLUS_CameraZoomUnproject, called from
+//   SELECT_HandleMouseInput (hover/selection) and ClickMap (walk/cast -
+//   the walk target, spell ground target and attack all resolve through
+//   it). Downstream stays byte-retail: clamps, skew, MouseOffsets, hit
+//   rects, the SCmd walk/cast packets.
+//
+//   Failure matrix (plan §5): non-D3D renderer -> factor clamped to 1.0
+//   with a one-way d2boot.log mark (the D3D sites are the only scaled
+//   paths this round; Glide/DDraw/Gdi keep their retail no-op
+//   nfpUpdateScaleFactor stubs); gate off -> level forced 0 and factor 1.0
+//   the same tick; join -> level 0 (VPCLOCK_ResetSession slot, the
+//   automap-clock session anchor); cursor misalignment -> the whole
+//   feature is one ini key away from off.
+
+static const int sgaVPCameraZoomFactors[3] = { 0x100, 0x140, 0x180 }; // 1.00 / 1.25 / 1.50
+static int gnCameraZoomLevel = 0;      // 0 = retail, wraps 0 -> 1 -> 2 -> 0
+static int gnCameraZoomPrevZDown = 0;  // Z edge poll state
+static int sbCameraZoomMarkRaised = 0; // one-way d2boot.log activation latch
+static int sbCameraZoomClampMarkRaised = 0; // one-way d2boot.log clamp latch
+
+void __stdcall VPCAMERAZOOM_ResetForJoin() {
+    gnCameraZoomLevel = 0;
+    gnCameraZoomPrevZDown = 0;
+    D2gfx::D2GFX::D2GFX_SetCameraZoomFactor(0x100);
+}
+
+BOOL __stdcall VANILLAPLUS_CameraZoomActive() {
+    DWORD dwNow = GetTickCount();
+    if (!dwCameraZoomLastCheck || dwNow - dwCameraZoomLastCheck >= 2000) {
+        dwCameraZoomLastCheck = dwNow;
+        gbCameraZoomMode = D2VP_GetFeatureToggle("camera_zoom");
+        if (gbCameraZoomMode && !sbCameraZoomMarkRaised) {
+            sbCameraZoomMarkRaised = 1;
+            D2BOOT_MarkFmt("camera-zoom: [features] camera_zoom=1 - Z steps the world zoom "
+                           "1.0/1.25/1.5; UI stays 1:1; D3D renderer only (others clamp to 1.0)");
+        }
+    }
+    return gbCameraZoomMode;
+}
+
+// Per-frame poll (Game.cpp InGameDraw, before the world bracket): gate hot-
+// read, non-D3D clamp, Z edge poll, factor publish. Factor 0x100 is
+// re-published every frame while idle so a stale value can never outlive
+// its state change.
+void __stdcall VANILLAPLUS_CameraZoomFrame() {
+    if (!VANILLAPLUS_CameraZoomActive()) {
+        // Gate off: owner failure-matrix row - forced back to 1.0 the same
+        // tick, level forgotten (a re-enable starts at 1.0).
+        gnCameraZoomLevel = 0;
+        gnCameraZoomPrevZDown = 0;
+        D2gfx::D2GFX::D2GFX_SetCameraZoomFactor(0x100);
+        return;
+    }
+
+    // Failure matrix: D3D only this round. The D3D draw sites are the only
+    // scaled paths shipped; Glide/DDraw/Gdi clamp to 1.0 with a mark.
+    int nRenderer = D2gfx::D2GFX::D2GFX_GetRendererMode();
+    if (nRenderer != 6) { // 6 = Direct3D (RENDERER_RenderedFunctionsSelector)
+        if (gnCameraZoomLevel) {
+            gnCameraZoomLevel = 0;
+            gnCameraZoomPrevZDown = 0;
+            if (!sbCameraZoomClampMarkRaised) {
+                sbCameraZoomClampMarkRaised = 1;
+                D2BOOT_MarkFmt("camera-zoom: clamped to 1.0 on renderer mode %d (D3D only this round)", nRenderer);
+            }
+        }
+        D2gfx::D2GFX::D2GFX_SetCameraZoomFactor(0x100);
+        return;
+    }
+
+    // Z edge poll (vk 0x5A 'Z'): high bit set now and clear last frame =
+    // one step. Level wraps 0 -> 1 -> 2 -> 0 (owner call: in-steps only).
+    int nZDown = (GetAsyncKeyState(0x5A) & 0x8000) ? 1 : 0;
+    if (nZDown && !gnCameraZoomPrevZDown) {
+        gnCameraZoomLevel = (gnCameraZoomLevel + 1) % 3;
+        int nFactor = sgaVPCameraZoomFactors[gnCameraZoomLevel];
+        D2gfx::D2GFX::D2GFX_SetCameraZoomFactor(nFactor);
+        // vpdiag habit: one line per level change carries level + factor +
+        // camera mode + renderer, so a field report pins the exact state.
+        D2BOOT_MarkFmt("camera-zoom: level %d (factor 1.%02dx) perspective=%d renderer=%d",
+                       gnCameraZoomLevel,
+                       (nFactor * 100 >> 8) % 100,
+                       (int)D2gfx::D2GFX::D2GFX_IsPerspectiveActive(),
+                       nRenderer);
+    }
+    gnCameraZoomPrevZDown = nZDown;
+}
+
+// Cursor inverse: maps one raw screen pixel back into the retail (unscaled)
+// world-screen space, about the player's screen anchor - the constant the
+// top-down MouseOffsets math (DRAW_UpdateMouseWorldOffsets: the player sits
+// at ScreenSizeX/2, ScreenSizeY/2 - 0x10) and the perspective position
+// funnel (H/2 - 0x10) agree on. Factor 1.0 = no-op. The retail projection
+// that follows (SELECT_ScreenToWorldCoords / ConvertCoordToPerspectiveView)
+// then speaks the space the hit rects and walk targets live in.
+void __stdcall VANILLAPLUS_CameraZoomUnproject(int* pnX, int* pnY) {
+    int nFactor = D2gfx::D2GFX::D2GFX_GetCameraZoomFactor();
+    if (!pnX || !pnY || nFactor == 0x100) {
+        return;
+    }
+    int nAnchorX = D2Client::UI::ui::ScreenSizeX / 2;
+    int nAnchorY = D2Client::UI::Inv::ScreenSizeY / 2 - 0x10;
+    *pnX = nAnchorX + (*pnX - nAnchorX) * 0x100 / nFactor;
+    *pnY = nAnchorY + (*pnY - nAnchorY) * 0x100 / nFactor;
 }

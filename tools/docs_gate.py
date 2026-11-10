@@ -204,12 +204,64 @@ def check_stale_rounds(repo, n, handoff):
         print(f'      {rel}: {cnt} R{n - 1} mention(s)')
 
 
+def _strip_c_dialect(txt):
+    # [R155] single-pass state machine: code, // comment, /* comment */,
+    # "string", 'char'. Escapes honored inside strings/chars; comments and
+    # literal bodies collapse to nothing/empties so brace/paren counting sees
+    # only real code. Replaces the R149-era ordered-regex chain (see the
+    # check_markers_and_balance note).
+    out = []
+    i, n = 0, len(txt)
+    state = 'code'
+    while i < n:
+        c = txt[i]
+        nxt = txt[i + 1] if i + 1 < n else ''
+        if state == 'code':
+            if c == '/' and nxt == '/':
+                state = 'line'; i += 2; continue
+            if c == '/' and nxt == '*':
+                state = 'block'; i += 2; continue
+            if c == '"':
+                state = 'str'; out.append('""'); i += 1; continue
+            if c == "'":
+                state = 'chr'; out.append("''"); i += 1; continue
+            out.append(c); i += 1
+        elif state == 'line':
+            if c == '\n':
+                state = 'code'; out.append('\n')
+            i += 1
+        elif state == 'block':
+            if c == '*' and nxt == '/':
+                state = 'code'; i += 2; continue
+            i += 1
+        elif state == 'str':
+            if c == '\\':
+                i += 2; continue
+            if c == '"' or c == '\n':
+                state = 'code'
+            i += 1
+        else:  # chr
+            if c == '\\':
+                i += 2; continue
+            if c == "'" or c == '\n':
+                state = 'code'
+            i += 1
+    return ''.join(out)
+
+
 def check_markers_and_balance(repo, changed):
     # [R149] markers pair as a MULTISET (the tree's established idiom nests
     # VP blocks — Path.cpp's case guards share spans — so file-order list
     # equality false-positived); balance strips comments and string/char
     # literals first (retail code legally contains lone parens inside
     # strings — Inv.cpp's strcat(..., ")") UTF-8 builders).
+    # [R155] the strip is a small state machine now, not four ordered regexes:
+    # the regex chain ran line-comments BEFORE block-comments, so a URL with
+    # a `//` inside a /* ... */ block (D2GFX.cpp's {@url https://...} doc
+    # comment) truncated the line and corrupted the brace count, and a `/*`
+    # inside a // comment (Select.cpp's "/*pX/*pY" doc) would over-eat the
+    # other way. A real lexer's order — context, not sequence — has neither
+    # failure mode.
     for rel in changed:
         if not (rel.endswith('.cpp') or rel.endswith('.h')):
             continue
@@ -221,10 +273,7 @@ def check_markers_and_balance(repo, changed):
         ends = re.findall(r'VP-END \[([^\]]+)\]', txt)
         if begins or ends:
             chk(f'markers: {rel} VP-BEGIN/VP-END paired', sorted(begins) == sorted(ends))
-        stripped = re.sub(r'//[^\n]*', '', txt)
-        stripped = re.sub(r'/\*.*?\*/', '', stripped, flags=re.S)
-        stripped = re.sub(r'"(\\.|[^"\\\n])*"', '""', stripped)
-        stripped = re.sub(r"'(\\.|[^'\\\n])*'", "''", stripped)
+        stripped = _strip_c_dialect(txt)
         chk(f'balance: {rel} braces', stripped.count('{') == stripped.count('}'))
         chk(f'balance: {rel} parens', stripped.count('(') == stripped.count(')'))
 

@@ -11,6 +11,19 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R155 — Camera Zoom: Z steps the world zoom 1.0/1.25/1.5, the UI stays 1:1**
+  (plans/CAMERA-ZOOM-PLAN.md, FEATURES row 0a, owner ask 2026-11-09 + the four owner calls
+  settled 2026-11-11 — in-steps only, Z only, D3D only first, level 0 each join): with
+  `[features] camera_zoom=1`, **Z** steps the world zoom 1.0 → 1.25 → 1.5 → 1.0 anchored on
+  your character. A world-phase bracket around the `ViewDraw2` call keeps the scaling inside
+  the world pass — the bottom bar, panels, tooltips, automap and cursor stay pixel-1:1 — and
+  the raw cursor pixel is inverse-zoomed before the retail projection (hover/selection at
+  `SELECT_HandleMouseInput`, walk/cast at `ClickMap`), so clicks land exactly where the
+  zoomed world shows them. D3D renderer only this round; Glide/DDraw/Gdi clamp to 1.0 with a
+  `d2boot.log` note. Gate = the charter (2 s hot-read, Options-page write bridge), the
+  fifteenth Options row (**Camera Zoom** — the page re-balances to two columns of eight),
+  ini template key, d2boot marks on activation and every step.
+
 - **R154 — Transparent HUD: the bottom bar's background goes fully transparent on ask**
   (FEATURES.md row 4, owner ask 2026-11-11 — "it is just the bottom bar i want to make
   transparent, and even then, not the globes, belt bar or skill buttons", then the XP/stamina

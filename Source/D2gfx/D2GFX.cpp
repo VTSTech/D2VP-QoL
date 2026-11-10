@@ -1188,6 +1188,48 @@ void __stdcall D2GFX_SetDefaultScaleFactor() {
     RENDERER_CurrentRenderedFunctions->nfpUpdateScaleFactor(0x100);
 }
 
+// ===== VP-BEGIN [camera-zoom R155]: the zoom publish point ==================
+// The single source of truth for the Vanilla+ camera zoom (Z key steps
+// 1.0/1.25/1.5, plans/CAMERA-ZOOM-PLAN.md). Lives in D2gfx - below both
+// D2Client (sets it, reads it for the cursor inverse) and D2Direct3D (reads
+// it in the world draw sites) - so no module imports UI state and the
+// module gates stay shut. Two values:
+//   nFactor8Dot8 - the world scale in 8.8 fixed point: 0x100 = 1.0,
+//     0x140 = 1.25, 0x180 = 1.5. Clamped to [0x100, 0x180]; anything else
+//     is owner error, not a crash. 0x100 = retail, every site no-ops.
+//   bWorldPass   - the world-phase bracket, set 1 around the ViewDraw2 call
+//     (Game.cpp InGameDraw) and 0 after. The renderer scales only while it
+//     is 1, so UI chrome, panels, text, the cursor and out-of-game scenes
+//     are exempt by construction - the UI 1:1 pillar holds without any
+//     per-call classification. Input/selection/click paths run outside the
+//     bracket and see retail geometry; the cursor inverse (D2Client) is
+//     what maps the pixel back into that space.
+static uint32_t gnD2GFX_CameraZoomFactor = 0x100; D2_STATIC_GUARD(gnD2GFX_CameraZoomFactor, "gnD2GFX_CameraZoomFactor");
+static int gnD2GFX_CameraZoomWorldPass = 0; D2_STATIC_GUARD(gnD2GFX_CameraZoomWorldPass, "gnD2GFX_CameraZoomWorldPass");
+
+void __stdcall D2GFX_SetCameraZoomFactor(int32_t nFactor8Dot8) {
+    if (nFactor8Dot8 < 0x100) {
+      nFactor8Dot8 = 0x100;
+    }
+    if (nFactor8Dot8 > 0x180) {
+      nFactor8Dot8 = 0x180;
+    }
+    gnD2GFX_CameraZoomFactor = (uint32_t)nFactor8Dot8;
+}
+
+int32_t __stdcall D2GFX_GetCameraZoomFactor() {
+    return (int32_t)gnD2GFX_CameraZoomFactor;
+}
+
+void __stdcall D2GFX_SetCameraZoomWorldPass(int32_t bActive) {
+    gnD2GFX_CameraZoomWorldPass = bActive ? 1 : 0;
+}
+
+int32_t __stdcall D2GFX_GetCameraZoomWorldPass() {
+    return gnD2GFX_CameraZoomWorldPass;
+}
+// VP-END [camera-zoom R155]
+
 int Unreferenced_004f6610() {
     int iVar1 = gnD2GFX_RequestedScaleFactor;
     if (gnD2GFX_RequestedScaleFactor < 0x200) {

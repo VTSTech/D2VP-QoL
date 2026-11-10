@@ -10,7 +10,7 @@
 // version line (D2Client AUTOMAP_DrawVersion) print D2VP_BUILD_TAG instead of
 // the retail "v 1.14d", and the boot self-ID (Game/Main.cpp) composes its
 // R-number from D2VP_ROUND, so all three stay in lockstep per round.
-#define D2VP_ROUND "154" // [R154] transparent_hud: the bottom bar's console frame + run/menu buttons + hostile indicator are draw-skipped behind [features] transparent_hud (opt-in, 2 s hot-read, Options row 14); globes/belt/skills/XP/stamina + all panels draw retail
+#define D2VP_ROUND "155" // [R155] camera_zoom: Z steps the world zoom 1.0/1.25/1.5 behind [features] camera_zoom (opt-in, 2 s hot-read, Options row 15); world-phase bracket + cursor inverse keep the UI 1:1 and clicks on the zoomed world; D3D renderer only, other renderers clamp to 1.0
 #define D2VP_BUILD_TAG "D2VP-R" D2VP_ROUND
 
 extern "C" {

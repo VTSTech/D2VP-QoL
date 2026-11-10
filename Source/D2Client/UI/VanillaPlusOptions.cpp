@@ -139,11 +139,11 @@ static const uint16_t VPPAGE_FONT_ID = 0xd;        // FontInGameChat - ControlCo
 // every stop whole again, 640x480 included ((480-337)/2 = 71 top margin).
 static const int VPPAGE_BOX_WIDTH = 0x26c;
 static const int VPPAGE_COL_WIDTH = 0x136;         // R144: half the box width - one column's span
-static const int VPPAGE_BOX_HEIGHT = 0x171;        // R147: was 0x151 - two columns of seven rows (see the layout check)
+static const int VPPAGE_BOX_HEIGHT = 0x191;        // R155: was 0x171 - two columns of eight rows (see the layout check)
 static const int VPPAGE_ROW_PITCH = 0x20;
 static const int VPPAGE_ROW_HEIGHT = 0x1a;
 static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
-static const int VPPAGE_BACK_ROW_Y = 0x144;        // from box top (R147: was 0x124 - seven rows per column push it down one pitch)
+static const int VPPAGE_BACK_ROW_Y = 0x164;        // from box top (R155: was 0x144 - eight rows per column push it down one pitch, the exact R108 geometry)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
 // [features] keys rendered by the page. Adding a slate feature = +1 entry
@@ -156,7 +156,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[14] = {
+static const VPPFeatureRow gaVanillaPlusRows[15] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -242,10 +242,19 @@ static const VPPFeatureRow gaVanillaPlusRows[14] = {
     // the hidden buttons stay clickable. No renderer code ships - the skip
     // is upstream of every renderer, so there is no Glide/D3D axis.
     { "transparent_hud", L"Transparent HUD", 0 },
+    // VP: [camera-zoom R155] camera_zoom - the fifteenth row (FEATURES row,
+    // plans/CAMERA-ZOOM-PLAN.md). Label = the plan's name ("Camera Zoom") -
+    // D2R parity: Z toggles between zoom steps. The gate
+    // VANILLAPLUS_CameraZoomActive (VanillaPlusCore.cpp) is 2 s hot-read and
+    // the write bridge busts dwCameraZoomLastCheck (D2VP_ConfigReloaded), so
+    // a flip here lands on the next frame. With the gate on, Z steps the
+    // world zoom 1.0/1.25/1.5 (D3D renderer only; other renderers clamp to
+    // 1.0 with a d2boot.log mark) and the level resets to 1.0 each join.
+    { "camera_zoom", L"Camera Zoom", 0 },
 };
-static const int VPP_ROW_COUNT = 14;
-static const int VPP_ROW_BACK = 14; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 7; // R147: was 6 - two columns of seven (fourteen rows: col 0 bands 0-6, col 1 bands 0-6)
+static const int VPP_ROW_COUNT = 15;
+static const int VPP_ROW_BACK = 15; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 8; // R155: was 7 - two columns of eight (fifteen rows: col 0 bands 0-7, col 1 bands 0-6; band 7 of col 1 stays empty)
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
