@@ -7,6 +7,7 @@
 #include "Source/D2Client/SKILLS/Skills.h"
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [unlock-fps-interp R151] UNLOCKFPS_GetPlayerRenderOffsetOrigin
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Missile.h"
 #include "Source/D2Client/UNIT/Monster.h"
@@ -1180,7 +1181,24 @@ void __fastcall SKILL_DrawUnitAtRotatedAngle(D2UnitStrc * pUnit, uint32_t nGamma
       bOrder = 0;
       pYpos = &nScreenY;
       pXpos = &nScreenX;
-      D2gfx::D2GFX::D2GFX_PerspecitveScalePosition(D2Common::Units::GetPrecisionX(pUnit), D2Common::Units::GetPrecisionY(pUnit), 0x60, (int*)pXpos, (int*)pYpos, bOrder);
+      // VP-BEGIN [unlock-fps-interp R151, issue #38]: the local player's
+      // rotated-angle sprite (Whirlwind's spin draw) rides the same glide
+      // as the body (Wall2) - raw precision input here would step the
+      // spinning character at the tick rate against a gliding world, the
+      // exact mismatch the body fix closed (WW keeps the sprite on this
+      // site for the whole spin). Other units keep raw. Off/interp
+      // off/still: 0 delta, retail.
+      int nVpOrigRotX = D2Common::Units::GetPrecisionX(pUnit);
+      int nVpOrigRotY = D2Common::Units::GetPrecisionY(pUnit);
+      if (pUnit && pUnit == UNIT::Player::GetPlayerUnit_UI()) {
+        int nVpOriginDx = 0;
+        int nVpOriginDy = 0;
+        UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+        nVpOrigRotX += nVpOriginDx;
+        nVpOrigRotY += nVpOriginDy;
+      }
+      D2gfx::D2GFX::D2GFX_PerspecitveScalePosition(nVpOrigRotX, nVpOrigRotY, 0x60, (int*)pXpos, (int*)pYpos, bOrder);
+      // VP-END [unlock-fps-interp R151, issue #38]
       nWorldOffset = UI::Path::DRAW_GetWorldOffsetX();
       nScreenX += nWorldOffset;
       nWorldOffset = UI::Path::DRAW_GetWorldOffsetY();

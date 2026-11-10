@@ -1105,6 +1105,9 @@ static int gnUnlockFpsOffsetX = 0;                  // per-present cache: one of
 static int gnUnlockFpsOffsetY = 0;                  // shared by the camera and every sprite draw
 static DWORD dwUnlockFpsFrameId = 1;                // [R143.1] increments per present - the interp cache epoch (starts 1 so the 0 cache key never matches)
 static DWORD dwUnlockFpsOffsetFrame = 0;            // [R143.1] present epoch the cached offset was computed for
+static int gnUnlockFpsOriginOffX = 0;               // [R151] per-present cache: one origin delta per frame,
+static int gnUnlockFpsOriginOffY = 0;               // shared by the warp and every perspective rider
+static DWORD dwUnlockFpsOriginFrame = 0;            // [R151] present epoch the cached origin delta was computed for
 static int sbUnlockFpsTimerRaised = 0;      // timeBeginPeriod(1) one-way latch
 static DWORD dwUnlockFpsStatsWindowTick = 0;
 static DWORD dwUnlockFpsPresentCount = 0;
@@ -1376,8 +1379,12 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOf
 // tick sample to the current one exactly like the top-down camera does.
 // offset = (curPrec - prevPrec) x (since - 40) / 40: at the tick it reads
 // -(cur - prev) (render = previous sample, continuous with the last frame),
-// just before the next tick it reads 0 (render = current sample). One call
-// site per frame (ViewDraw2) - no present-epoch cache needed. Fills 0 and
+// just before the next tick it reads 0 (render = current sample). [R151] the
+// delta is cached per present epoch (dwUnlockFpsOriginFrame) and shared by
+// every consumer - the R150 riders (body, shadow, state overlays) plus the
+// R151 riders (selection shape, WW sprite) must all see the exact same number
+// within a frame; per-site GetTickCount calls could straddle a 1 ms boundary
+// and break the glue. Fills 0 and
 // returns FALSE whenever it should not apply, exactly like the screen-unit
 // accessor, so the origin is byte-for-byte retail with the gate/interp off.
 BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t* pnOffsetY) {
@@ -1396,14 +1403,26 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t
     if (!gbUnlockFpsHaveSnap || !dwUnlockFpsLastClientTick) {
         return FALSE; // no client world update seen yet this process
     }
-    DWORD dwSinceTick = GetTickCount() - dwUnlockFpsLastClientTick;
-    if (dwSinceTick >= UNLOCKFPS_SIM_TICK_MS) {
-        dwSinceTick = UNLOCKFPS_SIM_TICK_MS; // clamp at the sample: offset 0, render = cur
+    if (dwUnlockFpsOriginFrame != dwUnlockFpsFrameId) {
+        // [R151] First consumer this present: compute the frame's origin delta
+        // once so the warp origin and every rider (body, shadow, state
+        // overlays, selection shape, the WW sprite) share it. R150 added three
+        // riders to R149's single ViewDraw2 call site; per-site GetTickCount
+        // calls could straddle a 1 ms boundary and let the camera and the body
+        // disagree by delta/40 within one frame - an intermittent sub-pixel
+        // tear in the glue the whole ride depends on.
+        dwUnlockFpsOriginFrame = dwUnlockFpsFrameId;
+        DWORD dwSinceTick = GetTickCount() - dwUnlockFpsLastClientTick;
+        if (dwSinceTick >= UNLOCKFPS_SIM_TICK_MS) {
+            dwSinceTick = UNLOCKFPS_SIM_TICK_MS; // clamp at the sample: offset 0, render = cur
+        }
+        int64_t nDeltaX = (int64_t)gnUnlockFpsCurPrecX - (int64_t)gnUnlockFpsPrevPrecX;
+        int64_t nDeltaY = (int64_t)gnUnlockFpsCurPrecY - (int64_t)gnUnlockFpsPrevPrecY;
+        gnUnlockFpsOriginOffX = (int32_t)(nDeltaX * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
+        gnUnlockFpsOriginOffY = (int32_t)(nDeltaY * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
     }
-    int64_t nDeltaX = (int64_t)gnUnlockFpsCurPrecX - (int64_t)gnUnlockFpsPrevPrecX;
-    int64_t nDeltaY = (int64_t)gnUnlockFpsCurPrecY - (int64_t)gnUnlockFpsPrevPrecY;
-    *pnOffsetX = (int32_t)(nDeltaX * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
-    *pnOffsetY = (int32_t)(nDeltaY * ((int)dwSinceTick - (int)UNLOCKFPS_SIM_TICK_MS) / (int)UNLOCKFPS_SIM_TICK_MS);
+    *pnOffsetX = gnUnlockFpsOriginOffX;
+    *pnOffsetY = gnUnlockFpsOriginOffY;
     return TRUE;
 }
 

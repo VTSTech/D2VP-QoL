@@ -365,7 +365,9 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffset(int32_t* pnOffsetX, int32_t* pnOf
 // position it hands D2GFX_SetPerspectiveScale, so the perspective camera
 // (the warp anchor every perspective layer - floor/wall tiles, sprites,
 // shadows - projects around) glides between the same two samples the top-down
-// consumers interpolate. One call site per frame; same gating and zero-fills
+// consumers interpolate. Per-present cached since R151 - the warp and every
+// player rider (body, shadow, states, selection shape, WW sprite) share one
+// delta per frame; same gating and zero-fills
 // as the screen-unit accessor (gate/interp off = byte-for-byte retail).
 BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t* pnOffsetY);
 

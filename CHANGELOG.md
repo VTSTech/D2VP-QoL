@@ -11,6 +11,14 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R151 — the #38 residual pass: the origin delta shared per present, the selection shape + the WW sprite ride**
+  ([#38](https://github.com/VTSTech/D2VP-QoL/issues/38), owner field pass on R150: "improved in perspective.
+  still a slight intermittent stutter… was unable to reproduce ctrl+click crash either"). The perspective origin
+  delta is now computed once per present and shared by every rider (R150's four call sites sampled their own
+  clocks — sites straddling a 1 ms boundary disagreed by delta/40 within one frame), and the two raw-projection
+  sites left in R150 join the glide: the hover selection shape (`GFX_DrawUnitSelectionShape` — the residual R150
+  named) and the Whirlwind rotated-angle sprite (`SKILL_DrawUnitAtRotatedAngle`). Both player-gated; off/interp
+  off = byte-for-byte retail. Self-ID `Vanilla+0.0.8-R151`.
 - **R150 — the R149 field pass: the deposit crash closed for real, the perspective glide's second half**
   ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37),
   [#38](https://github.com/VTSTech/D2VP-QoL/issues/38), owner field pass on the R149

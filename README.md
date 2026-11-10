@@ -1,8 +1,7 @@
 <img width="1916" height="1078" alt="image" src="https://github.com/user-attachments/assets/e66eb061-1a2e-49f0-8a13-4d7dadf2a59d" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/bd850c32-2a98-477f-bda9-a22e41d18bbd" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/999da238-d2f1-4c83-9a01-910daeea65a2" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/e89db5ba-6a2e-4deb-ac63-d1c5a7ff6bd0" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/51e5fb86-371d-4da7-98dc-ff525903bf1d" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b90c086e-189a-4d0c-950a-97a2b3e79ab9" />
 
 
 # D2VP Vanilla+QoL
@@ -12,7 +11,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R148-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R144-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -55,8 +54,8 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | Mana Burn Fix | `[features] mana_burn_fix` | Repairs retail's Mana Burn bug (256x the intended mana drain, 512x in Hell) to the designed 66–100% of monster-level damage, matching D2R post-2.4. |
 | Shift Item Compare | `[features] shift_compare` | Hold **Shift** over an equippable item and a second tooltip draws beside it: the item you have equipped for that body slot (D2R hover-compare parity) — inventory, stash, cube, trade, vendor; shield/quiver hovers compare the off-hand, weapons the primary. |
 | Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. R149 (#37) serialized the pick+place pair and R150 (#37 field pass) closed the real window: the pick echo no longer hands the transfer's item to the client cursor (it stays in its source cell until the place echo relinks it — no cursor hop), and clicks inside the 500 ms round-trip window are silently consumed — the deposit-leg crash (withdraw, then promptly Ctrl+Click the item back) is gone. |
-| Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. R149 (#38): perspective mode glides too — the warp origin itself (the perspective camera every perspective layer projects around) carries the same two-sample glide, and the screen-unit delta is top-down-only. R150 (#38 field pass): the character rides the same glide (sprite, shadow, state overlays) — screen-fixed at its retail spot while the perspective world glides. |
-| FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. R149 (#38): the glide works in perspective mode too (the warp origin glides — the perspective camera). R150: the character rides it as well — sprite, shadow and state overlays share the origin's glide, so the character holds its screen spot while the world scrolls. Off = the classic 25 Hz step cadence at ~60 presents. |
+| Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. R149 (#38): perspective mode glides too — the warp origin itself (the perspective camera every perspective layer projects around) carries the same two-sample glide, and the screen-unit delta is top-down-only. R150 (#38 field pass): the character rides the same glide (sprite, shadow, state overlays) — screen-fixed at its retail spot while the perspective world glides. R151 (residual pass): the origin delta is computed once per present and shared by every rider, and the hover selection shape + the Whirlwind sprite ride it too. |
+| FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. R149 (#38): the glide works in perspective mode too (the warp origin glides — the perspective camera). R150: the character rides it as well — sprite, shadow and state overlays share the origin's glide, so the character holds its screen spot while the world scrolls. R151: the hover selection shape and the Whirlwind spin sprite join the ride, and the shared delta is computed once per frame. Off = the classic 25 Hz step cadence at ~60 presents. |
 | Automap Clock | `[features] automap_clock` | The automap overlay gains one line under the build tag, right-aligned with the other overlay text: **SESS:** (real time since you entered the current game, `hh:mm:ss`) + **SYS:** (your PC's local clock, 12-hour with a trailing AM/PM, e.g. `12:01PM`). The level-name line also carries the area's level (`Blood Moor (3)`) — always-on, R148. Pure display. |
 
 No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
@@ -67,9 +66,9 @@ step-cadence presentation). The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R148`** (line 1 of `d2boot.log` pins any build); the
+Current build: **`Vanilla+0.0.8-R144`** (line 1 of `d2boot.log` pins any build); the
 latest release tag is
-**[`R148`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R148)**, 2026-11-09.
+**[`R144`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R144)**, 2026-11-09.
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),

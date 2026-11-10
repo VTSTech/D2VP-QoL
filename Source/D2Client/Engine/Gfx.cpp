@@ -3674,7 +3674,26 @@ BOOL __fastcall GFX_DrawUnitSelectionShape(D2UnitStrc * pUnit) {
       nCoord = Particle::PARTICLE_GetScreenZ(pUnit);
       pScreenYOut = &__frame0.nScreenY;
       pScreenXOut = &__frame0.nScreenX;
-      D2gfx::D2GFX::D2GFX_AdjustPerspectivePosition(D2Common::Units::GetPrecisionX(pUnit), D2Common::Units::GetPrecisionY(pUnit), nCoord, pScreenXOut, pScreenYOut);
+      // VP-BEGIN [unlock-fps-interp R151, issue #38]: the hovered unit's
+      // selection shape rides the same glide as the body (Wall2), the
+      // shadow and the state overlays. Raw precision input here would step
+      // the shape at the tick rate AROUND a screen-fixed character - the
+      // hover-only residual R150 named (the shape is drawn whenever the
+      // cursor rests on the unit, so the mismatch reads as an intermittent
+      // stutter in perspective). Other units keep raw: their shape and
+      // their sprite step together, retail-consistent. Off/interp
+      // off/still: 0 delta, retail.
+      int nVpOrigSelX = D2Common::Units::GetPrecisionX(pUnit);
+      int nVpOrigSelY = D2Common::Units::GetPrecisionY(pUnit);
+      if (pUnit && pUnit == UNIT::Player::GetPlayerUnit_UI()) {
+        int nVpOriginDx = 0;
+        int nVpOriginDy = 0;
+        UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+        nVpOrigSelX += nVpOriginDx;
+        nVpOrigSelY += nVpOriginDy;
+      }
+      D2gfx::D2GFX::D2GFX_AdjustPerspectivePosition(nVpOrigSelX, nVpOrigSelY, nCoord, pScreenXOut, pScreenYOut);
+      // VP-END [unlock-fps-interp R151, issue #38]
       nCallResult = PANELSHIFT_BorderForWorld(UI::Path::DRAW_GetTypeOfBorder()); // VP: [issue #26 / R100] no-panel-shift - unit sprite path rides the border-0 camera
       switch (nCallResult) {
         case 1:
