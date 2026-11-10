@@ -11,6 +11,35 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R153 — the #37 choke-point fix: every client-side item-unit free unlinks first**
+  ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37), owner field crash on the R152 build — the SAME
+  AV read `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`, ~5 s after the last page flip; paired-crash
+  frame-shift analysis against the owner's `d2exe.map` proved the same 15-frame draw chain on a build
+  that carries the R152 unlink): R152 had fixed one free site — the 0x9D REMOVED branch — but the
+  client frees item units at ~30 `RemoveObjectFromServerObjectTable` call sites (RELOAD recreate pairs,
+  equip/swap recreates, ground deletes), and any of them can free a chain-linked unit into the panel
+  draw's inventory-chain walk. R153 unlinks at the choke point instead: one VP block in
+  `CUnit::RemoveObject` runs the same self-guarding `INVENTORY_RemoveItemFromInventory` before
+  `FreeAny` — no-ops for ground/already-unlinked units, covers every free path at once, behaviorally
+  invisible. Ungated. Self-ID `Vanilla+0.0.8-R153`. Field ask §U-80.
+- **R152 — the #37 root fix: the page-switch remove storm stops corrupting the client inventory chain**
+  ([#37](https://github.com/VTSTech/D2VP-QoL/issues/37), owner field crash on the R150 build:
+  "Ctrl+Click deposit crash, this time no withdraw, just finished countess run, tp to town, open stash to
+  deposit, ctrl+click potion in inventory. crash" — symbolized against the owner's `d2exe.map`: AV read
+  `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`, same-ms as a `switched to page 7` mark). The page switch
+  dematerializes the whole page-4 set with the retail remove echo (`ITEM_RemoveItemFromCurrentLocation`
+  stamps `ITEMFLAG_REMOVED` 0x20; page 4 IS the player's own inventory page), and the client's REMOVED
+  branch freed each item unit **without unlinking it from the owning inventory's item chain** — retail never
+  bulk-removes list-linked grid items, so the latent dangling node never mattered until a hundred-page pager
+  flipped dozens of units per second while the panels kept drawing the same chain. The walk then dereferenced
+  freed/reused units — the crash, intermittent by pool-reuse luck, deposit or no deposit. R152 unlinks the
+  item first (`INVENTORY_RemoveItemFromInventory` — self-guarding, frees the grid cell, relinks head/tail/
+  neighbors, no-ops for cursor or unlinked items), captures the GUID before the free (the retail notify read
+  it after the free — a second UAF on the same path), and early-returns; the non-REMOVED retail path is
+  byte-identical. One build-gate rider: the generated header keeps `INVENTORY_RemoveItemFromInventory`
+  module-private to D2Common (no retail cross-module caller existed), so `Redivivus/d2_hand.h` hand
+  re-exposes the real, unchanged signature to D2Client — no wrapper, no new code. Self-ID
+  `Vanilla+0.0.8-R152`. Field ask §U-79.
 - **R151 — the #38 residual pass: the origin delta shared per present, the selection shape + the WW sprite ride**
   ([#38](https://github.com/VTSTech/D2VP-QoL/issues/38), owner field pass on R150: "improved in perspective.
   still a slight intermittent stutter… was unable to reproduce ctrl+click crash either"). The perspective origin

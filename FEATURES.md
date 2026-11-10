@@ -1,3 +1,17 @@
+*v17, 2026-11-10. R153 (**#37 choke-point fix**, on the owner's field crash on the R152 build — the SAME
+read `[null+0xC]` AV at `DRAW_UI_InventoryContent+0x9A`, ~5 s after the last page flip; paired-crash
+frame-shift analysis against the owner's `d2exe.map` pinned the same 15-frame draw chain on a build
+that carries the R152 unlink): R152 fixed one free site (the 0x9D REMOVED branch) but the client frees
+item units at ~30 `RemoveObjectFromServerObjectTable` call sites — the RELOAD recreate pairs, the
+equip/swap recreates, the ground deletes — and any of them can free a chain-linked unit into the panel
+draw's inventory-chain walk. R153 unlinks at the choke point: one VP block in `CUnit::RemoveObject`
+runs the same self-guarding `INVENTORY_RemoveItemFromInventory` (the `d2_hand.h` re-exposure from R152)
+before `FreeAny` — no-ops for ground/already-unlinked units, covers every free path at once and any
+future one, and makes R152's explicit unlink a harmless second call. Ungated — the unit is being
+deleted either way. No features, no keys. **Thirteen features ship.** Field asks: §U 73–80.*
+
+*v16, 2026-11-10. R152 (**#37 root fix**, on the owner's field crash on the R150 build — "Ctrl+Click deposit crash, this time no withdraw … ctrl+click potion in inventory. crash", symbolized against the owner's `d2exe.map`: AV read `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`, same-ms as a `switched to page 7` mark): the page switch dematerializes the whole page-4 set with the retail remove echo (`ITEM_RemoveItemFromCurrentLocation` stamps `ITEMFLAG_REMOVED` 0x20 — page 4 IS the player's own inventory page), and the client's REMOVED branch (`Item.cpp` `HandleItemRemoveFromContainer`) freed each item unit **without unlinking it from the owning inventory's item chain** (`CUnit::RemoveObject` → `FreeAny`: unit, item data, static path — the chain nodes thread through the item units themselves, so the freed blocks stayed reachable). Retail never bulk-removes list-linked grid items while their panel is open, so the latent dangling node never mattered until the hundred-page pager flipped dozens of units per second while the panels kept drawing that chain — the walk then dereferenced freed/reused pool memory, intermittent by reuse luck, deposit or no deposit (the R149/R150 guards were real but fixed the pair-dispatch desync, a different leg). R152 unlinks first (`INVENTORY_RemoveItemFromInventory` — self-guarding, frees the grid cell, relinks head/tail/neighbors, no-ops for cursor or unlinked items), captures the GUID before the free (the retail notify read it after the free — a second UAF on the same path) and early-returns; the non-REMOVED retail path is byte-identical. No gate — the unlink is behaviorally invisible (the item is being deleted either way) and hardens the retail path too. Field ask: §U-79. Row 18's header note (R147/R148, below) unchanged. **Thirteen features ship.** Field asks: §U 73–79.*
+
 *v15, 2026-11-10. R151 (the #38 residual pass, on the owner's R150 field report "improved in perspective. still a slight intermittent stutter"): the perspective origin delta is computed once per present and shared by every rider (R150's four call sites could straddle a 1 ms GetTickCount boundary and disagree by delta/40 within one frame); the hover selection shape (`GFX_DrawUnitSelectionShape`) and the Whirlwind rotated-angle sprite (`SKILL_DrawUnitAtRotatedAngle`) ride the same player glide — the two raw-projection sites left in R150. R150 (the R149 field pass): **#37** — the crash's real window was the ROUND TRIP, not the 2-frame park: the 0x19 pick echo hands the item client-side until the 0x18 place echo lands, so deposit-direction clicks in that window took the retail hand-full path with a mid-flight locked item (the deterministic deposit crash). The echo no longer hands the pair's item (`VPCTRLXFER_EchoSuppressHand`: it stays visible in its source cell until the place echo relinks it) and `VPCTRLXFER_PairInFlight` spans the whole 500 ms round trip (§0c); **#38** — the local player's sprite, shadow and state overlays ride the origin glide (`UNLOCKFPS_GetPlayerRenderOffsetOrigin` at Wall2/Gfx) — the character is screen-fixed at its retail spot while the perspective world glides (§17). R149 (smoke-test fallout on the R148 build): **#37** — the Ctrl+Click transfer serializes its pick+place pair (`VPCTRLXFER_PairInFlight`: a click inside the ~2-frame flight window is consumed — no second `0x19` against an occupied server hand, no overwritten parked `0x18`, the intermittent-crash desync gone, §0c); **#38** — the interpolation glide reaches perspective mode by gliding the warp origin `D2GFX_SetPerspectiveScale` itself (the perspective camera every perspective layer — floor/wall tiles, sprites, shadows — projects around; the screen-unit delta is top-down-only now, §17). Row 18's header note (R147/R148, below) unchanged. **Thirteen features ship.** Field asks: §T 67–72 + §U 73–74.*
 
 # FEATURES.md — D2R backport slate (vanilla-plus)
@@ -109,7 +123,7 @@ Every slate row must satisfy all of these before it ships:
 |---|---|---|---|---|---|---|
 | 0a | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **PLANNED**, drafted 2026-11-09: [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md) (renderer-side scale, UI stays 1:1, cursor truth; the R117–R122 reach arc is the zoom-out groundwork) |
 | 0b | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
-| 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
+| 0c | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; R149 pair serialization + R150 round-trip window closed the deterministic deposit-leg crash; R152 #37 root fix — the surviving intermittent crash was the page-switch remove storm freeing client units without unlinking them from the inventory chain, fixed by unlink-before-free in the REMOVED echo; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
 | 1 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
 | 2 | Clock / game-timer overlay | HUD | D2R Tab-screen game timer; BH wall-clock | S | Low | `clock_overlay` |
 | 3 | Item ilvl on tooltips | Loot | D2R 2.5 display-item-level toggle | S–M | Low | **Shipped** (R55 standalone line → R56 name-suffix → R57 bare digits → R59 single-space trim — `item_ilvl`, see §3; first shipped in release 0.0.7) |
@@ -118,7 +132,7 @@ Every slate row must satisfy all of these before it ships:
 | 6 | Auto gold pickup | Loot | D2R "Gold Pickup" gameplay option | M | Med | **Shipped 0.0.4** (2026-10-29: ledger row 33; field-verified — "Auto-Gold Pickup works!" — coexists with alt_toggle) |
 | 7 | Automap scale + position | HUD | D2R larger overlay map | M | Med | `automap_scale` |
 | 8 | Quick-cast keys | Controls | D2R-adjacent (PD2 quick cast) | M–L | Med–High | `quick_cast` |
-| 9 | Shared side-file stash | Stash | None — owner suggestion (PlugY-style side file) | L | Med–High | **Round 1 FIELD-PROVEN (R63, Rev 82; build-fix R64, Rev 83; tab-anchor fixes R65+R66, Revs 84-85; owner on R66: "Great job. I see it. It works.")** — 1 retail-shaped page via a stash-panel "Shared" tab (no hotkey), items + gold, own `_d2vp_shared.sss` file, `.d2s` retail-pure (save-flush design); SP-only v1; mechanism field-proven on the R65 build blind (page swap + cross-char item/gold round trip), tab visibility confirmed on R66. First shipped in release **0.0.7** (cut at R66); in-game **Shared Stash** row on the Vanilla+ Options page added R67 (no longer ini-only). **R75 (Rev 97): a SECOND shared page + pager** (owner: "give the current stash tab label an outline" + "add a 2nd page and buttons/arrows to navigate pages") — the label draws with a 1-px black halo on all four sides, `<`/`>` arrows beside the word step personal → Shared 1 → Shared 2, the word itself toggles back to personal, `_d2vp_shared.sss` v2 stores both pages (v1 files load as page 1), the 0x4F/0x7D param word carries the absolute desired page. (The R68–R71 tab polish — Font24, floating row, backdrop pill — was rolled back by owner decision at `59ff645`; R75 builds on the R66 in-panel tab.) **R82 (Rev 105): TEN shared pages** (owner: "increase the shared stash pages to 10") — the planned v2-header widening: same magic + version, `pageCount` 10 (header 28 → 92 bytes), pre-R82 two-page files read back with pages 3-10 empty (next save rewrites ten), labels `Shared 1`…`Shared 10`, arrows still step one page, one gold pool across all ten. SMOKE debts cleared: §H items 25 (`.d2s` in retail) + 27 (degrade drill) confirmed in the R83 full-belt pass ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24), 2026-11-02), the ten-page items 33-35 rode the R104 full pass ([#28](https://github.com/VTSTech/D2VP-QoL/issues/28), 2026-11-04); the "Then 100" leg widens the same two constants. **R146: A HUNDRED shared pages** (owner: "Good job, works. Let's increase the Shared Stash pages to 100") — that leg arrived: `VPSTASH_PAGE_COUNT`/`VPSTASH_PAGES` 10 → 100 (v2 header 92 → 812 bytes; per-page records only for used pages), the client word table grew to 101 script-generated labels `Shared 1`…`Shared 100`, narrower files (v1 / pre-R82 two-page / R82-R145 ten-page) load with the missing pages empty and rewrite as a hundred on the next save, a wider file (pageCount > 100) is still rejected whole, the `<<`/`>>` pager, the word toggle and the 0x4F/0x7D packet are untouched. Plan: plans/SHARED-STASH-PLAN.md |
+| 9 | Shared side-file stash | Stash | None — owner suggestion (PlugY-style side file) | L | Med–High | **Round 1 FIELD-PROVEN (R63, Rev 82; build-fix R64, Rev 83; tab-anchor fixes R65+R66, Revs 84-85; owner on R66: "Great job. I see it. It works.")** — 1 retail-shaped page via a stash-panel "Shared" tab (no hotkey), items + gold, own `_d2vp_shared.sss` file, `.d2s` retail-pure (save-flush design); SP-only v1; mechanism field-proven on the R65 build blind (page swap + cross-char item/gold round trip), tab visibility confirmed on R66. First shipped in release **0.0.7** (cut at R66); in-game **Shared Stash** row on the Vanilla+ Options page added R67 (no longer ini-only). **R75 (Rev 97): a SECOND shared page + pager** (owner: "give the current stash tab label an outline" + "add a 2nd page and buttons/arrows to navigate pages") — the label draws with a 1-px black halo on all four sides, `<`/`>` arrows beside the word step personal → Shared 1 → Shared 2, the word itself toggles back to personal, `_d2vp_shared.sss` v2 stores both pages (v1 files load as page 1), the 0x4F/0x7D param word carries the absolute desired page. (The R68–R71 tab polish — Font24, floating row, backdrop pill — was rolled back by owner decision at `59ff645`; R75 builds on the R66 in-panel tab.) **R82 (Rev 105): TEN shared pages** (owner: "increase the shared stash pages to 10") — the planned v2-header widening: same magic + version, `pageCount` 10 (header 28 → 92 bytes), pre-R82 two-page files read back with pages 3-10 empty (next save rewrites ten), labels `Shared 1`…`Shared 10`, arrows still step one page, one gold pool across all ten. SMOKE debts cleared: §H items 25 (`.d2s` in retail) + 27 (degrade drill) confirmed in the R83 full-belt pass ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24), 2026-11-02), the ten-page items 33-35 rode the R104 full pass ([#28](https://github.com/VTSTech/D2VP-QoL/issues/28), 2026-11-04); the "Then 100" leg widens the same two constants. **R146: A HUNDRED shared pages** (owner: "Good job, works. Let's increase the Shared Stash pages to 100") — that leg arrived: `VPSTASH_PAGE_COUNT`/`VPSTASH_PAGES` 10 → 100 (v2 header 92 → 812 bytes; per-page records only for used pages), the client word table grew to 101 script-generated labels `Shared 1`…`Shared 100`, narrower files (v1 / pre-R82 two-page / R82-R145 ten-page) load with the missing pages empty and rewrite as a hundred on the next save, a wider file (pageCount > 100) is still rejected whole, the `<<`/`>>` pager, the word toggle and the 0x4F/0x7D packet are untouched. **R152 (#37 root fix): page switches stop corrupting the client inventory chain** — the dematerialize storm's 0x9D REMOVED echoes freed the client item units without unlinking them from the player's inventory chain (the R150-era intermittent deposit crash), fixed in the echo handler (unlink-before-free); paging itself unchanged. Plan: plans/SHARED-STASH-PLAN.md |
 | 10 | Vanilla+ Options menu page | UI | None — owner suggestion 2026-10-29; in-game settings surface for the gated features | M | Med→Low | **Shipped** (landed 2026-10-30, ledger row 34; first release **0.0.6**); **ten rows as of R140** — the slate's five shipped keys + Shared Stash (R67: the row busts the client stash gate cache too, so the tab follows the toggle the same frame) + No Panel World Shift (R101, issue #26 round 9: the write bridge already busts the PANELSHIFT cache, so the flip applies same-frame; the seventh row moved the Previous Menu row down one pitch, 0x124→0x144) + Mana Burn Fix (R108: the R106 combat gate joins the panel — the eighth row moved the Previous Menu row down one pitch again, 0x144→0x164, and grew the box 0x171→0x191; the server gate keeps its 2 s poll by design, so a flip lands on the next drain roll within 2 s while the panel shows it same-frame) + Shift Item Compare (R125: the ninth row — Previous Menu moved 0x164→0x184, box 0x171→0x1b1) + Ctrl Click Transfer (R140: the tenth row — Previous Menu moved 0x184→0x1a4, box 0x1b1→0x1d1; the flip lands on the very next Ctrl+Click) |
 | 11 | Mana Burn fix (melee drain 256x bug) | Combat (D2Game) | D2R 2.4 patch notes ("fixed melee hits draining 256 times too much") + Basin wiki Mana Burn | S | Low | **Implemented** (R106 — `mana_burn_fix`; ini-only at ship, in-game **Mana Burn Fix** row on the Vanilla+ Options page since R108; server-side gate TU + VP-marked drain-roll shim in SUnitDmg.cpp; **field-proven** — daily play + the handoff field table) |
 | 12 | Stackable gems | Inventory | None — owner suggestion 2026-11-05; PD2 stacks gems in its currency tab | M | Med | `stack_gems` |
@@ -234,7 +248,7 @@ slot preference (Slot rules above), +1 `shiftcmp:` gate (shield-kind slot pick) 
 docs-budget gate). **FIELD-VERIFIED 2026-11-06** ("Great job, works" — the shield
 slot legs ran on the owner builds). Nothing owed.
 
-### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35; R149 pair serialization + R150 round-trip window for #37)
+### 0c. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35; R149 pair serialization + R150 round-trip window + R152 root fix for #37)
 
 **The ask** (owner, 2026-11-09, no issue): "Can we make Ctrl+Click put/remove items from
 Stash when Stash is open?" — D2R PC parity (Ctrl+Click moves an item with a container
@@ -316,6 +330,65 @@ closes #35": the emptied slot takes placements, both directions, transfers still
 complete; owner-closed ([#35](https://github.com/VTSTech/D2VP-QoL/issues/35)); standing
 regression check = SMOKE §R item 60. Files: `Inv.cpp` (park instead of send + the tick call),
 `VanillaPlusCore.{h,cpp}` (park + tick), `Redivivus/d2_boot.h` (round bump).
+
+**R152 (issue #37 root fix — the crash that survived R149 and R150): the page-switch
+remove storm freed list-linked client units without unlinking them.** Owner field crash
+on the R150 build, no withdraw in front ("just finished countess run, tp to town. open
+stash to deposit. ctrl+click potion in inventory. crash"), symbolized against the
+owner's own `d2exe.map` (the map the fork never had before): AV **read `[null+0xC]`**
+at `DRAW_UI_InventoryContent+0x9A`, the crash millisecond carrying a
+`shared stash: switched to page 7 (3 items)` mark. The stack was the panel DRAW, not
+the transfer: the shared page switch dematerializes the whole page-4 set through the
+retail `ITEM_RemoveItemFromCurrentLocation` (Container case: stamps
+`ITEMFLAG_REMOVED` 0x20 and sends the 0x9D remove echo — page 4 IS the player's own
+inventory page, so the echo always fires), and the client's REMOVED branch
+(`HandleItemRemoveFromContainer`, `Item.cpp`) called `RemoveObjectFromServerObjectTable`
+→ `CUnit::RemoveObject` → `FreeAny` — freeing the unit, its item data and its static
+path **while the owning inventory's item chain still threaded through it** (the chain
+nodes live IN the item units: `pUnitDataItem->sInvNode`). Retail never bulk-removes
+list-linked grid items while their panel is open, so the latent dangling node never
+mattered; the pager flips dozens of units per second while both panels keep drawing
+that same chain, and the draw's `pStaticPath->nPosX` deref on a walked freed/reused
+unit is exactly the `[null+0xC]` fault — intermittent by pool-reuse luck, deposit or
+no deposit, which is why no window theory could ever cover it. Fix, one VP block in
+the REMOVED branch (`// VP-BEGIN/END [stash-page R152, issue #37]`): unlink the item
+first (`D2Common INVENTORY_RemoveItemFromInventory` — self-guarding, frees the grid
+cell, relinks head/tail/neighbors, no-ops for cursor or unlinked items), capture the
+GUID before the free (the retail `NPCMENU_OnItemRemovedFromContainer` tail read it
+AFTER the free — a second UAF on the same path), then let the retail free run
+unchanged; an early return keeps the non-REMOVED retail path byte-identical. Ungated
+on purpose: the unlink is behaviorally invisible (the item is being deleted either
+way) and hardens the retail path too. Verification: the 20-check R152 static suite +
+docs_gate green (compile gate: the owner's Win11 build). Field ask: **SMOKE §U item 79**
+(the fast page-flip storm + the exact R150-field crash scenario). Files:
+`Source/D2Client/UNIT/Item.cpp` (the REMOVED branch), `Redivivus/d2_boot.h` (round
+bump).
+
+**R153 (issue #37 choke-point fix — the crash that survived R152): every client-side
+item-unit free now unlinks first.** The owner rebuilt with R152 and the smoke test
+crashed again — same AV read `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`, ~5 s
+after the last page flip (d2crash-20261109-222517, build `R150-1-gb12fc932-dirty`).
+Frame-shift analysis against the owner's `d2exe.map` (paired with the R148-dirty
+crash 200257) proved the same 15-frame draw chain on the new build — uniform
+per-region shifts (+0xC8 UI/Inv/Draw, +0x70 GAME/Game, 0 the app-mode tail, +0x140
+the thread entry), the signature of a rebuild, and a successful rebuild requires the
+R152 `d2_hand.h` decl — so the R152 unlink WAS in the binary. R152 had fixed one
+free site; the client frees item units at ~30 `RemoveObjectFromServerObjectTable`
+call sites (the remove/put RELOAD recreate pairs, the equip/swap recreates, the
+ground-packet deletes), and none of the others unlinks first — any of them can feed
+the draw's chain walk a freed unit. Which echo carried it this run is unproven and
+does not matter: fix at the choke point. One VP block in `CUnit::RemoveObject`
+(`// VP-BEGIN/END [unit-free R153, issue #37]`), inside the `UNIT_ITEM` branch right
+before `FreeAny`: the same self-guarding `INVENTORY_RemoveItemFromInventory` —
+no-ops for ground/already-unlinked units (the node's `pInventory` is null → the
+signature guard returns 0 before touching anything), frees the grid cell, relinks
+head/tail/neighbors, clears a matching `pCursorItem`. Covers all ~30 free sites at
+once and any future one; R152's explicit unlink becomes a harmless second call (the
+node is already detached → returns 0). Ungated — behaviorally invisible.
+Verification: the R153 static suite (unlink order, no-op safety, R152 block intact,
+boot lockstep) + docs_gate green (compile gate: the owner's Win11 build). Field ask:
+**SMOKE §U item 80**. Files: `Source/D2Client/UNIT/CUnit.cpp` (the choke point),
+`Redivivus/d2_boot.h` (round bump).
 
 ### 1. Persistent globe text (was: HP/MP globe hover values) — `[features] globe_persistent`
 

@@ -2010,6 +2010,25 @@ void RemoveObject(int32_t nIndex, D2UnitStrc * * ppUnitTable, eD2UnitType eUnitT
     }
     if (pUnit->eUnitType == UNIT_ITEM) {
       UI::Inv::INV_ClearItemDescription(pUnit);
+      // VP-BEGIN [unit-free R153, issue #37]: every caller of this free path
+      // (the remove/put RELOAD recreate pairs, the equip/swap recreates, the
+      // ground-packet deletes - ~30 call sites) can free an item unit while
+      // it is still list-linked in the owning inventory's item chain (the
+      // chain nodes thread through the item units themselves, so the freed
+      // block stays reachable). R152 fixed the one REMOVED-branch site; the
+      // R150-1 field crash (d2crash 20261109-222517: same AV read [null+0xC]
+      // at DRAW_UI_InventoryContent+0x9A, EAX=0 = pStaticPath after
+      // FreeStaticPath, 5.75 s after the last page flip on a build that HAS
+      // the R152 unlink) proves at least one more free path feeds the panel
+      // draw's chain walk a freed unit. Unlink at the choke point instead of
+      // chasing the echo: self-guarding (type/node/signature), no-ops for
+      // ground/already-unlinked items, frees the grid cell, relinks
+      // head/tail/neighbors, clears a matching pCursorItem. Behaviorally
+      // invisible - the unit is being deleted either way - and it makes the
+      // R152 explicit unlink (Item.cpp) a harmless redundant second call
+      // (the node is already detached, the second call returns 0).
+      D2Common::INVENTORY::Inventory::INVENTORY_RemoveItemFromInventory(pUnit);
+      // VP-END [unit-free R153, issue #37]
     }
 
     FreeAny(pUnit);
@@ -2540,6 +2559,7 @@ uint32_t __fastcall HitTestScreen(D2UnitStrc * pUnit, int32_t nClickX, int32_t n
         }
       }
     }
+    // VP-END [issue #26 / R92]
 
     int bSelectable;
     bSelectable = 0;

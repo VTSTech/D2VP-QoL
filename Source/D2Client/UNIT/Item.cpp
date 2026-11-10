@@ -1918,7 +1918,25 @@ void __fastcall HandleItemRemoveFromContainer(uint8_t * pBytes) {
           // VP-END [ctrl-click stash R150, issue #37]
           ITEM_RemoveUninterruptableState(pItem);
         } else {
-          CUnit::RemoveObjectFromServerObjectTable(pItem->nUnitGUID, UNIT_ITEM);
+          // VP-BEGIN [stash-page R152, issue #37]: the REMOVED echo frees the
+          // client item unit (CUnit::RemoveObject -> FreeAny: unit, item data,
+          // static path) WITHOUT unlinking it from the owning inventory's item
+          // chain. Retail never bulk-removes list-linked grid items while
+          // their panel is open, so the latent dangling node never mattered;
+          // the shared-stash page switch dematerializes the whole page-4 set
+          // with exactly this echo (ITEM_RemoveItemFromCurrentLocation stamps
+          // ITEMFLAG_REMOVED 0x20 and page 4 IS the player's own inventory
+          // page), dozens of units per flip, while the open panels keep
+          // drawing that same chain - the walk then dereferences freed/reused
+          // units: the R150-field AV (read [null+0xC] at
+          // DRAW_UI_InventoryContent+0x9A, d2crash 20261109-200257, EAX=0 =
+          // pStaticPath after FreeStaticPath). Unlink FIRST - self-guarding
+          // (type/node/signature), frees the grid cell, relinks head/tail/
+          // neighbors, no-ops for cursor or unlinked items - capture the GUID
+          // before the free, then let the retail free run unchanged.
+          int nVpRemovedItemGuid = pItem->nUnitGUID;
+          D2Common::INVENTORY::Inventory::INVENTORY_RemoveItemFromInventory(pItem);
+          CUnit::RemoveObjectFromServerObjectTable(nVpRemovedItemGuid, UNIT_ITEM);
           pBelongsResult = Player::GetPlayerUnit_UI();
           if (pOwnerUnit == pBelongsResult) {
             if (stItemDetails.nInvPage == INVPAGE_CORPSE) {
@@ -1927,6 +1945,14 @@ void __fastcall HandleItemRemoveFromContainer(uint8_t * pBytes) {
               Cursor::ITEM_SetItemOnHand(nullptr);
             }
           }
+
+          // The shared tail below reads pItem->nUnitGUID AFTER the unit was
+          // freed - a second UAF on the same path (the freelist usually keeps
+          // the dword; pool reuse does not have to). Captured GUID + early
+          // return keep the non-REMOVED retail path byte-identical.
+          UI::npcmenu::NPCMENU_OnItemRemovedFromContainer(nVpRemovedItemGuid);
+          return;
+          // VP-END [stash-page R152, issue #37]
         }
 
         pBelongsResult = Player::GetPlayerUnit_UI();

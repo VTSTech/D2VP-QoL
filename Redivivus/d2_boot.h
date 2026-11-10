@@ -10,7 +10,7 @@
 // version line (D2Client AUTOMAP_DrawVersion) print D2VP_BUILD_TAG instead of
 // the retail "v 1.14d", and the boot self-ID (Game/Main.cpp) composes its
 // R-number from D2VP_ROUND, so all three stay in lockstep per round.
-#define D2VP_ROUND "151" // [R151] #38 residual pass: the origin delta is computed once per present (four R150 call sites no longer straddle a 1 ms boundary); the hover selection shape and the WW rotated-angle sprite ride the same player glide
+#define D2VP_ROUND "153" // [R152] #37 root fix: the 0x9D REMOVED echo unlinks the item from its owner inventory chain before CUnit::RemoveObject frees it (page-switch dematerialize storms left dangling nodes the panel draw walked - the read [null+0xC] AV); freed-GUID NPC notify captured pre-free
 #define D2VP_BUILD_TAG "D2VP-R" D2VP_ROUND
 
 extern "C" {

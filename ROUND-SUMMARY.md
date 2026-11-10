@@ -1,37 +1,64 @@
-# Round summary — R151 (rev 167, 2026-11-10): the #38 residual pass — the origin delta shared per present + the selection-shape and WW-sprite riders
+# Round summary — R153 (rev 169, 2026-11-10): the #37 choke-point fix — every client-side item-unit free unlinks first
 
-Owner field on the R150 build: **"R150 is improved in perspective. still a slight
-intermittent stutter. but not constant jitter. was unable to reproduce ctrl+click crash
-either"** — [#37](https://github.com/VTSTech/D2VP-QoL/issues/37) (crash NOT reproducible —
-hold open until a clean session set, then close) +
-[#38](https://github.com/VTSTech/D2VP-QoL/issues/38) (constant jitter gone, an intermittent
-stutter left). R150 named one residual and left another class unexamined: per-call clock
-sampling, and the two raw-projection sites outside the body/shadow/state trio.
+## The crash
+
+The owner rebuilt with R152 (the build that required the `Redivivus/d2_hand.h`
+re-exposure — a successful compile IS the proof the fix is in) and smoke-tested:
+join → open stash → fast Shared-page flips 2→8→7 → ~5.75 s quiet → crash.
+`d2crash-20261109-222517`, build `R150-1-gb12fc932-dirty (release)`: **the same AV
+read `[null+0xC]` at `DRAW_UI_InventoryContent+0x9A`** (EAX=0 = pStaticPath after
+FreeStaticPath) as the R150-era crash.
+
+Symbolization against the owner's `d2exe.map`, keyed by the paired R148-dirty crash
+(`d2crash-20261109-200257`): all 15 frames of both reports are the SAME call chain
+(`DRAW_UI_InventoryContent` → `DRAW_UI_Inventory` → `DRAW_UI` → `InGameDraw` →
+`CLIENT_GameLoopFrame` → `MessageGameLoop` → `pfModes_EnterGame` → the app-mode
+tail) modulo uniform per-region shifts — **+0xC8** (UI/Inv/Draw), **+0x70**
+(GAME/Game), **0** (the app-mode tail), **+0x140** (the thread entry). That is the
+signature of a rebuild with small code insertions; shift-corrected, every new frame
+lands on the exact same symbol+offset.
+
+## Why R152 did not cover it
+
+R152 fixed ONE free site — the 0x9D REMOVED branch. The client frees item units at
+~30 `RemoveObjectFromServerObjectTable` call sites (`Item.cpp` alone): the
+remove/put RELOAD recreate pairs, the equip/swap recreates, the ground-packet
+deletes. None of the others unlinks the unit from the owning inventory's item chain
+before the free — any of them can free a chain-linked unit and feed the panel
+draw's walk a freed block (the chain nodes live IN the item units). Which echo
+carried it this run is unproven (no xfer lines exist in this build's log; the free
+happened inside the 5.75 s quiet window after the flips — consistent with a
+Ctrl+Click deposit leg or any item-churn echo) — and it does not matter.
 
 ## What changed
 
-1. **The origin delta is computed once per present** (`VanillaPlusCore.cpp`): R150 grew
-   `UNLOCKFPS_GetPlayerRenderOffsetOrigin` from R149's single ViewDraw2 call site to FOUR
-   (View warp, Wall2 body, Gfx shadow + state overlays) but left it recomputing per call
-   off a fresh `GetTickCount` — two sites straddling a 1 ms boundary disagreed by
-   delta/40 within the same frame (camera vs body vs shadow), an intermittent sub-pixel
-   tear in the glue. Now cached per present epoch (`dwUnlockFpsOriginFrame` +
-   `gnUnlockFpsOriginOffX/Y` — the screen-unit accessor's R143.1 pattern).
-2. **The hover selection shape rides** (`Gfx.cpp` `GFX_DrawUnitSelectionShape`): the
-   perspective branch projected the unit's RAW precision position — for the player that
-   is the shape stepping at the tick rate AROUND a screen-fixed body whenever the cursor
-   rests on the character: the hover-only residual R150 named, reading as the owner's
-   intermittent stutter. Player-gated; other units keep raw (their shape and sprite step
-   together, retail-consistent).
-3. **The WW sprite rides** (`SkillsBar.cpp` `SKILL_DrawUnitAtRotatedAngle`, Whirlwind's
-   rotated-angle draw): raw precision input — the spinning character stepped against the
-   gliding world for the whole spin. Player-gated; the `VanillaPlusCore.h` include added.
+One VP block in `CUnit::RemoveObject` (`Source/D2Client/UNIT/CUnit.cpp`,
+`// VP-BEGIN/END [unit-free R153, issue #37]`), inside the existing `UNIT_ITEM`
+branch right before `FreeAny`:
+
+1. **Unlink at the choke point**: the same self-guarding
+   `INVENTORY_RemoveItemFromInventory` R152 used (hand re-exposed in
+   `Redivivus/d2_hand.h` since R152) — for a chain-linked item it frees the grid
+   cell, relinks head/tail/neighbors and clears a matching `pCursorItem`; for
+   ground/already-unlinked units the node's `pInventory` is null and the signature
+   guard returns 0 before touching anything.
+2. **Covers all ~30 free sites at once** — and any future one. R152's explicit
+   unlink becomes a harmless second call (the node is already detached → returns 0).
+3. **Ungated on purpose** — behaviorally invisible (the unit is being deleted
+   either way), and it hardens every retail free path too.
+
+`Redivivus/d2_boot.h`: `D2VP_ROUND "152"→"153"`. No features, no keys, no d2boot
+marks.
 
 ## Verification
 
-Static only — the R151 suite + `docs_gate` green (compile gate of record: the owner's
-Win11 MSYS2 build). Field asks: SMOKE §U +77 (hover shape glued) +78 (WW sprite glides);
-73–76 stay from R150.
+Static — the R153 suite (the unlink lands inside the `UNIT_ITEM` branch BEFORE
+`FreeAny`; no-op safety for the ground paths; R152 block intact; boot lockstep) +
+`smoke_sync` contract 0 warnings + `docs_gate` green (compile gate of record: the
+owner's Win11 MSYS2 build). Field ask: SMOKE **§U +80** — the full storm on R153
+(item 79's flips + deposit scenario), then item churn with the panels open
+(vendor identify/repair/buy, gamble refresh — the RELOAD recreate path), then the
+mash rhythms of 73/75/76. 73–79 stay from R149–R152.
 
-Round identity: self-ID `Vanilla+0.0.8-R151`, automap tag `D2VP-R151`
-(`D2VP_ROUND "150"→"151"`).
+Round identity: self-ID `Vanilla+0.0.8-R153`, automap tag `D2VP-R153`
+(`D2VP_ROUND "152"→"153"`).
