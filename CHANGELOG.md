@@ -11,6 +11,16 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R156 — Camera Zoom on Glide: the same Z zoom now renders on the Glide renderer**
+  (plans/CAMERA-ZOOM-PLAN.md, FEATURES row 0a — owner field-verified the R155 D3D zoom and
+  ordered the port 2026-11-11): the R155 D3D site set mirrored into `Glide.cpp` — the two
+  zoom helpers (defined up front in the Glide namespace), the two perspective funnels, the
+  top-down sprite quads and the two flat subtile builders. Ground tiles ride the shared
+  client light grid the R155 round already scales; the cursor inverse and the world-phase
+  bracket are renderer-agnostic. DDraw/Gdi still clamp to 1.0 with a `d2boot.log` note.
+  Known v1 limit: the Glide lightmap halftone lattice stays at retail screen spots while
+  zoomed (soft glow offset — field QA decides if a rebuild rides a later round).
+
 - **R155 — Camera Zoom: Z steps the world zoom 1.0/1.25/1.5, the UI stays 1:1**
   (plans/CAMERA-ZOOM-PLAN.md, FEATURES row 0a, owner ask 2026-11-09 + the four owner calls
   settled 2026-11-11 — in-steps only, Z only, D3D only first, level 0 each join): with

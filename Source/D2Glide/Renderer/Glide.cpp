@@ -741,6 +741,31 @@ uint32_t gnGlideTMUHandle = 0; D2_GLOBAL_GUARD(gnGlideTMUHandle, "D2Glide::Rende
 
 namespace D2Glide::Renderer::Glide {
 
+// VP-BEGIN [camera-zoom R156]: the Glide zoom read-point - mirror of the D3D
+// helpers (Direct3D.cpp). Factor = the published 8.8 world scale while the
+// world-phase bracket (ViewDraw2) is open, retail 0x100 otherwise - UI
+// phase, panels, cursor and out-of-game scenes are exempt by construction.
+// Defined at the top of the namespace so every call site below sees them
+// (the R155 D3D round shipped these as use-before-declare, then learned the
+// namespace-mangling lesson - definitions up front avoids both).
+static uint32_t RENDERER_GLIDE_VPZoomFactor() {
+    if (!D2gfx::D2GFX::D2GFX_GetCameraZoomWorldPass()) {
+      return 0x100;
+    }
+    return (uint32_t)D2gfx::D2GFX::D2GFX_GetCameraZoomFactor();
+}
+
+// Scales one screen-space point about the window anchor - the player's
+// retail screen spot (H/2 - 0x10, the anchor the top-down MouseOffsets math
+// and the position funnel agree on; plans/CAMERA-ZOOM-PLAN.md).
+static void RENDERER_GLIDE_VPZoomScalePoint(int * pX, int * pY, uint32_t nFactor) {
+    int nAnchorX = RENDERER_nWindowWidth / 2;
+    int nAnchorY = RENDERER_nWindowHeight / 2 - 0x10;
+    *pX = nAnchorX + (*pX - nAnchorX) * (int)nFactor / 0x100;
+    *pY = nAnchorY + (*pY - nAnchorY) * (int)nFactor / 0x100;
+}
+// VP-END [camera-zoom R156]
+
 BOOL __stdcall RENDERER_GLIDE_LoadLibrarySymbols() {
     // Static local variables (originally global data)
     static grEnable GLIDEDLL_grEnable_4; D2_STATIC_GUARD_BSS(GLIDEDLL_grEnable_4, "D2Glide::Renderer::Glide::RENDERER_GLIDE_LoadLibrarySymbols::GLIDEDLL_grEnable_4");
@@ -2191,6 +2216,22 @@ static void __stdcall RENDERER_GLIDE_DrawShadowQuad(int32_t nPosX, int32_t nPosY
       nTexHeight = gnGlidePerspectiveScale * nTexHeight / 256;
     }
 
+    // VP-BEGIN [camera-zoom R156]: top-down world shadows - mirror of the D3D
+    // DrawShadowQuad block: scale the local sprite geometry and the anchor
+    // position about the window anchor. Perspective mode skips this: there
+    // the position arrives pre-scaled through the perspective funnel and
+    // retail's depth-size factor (gnGlidePerspectiveScale) is left untouched
+    // (v1: blob shadows keep retail size - plans/CAMERA-ZOOM-PLAN.md).
+    uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+    if (!bPerspectiveEnabled && nVPZoomFactor != 0x100) {
+      nScreenXCenter = nScreenXCenter * (int)nVPZoomFactor >> 8;
+      nScreenXBase = nScreenXBase * (int)nVPZoomFactor >> 8;
+      nTexWidth = nTexWidth * (int)nVPZoomFactor >> 8;
+      nTexHeight = nTexHeight * (int)nVPZoomFactor >> 8;
+      RENDERER_GLIDE_VPZoomScalePoint(&nPosX, &nPosY, nVPZoomFactor);
+    }
+    // VP-END [camera-zoom R156]
+
     gGlideVertex0.aVertex[0].fY = (float)(nScreenXBase + nPosY);
     nScreenXCenter = nPosX + nScreenXCenter;
     gGlideVertex0.aVertex[1].fY = (float)(nScreenXBase + nPosY + nTexHeight);
@@ -2257,6 +2298,21 @@ static void __stdcall RENDERER_GLIDE_DrawPalettedQuad(GlideTexInfoStrc * pGlideQ
       nParam3 = gnGlidePerspectiveScale * nParam3 / 256;
       nTexHeight = gnGlidePerspectiveScale * nTexHeight / 256;
     }
+
+    // VP-BEGIN [camera-zoom R156]: top-down world sprites - mirror of the D3D
+    // DrawPalettedQuad block: the four local geometry quantities ride the
+    // factor, the anchor position scales about the window anchor. Perspective
+    // mode skips this (position rides the funnels, retail depth-size factor
+    // untouched). UI-phase draws see factor 0x100 = no-op by construction.
+    uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+    if (!bPerspectiveEnabled && nVPZoomFactor != 0x100) {
+      nQuadLeft = nQuadLeft * (int)nVPZoomFactor >> 8;
+      nQuadTop = nQuadTop * (int)nVPZoomFactor >> 8;
+      nParam3 = nParam3 * (int)nVPZoomFactor >> 8;
+      nTexHeight = nTexHeight * (int)nVPZoomFactor >> 8;
+      RENDERER_GLIDE_VPZoomScalePoint(&nPosX, &nPosY, nVPZoomFactor);
+    }
+    // VP-END [camera-zoom R156]
 
     gGlideVertex0.aVertex[0].fX = (float)(nQuadLeft + nPosX);
     gGlideVertex0.aVertex[2].fX = (float)(nQuadLeft + nPosX + nParam3);
@@ -3519,6 +3575,7 @@ static void __stdcall RENDERER_GLIDE_CalculateScreenBounds(int32_t nViewportMode
           pnBounds->left += nHalfWidthDiv2;
         }
       }
+      // VP-END [issue #26 / R92]
     }
 }
 
@@ -3633,13 +3690,23 @@ BOOL __fastcall RENDERER_GLIDE_DrawShadowTileSimple(D2TileLibraryEntryStrc * pTi
         psSubtile = &pTile->pSubTiles[nSubtileIdx].nOffsetX;
         nSubtileX = *psSubtile + nPosX;
         nScreenY = (int)psSubtile[1] + nPosY + 0x20;
+        // VP-BEGIN [camera-zoom R156]: mirror of the D3D shadow builder -
+        // scale the subtile quad (position + 32 px span) about the window
+        // anchor before the cull. plans/CAMERA-ZOOM-PLAN.md.
+        uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+        int nVPSpan = 0x20;
+        if (nVPZoomFactor != 0x100) {
+          RENDERER_GLIDE_VPZoomScalePoint(&nSubtileX, &nScreenY, nVPZoomFactor);
+          nVPSpan = 0x20 * (int)nVPZoomFactor >> 8;
+        }
+        // VP-END [camera-zoom R156]
         if (nSubtileX >= nWindowMinX && nSubtileX < nWindowMaxX && nScreenY >= 0 && nScreenY < nWindowMaxY) {
           _bDrawn = 1;
           glBlocks::GLBLOCKS_LoadWallSubtileTexture(&pTile->pSubTiles[nSubtileIdx]);
           gGlidePerspectiveVertexBuffer[0].fX = (float)nSubtileX;
-          gGlidePerspectiveVertexBuffer[0].fY = (float)(nScreenY - 0x20);
+          gGlidePerspectiveVertexBuffer[0].fY = (float)(nScreenY - nVPSpan);
           gGlidePerspectiveVertexBuffer[1].fY = (float)nScreenY;
-          gGlidePerspectiveVertexBuffer[2].fX = (float)(nSubtileX + 0x20);
+          gGlidePerspectiveVertexBuffer[2].fX = (float)(nSubtileX + nVPSpan);
           gGlidePerspectiveVertexBuffer[1].fX = gGlidePerspectiveVertexBuffer[0].fX;
           gGlidePerspectiveVertexBuffer[2].fY = gGlidePerspectiveVertexBuffer[1].fY;
           gGlidePerspectiveVertexBuffer[3].fX = gGlidePerspectiveVertexBuffer[2].fX;
@@ -3821,6 +3888,17 @@ BOOL __thiscall RENDERER_GLIDE_DrawWallTileSimple(int32_t nScreenPanels, D2TileL
         nSubtileX = (int)*psSubtile;
         nScreenY = (int)psSubtile[1] + nPosY + 0x20;
         nScreenX = nPosX + nSubtileX;
+        // VP-BEGIN [camera-zoom R156]: mirror of the D3D flat wall builder -
+        // scale the subtile quad (position + 32 px span) about the window
+        // anchor before the cull; the color-table index below stays on the
+        // raw local offset. plans/CAMERA-ZOOM-PLAN.md.
+        uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+        int nVPSpan = 0x20;
+        if (nVPZoomFactor != 0x100) {
+          RENDERER_GLIDE_VPZoomScalePoint(&nScreenX, &nScreenY, nVPZoomFactor);
+          nVPSpan = 0x20 * (int)nVPZoomFactor >> 8;
+        }
+        // VP-END [camera-zoom R156]
         if (nScreenX >= nWindowMinX && nScreenX < nWindowMaxX && nScreenY >= 0 && nScreenY < nWindowMaxY) {
           nSubtileX >>= 5;
           dwColor0 = *(uint32_t*)(pColorTable + nSubtileX * 4);
@@ -3828,9 +3906,9 @@ BOOL __thiscall RENDERER_GLIDE_DrawWallTileSimple(int32_t nScreenPanels, D2TileL
           bDrawn = 1;
           glBlocks::GLBLOCKS_LoadWallSubtileTexture(&pTile->pSubTiles[nSubtileIdx]);
           gGlidePerspectiveVertexBuffer[0].fX = (float)nScreenX;
-          gGlidePerspectiveVertexBuffer[0].fY = (float)(nScreenY - 0x20);
+          gGlidePerspectiveVertexBuffer[0].fY = (float)(nScreenY - nVPSpan);
           gGlidePerspectiveVertexBuffer[1].fY = (float)nScreenY;
-          gGlidePerspectiveVertexBuffer[2].fX = (float)(nScreenX + 0x20);
+          gGlidePerspectiveVertexBuffer[2].fX = (float)(nScreenX + nVPSpan);
           gGlidePerspectiveVertexBuffer[1].fX = gGlidePerspectiveVertexBuffer[0].fX;
           gGlidePerspectiveVertexBuffer[2].fY = gGlidePerspectiveVertexBuffer[1].fY;
           gGlidePerspectiveVertexBuffer[3].fX = gGlidePerspectiveVertexBuffer[2].fX;
@@ -4359,6 +4437,22 @@ void __fastcall AdjustPerspectivePosition(int32_t nPosX, int32_t nPosY, int32_t 
     int nPerspScale = *(int*)((int)gpPerspectiveLookupTable + ((nDiagSum * 0x9c9b8 + nBais * 0x99800 >> 0x14) - 0x1000U & 0x1fff) * 4);
     *pXAdjust = ((nDeltaY - nDeltaX) * nPerspScale * 0x2d4 >> 0x14) + RENDERER_nWindowWidth / 2;
     *pYAdjust = ((nBais * 0x109a08 + nDiagSum * -0x5a800 >> 10) * nPerspScale >> 0x14) - 0x20 + RENDERER_nWindowHeight / 2;
+    // VP-BEGIN [camera-zoom R156]: scale the projected screen offsets about
+    // this funnel's own anchor (W/2, H/2 - 0x20) - mirror of the D3D
+    // AdjustPerspectivePosition edit. Every perspective layer projects
+    // through here during the world pass - floor/roof light grids,
+    // wall/shadow fans, unit sprite quads, shadows and weather - so positions
+    // AND fan/quad geometry scale in one place. World-phase gated: the same
+    // funnel also serves input-side math outside the bracket (hit rects),
+    // which stays retail for the cursor inverse to map into.
+    uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+    if (nVPZoomFactor != 0x100) {
+      int nVPAnchorX = RENDERER_nWindowWidth / 2;
+      int nVPAnchorY = RENDERER_nWindowHeight / 2 - 0x20;
+      *pXAdjust = nVPAnchorX + (*pXAdjust - nVPAnchorX) * (int)nVPZoomFactor / 0x100;
+      *pYAdjust = nVPAnchorY + (*pYAdjust - nVPAnchorY) * (int)nVPZoomFactor / 0x100;
+    }
+    // VP-END [camera-zoom R156]
 }
 
 void __fastcall PerspectiveScalePosition(int32_t nPosX, int32_t nPosY, int32_t nAngle, int * pXAdjust, int * pYAdjust, BOOL bOrder) {
@@ -4372,6 +4466,21 @@ void __fastcall PerspectiveScalePosition(int32_t nPosX, int32_t nPosY, int32_t n
     void* pLookupTable = gpPerspectiveLookupTable;
     nPerspScale = nPerspFactor * nScaledDepth >> 0x14;
     *pYAdjust = RENDERER_nWindowHeight / 2 - 0x10 + nPerspScale;
+    // VP-BEGIN [camera-zoom R156]: scale this funnel's output about its own
+    // anchor (W/2, H/2 - 0x10) - mirror of the D3D PerspectiveScalePosition
+    // edit. gnGlidePerspectiveScale (the depth sprite-size factor) is
+    // deliberately NOT zoomed: it is read outside the world bracket too
+    // (stale between frames), so folding the factor in would leak the zoom
+    // onto UI quads. v1: depth-shrink quads keep retail size, positions
+    // scale (plans/CAMERA-ZOOM-PLAN.md).
+    uint32_t nVPZoomFactor = RENDERER_GLIDE_VPZoomFactor();
+    if (nVPZoomFactor != 0x100) {
+      int nVPAnchorX = RENDERER_nWindowWidth / 2;
+      int nVPAnchorY = RENDERER_nWindowHeight / 2 - 0x10;
+      *pXAdjust = nVPAnchorX + (*pXAdjust - nVPAnchorX) * (int)nVPZoomFactor / 0x100;
+      *pYAdjust = nVPAnchorY + (*pYAdjust - nVPAnchorY) * (int)nVPZoomFactor / 0x100;
+    }
+    // VP-END [camera-zoom R156]
     nPerspScale -= (nScaledDepth + 0x37400) * *(int*)((int)pLookupTable + (nLookupIdx - 0xf80U & 0x1fff) * 4) >> 0x14;
     if (bOrder) {
       gnGlidePerspectiveScale = nPerspScale * 0x4cc >> 10;

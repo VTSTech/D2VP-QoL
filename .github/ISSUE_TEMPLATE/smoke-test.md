@@ -15,7 +15,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first. The r
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R155`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R156`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -224,14 +224,19 @@ Setup: `ctrl_click_xfer=1` for items 73, 75, 76, 79; `unlock_fps=1` + `unlock_fp
 
 ---
 
-## V. Camera zoom — Z steps the world zoom (R155 — owner ask, plans/CAMERA-ZOOM-PLAN.md; field ask)
+## V. Camera zoom — Z steps the world zoom (R155 D3D + R156 Glide — owner ask, plans/CAMERA-ZOOM-PLAN.md; field ask)
 
-Setup: `camera_zoom=1` (or the Options row) and the **D3D renderer**; perspective ON for items 82–83 (top-down for item 84). `d2boot.log` line 1 must read `Vanilla+0.0.8-R155`; the gate's activation mark (`camera-zoom: [features] camera_zoom=1 ...`) lands on the first in-game frame after the flip.
+Setup: `camera_zoom=1` (or the Options row) and the **D3D renderer**; perspective ON for items 82–83 (top-down for item 84); **Glide** (`-3dfx`) for items 85–87. `d2boot.log` line 1 must read `Vanilla+0.0.8-R156`; the gate's activation mark (`camera-zoom: [features] camera_zoom=1 ...`) lands on the first in-game frame after the flip.
 
 - [ ] **81. Z steps and the UI stays 1:1:** in-game, press **Z** — the world zooms in one step (1.25) around your character; press again → 1.5; again → back to 1.0. The zoom is anchored on your character (they hold their screen spot). The bottom bar, globes, panels, tooltips, the automap and the cursor sprite stay pixel-1:1 at every step. Each step writes one `camera-zoom: level N (factor 1.xx) perspective=P renderer=6` line to `d2boot.log`.
 - [ ] **82. Clicks land where the zoomed world shows (perspective):** at 1.25 and 1.5, click a monster's sprite → it is selected/attacked; click ground → the character walks to the clicked spot (not a half-screen off); cast a targeted spell at a monster's sprite → it hits. Hover: the selection shape and tooltips follow the sprite under the cursor, not the pre-zoom spot.
 - [ ] **83. Zoom + panel open (perspective):** at 1.25, open the inventory (world pans/shifts per retail with one panel open) — the world stays glued to the zoom, and clicks on visible world still land on the right spot. Close → unchanged. Flip `no_panel_shift=1` and repeat — the unpanned world keeps the zoom and correct clicks.
-- [ ] **84. Top-down + negative checks:** perspective OFF — Z still steps the zoom and clicks stay truthful (walls, floor and shadows scale together, no holes or seams at the tile joins). With `camera_zoom` off/missing, Z does nothing and d2boot.log grows no camera-zoom lines. On the Glide renderer (if you run the wrapper), Z does nothing and one `camera-zoom: clamped to 1.0 on renderer mode 4` note appears. Joining a new game/character resets the zoom to 1.0.
+- [ ] **84. Top-down + negative checks:** perspective OFF — Z still steps the zoom and clicks stay truthful (walls, floor and shadows scale together, no holes or seams at the tile joins). With `camera_zoom` off/missing, Z does nothing and d2boot.log grows no camera-zoom lines. On DDraw/Gdi, Z does nothing and one `camera-zoom: clamped to 1.0` note appears. Joining a new game/character resets the zoom to 1.0.
+
+- [ ] **85. Glide zoom steps and the UI stays 1:1:** run the `-3dfx` Glide wrapper with `camera_zoom=1` — **Z** steps the world zoom 1.25 → 1.5 → 1.0 exactly as on D3D (items 81), anchored on your character; the bottom bar, panels, tooltips, automap and cursor stay pixel-1:1; each step writes its `camera-zoom: level N ... renderer=4` line. Run both camera modes (perspective ON and OFF) — floors, walls, roofs, shadows and unit sprites scale together, no holes or seams at the tile joins.
+- [ ] **86. Glide clicks land where the zoomed world shows:** at 1.25/1.5 on Glide, click a monster → selected/attacked; click ground → walks to the clicked spot; hover selection and tooltips follow the sprite under the cursor (the same cursor-inverse as D3D — it is renderer-agnostic).
+- [ ] **87. Glide lightmap note (known v1 limit):** at 1.5, watch the soft light halftone around light sources — the glow lattice stays at its retail screen spot while the world scales (plan §8); if the offset reads as a defect rather than a nit, a per-factor lattice rebuild rides a later round — report it.
+
 
 ---
 

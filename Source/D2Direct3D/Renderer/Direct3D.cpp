@@ -508,6 +508,7 @@ static IDirectDrawSurface7 * gpD3DSmackerVideoSurface0[2] = {}; D2_STATIC_GUARD(
 static IDirect3DTexture2 * gpD3DSmackerVideoTexture0[2] = {}; D2_STATIC_GUARD(gpD3DSmackerVideoTexture0, "gpD3DSmackerVideoTexture0");
 
 namespace D2Direct3D::Renderer {
+
 // VP-BEGIN [camera-zoom R155]: forward decls - the definitions live near the
 // file bottom (next to the perspective funnels), but the top-down quad and
 // tile-build call sites above use them first. Must stay inside this
@@ -516,6 +517,7 @@ namespace D2Direct3D::Renderer {
 static uint32_t RENDERER_D3D_VPZoomFactor();
 static void RENDERER_D3D_VPZoomScalePoint(int * pX, int * pY, uint32_t nFactor);
 // VP-END [camera-zoom R155]
+
 // [vanilla-plus fix 24 superseded in R90 by upstream 03877005/57380e21:] the retail
 // ground-tile index buffers are rebuilt upstream-side (stack aStripIndices prefilled
 // into a properly-extent gpD3DGroundTileVertexBuffer, low-quality fan gdwRendererMode

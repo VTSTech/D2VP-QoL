@@ -318,10 +318,10 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         "; camera_zoom (R155, plans/CAMERA-ZOOM-PLAN.md) - Z steps the world\r\n"
         ";       camera zoom 1.0 -> 1.25 -> 1.5 -> 1.0 while you play. The UI,\r\n"
         ";       panels, tooltips and the cursor stay 1:1; clicks land where\r\n"
-        ";       the zoomed world shows them. D3D renderer only - other\r\n"
-        ";       renderers clamp to 1.0 (a one-line note lands in d2boot.log\r\n"
-        ";       when that happens). The zoom level resets to 1.0 each time\r\n"
-        ";       you join a game.\r\n"
+        ";       the zoomed world shows them. D3D and Glide renderers (R156) -\r\n"
+        ";       other renderers clamp to 1.0 (a one-line note lands in\r\n"
+        ";       d2boot.log when that happens). The zoom level resets to 1.0\r\n"
+        ";       each time you join a game.\r\n"
         "camera_zoom=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -2471,16 +2471,16 @@ void __stdcall VANILLAPLUS_CameraZoomFrame() {
         return;
     }
 
-    // Failure matrix: D3D only this round. The D3D draw sites are the only
-    // scaled paths shipped; Glide/DDraw/Gdi clamp to 1.0 with a mark.
+    // Failure matrix: D3D + Glide scaled (R156 = the Glide port; the site
+    // set mirrors Direct3D.cpp). DDraw/Gdi still clamp to 1.0 with a mark.
     int nRenderer = D2gfx::D2GFX::D2GFX_GetRendererMode();
-    if (nRenderer != 6) { // 6 = Direct3D (RENDERER_RenderedFunctionsSelector)
+    if (nRenderer != 6 && nRenderer != 4) { // 6 = Direct3D, 4 = Glide (eD2RendererMode)
         if (gnCameraZoomLevel) {
             gnCameraZoomLevel = 0;
             gnCameraZoomPrevZDown = 0;
             if (!sbCameraZoomClampMarkRaised) {
                 sbCameraZoomClampMarkRaised = 1;
-                D2BOOT_MarkFmt("camera-zoom: clamped to 1.0 on renderer mode %d (D3D only this round)", nRenderer);
+                D2BOOT_MarkFmt("camera-zoom: clamped to 1.0 on renderer mode %d (D3D + Glide scaled; DDraw/Gdi clamp)", nRenderer);
             }
         }
         D2gfx::D2GFX::D2GFX_SetCameraZoomFactor(0x100);

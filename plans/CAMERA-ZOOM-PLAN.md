@@ -5,9 +5,13 @@ the Task C item (handoff §9 item 3) that has been scoped-but-unstarted since th
 ranked. D2R parity: the launch feature — **Z** toggles the camera between zoom steps.
 **Round 1 (tree-verify)** pinned the eight anchors below (2026-11-11). **Round 2 (implement
 @ R155) is complete** — shipped this round, docs-gate green, overlay zip
-`d2vp-r155-overlay.zip` verify OK. Owner calls settled 2026-11-11 (§9): in-steps only,
-Z only, D3D renderer only first, level 0 each join. **Round 3 (field QA) pending** —
-SMOKE-CHECKLIST §V items 81–84 are the ask.*
+`d2vp-r155-overlay.zip` verify OK; **field-verified by the owner 2026-11-11** ("z to zoom
+works as intended in D3D"). Owner calls settled 2026-11-11 (§9): in-steps only,
+Z only, D3D renderer only first, level 0 each join. **The Glide port shipped @ R156**
+(owner order 2026-11-11) — the R155 D3D site set mirrored into Glide.cpp: helpers, the two
+perspective funnels, the top-down quads, the two flat subtile builders; the clamp lifted
+for renderer mode 4; the lightmap halftone lattice is a documented v1 limit (§8). **Round 3
+(field QA) pending** — SMOKE-CHECKLIST §V items 81–84 (D3D) + 85–87 (Glide) are the ask.*
 
 ---
 
@@ -19,9 +23,10 @@ about the character; the UI does not (pixel-1:1); the cursor stays truthful — 
 tooltip, walk and cast lands where the zoomed pixels are.
 
 **Non-goals for v1** (each is a clean follow-up, deliberately deferred):
-- No Glide/DDraw/Gdi path — D3D only this round (owner call); the other renderers clamp
-  to 1.0 with a one-way d2boot.log mark. The Glide port rides the gaGlidePerspective
-  vertices work.
+- ~~No Glide/DDraw/Gdi path~~ — **Glide shipped @ R156** (the site-set mirror described in
+  the status line; the clamp now covers DDraw/Gdi only). The gaGlidePerspective vertices
+  needed no work: every perspective layer already funnels through Glide's
+  `AdjustPerspectivePosition`/`PerspectiveScalePosition`, the byte-analogs of the D3D pair.
 - No smooth/stepped zoom animation — instant step, retail D2R shape.
 - No reach/cull-rect re-fit for zoom-OUT (v1 only zooms IN: 1.25/1.5 — the tile-walk sees
   FEWER tiles, so the retail view rect never shows a hole; zoom-out would need the §7
@@ -121,7 +126,12 @@ state machine, see below); smoke_sync 0 warnings (§V synced). Overlay zip
 3. The `AdjustPerspectivePosition` anchor (H/2−0x20) disagrees with the position funnel
    (H/2−0x10) by 0x10 px — ≤ 8 px residual click bias at 1.5. Instrument: the Wall2
    click-debug overlay; kill-switch: the ini key.
-4. Tool repair shipped with the round: `tools/docs_gate.py`'s comment stripper is a
+4. Glide (R156): the lightmap halftone lattice (`RENDERER_GLIDE_DrawLightMap`) is baked
+   once at init (`bGlideLightMapPointsBuilt`) — its dots keep their retail screen spots at
+   1.25/1.5 while the world scales (a soft additive-glow offset). Field QA (SMOKE §V item
+   87) decides if a per-factor lattice rebuild rides a later round. Glide blob shadows:
+   same retail-size rule as D3D (`gnGlidePerspectiveScale` untouched).
+5. Tool repair shipped with the round: `tools/docs_gate.py`'s comment stripper is a
    state machine now — the old ordered-regex chain truncated `/* {@url https://...} */`
    at the `//` and corrupted the brace count (D2GFX.cpp pre-existing, surfaced when the
    file entered the changed set), and a `/*` inside a `//` doc (Select.cpp "/*pX/*pY")
@@ -132,12 +142,13 @@ state machine, see below); smoke_sync 0 warnings (§V synced). Overlay zip
 
 ## 6. Roadmap
 
-- **Round 3 — field QA @ R155+**: SMOKE §V items 81–84 (Z steps + UI 1:1; click truth in
-  perspective; zoom + panel open + no_panel_shift; top-down + negatives + the Glide
-  clamp); Wall2 click-debug overlay if 82 reports drift.
-- **Round 4+ (field-green only)**: Glide port (gaGlidePerspectiveVertices /
-  gaPerspectiveImageSizeTable); overhead-plate reposition; blob-shadow size rider;
-  zoom-OUT with the §2.8 reach knobs.
+- **Round 3 — field QA @ R155/R156**: SMOKE §V items 81–84 (D3D: Z steps + UI 1:1; click
+  truth in perspective; zoom + panel open + no_panel_shift; top-down + negatives) + 85–87
+  (Glide: steps + UI 1:1 in both camera modes, click truth, the lightmap note); Wall2
+  click-debug overlay if 82/86 report drift. D3D side field-verified 2026-11-11.
+- **Round 4+ (field-green only)**: overhead-plate reposition; blob-shadow size rider;
+  the Glide lightmap lattice rebuild (if 87 reads as a defect); zoom-OUT with the §2.8
+  reach knobs.
 
 ## 7. Exit
 

@@ -1,112 +1,90 @@
-# Round summary — R155 (rev 171, 2026-11-11): camera_zoom — Z steps the world zoom 1.0/1.25/1.5, UI 1:1, D3D only
+# Round summary — R156 (rev 172, 2026-11-11): camera_zoom Glide port — the Z zoom renders on the Glide renderer
 
 ## The ask
 
-Owner, 2026-11-09: "Lets make a plan for z to zoom too" (D2R parity — the launch feature:
-Z toggles between zoom steps). Plan at `plans/CAMERA-ZOOM-PLAN.md`; Round 1 (tree-verify)
-pinned the eight anchors (input idiom, transform funnels, the ViewDraw2 world-phase
-bracket, the D3D image/tile sites, the cursor-truth trio, the rejected present-path
-design); the four owner calls settled 2026-11-11: **in-steps only** {1.0, 1.25, 1.5},
-**Z only**, **D3D renderer only first**, **level 0 each join**. This round = Round 2
-(implement @ R155).
+Owner, 2026-11-11, after field-verifying the R155 D3D zoom ("Great job, z to zoom works as
+intended in D3D", "R155 sent to Github"): "Now lets do Glide." The R155 plan had deferred
+the Glide path ("D3D only this round — the Glide port rides the gaGlidePerspective
+vertices work"); this round = the port @ R156.
 
-## The design (what Round 1 pinned and Round 2 built)
+## The design (what the port actually needed)
 
-- **Publish point in D2gfx** — `D2GFX_SetCameraZoomFactor` (8.8 fixed, 0x100/0x140/0x180)
-  + `D2GFX_SetCameraZoomWorldPass` (the bracket flag). D2gfx sits below both D2Client and
-  D2Direct3D, so no module imports UI state and the module gates stay shut. Retail's own
-  vestigial `nfpUpdateScaleFactor` channel was rejected: retail writes
-  `SetDefaultScaleFactor` every frame (View.cpp:1142) and the D3D stub is a no-op.
-- **The world-phase bracket** opens around the `ViewDraw2` call (`Game.cpp` InGameDraw,
-  after `DRAW_UpdateMouseWorldOffsets`, alongside the per-frame
-  `VANILLAPLUS_CameraZoomFrame()` poll) and closes right after: the renderer scales only
-  world-phase draws, so the bottom bar, panels, tooltips, automap and cursor are exempt by
-  construction — the UI 1:1 pillar holds with no per-call classification. Input and
-  selection run outside the bracket and see retail geometry.
-- **Perspective mode scales in one funnel**: `AdjustPerspectivePosition` +
-  `PerspectiveScalePosition` post-scale their outputs about their own anchors (W/2,
-  H/2−0x20 and W/2, H/2−0x10) — every perspective layer (floor/roof light grids, wall/
-  shadow/ground fans, unit sprite quads via `DrawPerspectiveImage`, shadows, weather)
-  projects through them, so positions AND fan/quad geometry scale in two functions.
-  `g_aSmackerSurfaceArray` (the depth sprite-size factor) is deliberately NOT zoomed: it
-  is read outside the bracket too (stale between frames), so folding the factor in would
-  leak the zoom onto UI quads.
-- **Top-down mode scales at the emitters**: `DrawPalettedQuad` + `DrawShadowQuad` (the
-  four local geometry quantities ride the factor, the anchor position scales about the
-  window anchor — the same shape as retail's perspective smacker-scale block), the two
-  flat subtile builders (`RENDERER_D3D_BuildWallTileVerticesNoPerspective`,
-  `RENDERER_D3D_BuildShadowTileVertices` — position + the 32 px span, cull on the scaled
-  coords), and the client ortho floor/roof light grids (`Draw.cpp`
-  `DRAW_CalcRoofLightGridOrtho` / `DRAW_CalcRoofLightOrtho` — the grid cells ARE the
-  ground-tile vertices; `DrawGroundTile` writes them straight into the floor VB).
-- **Cursor truth** (the R112 hosted-stop lesson: message pixels ride the space the game's
-  mapping speaks): the raw cursor pixel is inverse-zoomed about the player's screen anchor
-  (ScreenSizeX/2, ScreenSizeY/2−0x10) BEFORE the retail projection — at
-  `SELECT_HandleMouseInput` (hover/selection, both border branches) and `ClickMap`
-  (walk/cast — the walk target, spell ground target and attack all resolve through it).
-  Downstream stays byte-retail: clamps, skew, MouseOffsets, hit rects, the SCmd packets.
+- **The funnels already existed.** Glide's `AdjustPerspectivePosition` /
+  `PerspectiveScalePosition` (Glide.cpp, `namespace D2Glide::Renderer::Glide`) are the
+  byte-analogs of the D3D pair — same constants, same anchors (W/2, H/2−0x20 and W/2,
+  H/2−0x10). Every perspective layer (floor/roof light grids, wall/shadow fans, unit
+  sprites, shadows, weather) projects through them, so the perspective half of the port
+  is two post-scale blocks, identical in shape to R155's.
+- **Top-down mode scales at the same emitters**: `DrawPalettedQuad` + `DrawShadowQuad`
+  (the four local geometry quantities ride the factor, the anchor position scales about
+  the window anchor; the perspective branch is skipped — retail's depth-size factor
+  `gnGlidePerspectiveScale` stays untouched, the same leak argument as D3D's
+  `g_aSmackerSurfaceArray`), and the two flat subtile builders (`DrawWallTileSimple` /
+  `DrawShadowTileSimple` — position + the 32 px span, cull on the scaled coords; the wall
+  color-table index stays on the raw local offset).
+- **Ground tiles needed nothing**: `DrawGroundTile` reads the shared client light grid the
+  R155 round already scales in `Draw.cpp` — renderer-agnostic, rides for free.
+- **The helpers live at the top of the namespace.** The R155 D3D round shipped
+  use-before-declare, then learned the namespace-mangling link lesson (global-scope decls
+  + a namespace-wrapped body = two mangled names = undefined references). The port
+  defines `RENDERER_GLIDE_VPZoomFactor` / `RENDERER_GLIDE_VPZoomScalePoint` right after
+  `namespace D2Glide::Renderer::Glide {` opens — no forward decls to misplace.
+- **Clamp lift**: `VANILLAPLUS_CameraZoomFrame` accepts renderer mode 4 (Glide) alongside
+  6 (D3D); DDraw/Gdi still clamp with the updated mark; the ini template note says D3D and
+  Glide.
 
 ## What changed
 
-1. `Source/D2gfx/D2GFX.{h,cpp}` — the publish point: factor (clamped [0x100, 0x180]) +
-   world-pass bracket flag, four accessors.
-2. `Source/D2Direct3D/Renderer/Direct3D.cpp` — the zoom read-point
-   (`RENDERER_D3D_VPZoomFactor` / `RENDERER_D3D_VPZoomScalePoint` helpers) + five scaled
-   sites (the two perspective funnels, the two top-down quad emitters, both flat subtile
-   builders).
-3. `Source/D2Client/GAME/Draw.cpp` — the two ortho light-grid fills scale their cell
-   positions (world-phase gated).
-4. `Source/D2Client/GAME/Game/Game.cpp` — the per-frame poll + the world bracket around
-   `ViewDraw2`.
-5. `Source/D2Client/GAME/Select.cpp` + `Source/D2Client/UNIT/Player.cpp` — the cursor
-   inverse at the two projection entries.
-6. `VanillaPlusCore.{h,cpp}` — `VANILLAPLUS_CameraZoomActive` (the shared 2 s hot-read
-   gate, cache `dwCameraZoomLastCheck` busted in `D2VP_ConfigReloaded`),
-   `VANILLAPLUS_CameraZoomFrame` (Z edge poll vk 0x5A, level wrap 0→1→2→0, non-D3D clamp
-   with a one-way mark, factor re-published every frame),
-   `VANILLAPLUS_CameraZoomUnproject`, `VPCAMERAZOOM_ResetForJoin` (wired into
-   `VPCLOCK_ResetSession` — the automap-clock game-entry slot); d2boot marks = activation
-   + one per Z step (level/factor/perspective/renderer); the documented `camera_zoom=0`
-   block appended to the ini template.
-7. `VanillaPlusOptions.cpp` — the fifteenth row (`Camera Zoom`); the page re-balances to
-   two columns of EIGHT (`VPP_ROWS_PER_COL 7→8`): back row 0x144→0x164, box
-   0x171→0x191 (401 px — the exact R108 geometry; fits 640x480 whole, top margin 39 px).
+1. `Source/D2Glide/Renderer/Glide.cpp` — the two zoom helpers (namespace-top) + six scaled
+   sites: the two perspective funnels, the two top-down quad emitters, the two flat
+   subtile builders. Also landed the missing `// VP-END [issue #26 / R92]` pair on the
+   `RENDERER_GLIDE_CalculateScreenBounds` wide-UI block (pre-existing since R92; the gate
+   only audits changed files, so it surfaced now — the same class of find as R155's
+   Direct3D.cpp fix).
+2. `Source/D2Client/UI/VanillaPlusCore.cpp` — the clamp accepts mode 4; the clamp mark and
+   the ini template note updated.
+3. `Source/D2Direct3D/Renderer/Direct3D.cpp` — build fix on the owner's tree: the R155
+   helper forward-decls moved from global scope INSIDE `namespace D2Direct3D::Renderer`
+   (the file's body is namespace-wrapped; global decls made the calls mangle to
+   unreferenced symbols).
 
-`Redivivus/d2_boot.h`: `D2VP_ROUND "154"→"155"`.
+`Redivivus/d2_boot.h`: `D2VP_ROUND "155"→"156"`.
 
 ## Invariants held by construction
 
 - Gate off / missing ini = factor 1.0 re-published every frame; every scaled site no-ops
-  at 0x100 (byte-for-byte retail).
-- UI 1:1: the bracket is the only gate the renderer reads — UI-phase draws never scale.
-- Input truth: hit rects, walk targets and packets are computed outside the bracket from
-  retail math; only the cursor pixel is remapped.
-- Non-D3D renderers: the D3D sites are the only scaled paths; the client clamps the
-  factor to 1.0 with a one-way d2boot.log mark (Glide port = a later round).
+  at 0x100 (byte-for-byte retail) — Glide and D3D alike.
+- UI 1:1: the world-phase bracket is the only gate the renderer reads — Glide UI-phase
+  draws never scale, exactly as on D3D.
+- Input truth: the cursor inverse is renderer-agnostic (it maps the raw pixel into the
+  retail world-screen space; the retail projection that follows is untouched).
+- DDraw/Gdi: still clamped to 1.0 with the one-way d2boot.log mark.
 
 ## Known v1 limits (plan §8, accepted with the owner)
 
-- Overhead name/HP plates keep their unzoomed anchor offset at 1.25/1.5 (fix rides the
-  Glide port / a later round).
-- Perspective blob shadows keep retail size (positions scale through the funnel; the
-  depth-size factor is untouched).
-- The `AdjustPerspectivePosition` anchor (H/2−0x20) disagrees with the position funnel
-  (H/2−0x10) by 0x10 px — ≤ 8 px residual click bias at 1.5, verifiable against the Wall2
-  click-debug overlay in the field round.
+- The Glide lightmap halftone lattice (`RENDERER_GLIDE_DrawLightMap`) is baked once at
+  init — its dots keep their retail screen spots at 1.25/1.5 while the world scales (a
+  soft additive-glow offset; SMOKE §V item 87 decides if a per-factor lattice rebuild
+  rides a later round).
+- Glide blob shadows keep retail size in perspective mode (`gnGlidePerspectiveScale`
+  untouched — mirrors the D3D rule).
+- Carried from R155 (unchanged): overhead name/HP plates keep their unzoomed anchor
+  offset at 1.25/1.5; the H/2−0x20 vs H/2−0x10 anchor disagreement (≤ 8 px click bias at
+  1.5).
 
 ## Verification
 
-Static — docs_gate (options-page counts 15/15/8 + geometry + ini-template coverage;
-FEATURES "fifteen features ship" == 15 rows; handoff §2 count; round identity
-boot/handoff/CHANGELOG/ROUND-SUMMARY; VP-marker pairing + brace/paren balance on the
-changed TUs) + smoke_sync 0 warnings (§V items 81–84 + item 0/2 synced). Compile gate of
-record: the owner's Win11 MSYS2 build (overlay zip `d2vp-r155-overlay.zip`).
+Static — docs_gate (round identity boot/handoff/CHANGELOG/ROUND-SUMMARY; VP-marker
+pairing + brace/paren balance on the changed TUs; options-page counts) + smoke_sync 0
+warnings (§V items 85–87 + item 0 synced to R156). Compile gate of record: the owner's
+Win11 MSYS2 build.
 
 ## Field ask (the plan's Round 3, pending)
 
-SMOKE-CHECKLIST §V: Z steps + UI 1:1 (81), click truth in perspective (82), zoom + panel
-open + `no_panel_shift` (83), top-down + negative checks + the Glide clamp (84) — with
-the Wall2 click-debug overlay as the instrument if item 82 reports drift.
+SMOKE-CHECKLIST §V: D3D items 81–84 (81 field-verified by the owner 2026-11-11) + Glide
+items 85–87: zoom steps + UI 1:1 in both camera modes (85), click truth (86), the
+lightmap note (87) — the Wall2 click-debug overlay is the instrument if 82/86 report
+drift.
 
-Round identity: self-ID `Vanilla+0.0.8-R155`, automap tag `D2VP-R155`
-(`D2VP_ROUND "154"→"155"`).
+Round identity: self-ID `Vanilla+0.0.8-R156`, automap tag `D2VP-R156`
+(`D2VP_ROUND "155"→"156"`).
