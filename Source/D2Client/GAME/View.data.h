@@ -17,6 +17,7 @@
 struct D2SeedStrc;
 
 extern D2SeedStrc gArcaneStarSeed;
+extern uint32_t gaSpriteArcaneStarYOffset;
 extern int gnScaleFactor;
 
 namespace D2Client::GAME::View {

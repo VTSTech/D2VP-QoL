@@ -13,6 +13,10 @@
 #include <cstdio>
 #include <cstdarg>
 #include "Source/D2Headers/d2_platform.h"
+#ifndef RECON_FPTD_fnUnitIterCallback
+#define RECON_FPTD_fnUnitIterCallback
+typedef void (__fastcall *fnUnitIterCallback)(void * pUnit);
+#endif
 
 // Forward declarations
 struct D2ClientStrc;
@@ -124,7 +128,7 @@ void __fastcall CLIENT_WarpPlayerAndContinueMove(struct D2UnitStrc * pUnit, stru
 // @blizzard UnitProcessPlayerModeSimulation
 void __fastcall PLAYER_ProcessPlayerModeSimulation(struct D2UnitStrc * pUnit);
 uint8_t * __fastcall Unreferenced_004637f0(struct D2UnitStrc * param_1);
-uint16_t * __fastcall PLAYER_GetMonsterOwnerId(struct D2UnitStrc * pUnit);
+int __fastcall PLAYER_GetMonsterOwnerId(struct D2UnitStrc * pUnit);
 void __fastcall CLIENT_UpdateMonsterAllegiance(struct D2UnitStrc * pUnit, uint8_t byOldAllegiance, uint8_t byNewAllegiance);
 void __stdcall CLIENT_ClearServerAndClientUnitLists();
 void __stdcall SHOP_CleanupAssets();
@@ -134,6 +138,10 @@ uint32_t __stdcall GetQuestAvailabilityByIndex(int32_t nUnused, int32_t nQuestIn
 uint32_t __stdcall LOADER_PopupGameLoopCallback(uint32_t dwArg1);
 struct D2UnitStrc * __fastcall UNITS_FindClientSideUnit(int32_t nUnitGUID, eD2UnitType eUnitType);
 struct D2UnitStrc * __fastcall MISSILE_GetOwnerUnit(struct D2UnitStrc * pUnit);
+void CLIENT_SendIdlePlayerMessage(struct D2UnitStrc * pUnit);
+void __stdcall CUNIT_IterateHashTableWithCallback(struct D2UnitStrc * * UnitHashTable, fnUnitIterCallback pfnCallback);
+struct D2UnitStrc * __stdcall FindUnit(int32_t nUnitGUID, struct D2UnitStrc * * ppUnitHashTable, eD2UnitType eUnitType, int32_t nListIndex);
+uint32_t InsertIntoHashTable(struct D2UnitStrc * pUnit);
 // Iterates all 128 buckets of the server-side unit hash table. For each unit calls CLIENT_UpdateUnitFrame, then looks up the matching entry in the client-side hash table and dispatches CLIENT_DispatchMonsterAiBehavior (monsters) or OBJECT_ExecuteClientFunction (objects). Halts fatally on unit-type mismatch.
 void __stdcall CUNIT_UpdateClientFramesAndAI(struct D2UnitStrc * * pUnitHashTable);
 void __fastcall HANDSHAKE_SetClientPlayerUnit(struct D2UnitStrc * pUnit);

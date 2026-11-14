@@ -71,4 +71,5 @@ void __fastcall LOADER_SetConnectionLostFlag_Unref_00468000(BOOL bConnectionLost
 #endif // D2_MODULE_D2Client
 // 2 internal functions (defined in .cpp)
 
+void __stdcall CLIENT_SetAnimModeAndMoveToCurrentPos(eD2PlayerAnimMode nAnimMode, BOOL bMovePlayerUnit, struct D2UnitStrc * pUnit);
 } // namespace D2Client::Engine

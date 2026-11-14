@@ -3967,6 +3967,9 @@ namespace D2Client::Waypoint {
 extern D2WaypointStrc * pWaypoint;
 } // namespace D2Client::Waypoint
 
+namespace D2Client {
+void __stdcall dSceneTransitionDraw();
+
 // VP: Missing function declarations from D2VP-QoL fork
 eD2ArenaFlags __stdcall CLIENT_GetArenaFlags();
 void __fastcall CLIENT_SetArenaFlags(eD2ArenaFlags eArenaFlags);
@@ -3974,7 +3977,17 @@ void __fastcall TRADE_HandleTradeComplete(int32_t nValue, char bIsGoldAmount);
 void __fastcall NET_D2GS_CLIENT_Handle0x50_QuestSpecial(struct D2GSPacketSrv0x50 * pPacket);
 void __fastcall NET_D2GS_CLIENT_Incoming0x5E_QUESTPICKS(char * pBytes);
 void __fastcall NET_D2GS_CLIENT_Incoming0x89_QUESTEVENTTRIGGER(char * pBytes);
+void __stdcall DRAW_WORLD_SetWarpFadeTimer();
+int __fastcall SKILL_SelectProc_IsSelectableCorpse2(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+int __fastcall SKILL_SelectProc_IsCorpseConsumableBasic(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+int __fastcall SKILL_SelectProc_IsConvertibleCorpse(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+int __fastcall SKILL_SelectProc_IsCorpseValidForRevive(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+int __fastcall SKILL_SelectProc_CanReviveMonster(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+int __fastcall SKILL_SelectProc_IsSelectableCorpse(struct D2UnitStrc * pUnit, struct D2UnitStrc * pTargetUnit);
+BOOL __fastcall OBJECT_CheckAutoLight(struct D2UnitStrc * pUnit, int32_t bSkipCofLoad);
 int32_t __fastcall UI_GetDialogLineCount(int16_t nDialogId);
+
+} // namespace D2Client
 void __fastcall CLIENT_ToggleDefaultActiveFlag(int32_t bSet);
 void __fastcall ROSTER_SetArenaKillCountGlobal(eD2PlayerClassIDDWORD dwValue);
 void __fastcall ExitGamePlayCutScene(int32_t nCutsceneId);

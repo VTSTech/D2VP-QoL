@@ -138,6 +138,7 @@ struct D2InventoryStrc * __stdcall STRUCT_CreatePlayerInventory(struct D2PoolMan
 // @sourcefile .\INVENTORY\Inventory.cpp
 void __stdcall STRUCT_FreeInventory(struct D2InventoryStrc * pInventory);
 BOOL __stdcall INVENTORY_CheckDoItemBelongToInventory(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit);
+BOOL __fastcall INVENTORY_RemoveItemFromInventory(struct D2UnitStrc * pItem);
 struct D2UnitStrc * __stdcall ItemBelongsToInventoryOfPlayer(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit);
 BOOL __stdcall PutItemInInventory(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit, uint32_t dwParam);
 struct D2UnitStrc * __stdcall INVENTORY_GetFirstItem(struct D2InventoryStrc * pInventory);

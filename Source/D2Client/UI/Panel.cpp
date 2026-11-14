@@ -261,7 +261,7 @@ uint32_t __stdcall PANEL_GetBeltSlotHoverFlag_Unref_0047ec40() {
 
 void __stdcall PANEL_SetBottomPanelGlobals1_Unref_004880f0() {
     gnInvMouseX = 0;
-    gpInvCursorItem = 0;
+    D2Client::UI::Inv::gpInvCursorItem = 0;
 }
 
 uint32_t __stdcall PANEL_GetBeltSlotHoverFlag_Unref_0048a690() {

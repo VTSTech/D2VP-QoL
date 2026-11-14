@@ -5,7 +5,10 @@
 
 #include <cstdint>
 
+#ifndef _WIN32
+// On Windows, _EXCEPTION_DISPOSITION is defined in <excpt.h> via windows.h
 typedef int _EXCEPTION_DISPOSITION;
+#endif
 namespace _EXCEPTION_DISPOSITION_ns {
 #ifndef _WIN32  // provided by <windows.h>/<winnt.h> on Windows
 constexpr _EXCEPTION_DISPOSITION ExceptionContinueExecution = 0;

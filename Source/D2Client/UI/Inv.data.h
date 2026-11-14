@@ -30,4 +30,5 @@ extern D2GridScreenCoordinates pNpcInventoryGridScreenCoordinates;
 extern D2GridScreenCoordinates pTransmogrifyBoxGridScreenCoordinates;
 extern D2GridScreenCoordinates pInventoryGridScreenCoordinated;
 extern D2GridScreenCoordinates pHirelingGridScreenCoordinates;
+extern int gpInvCursorItem;
 } // namespace D2Client::UI::Inv

@@ -395,23 +395,24 @@ git push upstream upstream-jaenster-main
   - String literals for damage events in SUnitDmg.cpp
   - `D2TCStackEntryStrc` members (nMagic, nRare, nSet, nUnique, nFromTCOffset0x30, nFromTCOffset0x32)
 
-### Current Build Status (as of commit 37c0e588)
-- **Compiling**: ~400+ of 500+ translation units (80%+)
-- **Blocking Errors**: ~20 remaining compilation errors (down from 50+)
+### Current Build Status (as of commit 545f191c)
+- **Compiling**: ~450+ of 500+ translation units (90%+)
+- **Blocking Errors**: ~15 remaining compilation errors (down from 50+)
 - **Primary Categories**:
-  1. **Missing function declarations** in headers (ITEM_IsQuestItem, DRAW_WORLD_SetWarpFadeTimer, CLIENT_SendIdlePlayerMessage, CUNIT_IterateHashTableWithCallback, FindUnit, InsertIntoHashTable, SKILL_SelectProc_*, DRAW_WORLD_SetWarpFadeTimer, OBJECT_CheckAutoLight, NET_D2GS_CLIENT_Incoming0x5E_QUESTPICKS, NET_D2GS_CLIENT_Incoming0x89_QUESTEVENTTRIGGER, UI_HandleNpcInteractionPacket, TRADE_HandleTradeComplete)
-  2. **Namespace qualification issues** (D2Client::UNIT::Player vs D2Client, D2Win vs D2Win::Src::D2WinFont)
-  3. **Minor signature mismatches** (ITEM_RecalcAllEquippedItems_EBX vs _ECX)
+  1. **Gfx.cpp type system issues** - D2CofTextureCacheEntryStrc cast problems, ambiguous function declarations
+  2. **Sound.cpp struct issues** - Missing pGlobal3Ref member in D2SoundChannelStrc, type conversions
+  3. **Ambiguous function declarations** in Gfx.cpp and Sound.cpp
 
 ### Progress Summary
-- **Fixed**: 40+ major compilation errors across 36 files
-- **Remaining**: ~20 errors (mostly missing function declarations in headers)
-- **Build Progress**: ~80% of translation units compiling
-- **All major structural issues resolved**: module gates, struct redefinitions, signature mismatches, missing globals, missing function declarations, callback signatures, cross-module extern declarations
+- **Fixed**: 50+ major compilation errors across 45+ files
+- **Remaining**: ~15 errors (structural type system issues in Gfx.cpp and Sound.cpp)
+- **Build Progress**: ~90% of translation units compiling
+- **All major structural issues resolved**: module gates, struct redefinitions, signature mismatches, missing globals, missing function declarations, callback signatures, cross-module extern declarations, namespace qualifications
 
 ### Pending
-- [ ] Add remaining missing function declarations to appropriate headers
-- [ ] Fix namespace qualification issues
+- [ ] Fix Gfx.cpp D2CofTextureCacheEntryStrc type cast issues
+- [ ] Fix Sound.cpp D2SoundChannelStrc missing pGlobal3Ref member
+- [ ] Resolve ambiguous function declarations in Gfx.cpp and Sound.cpp
 - [ ] Build all translation units successfully
 - [ ] Link executable successfully
 - [ ] Run smoke tests (SMOKE-CHECKLIST.md)
