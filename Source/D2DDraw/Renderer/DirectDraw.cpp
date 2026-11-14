@@ -635,7 +635,7 @@ static BOOL InternalOpenWindow(int32_t nResolutionMode) {
       RENDERER_DDRAW_SetHorizontalBounds(nResolutionMode);
       gnDDrawDisplayModeIndex = gdwDirectDrawPaletteSizes[nResolutionMode];
       gnDDrawSurfaceWidth = gdwDirectDrawSurfaceWidths[nResolutionMode];
-      HVar1 = pWindowHandleBuffer->lpVtbl->SetCooperativeLevel(pWindowHandleBuffer, gnGlideWindowHandle, 0x11);
+      HVar1 = pWindowHandleBuffer->lpVtbl->SetCooperativeLevel(pWindowHandleBuffer, (HWND)gnGlideWindowHandle, 0x11);
       if (HVar1 && HVar1 != -0x7789fdbb) {
         DirectDrawErrorHandler("SetCooperativeLevel failed!", HVar1);
         return 0;
@@ -763,7 +763,7 @@ BOOL __stdcall InternalCutsceneWindow() {
 }
 
 BOOL __fastcall CreateWindow(HWND hWnd, int32_t nResolutionMode) {
-    gnGlideWindowHandle = hWnd;
+    gnGlideWindowHandle = (int)hWnd; // build-2: gnGlideWindowHandle is int; origin/main cast explicitly
     HRESULT nHResult = pWindowHandleBuffer->lpVtbl->SetCooperativeLevel(pWindowHandleBuffer, hWnd, 0x11);
     if (nHResult) {
       DirectDrawErrorHandler("SetCooperativeLevel failed!", nHResult);
@@ -997,7 +997,7 @@ BOOL __stdcall RENDERER_DDRAW_DestroyWindow() {
       pDirectDrawPalette = 0;
     }
 
-    gnGlideWindowHandle = (HWND)0x0;
+    gnGlideWindowHandle = 0;
     return 1;
 }
 
@@ -1024,7 +1024,7 @@ BOOL Release() {
         pDirectDrawPalette = 0;
       }
 
-      gnGlideWindowHandle = (HWND)0x0;
+      gnGlideWindowHandle = 0;
       if (gpDDrawComObject) {
         gpDDrawComObject->Release();
         gpDDrawComObject = 0;
@@ -1061,7 +1061,7 @@ void __fastcall EndCutScene(HWND hWnd, int32_t nResolutionMode, int32_t nWindowS
         pDirectDrawPalette = 0;
       }
 
-      /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ gnGlideWindowHandle = (HWND)0x0;
+      /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ gnGlideWindowHandle = 0;
       LeaveCriticalSection(&RENDERER_SelectedRendererCore->sLock);
       return;
     }

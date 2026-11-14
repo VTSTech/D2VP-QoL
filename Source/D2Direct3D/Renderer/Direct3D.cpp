@@ -16,7 +16,7 @@
 #include "Source/D2Direct3D/d3dTextureCache.h"
 #include "Source/D2Glide/Renderer/Glide.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/DC6.h"
 #include "Source/D2Win/DC6Block.h"
 #include "Source/Fog/Debug.h"
@@ -44,7 +44,7 @@
 #include "Source/D2Direct3D/d3dTextureCache.h"
 #include "Source/D2Glide/Renderer/Glide.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/D2Win.globals.h"
 #include "Source/D2gfx/D2GFX.h"
 #include "Source/Fog/D2MemoryManagerStrc.h"
@@ -1366,7 +1366,7 @@ void __fastcall SetGamma(int nGamma) {
       return;
     }
 
-    Fog::Src::DataArrays::FOG_FillArrayWithRandomInts(nGamma, aGammaRampRed, (double)BOOL_0074c020, (uint32_t*)0x2, 0x100, 0xffff);
+    Fog::Src::DataArrays::FOG_FillArrayWithRandomInts(nGamma, aGammaRampRed, (double)BOOL_0074c020, 2, 0x100, 0xffff); // build-2: FOG_FillArrayWithRandomInts takes int nElementSize (DataArrays.cpp def); origin/main's header spelled it uint32_t*
     uint32_t* pGammaRampRedSrc = aGammaRampRed;
     uint32_t* pGammaRampGreenDst = aGammaRampGreen;
     for (nEntryCount = 0x80; nEntryCount; nEntryCount--) {
@@ -2366,7 +2366,7 @@ BOOL __fastcall Initialize(HINSTANCE hInstance) {
     char szRegPath[22];
     uint32_t* pnGuidSize;
     int32_t nLoadResult;
-    uint32_t pSFileGlobal = Fog::Source::SFile::SFILE_GetGlobalPointer();
+    uint32_t pSFileGlobal = (uint32_t)Fog::Source::SFile::SFILE_GetGlobalPointer(); // build-2: Fog.h hands back D2SystemInfoStrc*; this TU does int arithmetic on the handle, as origin/main did
     if (!pSFileGlobal) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x408);
       exit(-1);

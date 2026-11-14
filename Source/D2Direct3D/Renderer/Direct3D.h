@@ -1262,7 +1262,9 @@ int32_t __fastcall RENDERER_D3D_CreateSystemMemoryTexture(struct IDirectDrawSurf
 void __stdcall RENDERER_D3D_ClearBackbuffer();
 void __fastcall RENDERER_D3D_CopySurfacePixels(struct IDirectDrawSurface7 * pSrcSurface, struct IDirectDrawSurface7 * pDestSurface, int nHeight);
 void __fastcall RENDERER_DIRECT3D_ErrorLog(char * szText, DWORD dwHResult);
-HRESULT __stdcall RENDERER_D3D_EnumDisplayModeCallback(int * pDisplayModeDesc, struct D2D3DDeviceSlotStrc * pModeList);
+HRESULT __stdcall RENDERER_D3D_EnumDisplayModeCallback(int * pDisplayModeDesc, int pModeList); // build-2: back to origin/main's spelling - the TU definition (and the lpVtbl void* slot) use int; the struct-pointer spelling created an overload set
+// VP: present the D3D backbuffer through a stretch-Blt instead of the retail Flip; build round 2 restored the declaration (the definition lives in Direct3D.cpp, callers at 567/3132/3182/3245)
+BOOL VPRES3D_PresentHostedFrame();
 BOOL __stdcall Direct3DCallBack(GUID * lpGUID, char * lpDriverDescription, char * lpDriverName, void * lpContext);
 void * __stdcall Catch_All_006b4c42();
 void * __stdcall Catch_All_006b4c73();

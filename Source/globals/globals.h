@@ -538,7 +538,11 @@ typedef uint32_t (__fastcall *EQUIP_Handler)(D2UnitStrc * param_1, D2InventorySt
 typedef uint32_t (__fastcall *fnInitiatePatchDownload)(uint8_t * pbData, uint32_t nSize);
 typedef uint32_t (__fastcall *fnSendReadUserData)(char * szAccount, uint32_t nCount, uint32_t nRequestId, char * * pszKeys);
 typedef uint32_t (__fastcall *fnSendWriteUserData)(char * szAccount, uint32_t nCount, char * * pszKeys, char * * pszValues);
-typedef uint32_t (__fastcall *fpCelDecodeCachedByFormat)(int32_t pDCCSrc, DC6 * pDCCDest);
+// Build round 2: restored upstream's signatures. The fork's (int32_t pDCCSrc) /
+// (int32_t pBlendTable) spellings made the only call sites (CelCmp.cpp
+// CELCMP_CreateCelFileFromCache, CELCMP_DrawFrameFromCache) ill-formed — the
+// callers pass CELLIST*/uint8_t* and the assignments need no cast with these.
+typedef uint32_t (__fastcall *fpCelDecodeCachedByFormat)(::CELLIST * pDCCSrc, DC6 * pDCCDest);
 typedef uint32_t (__fastcall *fpMonsterAiForEach)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pOther, D2MonsterAiParameterStruct * test);
 typedef uint64_t (__stdcall *pfnSymGetModuleBase64)(HANDLE hProcess, DWORD qwAddrLow, DWORD qwAddrHigh);
 typedef uint64_t (__stdcall *pfnSymLoadModule64)(HANDLE hProcess, HANDLE hFile, char * ImageName, char * ModuleName, DWORD BaseOfDllLow, DWORD BaseOfDllHigh, DWORD SizeOfDll);
@@ -574,7 +578,7 @@ typedef void (__fastcall *fnShrineClientOverlayUpdate)(D2UnitStrc * pUnit, D2Shr
 typedef void (__fastcall *fnShrineServerActivate)(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t dwParam);
 typedef void (__fastcall *fnSpriteCacheEntryRelease)(void * pHashEntry);
 typedef void (__fastcall *fpCelAllocDecodedByFormat)(DC6 * pDCC, DC6 * pDCCDest, uint8_t * pPaletteRemapFunc, uint32_t dwColorKey);
-typedef void (__fastcall *fpCelDrawFrameByFormat)(uint8_t * pImageHeader, uint8_t * pbDecompressedOutput, int32_t nDrawX, int32_t nClipLeft, int32_t nClipRight, uint32_t nDstPitch, int32_t nStartRow, int32_t nRowCount, int32_t pLookupTable1, int32_t pBlendTable, int32_t pLookupTable2);
+typedef void (__fastcall *fpCelDrawFrameByFormat)(uint8_t * pImageHeader, uint8_t * pbDecompressedOutput, int32_t nDrawX, int32_t nClipLeft, int32_t nClipRight, uint32_t nDstPitch, int32_t nStartRow, int32_t nRowCount, int32_t pLookupTable1, uint8_t * pBlendTable, int32_t pLookupTable2);
 typedef void (__fastcall *fpCelRemapFrameByFormat)(DC6Block * pFrame, BYTE * pPaletteRemap);
 typedef void (__fastcall *fpD2ShrineTableHandler)(D2ObjectOperateFnArg * pArguments, D2ShrinesTxt * pTxtShrines);
 typedef void (__fastcall *fpDrawVisTile)(uint8_t * pbTileData, int32_t nScreenX, int32_t nScreenY);
@@ -598,7 +602,12 @@ typedef void (__fastcall *pfnRoomExActivationHandler)(D2RoomExStrc * pRoomEx);
 typedef void (__fastcall *pfnRoomExDeactivationHandler)(D2RoomExStrc * pRoomEx);
 typedef void (__fastcall *pfnSCompCodec)(void * pDst, uint32_t * pnDstLen, void * pSrc, uint32_t nSrcLen, uint32_t dwParam);
 typedef void (__fastcall *pfnSCompEncodeCodec)(short * pDst, uint32_t * pnDstLen, short * pSrc, uint32_t nSrcLen, void * pUserData, uint32_t nBitsPerSample);
-typedef void (__fastcall *pfnSpriteCacheValidate)(void * pCelContext, void * pCelData, void * pFrameInfo);
+// Build round 2: restored upstream's parameter spelling (eD2UnitType, int32_t,
+// int32_t) — the fork sync's void*/void*/void* version made the only call site
+// (SpriteCache.cpp SPRITECACHE_ReleaseHashEntry) ill-formed (enum/int -> void*
+// needs a cast). Nothing else references the type and the callback is never
+// registered, so upstream's form is the ABI-identical fix.
+typedef void (__fastcall *pfnSpriteCacheValidate)(eD2UnitType eUnitType, int32_t nClassId, int32_t nMode);
 typedef void (__stdcall *D2AppModeShutdownFunc)();
 typedef void (__stdcall *D2ClientQuestEventFn)();
 typedef void (__stdcall *D2WinWndHandlerFn)(D2UIMouseMsgStrc * pMsg);
@@ -910,7 +919,11 @@ struct D2ObjModeFuncEntryStrc {
 #ifndef D2_DEFINED_D2PropertyFuncEntryStrc
 #define D2_DEFINED_D2PropertyFuncEntryStrc
 struct D2PropertyFuncEntryStrc {
-    /* 0x00 */ int32_t (__fastcall *pfnHandler)(int32_t, D2UnitStrc *, D2UnitStrc *, D2SetsTxtFStrc *, eD2UnitStat, int32_t, int32_t, uint32_t, int32_t); // Property function handler pointer
+    // Build round 2: restored upstream's last parameter (D2UnitStrc *). The fork
+    // sync's int32_t spelling mismatched all 244 handler definitions (each ends
+    // in D2UnitStrc * pContextUnit) and broke the gaPropertyFuncTable initialiser
+    // in ItemMods.cpp.
+    /* 0x00 */ int32_t (__fastcall *pfnHandler)(int32_t, D2UnitStrc *, D2UnitStrc *, D2SetsTxtFStrc *, eD2UnitStat, int32_t, int32_t, uint32_t, D2UnitStrc *); // Property function handler pointer
     /* 0x04 */ int32_t nStatCode; // Stat code parameter passed to handler
 };
 #endif // D2_DEFINED_D2PropertyFuncEntryStrc

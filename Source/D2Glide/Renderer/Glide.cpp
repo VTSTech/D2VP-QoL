@@ -16,7 +16,7 @@
 #include "Source/D2Glide/glFloorCache.h"
 #include "Source/D2Glide/glSubtileCache.h"
 #include "Source/D2Glide/glTextureCache.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/DC6.h"
 #include "Source/D2Win/DC6Block.h"
 #include "Source/D2gfx/D2GFX.h"
@@ -41,7 +41,7 @@
 #include "Source/D2Glide/glFloorCache.h"
 #include "Source/D2Glide/glSubtileCache.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/D2Win.globals.h"
 #include "Source/D2gfx/D2GFX.h"
 #include "Source/Fog/D2MemoryManagerStrc.h"
@@ -1029,8 +1029,8 @@ BOOL __fastcall Initialize(HINSTANCE hInstance) {
 }
 
 void __fastcall ClearCaches() {
-    glFloorCache::GLFLOOR_Destroy(&glBlocks::gGlideFloorTextureCache.dwEntrySize, nullptr);
-    glSubtileCache::GLSUBTILE_Destroy(&glBlocks::gGlideSubtileTextureCache.dwEntrySize, nullptr);
+    glFloorCache::GLFLOOR_Destroy(&glBlocks::gGlideFloorTextureCache, nullptr); // build-2: HEAD's signature takes GlFloorCacheStrc* (->nUsedCount); origin/main passed &dwEntrySize with array-index spelling
+    glSubtileCache::GLSUBTILE_Destroy(&glBlocks::gGlideSubtileTextureCache, nullptr); // build-2: same
     glTextureCache::GLTEXCACHE_Destroy(gGlideVertex0.aTextureCache, nullptr);
     glTextureCache::GLTEXCACHE_Destroy(gGlideVertex0.aTextureCache + 1, nullptr);
     glTextureCache::GLTEXCACHE_Destroy(gGlideVertex0.aTextureCache + 2, nullptr);
@@ -1095,7 +1095,7 @@ BOOL __fastcall SetGamma(int32_t nGamma) {
         FVar1 = 0;
         if (nGrGetResult) {
           pGammaTable = (FxU32*)Storm::Source::SMem::SMemAlloc(nTableSize * 4, ".\\Src\\glCore.cpp", 0x42f, 0);
-          Fog::Src::DataArrays::FOG_FillArrayWithRandomInts(nGamma, pGammaTable, (double)nContrastWeight, (uint32_t*)0x4, nTableSize, (1 << D2_SHIFT_COUNT(fGammaVal.nValue)) - 1); // VP: clamped contrast weight (upstream regen passes gbWINDOWED; fork feature keeps the clamped local)
+          Fog::Src::DataArrays::FOG_FillArrayWithRandomInts(nGamma, pGammaTable, (double)nContrastWeight, 4, nTableSize, (1 << D2_SHIFT_COUNT(fGammaVal.nValue)) - 1); // VP: clamped contrast weight (upstream regen passes gbWINDOWED; fork feature keeps the clamped local)
           (*GLIDEDLL_grLoadGammaTable_16)(nTableSize, pGammaTable, pGammaTable, pGammaTable);
           nFreeResult = Storm::Source::SMem::SMemFree(pGammaTable, ".\\Src\\glCore.cpp", 0x43a, 0);
           return nFreeResult;
@@ -1542,8 +1542,8 @@ BOOL __stdcall RENDERER_GLIDE_DestroyWindow() {
     ghGlideWindow = 0;
     (*GLIDEDLL_grFinish_0)();
     if (gbGlidePerspectiveMode) {
-      glFloorCache::GLFLOOR_Destroy(&glBlocks::gGlideFloorTextureCache.dwEntrySize, (GlFloorCacheStrc*)0x1);
-      glSubtileCache::GLSUBTILE_Destroy(&glBlocks::gGlideSubtileTextureCache.dwEntrySize, (GlSubtileCacheStrc*)0x1);
+      glFloorCache::GLFLOOR_Destroy(&glBlocks::gGlideFloorTextureCache, (GlFloorCacheStrc*)0x1); // build-2: struct-base spelling (HEAD signature)
+      glSubtileCache::GLSUBTILE_Destroy(&glBlocks::gGlideSubtileTextureCache, (GlSubtileCacheStrc*)0x1); // build-2
     } else {
       GLSMACK_DestroyNoop();
     }
@@ -2084,7 +2084,7 @@ static int32_t __stdcall RENDERER_GLIDE_UploadTextureToCache(GlideTexInfoStrc * 
     // nTexStartAddress, node+0xc = nMode - the same layout the upload writes
     // at the - 0x14 / - 0x10 sites below).
     if (nNewCacheNode) {
-      uint8_t* pSlotNode = gGlideVertex0.aTextureCache[nSpriteBufferPtr - 1].pNodes + (nNewCacheNode - 1) * 0x1c;
+      uint8_t* pSlotNode = (uint8_t*)(gGlideVertex0.aTextureCache[nSpriteBufferPtr - 1].pNodes + (nNewCacheNode - 1) * 0x1c); // build-2: pNodes is GlTextureCacheNodeStrc* since the typed round; this TU walks bytes
       if (*(FxU32*)(pSlotNode + 8) != nTexStartAddress || *(int*)(pSlotNode + 0xc) != nMode) {
         nNewCacheNode = 0;
         *pnCacheEntryIndex = 0;
@@ -3118,7 +3118,7 @@ void __stdcall RENDERER_GLIDE_DrawLightMap() {
         if (nCol == 0x18 && nRow == 0x18) {
           nLightColor = 0;
         } else {
-          nLightmapEntryPtr = gpnLightmapRowPointers[nCol] + nRow * 8;
+          nLightmapEntryPtr = (int)(gpnLightmapRowPointers[nCol] + nRow * 8); // build-2: cast back to the TU-local int handle
           nAlpha = (uint32_t)*(uint8_t*)(nLightmapEntryPtr + 4);
           nLightColor = (((*(uint8_t*)(gpnLightmapRowPointers[nCol] + 5 + nRow * 8) * nAlpha & -256) + (*(uint8_t*)(nLightmapEntryPtr + 6) * nAlpha >> 8)) * 0x100 + (*(uint8_t*)(nLightmapEntryPtr + 7) * nAlpha >> 8)) * 0x100;
         }

@@ -459,3 +459,104 @@ Fix (keep body, restore gate-clean surface):
 Verified: gates report now has Game at 0 ("at 0: crashy Game D2Lang D2Net");
 Main.cpp compiles standalone with the Redivivus.exe target flags (-fms-extensions
 -fwrapv, forced d2_platform.h/d2_hand.h).
+
+### Fix 2: batch compile errors — typedef drift between fork main and the ported tree
+Pattern of this round: the fork's own branch (origin/main) compiles; the ported
+jaenster-main tree drifted where fork-authored typedefs/headers were re-spelled
+without their call sites, or where fork files reference headers that were never
+committed. All fixed against origin/main / upstream 810e5018 as reference:
+
+- `Source/Fog/Debug.h`: `_EXCEPTION_DISPOSITION` has no declaration at the point
+  of the __GSHandlerCheck_EH_* prototypes (FogRoot.h's typedef is not visible in
+  Debug.cpp). Self-typedef `typedef int _EXCEPTION_DISPOSITION` guarded with
+  D2_DEFINED_EXCEPTION_DISPOSITION (same pattern as D2CMP's CelCmp.h).
+- `Source/globals/globals.h` typedef restores to upstream spelling:
+  `pfnSpriteCacheValidate(eD2UnitType, int32_t, int32_t)` (fork's void*/void*/
+  void* made SpriteCache.cpp's only call ill-formed);
+  `fpCelDecodeCachedByFormat(::CELLIST *, DC6 *)` and
+  `fpCelDrawFrameByFormat(..., uint8_t * pBlendTable, int32_t pLookupTable2)`
+  (fork's int spellings broke CelCmp.cpp's table initialisers and dispatches);
+  `D2PropertyFuncEntryStrc::pfnHandler` last param back to `D2UnitStrc *` (fork's
+  int32_t mismatched all 244 handlers and ItemMods.cpp's gaPropertyFuncTable).
+- `Source/D2Glide/Renderer/ShadowDiag.h`: **reconstructed** — the fork's port
+  commit shipped ShadowDiag.cpp + two Glide.cpp call sites but never committed
+  this header on any branch (git log --all confirms). API is the two functions
+  the call sites use: `NoteWorldFrame()` and `OnShadowQuad(GlideTexInfoStrc*,
+  const void*)` in namespace D2Glide::Renderer::ShadowDiag.
+- `Source/D2Headers/d2_platform.h`: added `typedef struct BINK {...} BINK` with
+  the four header fields the fork's BINK video playback reads (Width/Height/
+  Frames/FrameNum at +0x00..+0x0c per Rad Game Tools bink.h; handle is owned by
+  binkvideo.dll, never allocated/sizeof'd here). Fork used a typed BINK* with no
+  committed definition.
+- HWND cast sites in DirectDraw.cpp (638 SetCooperativeLevel, 766, 1000/1027/
+  1064): gnGlideWindowHandle is int; origin/main cast explicitly, the port
+  dropped the casts.
+- Windowed.cpp / Direct3D.cpp: `#include "Source/D2Multi/OOGUtilities.h"` ->
+  `"Source/D2Multi/ChatDlg.h"` — D2SmackerContextStrc's definition moved to
+  ChatDlg.h in the upstream restructure; OOGUtilities.h no longer defines it
+  (upstream's Windowed.cpp included ChatDlg.h itself).
+- Windowed.cpp render-fptr call sites updated to HEAD's typed
+  D2GfxHelperStrc/fp* signatures (nfpDrawBlendedVisTile uint8_t*,
+  nfpDrawRoofTile/nfpDrawWallTile uint32_t*, nfpDrawGroundTile
+  D2TileLibraryEntryStrc*/D2GfxLightExStrc*; drop the int round-trips). CELCMP_
+  DrawCelFrameFromGfxData/DRAW_DebugFillRect callers pass the uint8_t* the
+  re-typed CelCmp.h/FastCmp.h signatures expect.
+- `Source/D2Direct3D/Renderer/Direct3D.data.h`: re-added
+  `extern unsigned int g_bPerspectiveMode;` (origin/main declared it here;
+  Windowed.cpp's RenderDeviceCaps reads it).
+- `Source/D2Common/DATATBLS/MonsterTbls.h`: TXT_AllocItemDropData declaration
+  re-homed outside the `#endif // D2_MODULE_D2Common` gate block (same pattern
+  as the fork's PORTABLESAVE_FlushConfig / GetGambleLevelCache re-homes) so
+  D2Gdi's Windowed.cpp item-drop diagnostic resolves.
+- `Source/D2Direct3D/Renderer/Direct3D.h`: RENDERER_D3D_EnumDisplayModeCallback
+  declaration back to origin/main's `int pModeList` (struct-pointer spelling
+  created an overload set GCC could not resolve at the `(void*)` cast), and
+  `BOOL VPRES3D_PresentHostedFrame();` restored (fork sync dropped the decl; the
+  definition is in Direct3D.cpp, callers at 567/3132/3182/3245).
+- Direct3D.cpp callers: FOG_FillArrayWithRandomInts 4th arg `2` (int spelling;
+  DataArrays.cpp definition agrees); SFILE_GetGlobalPointer result cast
+  (Fog.h hands back D2SystemInfoStrc*, the TU does int arithmetic on it).
+- `Source/D2Win/Src/D2WinPalette.{h,cpp}`: restored `VP_GetTransposeBase()`
+  accessor (fix-27 VP block; fork sync dropped the function but kept the static
+  gPaletteTransposeBase buffer and the Direct3D.cpp caller).
+
+### Build Round 3 status (2026-11-14, after Round 2 fixes)
+
+Two rebuilds since the fixes above (`errs.txt` 19:46 → `build.log` 20:05):
+
+- **Error count: 328 → 94** (deduped compile errors; build now reaches ~77%,
+  first failure is in the D2Game module).
+- **Resolved this round**: all of ItemMods.cpp (245 errors —
+  `D2PropertyFuncEntryStrc::pfnHandler` signature restore), Windowed.cpp (31),
+  Direct3D.cpp (21), DirectDraw.cpp (13), glBlocks.cpp (8, BINK typedef +
+  `gpBinkVideoGlide`), d3dFloorCache.cpp (8), ShadowDiag.h missing header
+  (2 fatal errors).
+- **Remaining hotspots (94 errors, 6 files)**:
+  1. `Source/D2Glide/Renderer/Glide.cpp` — 54: conflicting declaration of
+     `gpnLightmapRowPointers` / `gpPerspectiveLookupTable` vs. the namespace
+     spellings, and `uint32_t*` → `GlFloorCacheStrc*` / `GlSubtileCacheStrc*`
+     conversions at the floor-cache call sites.
+  2. `Source/D2Game/UNIT/SUnit.cpp` — 14 and `SUnitDmg.cpp` — 9: int/void*
+     conversions into unit-data accessors.
+  3. `Source/D2Game/Monsters/Spawn.cpp` — 6: `uint32_t` → `void*` at
+     lines 257/480/487.
+  4. `Source/D2Launch/MainMenus.cpp` — 2 fatal: includes
+     `Source/D2Multi/McpConnect.h`, which the fork never committed (same
+     pattern as ShadowDiag.h — reconstruct or re-home the declarations).
+  5. `Source/D2Glide/Renderer/ShadowDiag.cpp` — 2: signature mismatches
+     against the reconstructed ShadowDiag.h.
+  6. Singles: SkillNec.cpp, A2Q4.cpp, A5Q5.cpp, PlayerSave2.cpp.
+
+Error categories across the remainder: 34 incomplete-type uses, ~46
+int/pointer conversion errors (-fpermissive), 4 conflicting declarations,
+2 missing-member, 2 missing-header.
+
+### Pending (Round 4)
+- [ ] Glide.cpp: align `gpnLightmapRowPointers` / `gpPerspectiveLookupTable`
+      declarations with the Glide namespace spellings; fix floor-cache pointer
+      conversions against origin/main
+- [ ] SUnit.cpp / SUnitDmg.cpp / Spawn.cpp: int→void* cast sites
+- [ ] MainMenus.cpp: resolve missing McpConnect.h (reconstruct header or
+      re-home the include)
+- [ ] ShadowDiag.cpp: match signatures to reconstructed ShadowDiag.h
+- [ ] Link all 25 modules; run smoke tests (SMOKE-CHECKLIST.md)

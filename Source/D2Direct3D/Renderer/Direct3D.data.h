@@ -29,6 +29,9 @@ extern int gnD3DTextureCacheCount;
 extern IDirectDrawSurface7 * g_pD3DSurfaceBackbuffer;
 extern IDirect3DDevice * g_pD3DDevice;
 extern unsigned int g_nBytesPerPixel;
+// Build round 2: re-added (dropped by the fork sync) — D2Gdi's Windowed.cpp
+// RenderDeviceCaps path reads it (origin/main declared it here).
+extern unsigned int g_bPerspectiveMode;
 extern uint8_t g_aLightingTable[65536];
 extern uint32_t g_aPerspectiveZDivisionTable[8192];
 

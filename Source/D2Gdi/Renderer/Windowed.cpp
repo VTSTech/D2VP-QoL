@@ -15,7 +15,7 @@
 #include "Source/D2Common/D2TileLibraryEntryStrc.h"
 #include "Source/D2Common/DATATBLS/MonsterTbls.h"
 #include "Source/D2DDraw/Renderer/DirectDraw.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/DC6.h"
 #include "Source/D2Win/DC6Block.h"
 #include "Source/D2gfx/D2GFX.h"
@@ -33,7 +33,7 @@
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/Draw.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Multi/ChatDlg.h"
 #include "Source/D2Win/D2Win.globals.h"
 #include "Source/D2gfx/D2GFX.h"
 #include "Source/Fog/D2MemoryManagerStrc.h"
@@ -742,7 +742,7 @@ void __fastcall DrawVerticalCropImage(D2GfxDataStrc * pData, int nPosX, int nPos
     uint32_t pLookupTable2 = 0;
     int nClipBottom = nDrawLines;
     uint8_t* pBlendTable = RENDERER_WINDOWED_GetPalettePointer(nDrawMode, (uint32_t*)&nDrawLines);
-    D2CMP::SRC::CelCmp::CELCMP_DrawCelFrameFromGfxData(pData, nPosX, nPosY, RENDERER_WINDOWED_nScaleOffsetY, RENDERER_WINDOWED_nScaleWidth, gpRenderBackBufferBits, nViewportHeight, RENDERER_WINDOWED_nDIBPitch, 0, (int32_t)pBlendTable, nSkipLines, nClipBottom, pLookupTable2); // [R116] nDstPitch slot: real DIB stride
+    D2CMP::SRC::CelCmp::CELCMP_DrawCelFrameFromGfxData(pData, nPosX, nPosY, RENDERER_WINDOWED_nScaleOffsetY, RENDERER_WINDOWED_nScaleWidth, gpRenderBackBufferBits, nViewportHeight, RENDERER_WINDOWED_nDIBPitch, 0, pBlendTable, nSkipLines, nClipBottom, pLookupTable2); // [R116] nDstPitch slot: real DIB stride
 }
 
 void __fastcall DrawClippedImage(D2GfxDataStrc * pData, int32_t nPosX, int32_t nPosY, void * pCropRect, int32_t nDrawMode) {
@@ -773,7 +773,7 @@ void __fastcall DrawClippedImage(D2GfxDataStrc * pData, int32_t nPosX, int32_t n
     int32_t nClipTop_00 = __frame0.nClipTop;
     int32_t nClipBottom_00 = __frame0.nClipBottom;
     uint8_t* pPalettePtr = RENDERER_WINDOWED_GetPalettePointer(nDrawMode, (uint32_t*)&pCropRect);
-    D2CMP::SRC::CelCmp::CELCMP_DrawCelFrameFromGfxData(pData, nPosX, nPosY, __frame0.nCropLeft, __frame0.nCropRight, gpRenderBackBufferBits, RENDERER_nWindowHeight, RENDERER_WINDOWED_nDIBPitch, 0, (int32_t)pPalettePtr, nClipTop_00, nClipBottom_00, bOutOfBounds); // [R116] nDstPitch slot: real DIB stride
+    D2CMP::SRC::CelCmp::CELCMP_DrawCelFrameFromGfxData(pData, nPosX, nPosY, __frame0.nCropLeft, __frame0.nCropRight, gpRenderBackBufferBits, RENDERER_nWindowHeight, RENDERER_WINDOWED_nDIBPitch, 0, pPalettePtr, nClipTop_00, nClipBottom_00, bOutOfBounds); // [R116] nDstPitch slot: real DIB stride
 }
 
 void __fastcall DrawShadow(D2GfxDataStrc * pData, int nPosX, int nPosY) {
@@ -819,7 +819,7 @@ void __fastcall DebugFillBackBuffer(int nPosX, int nPosY) {
       exit(-1);
     }
 
-    D2CMP::SRC::FastCmp::DRAW_DebugFillRect((int32_t)(gpRenderBackBufferBits + nPosX + RENDERER_WINDOWED_nDIBPitch * nPosY), RENDERER_WINDOWED_nDIBPitch); // [R116] row addr + nRowStride: real DIB stride
+    D2CMP::SRC::FastCmp::DRAW_DebugFillRect((uint8_t*)(gpRenderBackBufferBits + nPosX + RENDERER_WINDOWED_nDIBPitch * nPosY), RENDERER_WINDOWED_nDIBPitch); // [R116] row addr + nRowStride: real DIB stride
     return;
 }
 
@@ -1365,7 +1365,7 @@ BOOL __fastcall DrawShadowTile(D2TileLibraryEntryStrc * pTile, int32_t nPosX, in
           nVisCount = 1;
           bAllocOk = RENDERER_WINDOWED_CheckBlendedShadowsEnabled();
           if (bAllocOk) {
-            D2GfxRendereInitFunctionsStrc->nfpDrawBlendedVisTile((int)pTile->pSubTiles[nTileIndex].pPixelData, nScreenX, nScreenY, 0xc0);
+            D2GfxRendereInitFunctionsStrc->nfpDrawBlendedVisTile(pTile->pSubTiles[nTileIndex].pPixelData, nScreenX, nScreenY, 0xc0); // build-2: field takes uint8_t*, drop the int round-trip
           } else {
             D2GfxRendereInitFunctionsStrc->nfpDrawVisTile(pTile->pSubTiles[nTileIndex].pPixelData, nScreenX, nScreenY);
           }
@@ -1429,7 +1429,7 @@ BOOL __fastcall DrawTransWallTile(D2TileLibraryEntryStrc * pTile, int nPosX, int
             aCornerLight[1] = (uint32_t)pLight[bAllocOk + 1].nIntensity;
             aCornerLight[2] = aCornerLight[1];
             aCornerLight[3] = aCornerLight[0];
-            D2GfxRendereInitFunctionsStrc->nfpDrawRoofTile(*(int*)(psTileEntry + 8), nScreenX, a3, (int)aCornerLight, nAlpha);
+            D2GfxRendereInitFunctionsStrc->nfpDrawRoofTile(*(int*)(psTileEntry + 8), nScreenX, a3, aCornerLight, nAlpha); // build-2: field takes uint32_t*
             nLightIdx = 1;
           }
 
@@ -1491,7 +1491,7 @@ BOOL __fastcall DrawWallTile(D2TileLibraryEntryStrc * pTile, int nPosX, int nPos
           bDrawn = 1;
           aCornerLight[2] = aCornerLight[1];
           aCornerLight[3] = aCornerLight[0];
-          D2GfxRendereInitFunctionsStrc->nfpDrawWallTile(*(int*)(psTileEntry + 8), nScreenX, a3, (int)aCornerLight);
+          D2GfxRendereInitFunctionsStrc->nfpDrawWallTile(*(int*)(psTileEntry + 8), nScreenX, a3, aCornerLight); // build-2: field takes uint32_t*
         }
 
         nScreenPanels++;
@@ -1520,7 +1520,7 @@ BOOL __fastcall DrawGroundTile(D2TileLibraryEntryStrc * pTile, D2GfxLightExStrc 
           }
         default:
           {
-            bDrawResult = D2GfxRendereInitFunctionsStrc->nfpDrawGroundTile((int)pTile, a2, nPosY, (int)pLight);
+            bDrawResult = D2GfxRendereInitFunctionsStrc->nfpDrawGroundTile(pTile, a2, nPosY, pLight); // build-2: field takes D2TileLibraryEntryStrc*/D2GfxLightExStrc*
             return bDrawResult;
           }
         case 2:
@@ -1531,7 +1531,7 @@ BOOL __fastcall DrawGroundTile(D2TileLibraryEntryStrc * pTile, D2GfxLightExStrc 
       }
 
       a2 += nPanelOffsetX;
-      bDrawResult = D2GfxRendereInitFunctionsStrc->nfpDrawGroundTile((int)pTile, a2, nPosY, (int)pLight);
+      bDrawResult = D2GfxRendereInitFunctionsStrc->nfpDrawGroundTile(pTile, a2, nPosY, pLight); // build-2: field takes D2TileLibraryEntryStrc*/D2GfxLightExStrc*
       return bDrawResult;
     }
 

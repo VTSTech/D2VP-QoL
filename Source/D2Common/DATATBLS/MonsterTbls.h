@@ -196,11 +196,16 @@ void Unreferenced_0065a170();
 void __stdcall MONSTERTBLS_FreeMonUModTxt();
 // Populates sgtDataTable.pParsedTreasureClassDiffActChestABC by looking up each "Act N&lt;diff&gt; Chest &lt;A|B|C&gt;" TreasureClass name (formatted via sprintf) in the treasure-class link table for all 3 difficulties × 5 acts × 3 chest types (A/B/C). Stores a pointer to the resolved D2ParsedTreasureClassStrc or NULL for each slot.
 void __stdcall TXT_AllocParsedTreasureClassDiffActChestABC();
-void __stdcall TXT_AllocItemDropData(struct D2PoolManagerStrc * pMemory);
 void __fastcall ClearScreen_Unref_0065a3f0(struct D2PoolManagerStrc * bPartial);
 // Allocates and compiles all monster-related TXT data tables into the given memory pool. Loads uniquetitle/uniqueprefix/uniquesuffix/uniqueappellation (each keyed on the 'Name' column via DATATBLS_LookupStringId), then delegates to per-table alloc helpers for monlvl, monstats/monstats2, monprop, monsounds, monseq, monumod, superuniques, monpreset, hireling, npc, and MonEquip. Called once at startup during data-table initialization.
 void __fastcall TXT_AllocMonsterTables(struct D2PoolManagerStrc * pMemory);
 #endif // D2_MODULE_D2Common
+// Build round 2: re-homed outside the module gate (same pattern as the fork's
+// PORTABLESAVE_FlushConfig / GetGambleLevelCache re-homes): the declaration was
+// inside the D2_MODULE_D2Common block, so D2Gdi's Windowed.cpp item-drop
+// diagnostic could not see it. Cross-module caller, so it belongs on the
+// always-visible part of the header.
+void __stdcall TXT_AllocItemDropData(struct D2PoolManagerStrc * pMemory);
 // 3 internal functions (defined in .cpp)
 
 } // namespace D2Common::DATATBLS::MonsterTbls

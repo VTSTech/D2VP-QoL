@@ -34,4 +34,11 @@ void __stdcall Unreferenced_004fb1b0();
 BOOL __stdcall D2WINPAL_LoadPaletteFiles(char * szText1, char * szText2);
 #endif // D2_MODULE_D2Win
 
+// VP-BEGIN [fix-27]: the pl2 UI-transpose buffer went TU-private in upstream's
+// 962f88d5 per-TU restructure; RENDERER_D3D_FlushTransposedTextureNodes
+// (Direct3D.cpp, vanilla-plus fix 27) needs its base for the family range check.
+// Build round 2: restored - the fork sync dropped the accessor, not the buffer.
+uint8_t * VP_GetTransposeBase();
+// VP-END [fix-27]
+
 } // namespace D2Win::Src::D2WinPalette

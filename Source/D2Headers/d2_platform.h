@@ -850,6 +850,17 @@ extern "C" __stdcall int32_t BinkCopyToBuffer(void* pBink, void* pDest, int32_t 
 extern "C" __stdcall int32_t BinkSetSoundSystem(void* (__stdcall* pfnOpen)(uint32_t), uint32_t dwParam);
 extern "C" __stdcall void* BinkOpenDirectSound(uint32_t dwParam);
 extern "C" __stdcall uint32_t BinkDDSurfaceType(void* pDDSurface);
+// Build round 2: the fork's BINK video playback (DirectDraw / D3D / Glide
+// paths) holds the handle in a typed BINK* and reads four header fields. The
+// Rad Game Tools bink.h lays the struct out with Width/Height/Frames/FrameNum
+// at +0x00/+0x04/+0x08/+0x0c; only those are spelled — the handle itself is
+// owned by binkvideo.dll (BinkOpen's return), never allocated or sizeof'd here.
+typedef struct BINK {
+    uint32_t Width;    // +0x00
+    uint32_t Height;   // +0x04
+    uint32_t Frames;   // +0x08
+    uint32_t FrameNum; // +0x0c
+} BINK;
 extern "C" __stdcall int32_t ijlInit(void* pJpegCoreProps);
 extern "C" __stdcall int32_t ijlFree(void* pJpegCoreProps);
 extern "C" __stdcall int32_t ijlWrite(void* pJpegCoreProps, int32_t nWriteOption);

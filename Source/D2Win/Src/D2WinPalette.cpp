@@ -273,4 +273,10 @@ void __fastcall D2WINPAL_SetGammaRamp(uint32_t bCompactLineSpacingMode) {
     D2WinTextBox::gbCompactLineSpacingMode = bCompactLineSpacingMode;
 }
 
+// VP-BEGIN [fix-27]: see D2WinPalette.h / RENDERER_D3D_FlushTransposedTextureNodes.
+uint8_t * VP_GetTransposeBase() {
+    return gPaletteTransposeBase;
+}
+// VP-END [fix-27]
+
 } // namespace D2Win::Src::D2WinPalette
