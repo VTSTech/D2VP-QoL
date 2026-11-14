@@ -1023,7 +1023,7 @@ struct D2GfxHelperStrc {
 struct D2GfxInfoUnkStrc {
     /* 0x00 */ int nAnimMode; // animation mode key; GFX_FindGfxInfoByModeAndWeapon compares it with the requested mode
     /* 0x04 */ int nWeaponParam; // Weapon/COF param used as cache key alongside pAnimMode
-    /* 0x08 */ struct D2CofTextureCacheEntryStrc * pCofDataArray; // COF data array pointer, accessed at [5] (offset 0x14) by GFX_GetGfxInfoCofData
+    /* 0x08 */ int * pCofDataArray; // COF data array pointer, accessed at [5] (offset 0x14) by GFX_GetGfxInfoCofData
     /* 0x0C */ int nCofDataCount; // COF data count or flags
     /* 0x10 */ struct D2GfxInfoUnkStrc * pNext; // Next entry in linked list
 };
@@ -2934,7 +2934,7 @@ struct __attribute__((packed)) D2SoundChannelStrc {
     /* 0x1C */ int nPriority; // channel priority (set by SOUND_SetChannelPriority)
     /* 0x20 */ float fUnitDistance; // unit distance (pChannel[8])
     /* 0x24 */ int nParam; // extra param (pChannel[9])
-    /* 0x28 */ struct D2SoundListNodeStrc * pUnitList; // ptr to global3 timing struct (checked non-null + [4]!=0)
+    /* 0x28 */ int * pGlobal3Ref; // ptr to global3 timing struct (checked non-null + [4]!=0)
     /* 0x2C */ struct D2ClientSoundChannelStrc * pClientChannel; // unknown
     /* 0x30 */ int nPlayMode; // 1=streaming
     /* 0x34 */ uint32_t nScheduledTime; // global3+delay scheduled start time (pChannel[0xd])

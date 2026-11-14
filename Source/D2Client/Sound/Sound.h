@@ -98,7 +98,7 @@ struct __attribute__((packed)) D2SoundChannelStrc {
     /* 0x1C */ int nPriority; // channel priority (set by SOUND_SetChannelPriority)
     /* 0x20 */ float fUnitDistance; // unit distance (pChannel[8])
     /* 0x24 */ int nParam; // extra param (pChannel[9])
-    /* 0x28 */ struct D2SoundListNodeStrc * pUnitList; // ptr to global3 timing struct (checked non-null + [4]!=0)
+    /* 0x28 */ int * pGlobal3Ref; // ptr to global3 timing struct (checked non-null + [4]!=0)
     /* 0x2C */ struct D2ClientSoundChannelStrc * pClientChannel; // unknown
     /* 0x30 */ int nPlayMode; // 1=streaming
     /* 0x34 */ uint32_t nScheduledTime; // global3+delay scheduled start time (pChannel[0xd])
@@ -247,7 +247,7 @@ float __stdcall SOUND_CalculateAngle1(float fParam1, float fParam2);
 float __stdcall SOUND_CalculateAngle2(float fParam1, float fParam2);
 float __stdcall SOUND_CalculatePanning(float fParam1, float fParam2, float fParam3);
 struct D2SoundChannelStrc * __stdcall SOUND_GetChannelArray();
-struct D2SoundChannelStrc * __fastcall Unreferenced_004b9440(int param_1);
+int __fastcall Unreferenced_004b9440(int param_1);
 int __fastcall Unreferenced_004b9560(int param_1);
 uint32_t __fastcall SOUND_GetSoundId(int32_t nChannelHandle);
 int __fastcall SOUND_GetSoundByIndex(int32_t nChannelHandle);
@@ -287,8 +287,8 @@ BOOL __stdcall SOUND_IsDirectSoundAvailable();
 BOOL __stdcall SOUND_IsEaxAvailable();
 int32_t __fastcall SOUND_PlayFootstepSound(uint32_t nFrame, uint32_t nFootstepFrame, int nModulus);
 int Unreferenced_004e41e0();
-float __stdcall Unreferenced_004e4200();
-void __stdcall Unreferenced_004e4220();
+int Unreferenced_004e4200();
+int Unreferenced_004e4220();
 void __stdcall SOUND_TogglePauseAll();
 // @wasnamed SOUND_UpdateAllChannels - one name on two different functions.
 // @evidence Calls GetSoundEnvironLine, Day_/Night_Ambience and _Event,

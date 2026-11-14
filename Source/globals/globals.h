@@ -575,7 +575,7 @@ typedef void (__fastcall *fnSendNotifyJoin)(char * szName, char * szPass);
 typedef void (__fastcall *fnSendSetEmail)(char * szEmail);
 typedef void (__fastcall *fnSendStartAdvEx3)(char * szName, char * szPass, char * szDesc, int nFlags);
 typedef void (__fastcall *fnShrineClientOverlayUpdate)(D2UnitStrc * pUnit, D2ShrinesTxt * pShrinesTxt);
-typedef void (__fastcall *fnShrineServerActivate)(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t dwParam);
+typedef void (__fastcall *fnShrineServerActivate)(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, struct D2ShrinesTxt * dwParam);
 typedef void (__fastcall *fnSpriteCacheEntryRelease)(void * pHashEntry);
 typedef void (__fastcall *fpCelAllocDecodedByFormat)(DC6 * pDCC, DC6 * pDCCDest, uint8_t * pPaletteRemapFunc, uint32_t dwColorKey);
 typedef void (__fastcall *fpCelDrawFrameByFormat)(uint8_t * pImageHeader, uint8_t * pbDecompressedOutput, int32_t nDrawX, int32_t nClipLeft, int32_t nClipRight, uint32_t nDstPitch, int32_t nStartRow, int32_t nRowCount, int32_t pLookupTable1, uint8_t * pBlendTable, int32_t pLookupTable2);
@@ -979,7 +979,7 @@ struct D2RenderStatisticsStrc {
 #define D2_DEFINED_D2ShrineDispatchEntryStrc
 struct D2ShrineDispatchEntryStrc {
     /* 0x00 */ void (__fastcall *fpClientOverlayUpdate)(D2UnitStrc *, D2ShrinesTxt *); // Called by OBJECT_DispatchShrineClientFunc on client tick — updates GFX overlay state
-    /* 0x04 */ void (__fastcall *fpServerActivate)(D2UnitStrc *, D2UnitStrc *, uint32_t); // Called by OBJECT_HandleWellOpen when player activates shrine/well — server-side spawn or effect
+    /* 0x04 */ void (__fastcall *fpServerActivate)(D2UnitStrc *, D2UnitStrc *, struct D2ShrinesTxt *); // Called by OBJECT_HandleWellOpen when player activates shrine/well — server-side spawn or effect
     /* 0x08 */ int nOverlayIdActive; // GFX overlay ID shown when shrine is active/charged (-1 = none)
     /* 0x0C */ int nOverlayIdInactive; // GFX overlay ID shown when shrine is depleted/inactive (-1 = none)
     /* 0x10 */ int nSoundId; // Sound ID played when player activates shrine (0 = none)

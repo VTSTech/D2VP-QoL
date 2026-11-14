@@ -352,7 +352,7 @@ void __fastcall SKILL_DrawChargeTrail(D2UnitStrc * pUnit, uint32_t nGamma, int32
 
         nDrawY = nWorldOffsetXOrY - nWorldOffsetY;
         nTrailCount = nRandDir - nDrawX;
-        Engine::Gfx::DRAW_WORLD_Unit_1(pUnit, nGamma, nTrailCount, nDrawY, 1, 0);
+        Engine::Gfx::DRAW_WORLD_Unit_1(pUnit, nGamma, nTrailCount, nDrawY, (D2GamePalShiftGreenBloodStrc*)1, 0);
         nNormStepY += nNormVelX;
         nNormStepX += nAbsVelY;
         nAccumY -= nAbsVelX;

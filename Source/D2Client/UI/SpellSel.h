@@ -79,9 +79,9 @@ void __fastcall SPELLSEL_SetSkillSlot(int32_t nSlotIndex, int32_t nSkillId, int3
 void __stdcall SPELLSEL_AutoBindNonChargedSkills();
 void __fastcall SPELLSEL_DrawSkillRequirementTooltip(short * pwSkillId, int32_t bMouseOverIn, uint32_t nChargeCount, int32_t nScreenX, int32_t nBoxBottomY);
 void __fastcall SPELLSEL_DrawSkillGrid(struct D2UnitStrc * pUnit, int32_t nGridStartX, BOOL bWeaponSwap, BOOL bShowTooltips, BOOL bChargedOnly);
-void __fastcall Unreferenced_004aa6b0(BOOL bChargedOnly);
-void __stdcall Unreferenced_004aa6e0();
-void __stdcall Unreferenced_004aa710();
+int __fastcall Unreferenced_004aa6b0(BOOL bChargedOnly);
+int Unreferenced_004aa6e0();
+int Unreferenced_004aa710();
 void __fastcall SPELLSEL_CycleRightHandSkills(int32_t nSteps);
 void __stdcall SPELLSEL_RenderAllSkillGrids();
 void __stdcall SPELLSEL_ClearWaitingForSkillFlag_Unref_004aa8e0();

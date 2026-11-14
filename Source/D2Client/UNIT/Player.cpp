@@ -496,7 +496,7 @@ void __fastcall CLIENT_OnStatChanged(uint32_t dwUnused, D2UnitStrc * pUnit, D2Un
 void __fastcall JoinRoomSetup(D2UnitStrc * pUnit, D2RoomStrc * pRoom, int32_t nX, int32_t nY) {
     D2InventoryStrc* pInventory;
     D2SeedStrc sRandSeed;
-    Source::ClientEngine::CLIENT_RegisterActiveUnitInSlot((int32_t)pUnit);
+    Source::ClientEngine::CLIENT_RegisterActiveUnitInSlot(pUnit);
     D2Common::PATH::DynamicPath::AllocDynamicPath(nullptr, pRoom, nX, nY, pUnit, 1);
     if (!pUnit->pInventory) {
       pInventory = D2Common::INVENTORY::Inventory::STRUCT_CreatePlayerInventory(nullptr, pUnit);
@@ -548,7 +548,7 @@ void __fastcall JoinRoomSetup(D2UnitStrc * pUnit, D2RoomStrc * pRoom, int32_t nX
 }
 
 void __fastcall CLIENT_FreePlayerUnit(D2UnitStrc * pUnit) {
-    Source::ClientEngine::CLIENT_UnregisterActiveUnitFromSlot((int32_t)pUnit);
+    Source::ClientEngine::CLIENT_UnregisterActiveUnitFromSlot(pUnit);
     Engine::Gfx::FreeGfxInfo(pUnit);
     if (GAME::Game::sgpDrlgAct) {
       D2Common::PATH::DynamicPath::PATH_RemoveCollision(pUnit);
@@ -2042,7 +2042,7 @@ static uint32_t WalkToCoordOrUnit(D2UnderMouseStrc * pMouse) {
       nClassId = pPlayerUnit_lcl->nClassId;
     }
 
-    D2Common::Units::GetRunAndWalkVelocityForPlayer((int32_t)pPlayerUnit_lcl, nClassId, &nWalkVelocity, &nRunVelocity);
+    D2Common::Units::GetRunAndWalkVelocityForPlayer(pPlayerUnit_lcl, nClassId, &nWalkVelocity, &nRunVelocity);
     nWalkVelocity <<= 8;
     pDynamicPath = pMouse->pPlayer->pPath.pDynamicPath;
     nVelocityPct = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pMouse->pPlayer, UNITSTAT_velocitypercent, 0);
@@ -2091,7 +2091,7 @@ static BOOL INPUT_HandleLeftClickWithPet(D2UnderMouseStrc * pUnderMouse) {
       if (pPetUnit) {
         pSeed = GAME::RosterPets::GetSeed(nUnitGUID);
         if (pSeed->nState == 2) {
-          GAME::Select::SELECT_SetPetSeedTimestamp((int32_t)pUnderMouse->pPlayer, pPetUnit, 0);
+          GAME::Select::SELECT_SetPetSeedTimestamp(pUnderMouse->pPlayer, pPetUnit, 0);
         }
       }
     }
@@ -2169,7 +2169,7 @@ static BOOL INPUT_HandleRightClickWithPet(D2UnderMouseStrc * pUnderMouse) {
 
       pSeed = GAME::RosterPets::GetSeed(nUnitGUID);
       if (pSeed->nState == 2) {
-        GAME::Select::SELECT_SetPetSeedTimestamp((int32_t)pUnderMouse->pPlayer, pPetUnit, 0);
+        GAME::Select::SELECT_SetPetSeedTimestamp(pUnderMouse->pPlayer, pPetUnit, 0);
       }
 
       return 0;
@@ -2447,7 +2447,7 @@ void __fastcall CLIENT_WarpPlayerAndContinueMove(D2UnitStrc * pUnit, D2RoomStrc 
       }
     }
 
-    D2Common::PATH::Path::PATH_CheckCollisionFlags(pDynamicPath, (uint32_t)pUnit, pTargetRoom, nNewX, nNewY);
+    D2Common::PATH::Path::PATH_CheckCollisionFlags(pDynamicPath, pUnit, pTargetRoom, nNewX, nNewY);
     if (!bWasMoveMode) {
       return;
     }

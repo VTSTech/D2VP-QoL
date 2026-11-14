@@ -154,7 +154,7 @@ BOOL __stdcall INVENTORY_AutoPlaceItemInGrid(struct D2InventoryStrc * pInventory
 BOOL __stdcall INVENTORY_CheckGridCollisions(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, struct D2UnitStrc * * ppCollidedItemOut, int * pnCollidingItemCount, uint32_t nPage);
 // Checks whether the rectangular region [nGridX, nGridY, nGridX+itemW, nGridY+itemH] in the inventory grid for eInvPage is clear enough to place pUnit. Iterates every cell in the bounding box via the reinitialised grid; returns 0 if a box-code item blocks placement (when bCheckBox set) or if more than one distinct item occupies the region, otherwise returns 1. Writes a blocking item pointer to *pnOutItem when a conflict is found.
 // @sourcefile .\INVENTORY\Inventory.cpp
-BOOL __stdcall INVENTORY_CheckGridOccupancy(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, struct D2UnitStrc * * pnOutItem, uint32_t nPageByte, int bCheckBox);
+BOOL __stdcall INVENTORY_CheckGridOccupancy(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, int * pnOutItem, uint32_t nPageByte, int bCheckBox);
 BOOL __stdcall INVENTORY_PlaceItemAtCoords(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, int32_t nUnused, uint8_t bGridIndex);
 void __stdcall UnusedDebug(char * szFilename, uint32_t nLine, struct D2InventoryStrc * pInventory, int32_t nX, int32_t nY, eInventoryPage neInventoryPage, uint32_t dwParam, int32_t nInvPage);
 void __stdcall NullSub(struct D2InventoryStrc * pInventory);

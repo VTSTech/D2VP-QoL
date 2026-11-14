@@ -137,6 +137,7 @@ int32_t __stdcall CLIENT_IsArenaLevel();
 uint32_t __stdcall GetQuestAvailabilityByIndex(int32_t nUnused, int32_t nQuestIndex);
 uint32_t __stdcall LOADER_PopupGameLoopCallback(uint32_t dwArg1);
 struct D2UnitStrc * __fastcall UNITS_FindClientSideUnit(int32_t nUnitGUID, eD2UnitType eUnitType);
+struct D2UnitStrc * __fastcall UNITS_FindServerSideUnit(int32_t nUnitGUID, eD2UnitType eUnitType);
 struct D2UnitStrc * __fastcall MISSILE_GetOwnerUnit(struct D2UnitStrc * pUnit);
 void CLIENT_SendIdlePlayerMessage(struct D2UnitStrc * pUnit);
 void __stdcall CUNIT_IterateHashTableWithCallback(struct D2UnitStrc * * UnitHashTable, fnUnitIterCallback pfnCallback);

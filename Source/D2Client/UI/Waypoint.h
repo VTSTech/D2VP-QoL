@@ -48,7 +48,7 @@ void __stdcall InitializeWaypoints();
 void __stdcall WAYPOINT_SendClosePacket();
 void __stdcall WAYPOINT_Shutdown();
 void __stdcall WAYPOINT_PopulateList();
-void __stdcall Unreferenced_0049c980();
+int Unreferenced_0049c980();
 void __stdcall DRAW_UI_Waypoint();
 void __stdcall INPUT_WaypointTravel(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall WAYPOINT_SendOpenPacket();

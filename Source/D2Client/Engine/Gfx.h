@@ -21,6 +21,7 @@ struct D2InventoryStrc;
 struct D2LightMapStrc;
 struct D2MonStatsTxt;
 struct D2MonsterCofStatusEntryStrc;
+struct D2GamePalShiftGreenBloodStrc;
 struct D2ParticleStrc;
 struct D2TileLibraryEntryStrc;
 struct D2UnitStrc;
@@ -100,7 +101,7 @@ struct D2GfxHelperStrc {
 struct D2GfxInfoUnkStrc {
     /* 0x00 */ int nAnimMode; // animation mode key; GFX_FindGfxInfoByModeAndWeapon compares it with the requested mode
     /* 0x04 */ int nWeaponParam; // Weapon/COF param used as cache key alongside pAnimMode
-    /* 0x08 */ struct D2CofTextureCacheEntryStrc * pCofDataArray; // COF data array pointer, accessed at [5] (offset 0x14) by GFX_GetGfxInfoCofData
+    /* 0x08 */ int * pCofDataArray; // COF data array pointer, accessed at [5] (offset 0x14) by GFX_GetGfxInfoCofData
     /* 0x0C */ int nCofDataCount; // COF data count or flags
     /* 0x10 */ struct D2GfxInfoUnkStrc * pNext; // Next entry in linked list
 };
@@ -7328,12 +7329,12 @@ void __fastcall GFX_LoadMonsterCofArchive(uint8_t nCofNameIndex);
 // @sourcefile .\ENGINE\Gfx.cpp
 void __fastcall GFX_FreePlayerCofCache(int32_t nParam);
 // @sourcefile .\ENGINE\Gfx.cpp
-void GFX_FreeMonsterCofCache();
+int32_t GFX_FreeMonsterCofCache();
 void __fastcall GFX_PrecacheMonsterAllModes(int32_t nMonsterClassId, int32_t nFlags);
 int __stdcall GFX_GetCofCacheFlags();
 int __stdcall GFX_GetCofCacheMemUsage();
 int __stdcall GFX_GetGfxSystemFlags();
-struct D2MonsterCofStatusEntryStrc * __fastcall GFX_GetModeStatusEntry(int32_t nClassId);
+int32_t __fastcall GFX_GetModeStatusEntry(int32_t nClassId);
 // @sourcefile .\ENGINE\Gfx.cpp
 struct D2GfxInfoUnkStrc * __fastcall GFX_EnsureUnitCofLoaded(struct D2UnitStrc * pUnit, int32_t nAnimMode, int nWeaponClass);
 // @sourcefile .\ENGINE\Gfx.cpp
@@ -7375,7 +7376,7 @@ BOOL __fastcall GFX_DrawUnitColoredShape(struct D2UnitStrc * pUnit);
 // @sourcefile .\ENGINE\Gfx.cpp
 BOOL __fastcall GFX_DrawUnitSelectionShape(struct D2UnitStrc * pUnit);
 // @sourcefile .\ENGINE\Gfx.cpp
-BOOL __fastcall DRAW_WORLD_Unit_1(struct D2UnitStrc * pUnit, uint32_t nGamma, uint32_t bIsSelected, DRAWMODE nScreenY, int32_t pPalShift, int32_t bDrawStates);
+BOOL __fastcall DRAW_WORLD_Unit_1(struct D2UnitStrc * pUnit, uint32_t nGamma, uint32_t bIsSelected, DRAWMODE nScreenY, struct D2GamePalShiftGreenBloodStrc * pPalShift, int32_t bDrawStates);
 int __stdcall GFX_GetGfxSystemFlags_Unref_004723f0();
 #endif // D2_MODULE_D2Client
 // 25 internal functions (defined in .cpp)

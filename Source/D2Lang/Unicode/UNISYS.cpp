@@ -147,25 +147,26 @@ int32_t __fastcall UNICODE_CompareWideStringsNNoCase(uint16_t * pwszText1, uint1
     return (uint32_t)((uint16_t)wChar1Mapped > (uint16_t)wChar2Mapped);
 }
 
-uint16_t * __thiscall UNICODE_FindWideChar(uint16_t * pThis, uint16_t wCharToFind) {
-    uint16_t wCurChar = *pThis;
+short * __thiscall UNICODE_FindWideChar(void * pThis, int16_t wCharToFind) {
+    uint16_t * pCursor = (uint16_t*)pThis;
+    uint16_t wCurChar = *pCursor;
     if (wCurChar == L'\0') {
       return nullptr;
     }
 
     while (wCurChar != wCharToFind) {
-      wCurChar = pThis[1];
-      pThis = pThis + 1;
+      wCurChar = pCursor[1];
+      pCursor = pCursor + 1;
       if (wCurChar == L'\0') {
         return nullptr;
       }
     }
 
-    if (*pThis == L'\0') {
+    if (*pCursor == L'\0') {
       return nullptr;
     }
 
-    return pThis;
+    return (short *)pCursor;
 }
 
 uint16_t * __fastcall AppendToBuffer(uint16_t * wszText1, uint16_t * wszText2) {

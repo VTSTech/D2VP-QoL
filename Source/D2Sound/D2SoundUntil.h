@@ -42,7 +42,7 @@ namespace D2Sound::D2SoundUntil {
 
 // Function declarations
 // NOTE: Register params: pListHead (ECX): void *, pItem (EDX): void *
-void __fastcall SOUND_sD2SoundSmp_Alloc(void * pListHead, intptr_t pItem);
+void __fastcall SOUND_sD2SoundSmp_Alloc(void * pListHead, void * pItem);
 void __fastcall SOUND_sD2SoundSmp_Free(struct D2SoundListNodeStrc * * ppListHead, intptr_t nSearchValue);
 BOOL __fastcall SOUNDUTIL_FindInLinkedList(struct D2SoundListNodeStrc * pNode, intptr_t nSearchValue);
 void __fastcall SOUNDUTIL_FreeLinkedList(struct D2SoundListNodeStrc * * ppListHead);

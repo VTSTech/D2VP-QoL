@@ -52,7 +52,7 @@ D2ItemTypesTxt * __fastcall ItemTypes_GetLine(int32_t nItemType) {
     return nullptr;
 }
 
-uint32_t __stdcall ITEMS_SearchItemCodeTable(D2UnitStrc * pUnit, D2UnitStrc * dwContext, uint32_t nOffset) {
+uint32_t __stdcall ITEMS_SearchItemCodeTable(D2UnitStrc * pUnit, int32_t dwContext, uint32_t nOffset) {
     // Static local variables (originally global data)
     static D2ItemsEventMethodStrc aItemsEventMethod[4] = {
     {
@@ -83,7 +83,7 @@ uint32_t __stdcall ITEMS_SearchItemCodeTable(D2UnitStrc * pUnit, D2UnitStrc * dw
     }
 
     sCalcContext.pUnit = pUnit;
-    sCalcContext.nContext = dwContext;
+    sCalcContext.nContext = (struct D2UnitStrc*)dwContext;
     uint32_t nFormulaResult = Fog::Skills::SKILLS_CompileSkillFormula((uint32_t*)((uint8_t*)sgptDataTable->pItemsCode + nOffset), sgptDataTable->nItemsCodeSize - nOffset, Stats::StatsEx::nullsub, aItemsEventMethod, nItemsEventMethodSize, &sCalcContext);
     return nFormulaResult;
 }

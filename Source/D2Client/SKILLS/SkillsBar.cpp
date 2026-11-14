@@ -183,7 +183,7 @@ BOOL __fastcall Skills_CltDoFunc_Bar_BloodParticlesOnTarget(D2UnitStrc * pUnit, 
       pUnit->eUnitFlags |= UNITFLAG_SKSRVDOFUNC;
     }
 
-    UNIT::Monster::MONSTER_SpawnBloodParticles(pTarget, (D2MonStats2Txt*)0x5, 0);
+    UNIT::Monster::MONSTER_SpawnBloodParticles(pTarget, 0x5, 0);
     return 1;
 }
 
@@ -290,7 +290,7 @@ BOOL __fastcall Skills_CltDoFunc_Bar_SoftMonster_BloodParticles(D2UnitStrc * pUn
       pUnit->eUnitFlags |= UNITFLAG_SKSRVDOFUNC;
     }
 
-    UNIT::Monster::MONSTER_SpawnBloodParticles(pTarget, (D2MonStats2Txt*)0x5, 0);
+    UNIT::Monster::MONSTER_SpawnBloodParticles(pTarget, 0x5, 0);
     return 1;
 }
 

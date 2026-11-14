@@ -165,7 +165,7 @@ void __stdcall szPrintfBuffer(struct D2UnitStrc * pUnit, uint16_t * wszText);
 void __stdcall INV_FormatArmorClassText(struct D2UnitStrc * pUnit, struct D2UnitStrc * pUnit2, uint16_t * wszText);
 void __stdcall INV_LoadBodySlotImages();
 void __stdcall INV_FreeBodySlotImages();
-uint8_t Unreferenced_00486ad0();
+int Unreferenced_00486ad0();
 int32_t __stdcall INV_GetGoldButtonX();
 int32_t __stdcall INV_GetGoldButtonY();
 // Returns whether the inventory is in an interactive (shop/stash/trade) mode. Thirty-three bytes that touch EAX only - a global load, a jump table and a return - so it preserves ECX. Declaring it __stdcall made the decompiler treat ECX as killed by the call, and ClickItemLeft carries a SETZ result in ECX across exactly this call. The lost register became an unassigned local, the pick-up branch was never taken, and clicking an inventory item stopped lifting it.
@@ -225,7 +225,7 @@ BOOL __stdcall INV_GetGambleFlag();
 void __stdcall INV_StashOpened();
 void __stdcall INV_StashOpenedWithGold();
 void __fastcall INV_SetInventoryActive(int32_t bActive);
-void Unreferenced_00489a10();
+int Unreferenced_00489a10();
 void __stdcall INV_HandleStashMouseMove(struct D2UIMouseMsgStrc * pMsg);
 // Handles left-click in stash window. Sets/clears gbInventoryDragInProgress based on cursor state. Picks up item from stash grid or places item, sends stash update packet to server.
 void __stdcall INV_HandleStashLeftClick(struct D2UIMouseMsgStrc * pMsg);
@@ -271,7 +271,7 @@ void __stdcall INV_DrawHirelingName(struct D2UnitStrc * pUnit);
 void __stdcall INV_DrawHirelingStatLabels();
 void __stdcall INV_DrawHirelingEmptySlots(struct D2UnitStrc * pUnit);
 void __fastcall INV_DrawHirelingCursorHighlight(struct D2UnitStrc * pUnit);
-struct D2UnitStrc * Unreferenced_0048b640();
+int Unreferenced_0048b640();
 void __stdcall INV_HandleMercInvLeftDown(struct D2UIMouseMsgStrc * pMsg);
 // Handles left-click events in mercenary inventory UI. Checks for close button click, then iterates through mercenary equipment slots to handle item equipping/unequipping. Validates item compatibility with mercenary, removes items client-side, sends 0x61 packet to server, and plays appropriate success/failure sounds.
 void __stdcall INV_HandleMercInvLeftClick(struct D2UIMouseMsgStrc * pMsg);

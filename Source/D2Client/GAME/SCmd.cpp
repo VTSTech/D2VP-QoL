@@ -2348,7 +2348,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x98_SETSPAWNERMONSTER(char * pBytes) {
     sPayload.dwData0 = *(uint32_t*)pBytes;
     sPayload.wData4 = *(uint16_t*)(pBytes + 4);
     sPayload.nData6 = pBytes[6];
-    UNIT::Monster::NPCMENU_HandleQuestUpdate((uintptr_t)&sPayload);
+    UNIT::Monster::NPCMENU_HandleQuestUpdate((D2GSPacketSrv0x98*)&sPayload);
 }
 
 void __fastcall NET_D2GS_CLIENT_Incoming0x99_ITEM_SKILL_ID(char * pBytes) {
@@ -2362,7 +2362,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x99_ITEM_SKILL_ID(char * pBytes) {
       return;
     }
 
-    SKILLS::SkillsPal::SKILL_ExecuteItemCastOnUnit(pUnit, (eD2Skills)*(uint16_t*)(pBytes + 6), (short int*)(uint32_t)(uint8_t)pBytes[8], pTargetUnit, *(uint16_t*)(pBytes + 0xe));
+    SKILLS::SkillsPal::SKILL_ExecuteItemCastOnUnit(pUnit, (eD2Skills)*(uint16_t*)(pBytes + 6), (int32_t)pBytes[8], pTargetUnit, *(uint16_t*)(pBytes + 0xe));
 }
 
 void __fastcall NET_D2GS_CLIENT_Incoming0x9A_ITEM_SKILL_XY(char * pBytes) {
@@ -2371,7 +2371,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x9A_ITEM_SKILL_XY(char * pBytes) {
       return;
     }
 
-    SKILLS::SkillsPal::SKILL_ExecuteItemCastAtCoords(pUnit, (eD2Skills)*(uint16_t*)(pBytes + 6), (short int*)(uint32_t)(uint8_t)pBytes[10], (uint32_t)*(uint16_t*)(pBytes + 0xb), (uint32_t)*(uint16_t*)(pBytes + 0xd), *(uint16_t*)(pBytes + 0xf));
+    SKILLS::SkillsPal::SKILL_ExecuteItemCastAtCoords(pUnit, (eD2Skills)*(uint16_t*)(pBytes + 6), (int32_t)pBytes[10], (uint32_t)*(uint16_t*)(pBytes + 0xb), (uint32_t)*(uint16_t*)(pBytes + 0xd), *(uint16_t*)(pBytes + 0xf));
 }
 
 void __fastcall NET_D2GS_CLIENT_Incoming0x4C_SKILL_ID(D2UnitStrc * pUnit, D2GSPacketSrv0x4C * pBytes) {
@@ -2527,7 +2527,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x42(char * pBytes) {
     D2SCmdPayload_u32_u16 sPayload;
     sPayload.dwData0 = *(uint32_t*)pBytes;
     sPayload.wData4 = *(uint16_t*)(pBytes + 4);
-    UNIT::ITEM_HandleCursorItemRemoval((uintptr_t)&sPayload);
+    UNIT::ITEM_HandleCursorItemRemoval((D2GSPacketSrv0x42*)&sPayload);
 }
 
 void __fastcall SCMD_Rcv0x45_Ignore(char * pBytes) {
@@ -2888,7 +2888,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x7C_SETITEMUNUSED(char * pBytes) {
     D2SCmdPayload_u32_u16 sPayload;
     sPayload.dwData0 = *(uint32_t*)pBytes;
     sPayload.wData4 = *(uint16_t*)(pBytes + 4);
-    UNIT::ITEM_HandleServerItemAction((uintptr_t)&sPayload);
+    UNIT::ITEM_HandleServerItemAction((D2GSPacketSrv0x7C*)&sPayload);
 }
 
 void __fastcall NET_D2GS_CLIENT_Incoming0x7D(D2GSPacketSrv0x7D * pBytes) {
@@ -3206,7 +3206,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0xA8_UNITSTATE_ONVAL_EX(D2GSPacketSrv0xA
         eSkill = Fog::BitBuffer::ReadUnsigned(&bitBuffer, (uint32_t)nSendBits);
       }
 
-      pStatList = UNIT::PlrSkills::NET_D2GS_CLIENT_HandleAddSTatUnit(pUnit, pStatList, (D2UnitDataUnion*)eStateCopy, eUnitStat, eSkill, nStatParam);
+      pStatList = UNIT::PlrSkills::NET_D2GS_CLIENT_HandleAddSTatUnit(pUnit, pStatList, eStateCopy, eUnitStat, eSkill, nStatParam);
       eUnitStat = Fog::BitBuffer::ReadUnsigned(&bitBuffer, 9);
       eState = eStateCopy;
       pFoundUnit = pUnit;
@@ -3281,7 +3281,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0xAA_UNITSTATE_ALL_EX(D2GSPacketSrv0xAA 
             eSkill = Fog::BitBuffer::ReadUnsigned(&bitBuffer, (uint32_t)nSendBits);
           }
 
-          pStatList = UNIT::PlrSkills::NET_D2GS_CLIENT_HandleAddSTatUnit(pFoundUnit, pStatList, (D2UnitDataUnion*)eStateCopy, eUnitStat, eSkill, nStatParam);
+          pStatList = UNIT::PlrSkills::NET_D2GS_CLIENT_HandleAddSTatUnit(pFoundUnit, pStatList, eStateCopy, eUnitStat, eSkill, nStatParam);
           eUnitStat = Fog::BitBuffer::ReadUnsigned(&bitBuffer, 9);
           pUnit = pFoundUnit;
           eState = eStateCopy;

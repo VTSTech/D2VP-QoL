@@ -46,12 +46,12 @@ static_assert(sizeof(void*) != 4 || sizeof(::D2SoundListNodeStrc) == 0x8, "D2_NE
 namespace D2Sound::D2SoundUntil {
 
 // NOTE: Register params: pListHead (ECX): void *, pItem (EDX): void *
-void __fastcall SOUND_sD2SoundSmp_Alloc(void * pListHead, intptr_t pItem) {
+void __fastcall SOUND_sD2SoundSmp_Alloc(void * pListHead, void * pItem) {
     intptr_t* pNewNode = (intptr_t*)D2_ALLOC_AT(8, ".\\Src\\D2SoundUtil.cpp", 0xd5);
     *pNewNode = 0;
     pNewNode[1] = 0;
     intptr_t dwOldHead = *(intptr_t*)pListHead;
-    *pNewNode = pItem;
+    *pNewNode = (intptr_t)pItem;
     pNewNode[1] = dwOldHead;
     *(intptr_t**)pListHead = (intptr_t*)pNewNode;
 }

@@ -1229,7 +1229,7 @@ BOOL __stdcall INVENTORY_CheckGridCollisions(D2InventoryStrc * pInventory, D2Uni
 
 // Checks whether the rectangular region [nGridX, nGridY, nGridX+itemW, nGridY+itemH] in the inventory grid for eInvPage is clear enough to place pUnit. Iterates every cell in the bounding box via the reinitialised grid; returns 0 if a box-code item blocks placement (when bCheckBox set) or if more than one distinct item occupies the region, otherwise returns 1. Writes a blocking item pointer to *pnOutItem when a conflict is found.
 // @sourcefile .\INVENTORY\Inventory.cpp
-BOOL __stdcall INVENTORY_CheckGridOccupancy(D2InventoryStrc * pInventory, D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, D2UnitStrc * * pnOutItem, uint32_t nPageByte, int bCheckBox) {
+BOOL __stdcall INVENTORY_CheckGridOccupancy(D2InventoryStrc * pInventory, D2UnitStrc * pUnit, int32_t nGridX, int32_t nGridY, int32_t eInvPage, int * pnOutItem, uint32_t nPageByte, int bCheckBox) {
     D2ItemsTxt* pItemsTxt;
     D2GridScreenCoordinates DStack_20;
     D2UnitStrc* pCellUnit;
@@ -1289,7 +1289,7 @@ BOOL __stdcall INVENTORY_CheckGridOccupancy(D2InventoryStrc * pInventory, D2Unit
       while (nCol < nColXEnd) {
         pCellUnit = pDVar2_col->pGridCells[(uint32_t)pDVar2_col->bWidth * nUnit + nCol];
         if (pCellUnit) {
-          *pnOutItem = pCellUnit;
+          *pnOutItem = (int)pCellUnit;
           pItemsTxt = DATATBLS::ItemTbls::TXT_Items_GetLine(pCellUnit->nClassId);
           if (bCheckBox && pItemsTxt->dwCode == 0x20786f62) {
             return 0;

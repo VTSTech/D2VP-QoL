@@ -284,12 +284,12 @@ static void SOUND_ReleaseChannel(D2SoundChannelStrc * pChannel) {
       return;
     }
 
-    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free((int**)&gpActiveSoundChannelsHead, (int32_t)pChannel);
+    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free((D2SoundListNodeStrc**)&gpActiveSoundChannelsHead, (int32_t)pChannel);
     for (pChanNode = (D2SoundChannelStrc*)pChannel->pGlobal3Ref; pChanNode; pChanNode = (D2SoundChannelStrc*)pChanNode->nSoundId) {
       UNIT::UnitSnd::FreeSfxData((D2UnitStrc*)pChanNode->pListNode, pChannel->nChannelHandle);
     }
 
-    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList(&pChannel->pGlobal3Ref);
+    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList((D2SoundListNodeStrc**)&pChannel->pGlobal3Ref);
     if (pChannel->nPlayMode == 1) {
       GAME::Sound::SOUND_StopAndDetach(pChannel->pClientChannel);
     }
@@ -405,7 +405,7 @@ D2SoundChannelStrc * __stdcall SOUND_SetChannelProperties(int32_t nSoundGroup, i
       D2SoundsTxt* pSoundsTxt;
       nChannelData = pDVar1->pChannel;
       pSoundsTxt = SoundHdr::TXT_sounds_GetLineBySoundId(nChannelData->nSoundId);
-      if (pSoundsTxt->nGroupStartIndex == nSoundGroup && nChannelData != nExcludeChannel && nChannelData->nPlayMode == 1 && (!pListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pGlobal3Ref, pListKey) , bInList != 0)) && (!nBestChannel || nChannelData->nScheduledTime < nBestChannel->nScheduledTime)) {
+      if (pSoundsTxt->nGroupStartIndex == nSoundGroup && nChannelData != nExcludeChannel && nChannelData->nPlayMode == 1 && (!pListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList((D2SoundListNodeStrc*)nChannelData->pGlobal3Ref, pListKey) , bInList != 0)) && (!nBestChannel || nChannelData->nScheduledTime < nBestChannel->nScheduledTime)) {
         nBestChannel = nChannelData;
       }
     }
@@ -425,7 +425,7 @@ static D2SoundChannelStrc * __stdcall SOUND_FindActiveStreamChannel(D2SoundChann
       }
 
       nChannelData = pDVar1->pChannel;
-      if (nChannelData != pExcludeChannel && nChannelData->nPlayMode == 1 && (!nListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList(nChannelData->pGlobal3Ref, nListKey) , bInList != 0)) && nChannelData->nSoundId >= 0xb76 && nChannelData->nSoundId <= 0x1230) {
+      if (nChannelData != pExcludeChannel && nChannelData->nPlayMode == 1 && (!nListKey || (bInList = D2Sound::D2SoundUntil::SOUNDUTIL_FindInLinkedList((D2SoundListNodeStrc*)nChannelData->pGlobal3Ref, nListKey) , bInList != 0)) && nChannelData->nSoundId >= 0xb76 && nChannelData->nSoundId <= 0x1230) {
         break;
       }
 
@@ -1272,7 +1272,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
               exit(-1);
             }
           } else {
-            GAME::Sound::SOUND_UpdateChannelParams((int*)ppStreamHandle);
+            GAME::Sound::SOUND_UpdateChannelParams(ppStreamHandle);
             if (pSoundsTxt->nLoadState == 2) {
               SoundHdr::SOUNDHDR_UpdateLRUTimestamp(pChanEntry->nSoundId);
             }
@@ -1286,7 +1286,7 @@ void __fastcall SOUND_UpdateAllChannels(uint32_t nFrameTime) {
       SOUND_ReleaseChannel((D2SoundChannelStrc*)*pFreeList);
     }
 
-    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList(&__frame0.pFreeChannelList);
+    D2Sound::D2SoundUntil::SOUNDUTIL_FreeLinkedList((D2SoundListNodeStrc**)&__frame0.pFreeChannelList);
     eD2GSGameType eGameType = GAME::Game::CLIENT_GetD2GSGameType();
     if ((eGameType == GAMETYPE_SINGLEPLAYER || (eGameType = GAME::Game::CLIENT_GetD2GSGameType() , eGameType == GAMETYPE_SINGLEPLAYER_UNCAPPED)) && (bUiFlag = UI::ui::UI_GetFlag(UI_ESCMENU) , bUiFlag || (bUiFlag = UI::ui::UI_GetFlag(UI_CONFIG) , bUiFlag != 0))) {
       bMenuPaused = true;
@@ -1378,7 +1378,7 @@ void __fastcall SOUND_StopUnitSoundByIndex(int32_t nChannelHandle, D2UnitStrc * 
     }
 
     D2SoundsTxt* pSoundsTxtLine = SoundHdr::TXT_sounds_GetLineBySoundId(nChanDataPtr->nSoundId);
-    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free(&nChanDataPtr->pGlobal3Ref, (int32_t)pUnit);
+    D2Sound::D2SoundUntil::SOUND_sD2SoundSmp_Free((D2SoundListNodeStrc**)&nChanDataPtr->pGlobal3Ref, (int32_t)pUnit);
     if (!pSoundsTxtLine->Loop || nChanDataPtr->bFadeActive && !nChanDataPtr->nFadeDir) {
       bForceStopNeeded = true;
     } else {

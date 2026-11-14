@@ -2341,7 +2341,7 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
       }
     }
 
-    Monster::MONSTER_InitMonsterUnit(pUnit, pRoom, nMercSkillId, pSkillIdPtr, iVar1, pCreateData->eUnitType);
+    Monster::MONSTER_InitMonsterUnit(pUnit, pRoom, nMercSkillId, (int32_t)pSkillIdPtr, iVar1, pCreateData->eUnitType);
     D2Common::PATH::DynamicPath::SetStepNum(pUnit->pPath.pDynamicPath, pMonStats2Diff[nMonStatsExId].MeleeRng);
     GAME::Wall2::WALL2_InitUnitGfx(pUnit);
     CLIENT_PlaySkillVisualEffect(pUnit, iVar1);

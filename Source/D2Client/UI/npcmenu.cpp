@@ -3710,7 +3710,7 @@ D2UnitStrc * __stdcall GetInteractedUnit() {
     return nullptr;
 }
 
-static void SetInteractedUnitInfo(D2UnitStrc * pUnit) {
+void SetInteractedUnitInfo(D2UnitStrc * pUnit) {
     if (pUnit) {
       _Interaction::bInteractingWithNpc = 1;
       _Interaction::nCurrentInteractedNpcGUID = pUnit->nUnitGUID;
@@ -3830,7 +3830,7 @@ uint16_t __fastcall NPCMENU_FindNextUnhandledMessage(int16_t nMsgTypeToFind) {
     } while (true);
 }
 
-int __fastcall NPCMENU_ScrollCompleteShowNextMessage(void * pUserParam, uint32_t nReason, int bDismissed) {
+int __fastcall NPCMENU_ScrollCompleteShowNextMessage(void * pUserParam, uint32_t nReason, void * pDismissCallback) {
     D2UnitStrc* pDVar1;
     if (gnNpcMenuActiveMode == '\x01') {
       uint16_t wDialogStringId;
@@ -3903,7 +3903,7 @@ static int32_t __stdcall NPCMENU_CheckQuestDependentCallbacks(D2NpcQuestCallback
     return nResult;
 }
 
-static bool inline_NPC_IsInteractableSideNpc(int32_t nNpcClassId) {
+bool inline_NPC_IsInteractableSideNpc(int32_t nNpcClassId) {
     /* DeckardCain */ /* Drehya */ /* Ancient Statue 1 */ /* Ancient Statue 2 
                           */ /* Ancient Statue 3 */ /* tyrael */ /* navi */ /* act2guard5 */ /* tyrael1 */ /* act2guard4 */ /* act2guard2 */ /* izualghost */ /* malachai */ if (nNpcClassId != 146 && nNpcClassId != 527 && nNpcClassId != 537 && nNpcClassId != 538 && nNpcClassId != 539 && nNpcClassId != 521 && nNpcClassId != 266 && nNpcClassId != 378 && nNpcClassId != 251 && nNpcClassId != 377 && nNpcClassId != 331 && nNpcClassId != 406 && nNpcClassId != 408) {
       return false;
@@ -7300,7 +7300,7 @@ int __stdcall NPCMENU_EnableTyraelTravelToHarrogathOption() {
     return 1;
 }
 
-static void __stdcall NPCMENU_HandleMenuSelection(int32_t bReopenMenu, D2UnitStrc * pUnit) {
+void __stdcall NPCMENU_HandleMenuSelection(int32_t bReopenMenu, D2UnitStrc * pUnit) {
     // Static local variables (originally global data)
     static uint32_t gNPCMenuSelectionPtrTable = 0x9; D2_STATIC_GUARD(gNPCMenuSelectionPtrTable, "D2Client::UI::npcmenu::NPCMENU_HandleMenuSelection::gNPCMenuSelectionPtrTable");
     static D2NpcQuestCallbackEntry gaNpcMenuQuestCallbackTable[9] = {
