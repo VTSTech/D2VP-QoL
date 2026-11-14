@@ -122,7 +122,7 @@ void __fastcall FORMS_DestroyListJmp_Unref_0041f930(uint32_t * pEncoder);
 void __fastcall FORMS_DestroyListJmp_Unref_0041f940(uint32_t * pEncoder);
 uint16_t __fastcall Unreferenced_0042e5c0(uint16_t nValue);
 void __fastcall CRYPTO_ByteSwap16Array(uint16_t * pArray, uint32_t nCount);
-uint16_t * __thiscall CRYPTO_ByteSwap32Array(uint16_t * pwOut, uint16_t wValue);
+void __thiscall CRYPTO_ByteSwap32Array(uint16_t * pwOut, uint16_t wValue);
 int __fastcall Unreferenced_0042e620(uint16_t * param_1);
 int __fastcall Unreferenced_0042e630(uint16_t * param_1);
 void __thiscall CRYPTO_ByteSwap64Array(uint16_t * pwIn, uint16_t * pwOut);
@@ -134,7 +134,7 @@ void __stdcall IMAGE_LoadPredefinedImages();
 void __stdcall IMAGE_FreePredefinedImages();
 // Loads a palette pair (.dat and .pl2 files) for rendering. Constructs full paths by prepending "DATA\\GLOBAL\\" to the input filenames, checks if the palette is "palette\\fechar\\pal.dat" via string comparison, sets global flag gnIsFecharPalette accordingly, then calls D2Win palette loader with the constructed paths.
 int __fastcall D2GFX_SetPaletteForDraw(char * szPaletteDat, char * szPalettePl2);
-void __stdcall Unreferenced_0042f370();
+int Unreferenced_0042f370();
 struct D2ControlStrc * __fastcall FORMS_CreateAnyFormFromList(int32_t nFormIndex);
 void __stdcall FORMS_DestroyList();
 struct D2ControlStrc * __fastcall FORMS_CreateAnyFormFromListExEx(int32_t nFormIndex);
@@ -242,7 +242,7 @@ void __stdcall MAINMENU_AppendCreditsEnd();
 // @sourcefile .\Src\MainMenus.cpp
 uint16_t * __stdcall MAINMENU_LoadCreditsFile(uint32_t * pnCharCount);
 void __stdcall MAINMENU_SyncCreditsColumns();
-void __stdcall Unreferenced_00431020();
+int Unreferenced_00431020();
 // @sourcefile .\Src\MainMenus.cpp
 // Registers: nReserved (ECX) is 0 at the only call site and not read.
 int __fastcall MAINMENU_DisplayCredits(int32_t nReserved);

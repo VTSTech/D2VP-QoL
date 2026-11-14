@@ -955,7 +955,7 @@ D2UnitStrc * __fastcall CreateMonster(D2UnknownCreateMonsterStrc * pMonsterSpawn
         bPlaceInRoom = 3;
       }
 
-      D2UnitStrc* pUnit = UNIT::SUnit::CreateUnit(UNIT_MONSTER, pMonsterSpawnData->nClassId, nSpawnX, nSpawnY, pMonsterSpawnData->pGame, pRoom, bPlaceInRoom, pMonsterSpawnData->eMode, pMonsterSpawnData->nGUID);
+      D2UnitStrc* pUnit = UNIT::SUnit::CreateUnit(UNIT_MONSTER, pMonsterSpawnData->nClassId, nSpawnX, nSpawnY, pMonsterSpawnData->pGame, pRoom, bPlaceInRoom, pMonsterSpawnData->eMode, (void*)pMonsterSpawnData->nGUID);
       if (pUnit) {
         nFlagsFiltered = nSpawnFlags & 8;
         if (*((uint8_t*)pMonStatsTxt + 0xe) & (uint8_t)Fog::BitBuffer::gadwBitMasks[2]) {

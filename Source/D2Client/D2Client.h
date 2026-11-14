@@ -322,7 +322,7 @@ struct D2AutomapCellStrc {
 #define D2_DEFINED_D2AutomapLayerStrc
 struct D2AutomapLayerStrc {
     /* 0x00 */ int nLayer;
-    /* 0x04 */ int fSaved;
+    /* 0x04 */ void * fSaved;
     /* 0x08 */ struct D2AutomapCellStrc * pFloors;
     /* 0x0C */ struct D2AutomapCellStrc * pWalls;
     /* 0x10 */ struct D2AutomapCellStrc * pObjects;

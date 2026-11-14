@@ -250,7 +250,7 @@ void __fastcall GLSUBTILE_InvalidateByIndex(GlSubtileCacheStrc * pCache, int nNo
 
 // Destroys subtile cache by clearing all entries and freeing node array memory.
 // @sourcefile .\Src\glSubtileCache.cpp
-void __fastcall GLSUBTILE_Destroy(GlSubtileCacheStrc * pCacheData, int pCache) {
+void __fastcall GLSUBTILE_Destroy(GlSubtileCacheStrc * pCacheData, GlSubtileCacheStrc * pCache) {
     GlSubtileCacheNodeStrc* pEvictNode;
     uint32_t nActiveCount;
     if (pCache && pCacheData->nUsedCount) {

@@ -122,13 +122,13 @@ void __stdcall nullsub(D2UnitStrc * dwUnused1, uint32_t dwUnused2, uint32_t dwUn
 // @wasnamed nullsub - one name on two different functions.
 // @evidence RET 0x10 (c2 10 00) - four dword arguments.
 // Registers: pGame (ECX) and pUnit (EDX) are passed by the callers but not read.
-void __fastcall SUNITDMG_DebugTraceAvoidRoll(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * dwParam1, uint32_t dwParam2, uint32_t dwParam3, char * dwParam4) {
+void __fastcall SUNITDMG_DebugTraceAvoidRoll(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * dwParam1, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4) {
 
 }
 
 // @wasnamed nullsub - one name on two different functions.
 // @evidence RET 0x1C (c2 1c 00) - seven dword arguments.
-void __stdcall nullsub_7Arg(D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4, uint32_t dwParam5, char * dwParam6, uint32_t dwParam7) {
+void __stdcall nullsub_7Arg(D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4, uint32_t dwParam5, uint32_t dwParam6, uint32_t dwParam7) {
 
 }
 
@@ -138,7 +138,7 @@ void __stdcall nullsub_7Arg(D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwPa
 // D2Common::Unit::SUnitDmg::DAMAGE_ApplyElementalDamageWithResist, both __fastcall shaped
 // (ECX and EDX loaded, three dwords pushed). The _B suffix is a disambiguator, not a claim
 // about behaviour.
-void __stdcall nullsub_B(D2UnitStrc * pUnit, uint32_t dwParam2, char * dwParam3) {
+void __stdcall nullsub_B(D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3) {
 
 }
 

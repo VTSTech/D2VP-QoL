@@ -44,6 +44,15 @@ void __fastcall D2WINTIMER_Start(int * pTimer) {
     pTimer[0xc] = 0;
 }
 
+void __fastcall D2WINEDITBOX_Destroy(int * pEditBox) {
+    if (*pEditBox != 8) {
+      Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x45);
+      exit(-1);
+    }
+
+    pEditBox[8] = (int)D2WINTIMER_GetElapsed;
+}
+
 BOOL __fastcall DrawEx(::D2WinTimer * pTimer) {
     DWORD dwTickCount;
     D2ControlMsg sMsg;

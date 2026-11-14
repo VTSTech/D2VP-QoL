@@ -1324,7 +1324,7 @@ int __fastcall PLRSAVE_LoadCorpseFromBuffer(::SGAMEDATA * pGame, D2UnitStrc * pU
     int32_t nOwnerGUID;
     int32_t nPosY;
     ::SGAMEDATA* pGame_00;
-    uint32_t pReserved;
+    void* pReserved;
     D2RoomStrc* pRoom;
     D2UnitStrc* pCorpseUnit = *ppCorpseList;
     D2ClientStrc* pClient = UNIT::SUnit::SUNIT_GetClient(pUnit, ".\\PLAYER\\PlrSave2.cpp", 0x733);

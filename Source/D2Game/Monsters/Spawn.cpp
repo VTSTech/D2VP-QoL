@@ -254,7 +254,7 @@ static D2UnitStrc * __stdcall SPAWN_SpawnMonsterWithMinions(::SGAMEDATA * pGame,
           nObjClassId = 0;
           bActive = true;
           pGameCopy = pGame;
-          UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x232, D2Common::Units::GetXPosFromDynamicPathUnit(pUnit), D2Common::Units::GetYPosFromDynamicPathUnit(pUnit), pGameCopy, pRoom, bActive, nObjClassId, nMinionCount);
+          UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x232, D2Common::Units::GetXPosFromDynamicPathUnit(pUnit), D2Common::Units::GetYPosFromDynamicPathUnit(pUnit), pGameCopy, pRoom, bActive, nObjClassId, nullptr);
         }
       }
 
@@ -477,14 +477,14 @@ static D2UnitStrc * __stdcall SPAWN_SpawnMonsterWithCollisionObj(::SGAMEDATA * p
     }
     if (nClassId < D2Common::ITEMS::Items::sgptDataTable->nTxtMonStatsSize && nClassId == 0x1b0) {
       _bRescueQuestDone = 0;
-      UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x23b, D2Common::Units::GetXPosFromDynamicPathUnit(pMonster), D2Common::Units::GetYPosFromDynamicPathUnit(pMonster), pGame, pRoom, true, 0, _bRescueQuestDone);
+      UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x23b, D2Common::Units::GetXPosFromDynamicPathUnit(pMonster), D2Common::Units::GetYPosFromDynamicPathUnit(pMonster), pGame, pRoom, true, 0, nullptr);
       return pMonster;
     }
 
     int32_t nValidatedClassId = D2Common::DATATBLS::MonsterTbls::ValidateClassId(nClassId);
     if (nValidatedClassId == 0x1b1) {
       _bRescueQuestDone = 0;
-      UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x23c, D2Common::Units::GetXPosFromDynamicPathUnit(pMonster), D2Common::Units::GetYPosFromDynamicPathUnit(pMonster), pGame, pRoom, true, 0, _bRescueQuestDone);
+      UNIT::SUnit::CreateUnit(UNIT_OBJECT, 0x23c, D2Common::Units::GetXPosFromDynamicPathUnit(pMonster), D2Common::Units::GetYPosFromDynamicPathUnit(pMonster), pGame, pRoom, true, 0, nullptr);
     }
 
     return pMonster;

@@ -357,7 +357,7 @@ void __fastcall SKILLNEC_OnCurseExpire(D2UnitStrc * pUnit, eD2States eState, int
       Monster::AI::AttachCorrectAiFunctionToMonster(UNIT::SUnit::GetGamePointer(pUnit), pUnit, pMonsterAiGeneral, 0);
     }
 
-    SkillsServer::DefaultExpireFunction(pUnit, eState, dwParam);
+    SkillsServer::DefaultExpireFunction(pUnit, eState, (D2StatListExStrc*)dwParam);
 }
 
 int __fastcall Unreferenced_005c33d0(int param_1) {

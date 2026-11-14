@@ -872,7 +872,7 @@ void __fastcall DRAW_UI(D2GameViewStrc * pGameView) {
 void __fastcall CLIENT_AdjustMemoryBudget(D2PoolManagerStrc * pMemory, int32_t bInitSpriteCache) {
     float fPhysMemMB;
     uint32_t pStormGlobal;
-    pStormGlobal = Fog::Source::SFile::SFILE_GetGlobalPointer();
+    pStormGlobal = (uint32_t)Fog::Source::SFile::SFILE_GetGlobalPointer(); // build-2: Fog.h hands back D2SystemInfoStrc*; this TU does int arithmetic on the handle, as origin/main did
     if (!pStormGlobal) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x30);
       exit(-1);
@@ -901,7 +901,7 @@ void __fastcall CLIENT_AdjustMemoryBudget(D2PoolManagerStrc * pMemory, int32_t b
     nRemainingBytes = pStormGlobal - dwPhysMemBytes;
     if (bInitSpriteCache) {
       nRemainingBytes += -0x600000;
-      D2CMP::SRC::SpriteCache::GFX_InitLRUCache(pMemory, (D2PoolManagerStrc*)0x600000);
+      D2CMP::SRC::SpriteCache::GFX_InitLRUCache(pMemory, (uint32_t)0x600000);
     }
 
     uint32_t dwCelCacheSize;
@@ -918,7 +918,7 @@ void __fastcall CLIENT_AdjustMemoryBudget(D2PoolManagerStrc * pMemory, int32_t b
 
     dwCelCacheSize = 0x1800000;
     init_caches:
-    D2CMP::SRC::SpriteCache::GFX_InitCelDataCache((uint32_t)pMemory, dwCelCacheSize, 0x7d000, pStormGlobal);
+    D2CMP::SRC::SpriteCache::GFX_InitCelDataCache(pMemory, dwCelCacheSize, 0x7d000, pStormGlobal);
     Engine::Gfx::GFX_InitCofSystem(0x200000);
 }
 

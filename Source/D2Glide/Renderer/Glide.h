@@ -239,4 +239,9 @@ void __fastcall PlayerSmacker(struct D2SmackerContextStrc * pContext);
 #endif // D2_MODULE_D2Glide
 // 14 internal functions (defined in .cpp)
 
+// VP-BEGIN [shadow-diag]: the sprite-cache buffer went TU-private in upstream's
+// 962f88d5 per-TU restructure; ShadowDiag reads it at dump time through this view.
+void * VP_GetSpriteBuffer();
+// VP-END [shadow-diag]
+
 } // namespace D2Glide::Renderer::Glide

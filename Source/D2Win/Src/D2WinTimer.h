@@ -26,6 +26,7 @@ namespace D2Win::Src::D2WinTimer {
 
 // Function declarations
 void __fastcall D2WINTIMER_Start(int * pTimer);
+void __fastcall D2WINEDITBOX_Destroy(int * pEditBox);
 BOOL __fastcall DrawEx(::D2WinTimer * pTimer);
 BOOL __stdcall Key(struct D2ControlMsg * pTimer);
 // @sourcefile .\Src\D2WinTimer.cpp

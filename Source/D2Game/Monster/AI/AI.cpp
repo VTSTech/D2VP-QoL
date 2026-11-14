@@ -9320,7 +9320,7 @@ bool __fastcall AI_Monster_ExecuteMapAiBehavior(::SGAMEDATA * pGame, D2UnitStrc 
       return false;
     }
     if (gaMapAiDirectionHandlers[nMapAiDirection]) {
-      bool bResult = (*gaMapAiDirectionHandlers[nMapAiDirection])(pGame, pUnit, pAiParam, pMapAi->pPosition + nMapAiHandlerResult);
+      bool bResult = (*gaMapAiDirectionHandlers[nMapAiDirection])(pGame, pUnit, pAiParam, (uint32_t)(pMapAi->pPosition + nMapAiHandlerResult));
       return bResult;
     }
 

@@ -592,7 +592,7 @@ void __fastcall BlockHaremRoomForPlayerAccess(D2QuestDataStrc * pQuestData, D2Un
     }
 
     pA2Q4Specific->nPortalPlacedState = 0;
-    uint32_t pNullArg = 0;
+    void* pNullArg = 0;
     int32_t nInitialMode = 0;
     pA2Q4Specific->nHaremBlockerX = ptPlayerPos.x - 2;
     uint8_t bForcedSpawn = 1;

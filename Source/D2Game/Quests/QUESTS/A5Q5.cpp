@@ -816,7 +816,7 @@ void __fastcall Q35_Callback08_MonsterKilled(D2QuestDataStrc * pQuestData, D2Que
     UNIT::SUnit::IteratePlayerOrMonsterUnits(pQuestArgs->pGame, 0, pQuestArgs->pTarget, (::fpExecuteOnUnitFunction)Q35_OnAncientsDefeated);
     UNIT::SUnit::IteratePlayerOrMonsterUnits(pQuestArgs->pGame, 0, pQuestArgs->pTarget, (::fpExecuteOnUnitFunction)Q35_SetCannotComplete);
     QUEST_SetStateFlag(pQuestData, 5, "d:\\diablo2\\Diablo2\\Source\\D2Game/Quests/a5q5.cpp", 0x34a);
-    uint32_t pCreateParam = 0;
+    void* pCreateParam = 0;
     int32_t nPosYSpawn = 0;
     bool bActiveUnit = true;
     D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pQuestArgs->pTarget);

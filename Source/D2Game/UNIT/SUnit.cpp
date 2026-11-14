@@ -1991,7 +1991,7 @@ D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int3
 
     pAllocUnit->eUnitFlags |= UNITFLAG_INITSEEDSET;
     pAllocUnit->nNodeTableIndex = 0xb;
-    if (eUnitType == UNIT_MONSTER && bPlaceInRoom & 2 || (pMonsterData = UNITS_IncrementUnitGUIDCounter(pGame, eUnitType) , eUnitType <= UNIT_WARP)) {
+    if (eUnitType == UNIT_MONSTER && bPlaceInRoom & 2 || (pMonsterData = (void*)UNITS_IncrementUnitGUIDCounter(pGame, eUnitType) , eUnitType <= UNIT_WARP)) {
       D2UnitDataObjectStrc* pObjectData;
       switch (eUnitType) {
         case UNIT_PLAYER:
@@ -1999,7 +1999,7 @@ D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int3
                          UNIT_FillFunctions[eUnitType]). Calls STRUCT_FillPlayerUnit then, if the
                          place-in-room flag is set, calls UNITS_PlaceUnitInRoom and applies
                          COLLIDE_CORPSE collision for dead/dying players or monsters whose MonStats2
-                         deadCol flag is clear. */ PLAYER::Player::STRUCT_FillPlayerUnit(pGame, pAllocUnit, pMonsterData);
+                         deadCol flag is clear. */ PLAYER::Player::STRUCT_FillPlayerUnit(pGame, pAllocUnit, (int32_t)pMonsterData);
         if (nInitialMode != 0x11) {
           GAME::Targets::TARGETS_AddTargetToTrackingList(pGame, pAllocUnit, nullptr);
         }
@@ -2011,7 +2011,7 @@ D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int3
                          calls STRUCT_FillDataMonster, then conditionally places the unit in the room
                          and assigns COLLIDE_CORPSE for dead monsters whose MonStats2 deadCol flag is
                          clear. */ pAllocUnit->eAnimMode.ePlayerMode = nInitialMode;
-        D2Game::Monster::STRUCT_FillDataMonster(pGame, pRoom, pAllocUnit, pMonsterData);
+        D2Game::Monster::STRUCT_FillDataMonster(pGame, pRoom, pAllocUnit, (int32_t)pMonsterData);
         break;
         case UNIT_OBJECT:
           /* Jump-table branch of CreateUnit for UNIT_OBJECT: allocates the 0x38-byte
@@ -2025,7 +2025,7 @@ D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int3
         pAllocUnit->pUnitData.pUnitDataObject->pTxtObjectsLine = pDVar1;
         pAllocUnit->eAnimMode.eObjectMode = nInitialMode;
         D2Common::Units::AllocStaticPath(pAllocUnit);
-        Objects::OBJECT_InitializeObject(pGame, pAllocUnit, pMonsterData, pRoom, nPosX, nPosY);
+        Objects::OBJECT_InitializeObject(pGame, pAllocUnit, (int32_t)pMonsterData, pRoom, nPosX, nPosY);
         break;
         case UNIT_ITEM:
           /* Jump-table branch of CreateUnit for UNIT_ITEM (dispatched via
@@ -2034,19 +2034,19 @@ D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int3
                          applies corpse collision (shared dead-unit logic with the other Fill*
                          variants). */ pAllocUnit->eAnimMode.ePlayerMode = nInitialMode;
         D2Common::Units::AllocStaticPath(pAllocUnit);
-        ITEMS::Items::Drop::ITEM_InitializeDroppedItem(pAllocUnit, pGame, pMonsterData, pRoom);
+        ITEMS::Items::Drop::ITEM_InitializeDroppedItem(pAllocUnit, pGame, (int32_t)pMonsterData, (uint32_t)pRoom);
         break;
         case UNIT_MISSILE:
           /* Jump-table branch of CreateUnit for UNIT_MISSILE (dispatched via
                          UNIT_FillFunctions[eUnitType]). */ pAllocUnit->eAnimMode.ePlayerMode = nInitialMode;
-        MISSILES::Missiles::STRUCT_FillDataMissile(pGame, pAllocUnit, pMonsterData);
+        MISSILES::Missiles::STRUCT_FillDataMissile(pGame, pAllocUnit, (int32_t)pMonsterData);
         break;
         case UNIT_WARP:
           /* Jump-table branch of CreateUnit for UNIT_WARP (dispatched via
                          UNIT_FillFunctions[eUnitType]). Falls through into the shared tail at
                          UNITS_RestoreUnitInRoom. */ D2Common::Units::AllocStaticPath(pAllocUnit);
         pAllocUnit->eUnitFlags |= UNITFLAG_TARGETABLE;
-        pAllocUnit->nUnitGUID = pMonsterData;
+        pAllocUnit->nUnitGUID = (int)pMonsterData;
       }
     }
     /* Shared tail of CreateUnit: every UNIT_FillFunctions jump-table branch

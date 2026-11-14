@@ -552,11 +552,134 @@ int/pointer conversion errors (-fpermissive), 4 conflicting declarations,
 2 missing-member, 2 missing-header.
 
 ### Pending (Round 4)
-- [ ] Glide.cpp: align `gpnLightmapRowPointers` / `gpPerspectiveLookupTable`
+- [x] Glide.cpp: align `gpnLightmapRowPointers` / `gpPerspectiveLookupTable`
       declarations with the Glide namespace spellings; fix floor-cache pointer
       conversions against origin/main
-- [ ] SUnit.cpp / SUnitDmg.cpp / Spawn.cpp: int→void* cast sites
-- [ ] MainMenus.cpp: resolve missing McpConnect.h (reconstruct header or
-      re-home the include)
-- [ ] ShadowDiag.cpp: match signatures to reconstructed ShadowDiag.h
+- [x] SUnit.cpp / SUnitDmg.cpp / Spawn.cpp: int→void* cast sites
+- [x] MainMenus.cpp: resolve missing McpConnect.h (restored from origin/main)
+- [x] ShadowDiag.cpp: match signatures to reconstructed ShadowDiag.h
 - [ ] Link all 25 modules; run smoke tests (SMOKE-CHECKLIST.md)
+
+---
+
+## Build Round 4 (compile-error cleanup, 2026-11-14)
+
+Pattern of the whole round unchanged: **origin/main (the fork) compiles; the
+ported jaenster-main tree drifted** where fork-authored declarations were
+re-spelled to HEAD's typed Ghidra style without their fork call sites, or fork
+files referenced headers never committed. Every fix below was made against
+`origin/main` as reference (the fork is the feature source; HEAD is the header
+authority — fork call sites were adapted to HEAD's typed signatures where the
+two disagree).
+
+### Fix 3: Glide module (was 54 errors, was stale log noise)
+
+Important process note: the `build.log`/`errs.txt` numbers for Glide.cpp
+interleaved two concurrent make runs — after the Round-2/3 edits landed, Glide
+compiled down to 5 real errors. Real fixes:
+
+- `Source/D2Glide/Renderer/Glide.data.h`: restored origin/main's extern
+  spellings `int * gpnLightmapRowPointers;` and
+  `void * gpPerspectiveLookupTable;` (the port re-typed them `uint8_t**` /
+  `int32_t*`, conflicting with the TU definitions at Glide.cpp:722/733 and
+  breaking the `D2_ALLOC_AT` assignment and the lightmap-row int-handle
+  arithmetic).
+- `Source/D2Glide/glSubtileCache.{h,cpp}`: `GLSUBTILE_Destroy` 2nd param
+  `int pCache` → `struct GlSubtileCacheStrc * pCache` (origin/main spelling;
+  the body only truth-tests it, callers pass `nullptr` /
+  `(GlSubtileCacheStrc*)0x1`).
+- `Source/D2Glide/Renderer/Glide.h`: restored the `VP_GetShadowDiag`-era
+  `VP-BEGIN/VP-END [shadow-diag]` block declaring `void * VP_GetSpriteBuffer();`
+  in `D2Glide::Renderer::Glide` (fork sync dropped the decl; definition is at
+  Glide.cpp:4807, caller ShadowDiag.cpp:137).
+- Dead-end recorded for honesty: an early hypothesis fixed
+  `GLFLOOR_Destroy` call sites to origin/main's `&cache.dwEntrySize` spelling,
+  but the ported tree's glFloorCache.{h,cpp} definition is HEAD's struct-typed
+  `GlFloorCacheStrc*` — the struct-base call sites were already correct; no
+  change to those call sites is kept.
+
+### Fix 4: D2Game unit/quest cast sites (SUnit, Spawn, SUnitDmg, quests, AI, Create)
+
+All matching origin/main's exact spellings:
+
+- `Source/D2Game/UNIT/SUnit.cpp` `CreateUnit`: 7 explicit casts restored —
+  `(void*)UNITS_IncrementUnitGUIDCounter(...)`, `(int32_t)pMonsterData` into
+  STRUCT_FillPlayerUnit / STRUCT_FillDataMonster / OBJECT_InitializeObject /
+  ITEM_InitializeDroppedItem / STRUCT_FillDataMissile, `(uint32_t)pRoom` for
+  ITEM_InitializeDroppedItem, `(int)pMonsterData` for the UNIT_WARP nUnitGUID.
+- `Source/D2Game/ITEMS/Items/Drop.h`: `ITEM_InitializeDroppedItem` last param
+  `struct D2RoomStrc * dwUnused` → `uint32_t dwUnused` (matches the Drop.cpp
+  definition and origin/main).
+- `Source/D2Game/Monsters/Spawn.cpp`: 3 `CreateUnit(..., pMonsterData)` calls
+  (0x232/0x23b/0x23c collision objects) now pass `nullptr` — the fork locals
+  (`nMinionCount` / `_bRescueQuestDone`) were just zeroed immediately before,
+  decompiler artifacts; origin/main passes `pNullArg`/`0`.
+- `Source/D2Game/PLAYER/PlayerSave2.cpp`: `pReserved` declared
+  `uint32_t` → `void*` (origin/main; passed as CreateUnit's pMonsterData).
+- `Source/D2Game/Quests/QUESTS/A5Q5.cpp`: `pCreateParam` `uint32_t` → `void*`
+  (same CreateUnit pattern).
+- `Source/D2Game/Quests/QUESTS/A2Q4.cpp`: `pNullArg` `uint32_t` → `void*`.
+- `Source/D2Game/Monster/AI/AI.cpp`: map-AI handler dispatch cast
+  `(uint32_t)(pMapAi->pPosition + nMapAiHandlerResult)` (handler typedef takes
+  uint32_t; origin/main casts).
+- `Source/D2Game/Monster/Create.cpp`: `CreateUnit(..., (void*)pMonsterSpawnData->nGUID)`.
+- `Source/D2Game/SKILLS/SkillNec.cpp:360`: `DefaultExpireFunction(..., (D2StatListExStrc*)dwParam)`
+  — HEAD's SkillsServer.h/StatsEx.h type the expire-callback param as the stat
+  list (origin/main used the int spelling); the parameter is unused in the body,
+  so the fork call site casts. The same file already casts
+  `SKILLNEC_OnCurseExpire` to `PFN_StatExpireCallback` at registration.
+- `Source/D2Game/D2GameRoot.{h,cpp}`: `SUNITDMG_DebugTraceAvoidRoll` (char *
+  dwParam4 → uint32_t dwParam4), `nullsub_7Arg` (dwParam6), `nullsub_B`
+  (dwParam3) — header + definition aligned to origin/main's uint32_t stub
+  spellings; the SUnitDmg.cpp call sites were already origin/main-identical.
+- `Source/D2Game/UNIT/SUnitDmg.cpp`: `SKILLEMONST_ApplyReflectedDamage(...,
+  (uintptr_t)&sDamage)` → `(..., &sDamage)` — the ported tree's SkillEMonst.h
+  keeps origin/main's typed `D2DamageStrc * pCombatEntry` and the definition
+  dereferences `pCombatEntry->dwPhysDamage`, so the typed pointer is passed
+  directly instead of the fork's int round-trip.
+
+### Fix 5: D2Launch/MainMenus.cpp (was 91 errors) + D2Win/D2MCPClient surface
+
+MainMenus.cpp is otherwise byte-identical to origin/main; all fixes adapt the
+fork call sites to HEAD's typed headers:
+
+- FORMS_AnimFrameStrc initializers: `(void*)gaDC6...` → `(DC6**)` ×63
+  (HEAD's D2Win.h/D2WinAnimImage.h define ppBaseImage/ppOverlayImage as
+  `struct DC6 **`; the struct's own comment says readers cast explicitly, and
+  this tree's D2WinAnimImage.cpp readers assign straight to `DC6**`, so the
+  field type stays and the fork's void* casts adapt).
+- `#include "Source/D2Launch/D2LaunchRoot.h"` added — declares
+  `UIMENU_ToggleHardcoreMode`, `UIMENU_DisconnectAndReturnToMainMenu`,
+  `MAINMENU_ConnectViaTCPIPAndSelectChar`, `MAINMENU_OnPressSkipEmailAddress`,
+  `thunk_UIMENU_MainMenuAgain` in namespace D2Launch (6 "not a member"
+  errors); `#include "Source/D2Multi/ChatDlg.h"` added — full (packed)
+  `D2WinButton` and `FORMS_PredefinedFormStrc` definitions (9 incomplete-type
+  errors incl. the 333-entry `gaPredefinedForms` array).
+- `Source/D2Win/Src/D2WinTimer.{h,cpp}`: restored `D2WINEDITBOX_Destroy`
+  (declaration + definition from origin/main; the port dropped it but kept the
+  three MainMenus callers).
+- COMPRESS_DestroyEncoderContext: `(D2CompressEncoderStrc*)in_ECX` ×2 (HEAD's
+  SComp.h types the param; fork passes uint32_t*).
+- D2WINIMAGE_StopAnimation: `(D2WinImage*)gpCtlPatchProgressAnimImage` ×2.
+- MCP packet senders: `NET_MCP_CLIENT_Send_0x0A_CharDelete(pCharSel->szCharname, 0)`
+  and `NET_MCP_CLIENT_Send_0x18_CharUpgrade(pCharSel->szCharname)` — HEAD's
+  D2MCPClient takes the name string; the fork's variant took the CharSel struct
+  and dereferenced the same member.
+- `Source/D2Launch/MainMenus.h`: three drifted declarations restored to
+  origin/main spellings (`void __thiscall CRYPTO_ByteSwap32Array(...)`,
+  `int Unreferenced_0042f370();`, `int Unreferenced_00431020();`).
+
+### Fix 6: restored never-synced fork header
+
+- `Source/D2Multi/McpConnect.h`: restored from origin/main (18 lines,
+  `D2Multi::McpConnect::GetMCPThread()` gate-guarded) — the port commit shipped
+  MainMenus.cpp's include of it but never committed the file (same pattern as
+  ShadowDiag.h in Round 2). `Source/D2MCPClient/McpConnect.h` was present
+  already.
+
+### Build status
+
+See the live status note appended below (build12.log) — D2Game is the last
+module with compile errors; D2Multi/D2Win/D2DDraw and 20 other targets already
+build clean in this round.
+

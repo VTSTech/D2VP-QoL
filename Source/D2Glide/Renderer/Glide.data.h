@@ -100,7 +100,7 @@ extern uint32_t gaGlideDebugFontTexStartAddrs[96];
 extern void * lpBuffer_008802c8[96];
 extern void * gpGlideDebugFontTexture;
 extern uint32_t gnGlideDebugFontTMU;
-extern uint8_t * * gpnLightmapRowPointers;
+extern int * gpnLightmapRowPointers;
 // @data gapGlideGroundStripVertexPtrs
 // @wasnamed gapGlideTileVertexPtrs
 // @evidence Built at runtime by 0050d646 and consumed by the loop at 0050daf8,
@@ -114,7 +114,7 @@ extern uint8_t * gpGlideLightingTable;
 extern int gnGlidePerspectiveOriginX;
 extern int32_t gnGlidePerspectiveScale;
 extern int gnGlidePerspectiveOriginY;
-extern int32_t * gpPerspectiveLookupTable;
+extern void * gpPerspectiveLookupTable;
 extern uint8_t (*gpGlideSmackerTexBuf0)[32768];
 extern uint8_t (*gpGlideSmackerTexBuf1)[32768];
 extern uint32_t gnGlideSmackTex1StartAddr;

@@ -47,17 +47,17 @@ void __stdcall nullsub(struct D2UnitStrc * dwUnused1, uint32_t dwUnused2, uint32
 // @wasnamed nullsub - one name on two different functions.
 // @evidence RET 0x10 (c2 10 00) - four dword arguments.
 // Registers: pGame (ECX) and pUnit (EDX) are passed by the callers but not read.
-void __fastcall SUNITDMG_DebugTraceAvoidRoll(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * dwParam1, uint32_t dwParam2, uint32_t dwParam3, char * dwParam4);
+void __fastcall SUNITDMG_DebugTraceAvoidRoll(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * dwParam1, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4);
 // @wasnamed nullsub - one name on two different functions.
 // @evidence RET 0x1C (c2 1c 00) - seven dword arguments.
-void __stdcall nullsub_7Arg(struct D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4, uint32_t dwParam5, char * dwParam6, uint32_t dwParam7);
+void __stdcall nullsub_7Arg(struct D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3, uint32_t dwParam4, uint32_t dwParam5, uint32_t dwParam6, uint32_t dwParam7);
 // One of four empty stubs at 005347b0/c0/d0/e0. 005347b0 and this one are both RET 0xC
 // (bytes c2 0c 00). The two 0xC stubs are byte-identical empty hooks with no recoverable semantics -
 // 005347b0 is called from D2Common::Unit::SUnitDmg::DAMAGE_RollAttackHit, this one from
 // D2Common::Unit::SUnitDmg::DAMAGE_ApplyElementalDamageWithResist, both __fastcall shaped
 // (ECX and EDX loaded, three dwords pushed). The _B suffix is a disambiguator, not a claim
 // about behaviour.
-void __stdcall nullsub_B(struct D2UnitStrc * pUnit, uint32_t dwParam2, char * dwParam3);
+void __stdcall nullsub_B(struct D2UnitStrc * pUnit, uint32_t dwParam2, uint32_t dwParam3);
 int __stdcall QSERVER_CountClientsWithStatusFlag0x20();
 void __fastcall GAME_SetNoSaveFlag_Unref_00544090(BOOL bResult);
 // Clears the global gbQuestReconnectMode flag (sets to 0), disabling quest-reconnect mode. Called during game teardown or after reconnect handling is complete.

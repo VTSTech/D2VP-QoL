@@ -2721,7 +2721,7 @@ void __fastcall DAMAGE_ProcessCombatQueueEntry(::SGAMEDATA * pGame, D2UnitStrc *
           return;
         }
 
-        SKILLS::SkillEMonst::SKILLEMONST_ApplyReflectedDamage(pGameLocal, pUnit, pVictim, (uintptr_t)&sDamage);
+        SKILLS::SkillEMonst::SKILLEMONST_ApplyReflectedDamage(pGameLocal, pUnit, pVictim, &sDamage);
       }
 
       SERVER_GetHitCalculation(pGameLocal, pUnit, pVictim, &sDamage);

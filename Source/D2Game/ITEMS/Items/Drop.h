@@ -108,7 +108,7 @@ namespace D2Game::ITEMS::Items::Drop {
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Game)
 int Unreferenced_00555cc0();
 void __fastcall ITEMDROP_AddToDropList(int * pnDropCount, uint32_t * pDropListArr, uint32_t dwItemTxtEntry, uint32_t dwWeightOffset);
-void __fastcall ITEM_InitializeDroppedItem(struct D2UnitStrc * pUnit, ::SGAMEDATA * pGame, int32_t dwUnitGUID, struct D2RoomStrc * dwUnused);
+void __fastcall ITEM_InitializeDroppedItem(struct D2UnitStrc * pUnit, ::SGAMEDATA * pGame, int32_t dwUnitGUID, uint32_t dwUnused);
 // Find collision-free coords near drop point. Offset (+2,+3), check if better room exists, then scan for free space using SPAWN_ITEM_COLLISION + COLLISION_ITEMS flags. Returns room or NULL if no space found.
 struct D2RoomStrc * __fastcall FindBestSpotToSpawnItem(struct D2RoomStrc * pRoom, POINT * pPoint, POINT * pNewPosition, uint32_t nCollisionMask, uint8_t nMaxSearchRadius);
 // Selects a random exceptional-tier item class index for a drop roll. Iterates the exceptional slice of the Items txt table (between the exceptional and elite size offsets), filters candidates via MONSTER_ShouldSpawnSuperUnique against level/TC constraints, respects the expansion flag, then picks one uniformly at random using the D2SeedStrc PRNG (power-of-two fast path or modulo). Returns the Items txt index of the chosen class, or -1 if none qualify.

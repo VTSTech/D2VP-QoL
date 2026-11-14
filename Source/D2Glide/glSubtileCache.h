@@ -63,7 +63,7 @@ void __fastcall GLSUBTILE_PromoteNodeToMRU(struct GlSubtileCacheStrc * pCache, i
 void __fastcall GLSUBTILE_InvalidateByIndex(struct GlSubtileCacheStrc * pCache, int nNodeIndex);
 // Destroys subtile cache by clearing all entries and freeing node array memory.
 // @sourcefile .\Src\glSubtileCache.cpp
-void __fastcall GLSUBTILE_Destroy(struct GlSubtileCacheStrc * pCacheData, int pCache);
+void __fastcall GLSUBTILE_Destroy(struct GlSubtileCacheStrc * pCacheData, struct GlSubtileCacheStrc * pCache);
 // Ensures cache has free capacity by allocating a node. If cache is full, evicts LRU entry first.
 int __fastcall GLSUBTILE_EnsureCapacity(struct GlSubtileCacheStrc * pCache);
 #endif // D2_MODULE_D2Glide
