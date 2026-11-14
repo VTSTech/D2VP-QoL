@@ -382,6 +382,14 @@ void __fastcall WriteCrashDump(uint32_t dwHeader0, uint32_t dwHeader1, uint32_t 
 void HandleExceptionWithStackDump(uint32_t dwUnused, struct _EXCEPTION_POINTERS * pExceptionPointers);
 BOOL __stdcall DEBUG_LoadStackCrawlDbgHelp();
 void __fastcall TriggerManualStackDump(char * szCategory);
+// The /GS __EH handlers below share the SEH disposition signature. FogRoot.h
+// typedefs _EXCEPTION_DISPOSITION as int, but this header is included ahead of
+// it in Debug.cpp; self-typedef like D2CMP's CelCmp.h does (identical typedefs
+// are legal in C++).
+#ifndef D2_DEFINED_EXCEPTION_DISPOSITION
+#define D2_DEFINED_EXCEPTION_DISPOSITION
+typedef int _EXCEPTION_DISPOSITION;
+#endif
 _EXCEPTION_DISPOSITION __GSHandlerCheck_EH_6ca575(struct EHExceptionRecord * pExceptionRecord, struct EHRegistrationNode * pRegistrationNode, struct _CONTEXT * pContext, void * pDispatcherContext);
 _EXCEPTION_DISPOSITION __GSHandlerCheck_EH_6ca595(struct EHExceptionRecord * pExceptionRecord, struct EHRegistrationNode * pRegistrationNode, struct _CONTEXT * pContext, void * pDispatcherContext);
 _EXCEPTION_DISPOSITION __GSHandlerCheck_EH_6ca5b5(struct EHExceptionRecord * pExceptionRecord, struct EHRegistrationNode * pRegistrationNode, struct _CONTEXT * pContext, void * pDispatcherContext);

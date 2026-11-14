@@ -80,6 +80,11 @@ void __stdcall SOUND_ShutdownDirectSound();
 void __fastcall SOUND_Initialize(uint32_t dwLanguageCode, BOOL bSoundInBackground);
 DWORD __stdcall SOUND_GetEAXEnabledFlag();
 } // namespace D2Sound::Sound
+// VP: vanilla-plus d2boot bridge - Game's boot verdict mark reads the fork's
+// EAX option verdict. VPSOUND_GetEAXEnabledFlag (VanillaPlusSound.cpp) is the
+// public wrapper; declared here because this is the module's cross-module
+// surface (the fork's private VanillaPlusSound.h is module-internal).
+DWORD __stdcall VPSOUND_GetEAXEnabledFlag();
 namespace D2Sound::Src::D2SoundFast {
 BOOL __stdcall SOUND_IsAmbientStreaming();
 void __fastcall SOUND_SetMusicEnabled(int32_t nEnabled);

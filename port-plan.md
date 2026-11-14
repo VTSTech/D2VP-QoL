@@ -416,3 +416,46 @@ git push upstream upstream-jaenster-main
 - [ ] Build all translation units successfully
 - [ ] Link executable successfully
 - [ ] Run smoke tests (SMOKE-CHECKLIST.md)
+
+---
+
+## Build Round 2 (sandbox rebuild, 2026-11-14)
+
+Environment: no root, Debian trixie host. User-local cross toolchain built by
+extracting the distro `g++-mingw-w64-i686-posix` (GCC 14) .deb closure into
+`~/mingw-local/` (scripts/setup-mingw.sh); cmake 4.4.5 via pip. Build wrapper:
+`scripts/d2env.sh` (sets PATH/LD_LIBRARY_PATH). Configure passed: all 25 modules
+match project.json.
+
+### Fix 1: module gates — strict Game module failed (BUILD BLOCKER #1)
+`cmake/module-gates.cmake` (custom target) FATAL_ERROR: Game is `strict` and the
+fork sync of `Source/Game/Main.cpp` had replaced upstream's public-header
+includes with internal module headers.
+
+Evidence (gates report, Game rows): D2CMP internal, D2Common internal,
+D2Game **violation** (Game may not see D2Game at all), D2Lang internal,
+D2MCPClient internal, D2Sound internal, D2Win internal, D2gfx internal, Fog
+internal, Storm internal — 10 pairs, all charged to Main.cpp. Baseline
+(810e5018 upstream) has Game at 0; the fork sync introduced every charge.
+
+Fix (keep body, restore gate-clean surface):
+- `Source/Game/Main.cpp`: include block rewritten — public headers only for
+  modules Game SEES (D2Common.h, D2Lang.h, D2MCPClient.h, D2Sound.h, D2Win.h,
+  D2gfx.public.h, Fog.h, Storm.h); D2Client/D2Launch/D2Multi headers kept (Game
+  LOADS them, any header allowed); VP/D2-boot includes kept
+  (VanillaPlusCore.h, d2_boot.h, d2_hangwatch.h). Every internal include the
+  body actually uses (IGNORELIST_Shutdown, MPQ_LoadAllMediaMpqFiles,
+  SSTR/SReg/SMem, AsyncData/D2Net/ErrorManager, D2WinArchive/D2WinMain) is
+  declared in that module's public header; include-only internals dropped
+  (D2CMP/*, D2Game/GAME/Event.h, zlib/deflate.h, D2WinFont/D2Comp/D2WinAnimImage,
+  Fog strc headers...).
+- `Source/D2Sound/D2Sound.h`: `VPSOUND_GetEAXEnabledFlag()` declared in the
+  module's public interface (global scope, matching VanillaPlusSound.cpp's
+  definition) so Game's d2boot EAX verdict mark no longer needs the
+  module-private VanillaPlusSound.h.
+- `Source/D2Client/UNIT/Object.h` include dropped from Main.cpp: it pulls
+  `Source/D2Game/D2Game.h`, which Game may not include under any circumstances.
+
+Verified: gates report now has Game at 0 ("at 0: crashy Game D2Lang D2Net");
+Main.cpp compiles standalone with the Redivivus.exe target flags (-fms-extensions
+-fwrapv, forced d2_platform.h/d2_hand.h).
