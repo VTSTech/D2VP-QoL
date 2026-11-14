@@ -206,7 +206,7 @@ void __stdcall AUTOMAP_DrawLevelName();
 void __stdcall AUTOMAP_DrawVersion();
 void __stdcall AUTOMAP_DrawServerIP();
 void __stdcall AUTOMAP_DrawDifficulty();
-void Unreferenced_0045a280();
+int Unreferenced_0045a280();
 void __stdcall AUTOMAP_LoadDC6Sprites();
 // AUTOMAP_Init - Initializes the automap subsystem.
 // Loads DC6 sprite assets for all 4 act map tilesets

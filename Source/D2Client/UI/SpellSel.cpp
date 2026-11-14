@@ -13,17 +13,150 @@
 #include "Source/D2Client/UI/Panel.h"
 #include "Source/D2Client/UI/SkillDesc.h"
 #include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/PlrSkills.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2SkillStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
+#include "Source/D2Common/Txt/Skills.inline.h"
 #include "Source/D2Common/Units.inline.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Launch/MainMenus.h"
+// VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
+#include "Source/D2Client/UI/VanillaPlusCore.h"
+// VP-END [resolution site-5]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -244,7 +377,7 @@ void __stdcall SPELLSEL_Cleanup() {
       }
 
       pClassIconEntry++;
-    } while ((intptr_t)pClassIconEntry < (intptr_t)((char*)&pSpellsClassSkillicon + sizeof(pSpellsClassSkillicon)));
+    } while ((int)pClassIconEntry < (intptr_t)((char*)&pSpellsClassSkillicon + sizeof(pSpellsClassSkillicon)));
 }
 
 DC6 * __fastcall ARCHIVE_LoadSpellsClassSkillicon(short * pSkillId) {
@@ -270,7 +403,7 @@ void __fastcall SPELLSEL_SetMouseHandFlag(uint32_t bLeftHand) {
     gbSpellSelMouseHandFlag = bLeftHand;
 }
 
-static uint32_t __stdcall SPELLSEL_IsMouseInRect(int32_t nRectX, int32_t nRectY, int32_t nWidth, int32_t nHeight) {
+uint32_t __stdcall SPELLSEL_IsMouseInRect(int32_t nWidth, int32_t nHeight, int32_t nRectX, int32_t nRectY) {
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX >= nRectX && nMouseX <= nRectX + nWidth && nMouseY >= nRectY - nHeight && nMouseY <= nRectY) {
@@ -740,7 +873,7 @@ void __stdcall INPUT_SpellSelectClick(D2UIMouseMsgStrc * pMsg) {
       }
 
       pSlotSkillIdPtr++;
-      if ((intptr_t)pSlotSkillIdPtr >= (intptr_t)((char*)&gSpellSelGridRegion + 960)) {
+      if ((int)pSlotSkillIdPtr >= (intptr_t)((char*)&gSpellSelGridRegion + 960)) {
         if (nInitialMouseY <= Inv::ScreenSizeY - 0x31 && !bHandled) {
           bHasCharges = ui::GetUIFlag(UI_SKILLSELECT);
           if (bHasCharges) {
@@ -779,7 +912,7 @@ void __stdcall SPELLSEL_ClearSkillBinding(short * pSkillId, int32_t nChargesLeft
       }
 
       pSlotSkillId++;
-    } while ((intptr_t)pSlotSkillId < (intptr_t)((char*)&gSpellSelGridRegion + 720));
+    } while ((int)pSlotSkillId < (intptr_t)((char*)&gSpellSelGridRegion + 720));
 }
 
 void __stdcall SPELLSEL_ClearChargedSkillBindings() {
@@ -849,7 +982,7 @@ void __fastcall SPELLSEL_HandleSkillSelection(int32_t nSlotIndex) {
       }
 
       pSlotSkillXPtr = (D2SpellSelGridRegionStrc*)(pSlotSkillXPtr->aSkillGrid + 1);
-    } while ((intptr_t)pSlotSkillXPtr < (intptr_t)((char*)&gSpellSelGridRegion + 240));
+    } while ((int)pSlotSkillXPtr < (intptr_t)((char*)&gSpellSelGridRegion + 240));
 }
 
 static int SPELLSEL_IsSkillSlotValid(int32_t nSlot) {
@@ -960,12 +1093,13 @@ void __fastcall SPELLSEL_DrawSkillRequirementTooltip(short * pwSkillId, int32_t 
     char szNumBuf[12];
     uint16_t wszNumBuf[10];
     short int* pSkillId = pwSkillId;
+    int bMouseOver = bMouseOverIn;
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX < nScreenX || nMouseX > nScreenX + 0x30 || nMouseY < nBoxBottomY - 0x30 || nMouseY > nBoxBottomY) {
-      bMouseOverIn = 1;
-    } else if (bMouseOverIn != 1) {
-      bMouseOverIn = 0;
+      bMouseOver = 1;
+    } else if (bMouseOver != 1) {
+      bMouseOver = 0;
     }
 
     nMouseX = Cursor::GetMouseX();
@@ -1004,7 +1138,7 @@ void __fastcall SPELLSEL_DrawSkillRequirementTooltip(short * pwSkillId, int32_t 
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszTooltip, pWszSep);
     pWszStr = D2Lang::StrTable::strtable::GetLocaleString(wStatName2Idx);
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszTooltip, pWszStr);
-    D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(wszTooltip, nScreenX, nBoxBottomY - 0x32, bMouseOverIn, 1);
+    D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(wszTooltip, nScreenX, nBoxBottomY - 0x32, bMouseOver, 1);
 }
 
 void __fastcall SPELLSEL_DrawSkillGrid(D2UnitStrc * pUnit, int32_t nGridStartX, BOOL bWeaponSwap, BOOL bShowTooltips, BOOL bChargedOnly) {
@@ -1151,34 +1285,52 @@ void __fastcall SPELLSEL_DrawSkillGrid(D2UnitStrc * pUnit, int32_t nGridStartX, 
     } while (true);
 }
 
-void __fastcall Unreferenced_004aa6b0(BOOL bChargedOnly) {
-    if (gbSpellSelMouseHandFlag) {
-      return;
-    }
-
-    BOOL bShowTooltips = 0;
-    BOOL bWeaponSwap = 0;
-    gSpellSelGridRegion.sGridIndex[0] = 0;
-    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), ui::ScreenSizeX - 0x80, bWeaponSwap, bShowTooltips, bChargedOnly);
-}
-
-void __stdcall Unreferenced_004aa6e0() {
+int __fastcall Unreferenced_004aa6b0(int param_1) {
+    int in_EAX;
+    int extraout_EAX;
+    BOOL bWeaponSwap;
+    BOOL bShowTooltips;
     if (!gbSpellSelMouseHandFlag) {
-      return;
+      int nGridStartX;
+      bShowTooltips = 0;
+      bWeaponSwap = 0;
+      gSpellSelGridRegion.sGridIndex[0] = 0;
+      nGridStartX = ui::ScreenSizeX - 0x80;
+      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), nGridStartX, bWeaponSwap, bShowTooltips, param_1);
+      in_EAX = extraout_EAX;
     }
 
-    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50, 1, 1, 0);
+    return in_EAX;
 }
 
-void __stdcall Unreferenced_004aa710() {
+int Unreferenced_004aa6e0() {
+    int in_EAX;
     if (gbSpellSelMouseHandFlag) {
-      return;
+      int extraout_EAX;
+      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50, 1, 1, 0);
+      in_EAX = extraout_EAX;
     }
 
-    BOOL bChargedOnly = 0;
-    BOOL bShowTooltips = 1;
-    BOOL bWeaponSwap = 0;
-    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), ui::ScreenSizeX - 0x80, bWeaponSwap, bShowTooltips, bChargedOnly);
+    return in_EAX;
+}
+
+int Unreferenced_004aa710() {
+    int in_EAX;
+    int extraout_EAX;
+    BOOL bWeaponSwap;
+    BOOL bShowTooltips;
+    BOOL bChargedOnly;
+    if (!gbSpellSelMouseHandFlag) {
+      int nGridStartX;
+      bChargedOnly = 0;
+      bShowTooltips = 1;
+      bWeaponSwap = 0;
+      nGridStartX = ui::ScreenSizeX - 0x80;
+      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), nGridStartX, bWeaponSwap, bShowTooltips, bChargedOnly);
+      in_EAX = extraout_EAX;
+    }
+
+    return in_EAX;
 }
 
 void __fastcall SPELLSEL_CycleRightHandSkills(int32_t nSteps) {
@@ -1222,6 +1374,8 @@ void __stdcall SPELLSEL_RenderAllSkillGrids() {
     BOOL bIsWeaponSwap;
     BOOL bShowTooltips;
     memset(&gSpellSelGridRegion, 0, 0x3c5);
+    bool bIsRightHand;
+    bIsRightHand = !gbSpellSelMouseHandFlag;
     int32_t* pSlotPtr;
     pSlotPtr = gSpellSelGridRegion.aRightHandSlots;
     for (nStartX = 0x3c; nStartX; nStartX--) {
@@ -1229,12 +1383,13 @@ void __stdcall SPELLSEL_RenderAllSkillGrids() {
       pSlotPtr++;
     }
 
-    if (!!gbSpellSelMouseHandFlag) {
+    if (!bIsRightHand) {
       bIsLeftHand = 0;
       bShowTooltips = 0;
       bIsWeaponSwap = 1;
+      nStartX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x80; // VP: site-5, bar-anchored grid
       gSpellSelGridRegion.sGridIndex[0] = 0;
-      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50, bIsWeaponSwap, bShowTooltips, bIsLeftHand);
+      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50 + VPRES_GetWideUiOffsetX(), bIsWeaponSwap, bShowTooltips, bIsLeftHand); // VP: site-5, bar-anchored grid (R45: icon pass re-paired with its tooltip pass)
       if (!gbSpellSelMouseHandFlag) {
         goto draw_right_grid_icons;
       }
@@ -1244,13 +1399,17 @@ void __stdcall SPELLSEL_RenderAllSkillGrids() {
       bShowTooltips = 0;
       bIsWeaponSwap = 0;
       gSpellSelGridRegion.sGridIndex[0] = 0;
-      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), ui::ScreenSizeX - 0x80, bIsWeaponSwap, bShowTooltips, bIsLeftHand);
+      nStartX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x80; // VP: site-5, bar-anchored grid (R45: offset restored)
+      SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), nStartX, bIsWeaponSwap, bShowTooltips, bIsLeftHand); // VP: site-5, bar-anchored grid (R45: icon pass re-paired with its tooltip pass)
       if (!gbSpellSelMouseHandFlag) {
         goto draw_right_grid_tooltips;
       }
     }
 
-    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50, 1, 1, 0);
+    bIsLeftHand = 0;
+    bShowTooltips = 1;
+    bIsWeaponSwap = 1;
+    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), 0x50 + VPRES_GetWideUiOffsetX(), bIsWeaponSwap, bShowTooltips, bIsLeftHand); // VP: site-5, bar-anchored grid
     if (gbSpellSelMouseHandFlag) {
       return;
     }
@@ -1259,7 +1418,8 @@ void __stdcall SPELLSEL_RenderAllSkillGrids() {
     bIsLeftHand = 0;
     bShowTooltips = 1;
     bIsWeaponSwap = 0;
-    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), ui::ScreenSizeX - 0x80, bIsWeaponSwap, bShowTooltips, bIsLeftHand);
+    nStartX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x80; // VP: site-5, bar-anchored grid
+    SPELLSEL_DrawSkillGrid(UNIT::Player::GetPlayerUnit_UI(), nStartX, bIsWeaponSwap, bShowTooltips, bIsLeftHand);
 }
 
 void __stdcall SPELLSEL_ClearWaitingForSkillFlag_Unref_004aa8e0() {
@@ -1272,16 +1432,16 @@ void __stdcall SPELLSEL_ClearWaitingForSkillFlag() {
 
 int __stdcall SPELLSEL_IsWaitingForSkill() {
     D2UnitStrc* pUnit = UNIT::Player::GetPlayerUnit_UI();
-    if (pUnit) {
-      BOOL eState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
-      if (!eState) {
-        return BooleanWaitingForSkillingMaybe;
-      }
-
-      return 1;
-    } else {
+    if (!pUnit) {
       return BooleanWaitingForSkillingMaybe;
     }
+
+    BOOL eState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
+    if (!eState) {
+      return BooleanWaitingForSkillingMaybe;
+    }
+
+    return 1;
 }
 
 void __stdcall ARCHIVE_LoadSpellsClassSkilltree() {
@@ -1340,8 +1500,8 @@ static int32_t SPELLSEL_GetSkillTreeColumnOffset(char cSkillColumn) {
     return 0;
 }
 
-void __thiscall SPELLSEL_DrawTabHeader(uint16_t * pThis, int32_t nYOffset) {
-    ui::UI_DrawTextCentered(WindowSizeX - Inv::gnPanelOffsetX - 0x5a, Inv::gnPanelOffsetY + Inv::ScreenSizeY - 0x1e0 + nYOffset, WindowSizeX - Inv::gnPanelOffsetX, pThis, 0);
+void __thiscall SPELLSEL_DrawTabHeader(void * pThis, int32_t nYOffset) {
+    ui::UI_DrawTextCentered(WindowSizeX - Inv::gnPanelOffsetX - 0x5a, Inv::gnPanelOffsetY + Inv::ScreenSizeY - 0x1e0 + nYOffset, WindowSizeX - Inv::gnPanelOffsetX, (uint16_t*)pThis, 0);
 }
 
 void __stdcall SPELLSEL_DrawSkilltreeBackground(DC6 * pDC6, int32_t nSkillTreeTab) {
@@ -1602,7 +1762,7 @@ void __stdcall SKILLTREE_DrawBackground() {
     D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nTabHighlightX + nScreenX, Inv::gnPanelOffsetY - 0x3f + Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
 }
 
-static BOOL __stdcall SKILLTREE_IsMouseOnSkillNode(int32_t nNodeScreenX, int32_t nNodeScreenY, int32_t nHitWidth, int32_t nHitHeight) {
+static BOOL __stdcall SKILLTREE_IsMouseOnSkillNode(int32_t nHitWidth, int32_t nHitHeight, int32_t nNodeScreenY, int32_t nNodeScreenX) {
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX >= nNodeScreenX && nMouseX <= nNodeScreenX + nHitWidth && nMouseY >= nNodeScreenY - nHitHeight && nMouseY <= nNodeScreenY) {
@@ -1664,7 +1824,7 @@ void __stdcall SKILLTREE_RenderSkillTree() {
         return;
       }
 
-      nScreenY = SKILLTREE_IsMouseOnSkillNode(ui::ScreenSizeX - Inv::gnPanelOffsetX - 0x131, Inv::gnPanelOffsetY - 0x3f + Inv::ScreenSizeY, 0x22, 0x22);
+      nScreenY = SKILLTREE_IsMouseOnSkillNode(0x22, 0x22, Inv::gnPanelOffsetY - 0x3f + Inv::ScreenSizeY, ui::ScreenSizeX - Inv::gnPanelOffsetX - 0x131);
       if (!nScreenY) {
         return;
       }
@@ -1796,7 +1956,7 @@ void __stdcall INPUT_SkillTreeLeftClick(D2UIMouseMsgStrc * pMsg) {
       nTmpResult = ui::ScreenSizeX - Inv::gnPanelOffsetX - 0x131;
     }
 
-    nSkillListIdx = SKILLTREE_IsMouseOnSkillNode(nTmpResult, nPrevActiveTab, 0x22, 0x22);
+    nSkillListIdx = SKILLTREE_IsMouseOnSkillNode(0x22, 0x22, nPrevActiveTab, nTmpResult);
     if (nSkillListIdx) {
       Sound::SOUND_PlaySound(SOUND_CURSOR_BUTTON_CLICK, nullptr, 0, 0, 0);
       gbSpellSelSkillTreeBackground = 1;
@@ -1939,7 +2099,7 @@ void __stdcall ClickOnScreenSkillWindow(D2UIMouseMsgStrc * pMsg) {
                       if (iSkillResult <= nNewSkills) {
                         iSkillResult = SPELLSEL_IsWaitingForSkill();
                         if (!iSkillResult) {
-                          GAME::Msg::NET_D2GS_CLIENT_Send_SHORT(';', (uint16_t)eSkill);
+                          GAME::Msg::NET_D2GS_CLIENT_Send_SHORT(';', (short int)eSkill);
                           BooleanWaitingForSkillingMaybe = 0;
                         }
                       }
@@ -1986,7 +2146,7 @@ void __stdcall ClickOnScreenSkillWindow(D2UIMouseMsgStrc * pMsg) {
       nNewSkills = ui::ScreenSizeX - Inv::gnPanelOffsetX - 0x131;
     }
 
-    nSkillIdx = SKILLTREE_IsMouseOnSkillNode(nNewSkills, skillIdOfClass, 0x22, 0x22);
+    nSkillIdx = SKILLTREE_IsMouseOnSkillNode(0x22, 0x22, skillIdOfClass, nNewSkills);
     if (nSkillIdx) {
       ui::SetUIFlag(UI_SKILLTREE, UI_TOGGLE, 0);
     }
@@ -2351,7 +2511,5 @@ void __stdcall DRAW_UI_SkillWindow() {
     SKILLTREE_RenderSkillTree();
     SPELLSEL_DrawTabHighlight(nSkillTreeActiveTab);
 }
-
-static void * keep_004a8cf0 = (0 ? (SPELLSEL_IsMouseInRect(*(int32_t *)0, *(int32_t *)0, *(int32_t *)0, *(int32_t *)0), (void *)0) : (void *)0);
 
 } // namespace D2Client::UI::SpellSel

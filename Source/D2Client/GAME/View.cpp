@@ -2,7 +2,8 @@
 
 #include "Source/D2Client/GAME/View.h"
 #include "Source/D2Client/Core/Archive.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GameViewStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/D2LightMapStrc.h"
@@ -10,20 +11,145 @@
 #include "Source/D2Client/Draw/Weather.h"
 #include "Source/D2Client/GAME/Draw.h"
 #include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Wall2.h"
 #include "Source/D2Client/Sound/Sound.h"
 #include "Source/D2Client/UI/Path.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Game/D2Game.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgStrc.h"
+#include "Source/D2Common/Drlg/Transform.h"
+#include "Source/D2Common/Seed.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2DDraw/Renderer/DirectDraw.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/Seed.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Hell/D2Hell.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/Draw/LightMap.data.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
 #include "Source/D2Client/GAME/View.data.h"
+#include "Source/D2Common/Seed.inline.h"
+#include "Source/D2Game/Seed.inline.h"
+// VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
+#include "Source/D2Client/UI/VanillaPlusCore.h"
+// VP-END [resolution site-5]
+#include "Redivivus/d2_boot.h" // [d2boot] issue #26 D3D perspective-toggle triage marks [R96]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -42,13 +168,14 @@
 static_assert(sizeof(void*) != 4 || sizeof(::D2GameViewStrc) == 0xeabc, "D2_NEW_AT(D2GameViewStrc): the 32-bit layout must be the 0xeabc bytes 1.14d allocates");
 
 
-static D2SeedStrc * gpArcaneStarsSeed = (D2SeedStrc *)&gArcaneStarSeed; D2_STATIC_GUARD(gpArcaneStarsSeed, "gpArcaneStarsSeed");
+static D2SeedStrc * gpArcaneStarsSeed = (D2SeedStrc *)&gaSpriteArcaneStarYOffset; D2_STATIC_GUARD(gpArcaneStarsSeed, "gpArcaneStarsSeed");
 namespace D2Client::GAME::View {
 D2SeedStrc gAncientsCloudSeed = D2SeedStrc(); D2_GLOBAL_GUARD(gAncientsCloudSeed, "D2Client::GAME::View::gAncientsCloudSeed");
 } // namespace D2Client::GAME::View
 static uint8_t gaArcaneStarColors[256] = {}; D2_STATIC_GUARD(gaArcaneStarColors, "gaArcaneStarColors");
-D2SeedStrc gArcaneStarSeed = D2SeedStrc(); D2_GLOBAL_GUARD(gArcaneStarSeed, "gArcaneStarSeed");
-int gnScaleFactor = 0; D2_GLOBAL_GUARD(gnScaleFactor, "gnScaleFactor");
+uint32_t gaSpriteArcaneStarYOffset = 0; D2_GLOBAL_GUARD(gaSpriteArcaneStarYOffset, "gaSpriteArcaneStarYOffset");
+static uint32_t gaSpriteArcaneStarXOffset = 0; D2_STATIC_GUARD(gaSpriteArcaneStarXOffset, "gaSpriteArcaneStarXOffset");
+int nScaleFactor = 0; D2_GLOBAL_GUARD(nScaleFactor, "nScaleFactor");
 static int32_t gaArcaneStarYPos[256] = {}; D2_STATIC_GUARD(gaArcaneStarYPos, "gaArcaneStarYPos");
 static uint8_t gPaletteTransitionTable[12544] = {}; D2_STATIC_GUARD(gPaletteTransitionTable, "gPaletteTransitionTable");
 namespace D2Client::GAME::View {
@@ -76,7 +203,7 @@ uint8_t * gpViewPalByteTable32x40 = 0; D2_GLOBAL_GUARD(gpViewPalByteTable32x40, 
 } // namespace D2Client::GAME::View
 static DC6 * gpAncientsBgDC6 = 0; D2_STATIC_GUARD(gpAncientsBgDC6, "gpAncientsBgDC6");
 static DC6 * gnDrawBackgroundRenderOffset = 0; D2_STATIC_GUARD(gnDrawBackgroundRenderOffset, "gnDrawBackgroundRenderOffset");
-static uint32_t gnFrameDrawCounter = 0; D2_STATIC_GUARD(gnFrameDrawCounter, "gnFrameDrawCounter");
+uint32_t gnFrameDrawCounter = 0; D2_GLOBAL_GUARD(gnFrameDrawCounter, "gnFrameDrawCounter");
 
 namespace D2Client::GAME::View {
 
@@ -95,15 +222,14 @@ void __fastcall DRAW_CoordIsInCoord(int32_t nWorldX, int32_t nWorldY, uint8_t * 
     }
 
     nCellX = nCellY * 0x30 + nCellX;
-    D2LightMapCellStrc* t2_r0 = &D2Client::Draw::LightMap::gaLightMapCells[nCellX];
-    *pOutIntensity = t2_r0->nCellIntensity;
+    *pOutIntensity = D2Client::Draw::LightMap::gaLightMapCells[nCellX].nCellIntensity;
     if (!D2Client::Draw::LightMap::gbLightmapColorEnabled) {
       return;
     }
 
-    *pOutRed = t2_r0->nRed;
-    *pOutGreen = t2_r0->nGreen;
-    *pOutBlue = t2_r0->nBlue;
+    *pOutRed = D2Client::Draw::LightMap::gaLightMapCells[nCellX].nRed;
+    *pOutGreen = D2Client::Draw::LightMap::gaLightMapCells[nCellX].nGreen;
+    *pOutBlue = D2Client::Draw::LightMap::gaLightMapCells[nCellX].nBlue;
 }
 
 void __stdcall DrawLight() {
@@ -140,7 +266,7 @@ uint8_t * __stdcall VIEW_AllocByteTable(uint32_t nDim, int32_t nSteps) {
         do {
           nAccum = nOuter << 0x10;
           for (nStepLeft = nSteps; (uint32_t)nStepLeft > 0; nStepLeft--) {
-            *pWrite = (uint8_t)(nAccum / 65536);
+            *pWrite = (uint8_t)(nAccum + (nAccum >> 0x1f & 0xffffU) >> 0x10);
             pWrite++;
             nAccum += nMidScaled / nSteps;
           }
@@ -157,12 +283,12 @@ uint8_t * __stdcall VIEW_AllocByteTable(uint32_t nDim, int32_t nSteps) {
     return pTable;
 }
 
-void __fastcall Unreferenced_00475c30(LPVOID param_1) {
+void __fastcall Unreferenced_00475c30(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 // Allocates a (nDim × nDim × (nSteps+1)) pointer table via D2MEM_VirtualAlloc and fills it with pointers into gPaletteTransitionTable for each interpolated palette entry. Used to build lighting/palette blend lookup tables for the game view renderer. Returns the base pointer of the allocated table.
@@ -189,7 +315,7 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable(uint32_t nDim, uint32_t nSte
             nAccum = nOuter << 0x10;
             do {
               nPaletteIdx = nAccum / 65536;
-              *pWrite = gPaletteTransitionTable + (uint32_t)(uint8_t)nPaletteIdx * 0x100;
+              *pWrite = gPaletteTransitionTable + (nPaletteIdx & 0xff) * 0x100;
               pWrite++;
               nAccum += nMidScaled / (int)nSteps;
               nInnerLeft--;
@@ -197,7 +323,7 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable(uint32_t nDim, uint32_t nSte
           }
 
           nMidScaled += 0x10000;
-          *pWrite = gPaletteTransitionTable + (uint32_t)(uint8_t)nPaletteIdx * 0x100;
+          *pWrite = gPaletteTransitionTable + (nPaletteIdx & 0xff) * 0x100;
           pWrite++;
           nMidLeft--;
         } while (nMidLeft);
@@ -210,12 +336,12 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable(uint32_t nDim, uint32_t nSte
     return pTable;
 }
 
-void __fastcall Unreferenced_00475d20(LPVOID param_1) {
+void __fastcall Unreferenced_00475d20(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 uint8_t * * __stdcall VIEW_AllocPalettePointerTable2(uint32_t nDim, int32_t nSteps) {
@@ -253,12 +379,12 @@ uint8_t * * __stdcall VIEW_AllocPalettePointerTable2(uint32_t nDim, int32_t nSte
     return pTable;
 }
 
-void __fastcall Unreferenced_00475de0(LPVOID param_1) {
+void __fastcall Unreferenced_00475de0(int param_1) {
     if (!param_1) {
       return;
     }
 
-    D2Hell::D2MEM_VirtualFree(param_1);
+    D2Hell::D2MEM_VirtualFree((LPVOID)param_1);
 }
 
 void __stdcall VIEW_InitLookupTables() {
@@ -376,6 +502,25 @@ void __fastcall SetViewRectangleSize(D2GameViewStrc * pGameView, int32_t xLeft, 
       lprc->left += -0x2d;
       pGameView->rcExtendedView.right += 0x1e;
     }
+    // VP-BEGIN [R122]: re-fit the fixed-pixel cull rect to the live
+    // backbuffer at the wide stops. The R121 field log pinned the last
+    // bottom band on this rect: with the walk at hop 4 and the fill
+    // firing all four sides (fire=1248, st=12432 stamps/frame), the
+    // drawn-floor px AABB still hugs the rect on every edge and stops
+    // 51-82px short of the 1080p bottom - retail builds the rect as
+    // UI::Inv::ScreenSizeY - 0x2f (the 800x600 panel-era wedge: both modes logged
+    // rcv bottom 1033 < 1080), and DrawFloorTile + the wall2 scene cull
+    // kill every tile anchored past it, fill stamps included. A uniform
+    // +-0xc0 base covers retail's widest per-edge margin (persp left
+    // -0x2d-0x50 = -0x7d) with slack for the perspective warp's far
+    // edges. 640x480/800x600 keep the retail rect byte-identical.
+    if (VPRES_IsWideLayoutMode(D2gfx::D2GFX::D2GFX_GetResolutionMode())) {
+      lprc->left = -0xc0;
+      lprc->top = -0xc0;
+      lprc->right = UI::ui::ScreenSizeX + 0xc0;
+      lprc->bottom = UI::Inv::ScreenSizeY + 0xc0;
+    }
+    // VP-END [R122]
 
     pGameView->nFlags |= 1;
 }
@@ -433,6 +578,19 @@ void __fastcall GAMEVIEW_PrepareScene(D2GameViewStrc * pGameView, uint32_t nFlag
     uint32_t nBorderType = UI::Path::DRAW_GetTypeOfBorder();
     if (nBorderType != 3) {
       Wall2::WALL2_BuildSceneDrawList(pGameView, nFlags);
+    } else if (VPRES_IsWideLayoutMode(D2gfx::D2GFX::D2GFX_GetResolutionMode())) {
+      // VP-BEGIN [issue #26 / R93]: wide-UI layouts build the scene draw list
+      // with both panels open too. Retail skips it when both panels are up
+      // because at 640x480/800x600 the two 320/400-px panels cover the whole
+      // window; the 800-class UI floats 240 px inboard at 1280x720, so the
+      // outer strips still show world and the skip rendered them as pure
+      // black backbuffer (issue #26: "Both panels. all black outside of
+      // panel"). Border 3's view rect is the full unpanned window (Path.cpp
+      // case 3), the light grids run at zero pan and every renderer falls
+      // through to its full-width no-pan clip, so the standard build is the
+      // whole fix. Retail modes keep the skip (byte-identical + fill rate).
+      Wall2::WALL2_BuildSceneDrawList(pGameView, nFlags);
+      // VP-END [issue #26 / R93]
     }
 
     pGameView->nFlags &= -2;
@@ -441,23 +599,39 @@ void __fastcall GAMEVIEW_PrepareScene(D2GameViewStrc * pGameView, uint32_t nFlag
 void __stdcall VIEW_GenerateRandomViewParams(int32_t nStarIndex, int32_t bRespawn) {
     uint32_t nStarXPos;
     uint32_t nYPos;
-    uint32_t seed;
+    D2SeedStrc seed;
     D2SeedStrc* pStarSeed = gpArcaneStarsSeed;
     if (bRespawn) {
-      seed = D2_SeedRoll(gpArcaneStarsSeed);
-      nStarXPos = (seed & 7) - 1 + UI::SpellSel::WindowSizeX;
+      seed = D2_SEED_NEXT(*gpArcaneStarsSeed);
+      *gpArcaneStarsSeed = seed;
+      nStarXPos = (seed.nSeedLow & 7) - 1 + UI::SpellSel::WindowSizeX;
     } else {
       nStarXPos = D2Common::Seed::UNIT_GetModuloFromSeed(gpArcaneStarsSeed, UI::SpellSel::WindowSizeX);
     }
 
     int nWindowHeight = UI::ui::WindowSizeY;
     gaArcaneStarXPos[nStarIndex] = nStarXPos;
-    nYPos = D2_SeedRollLimited(pStarSeed, nWindowHeight);
+    if (nWindowHeight <= 0) {
+      nYPos = 0;
+    } else if (nWindowHeight & nWindowHeight - 1U) {
+      seed = D2_SEED_NEXT(*pStarSeed);
+      pStarSeed->nSeedHigh = seed.nSeedHigh;
+      pStarSeed->nSeedLow = seed.nSeedLow;
+      nYPos = (uint32_t)(seed.nSeedLow % (uint32_t)nWindowHeight);
+    } else {
+      seed = D2_SEED_NEXT(*pStarSeed);
+      pStarSeed->nSeedHigh = seed.nSeedHigh;
+      pStarSeed->nSeedLow = seed.nSeedLow;
+      nYPos = nWindowHeight - 1U & seed.nSeedLow;
+    }
+
     gaArcaneStarYPos[nStarIndex] = nYPos;
-    seed = D2_SeedRoll(pStarSeed);
-    gaArcaneStarXVelocity[nStarIndex] = (int)(seed / 5) * 5 - seed - 1;
-    seed = D2_SeedRoll(pStarSeed);
-    gaArcaneStarColors[nStarIndex] = gaArcaneStarColorTable[seed & 7];
+    seed = D2_SEED_NEXT(*pStarSeed);
+    *pStarSeed = seed;
+    gaArcaneStarXVelocity[nStarIndex] = (int)(seed.nSeedLow / 5) * 5 - seed.nSeedLow - 1;
+    seed = D2_SEED_NEXT(*pStarSeed);
+    *pStarSeed = seed;
+    gaArcaneStarColors[nStarIndex] = gaArcaneStarColorTable[seed.nSeedLow & 7];
 }
 
 // Renders the animated star-field overlay used in the Arcane Sanctuary. On first call, seeds a PRNG from SHAKE_StartTickcount, generates 8 brightness-graduated palette entries into gaArcaneStarColorTable, then calls VIEW_GenerateRandomViewParams for each of the 256 stars. Each frame, draws all 256 stars as single-pixel lines using D2GFX_DrawLine. Every 40 ms (tick delta > 0x28), advances each star's X position by its velocity; stars that fall off-screen are re-randomised via VIEW_GenerateRandomViewParams.
@@ -569,7 +743,7 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
     uint32_t nTileFrame3;
     char szFilePath[260];
     D2GfxDataStrc sGfxData;
-    uint32_t ullSeedValue;
+    D2SeedStrc ullSeedValue;
     if (D2CLIENT_ExitVar3) {
       return;
     }
@@ -605,7 +779,14 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
     if (!gnDrawBackgroundRenderOffset) {
       pStrSrc = "data\\global\\ui\\cloud01";
       pStrDst = szFilePath;
-      memcpy(pStrDst, pStrSrc, 23);
+      for (nCloudIdx = 5; nCloudIdx; nCloudIdx--) {
+        *(uint32_t*)pStrDst = *(uint32_t*)pStrSrc;
+        pStrSrc += 4;
+        pStrDst += 4;
+      }
+
+      *(uint16_t*)pStrDst = *(uint16_t*)pStrSrc;
+      pStrDst[2] = pStrSrc[2];
       gnDrawBackgroundRenderOffset = Core::Archive::IMAGE_LoadDC6Ex(szFilePath, 0);
     }
 
@@ -643,7 +824,9 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
       }
 
       dwResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-      if (dwResMode == 2) {
+      // VP: [resolution site-5] wide modes draw the extra summit cloud row
+      // like 800x600 (needed when the vertical scroll exposes it)
+      if (VPRES_IsWideLayoutMode(dwResMode)) {
         sGfxData.nFrameNumber = nCloudFrame + 8;
         D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nScrollOffset, 0x300, -1, DRAW_SOLID, nullptr);
         sGfxData.nFrameNumber = nTileFrameX + 8;
@@ -673,11 +856,13 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
       nScrollOffset = 0;
       do {
         nCloudSeedVal = D2Common::Seed::UNIT_GetModuloFromSeed(pAncientsCloudSeed, UI::SpellSel::WindowSizeX << 4);
-        *(uint32_t*)((char*)gaAncientsCloudXPos + nScrollOffset) = nCloudSeedVal;
-        ullSeedValue = D2_SeedRoll(pAncientsCloudSeed);
-        *(uint32_t*)((char*)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue % 0xfa;
-        ullSeedValue = D2_SeedRoll(pAncientsCloudSeed);
-        *(uint32_t*)((char*)gaAncientsCloudVelocities + nScrollOffset) = (ullSeedValue & 0xf) + 8;
+        *(uint32_t*)((int)gaAncientsCloudXPos + nScrollOffset) = nCloudSeedVal;
+        ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
+        *pAncientsCloudSeed = ullSeedValue;
+        *(uint32_t*)((int)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 0xfa;
+        ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
+        *pAncientsCloudSeed = ullSeedValue;
+        *(uint32_t*)((int)gaAncientsCloudVelocities + nScrollOffset) = (ullSeedValue.nSeedLow & 0xf) + 8;
         nScrollOffset += 4;
       } while (nScrollOffset < 0x28);
 
@@ -687,11 +872,12 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
     nScrollOffset = 0;
     do {
       nCloudIdx = UI::SpellSel::WindowSizeX;
-      *(int*)((char*)gaAncientsCloudXPos + nScrollOffset) += *(int*)((char*)gaAncientsCloudVelocities + nScrollOffset);
-      if (*(int*)((char*)gaAncientsCloudXPos + nScrollOffset) > (nCloudIdx + 0x170) * 0x10) {
-        *(uint32_t*)((char*)gaAncientsCloudXPos + nScrollOffset) = -5888;
-        ullSeedValue = D2_SeedRoll(pAncientsCloudSeed);
-        *(uint32_t*)((char*)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue % 300;
+      *(int*)((int)gaAncientsCloudXPos + nScrollOffset) += *(int*)((int)gaAncientsCloudVelocities + nScrollOffset);
+      if (*(int*)((int)gaAncientsCloudXPos + nScrollOffset) > (nCloudIdx + 0x170) * 0x10) {
+        *(uint32_t*)((int)gaAncientsCloudXPos + nScrollOffset) = -5888;
+        ullSeedValue = D2_SEED_NEXT(*pAncientsCloudSeed);
+        *pAncientsCloudSeed = ullSeedValue;
+        *(uint32_t*)((int)gaAncientsCloudYPos + nScrollOffset) = ullSeedValue.nSeedLow % 300;
       }
 
       nScrollOffset += 4;
@@ -699,18 +885,14 @@ static void DRAW_Background_Ancients(D2UnitStrc * pPlayerUnit) {
 
     nScrollOffset = 0;
     do {
-      nCloudIdx = *(int*)((char*)gaAncientsCloudXPos + nScrollOffset) / 16;
+      nCloudIdx = *(int*)((int)gaAncientsCloudXPos + nScrollOffset) / 16;
       sGfxData.pDC6 = gnDrawBackgroundRenderOffset;
       sGfxData.nFrameNumber = 0;
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx, *(int32_t*)((char*)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx, *(int32_t*)((int)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
       sGfxData.nFrameNumber = 1;
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx + 0x100, *(int32_t*)((char*)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nCloudIdx + 0x100, *(int32_t*)((int)gaAncientsCloudYPos + nScrollOffset), -0x22222223, DRAW_LIGHTTRANSPARENT, nullptr);
       nScrollOffset += 4;
     } while (nScrollOffset < 0x28);
-}
-
-void __stdcall RENDERER_TogglePerspective_Unref_004769b0() {
-    gnFrameDrawCounter = (uint32_t)!gnFrameDrawCounter;
 }
 
 // Adjusts the looping screen-shake rumble sound (SOUND_BABOONDEMON_HIT_4) to match the current shake intensity. Converts nShakeIntensity (0–20) to a 0–255 target volume, starts the channel if not already playing, stops it if volume reaches 0, otherwise ramps the current volume toward the target by ±6 per call via SOUND_SetChannelPriority.
@@ -841,6 +1023,19 @@ D2GameViewStrc * __stdcall AllocGameView() {
 // @wasnamed Draw_AnythingInTheWorldNonUI
 // Already-documented — existing description is detailed and accurate (6-layer world rendering pipeline: background FX, underfloor, floor tiles, shadows, units, roofs/weather; handles perspective scale, lightmap updates, level-specific FX for Arcane Sanctuary and Arreat Summit).
 void __fastcall ViewDraw2(D2GameViewStrc * pGameView) {
+    // [d2boot] issue #26 D3D perspective-toggle death triage: 0 = no
+    // perspective frame seen yet, 1 = enter mark written, 2 = drawn mark
+    // written. A death with "enter" but no "drawn" pins the fault inside the
+    // world pass (floor/shadow/wall/roof/weather) on the first perspective
+    // frame after a runtime toggle; neither mark means the death happens
+    // before the world draw (menu/UI side). [R96]
+    static int gnVP96PerspectiveFrameProbe; D2_STATIC_GUARD_BSS(gnVP96PerspectiveFrameProbe, "D2Client::GAME::View::ViewDraw2::gnVP96PerspectiveFrameProbe");
+    // [d2boot] R97: transition tracker, re-armed on every flip (the R96
+    // first-frame probe is one-shot and was already spent when the owner's
+    // 1 -> 0 toggle died). One line per flip brackets the frame in the
+    // bootlog next to the R97 floor-pass and promote-guard marks. [R97]
+    static int gnVP97ViewLastPerspective; D2_STATIC_GUARD_BSS(gnVP97ViewLastPerspective, "D2Client::GAME::View::ViewDraw2::gnVP97ViewLastPerspective");
+
     uint32_t _bPerspective;
     bool bPerspective;
     D2UnitStrc* pPlayerUnit_lcl;
@@ -852,13 +1047,40 @@ void __fastcall ViewDraw2(D2GameViewStrc * pGameView) {
     }
 
     D2gfx::D2GFX::D2GFX_UpdateScaleFactor();
-    gnScaleFactor = D2gfx::D2GFX::D2GFX_GetScaleFactor();
+    nScaleFactor = D2gfx::D2GFX::D2GFX_GetScaleFactor();
     _bPerspective = D2gfx::D2GFX::D2GFX_IsPerspectiveActive();
+    if ((int)_bPerspective != gnVP97ViewLastPerspective) {
+      gnVP97ViewLastPerspective = (int)_bPerspective;
+      D2BOOT_MarkFmt("world: perspective now %d, view frame [R97]", (int)_bPerspective); // [d2boot]
+    }
     if (_bPerspective) {
+      if (!gnVP96PerspectiveFrameProbe) {
+        gnVP96PerspectiveFrameProbe = 1;
+        D2BOOT_MarkFmt("world: first perspective frame enter (renderer=%d) [R96]", (int)D2gfx::D2GFX::D2GFX_GetRendererMode()); // [d2boot]
+      }
+
       int32_t nXScale;
       pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_UI();
       nXScale = D2Common::Units::GetPrecisionX(pPlayerUnit_lcl);
       nYScale = D2Common::Units::GetPrecisionY(pPlayerUnit_lcl);
+      // VP-BEGIN [unlock-fps-interp R149]: the perspective warp
+      // origin IS the perspective camera - every perspective layer (floor
+      // tiles via AdjustPerspectivePosition, unit sprites via
+      // PerspecitveScalePosition, shadows) projects world-minus-THIS-anchor,
+      // and retail steps it once per tick with the player. Gliding it with
+      // the same two-sample alpha the top-down camera rides (the player's
+      // precision-unit pair, snap rules included) makes the whole perspective
+      // world scroll at the present rate through the ONE warp it already
+      // shares - no per-layer screen-unit deltas (those never reached these
+      // layers anyway, and the character needs no cancel: it is the anchor,
+      // delta 0, byte-for-byte its retail screen spot). Gate/interp off:
+      // offsets 0, byte-for-byte retail.
+      int nVpOriginDx = 0;
+      int nVpOriginDy = 0;
+      UNLOCKFPS_GetPlayerRenderOffsetOrigin(&nVpOriginDx, &nVpOriginDy);
+      nXScale += nVpOriginDx;
+      nYScale += nVpOriginDy;
+      // VP-END [unlock-fps-interp R149]
       nShakeOffsetX = 0;
       nShakeOffsetY = 0;
       if (SHAKE_Amplitude) {
@@ -920,6 +1142,10 @@ void __fastcall ViewDraw2(D2GameViewStrc * pGameView) {
     D2gfx::D2GFX::D2GFX_SetDefaultScaleFactor();
     D2Client::Draw::Weather::DRAW_Overlay_Weather();
     dSceneTransitionDraw();
+    if (gnVP96PerspectiveFrameProbe == 1) {
+      gnVP96PerspectiveFrameProbe = 2;
+      D2BOOT_Mark("world: first perspective frame drawn [R96]"); // [d2boot]
+    }
 }
 
 // Applies screen-shake offset to the camera center point. Computes shake magnitude from elapsed ticks using a three-phase envelope (fade-in over Arg3, sustain over Arg1, fade-out over Arg2). Rolls random X/Y offsets from the player unit seed and adds them to *pCenterX/*pCenterY. Updates the global shake-sound volume proportionally; zeros shake state when the envelope expires.

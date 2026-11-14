@@ -64,6 +64,10 @@ DWORD __stdcall SOUND_GetSound3DFlag() {
     return gbSound3DEnabled;
 }
 
+DWORD __stdcall SOUND_GetDirectSoundInitializedFlag() {
+    return gpDirectSound != 0;
+}
+
 DWORD __stdcall SOUND_GetSoundQualityFlag() {
     return gnSoundQualityMode;
 }

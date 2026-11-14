@@ -400,7 +400,13 @@ uint32_t __fastcall MAINMENU_TestFlag0x20(uint32_t dwFlags);
 // Provenance: asm 004379e0..004379e8; unreferenced in 1.14d.
 uint32_t __fastcall MAINMENU_GetFlagBits8To12(uint32_t dwFlags);
 int __stdcall LAUNCHER_PollBNConnectionPump(int nFrameIndex);
+
 #endif // D2_MODULE_D2Launch
+
+// Cross-module extern declarations (for visibility from other modules)
+extern D2WinTextBox * gpCtlBnetProgressBar;
+extern D2WinTextBox * gbBnetConnectionTimerActive;
+extern D2ControlStrc * gpCtlBnetProgressBar2;
 // 9 internal functions (defined in .cpp)
 
 } // namespace D2Launch::MainMenus

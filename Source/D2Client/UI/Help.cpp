@@ -10,13 +10,120 @@
 #include "Source/D2Client/UI/EscMenu.h"
 #include "Source/D2Client/UI/Party.h"
 #include "Source/D2Client/UI/ui.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Gdi/Renderer/Windowed.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/UI/Help.data.h"
 #include "Source/D2Client/UI/ui.data.h"
+#include "Source/D2Launch/MainMenus.h"
+// VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
+#include "Source/D2Client/UI/VanillaPlusCore.h"
+// VP-END [resolution site-5]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -46,7 +153,7 @@ int32_t __stdcall GetSeenHelpMenuValue() {
     return bSeenHelpMenu;
 }
 
-static void __stdcall SetSeenHelpMenu(BOOL bSeenHelpMenu) {
+void __stdcall SetSeenHelpMenu(BOOL bSeenHelpMenu) {
     Help::bSeenHelpMenu = bSeenHelpMenu;
     Storm::Source::SReg::SRegSaveValue("Diablo II", "Help Menu", 1, bSeenHelpMenu);
 }
@@ -55,7 +162,8 @@ void __stdcall LoadBorder() {
     char* pFilename;
     DWORD dwResolutionMode;
     dwResolutionMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (dwResolutionMode == 2) {
+    // VP: [resolution site-5] wide modes load the 800x600 help border art
+    if (VPRES_IsWideLayoutMode(dwResolutionMode)) {
       if (!pHelpBorder) {
         pFilename = "Menu\\800helpborder";
         goto load_help_images;
@@ -115,19 +223,19 @@ void __stdcall DrawBorderXpac() {
     sGfxData.pDC6 = pHelpBorder;
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, 0x100, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0 + VPRES_GetWideUiOffsetX(), 0x100 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 1;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, 0x200, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0 + VPRES_GetWideUiOffsetX(), 0x200 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 2;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x42, 0x14, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x42 + VPRES_GetWideUiOffsetX(), 0x14 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 3;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x142, 0x14, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x142 + VPRES_GetWideUiOffsetX(), 0x14 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 4;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x217, 0x100, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x217 + VPRES_GetWideUiOffsetX(), 0x100 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 5;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x30c, 0x100, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x30c + VPRES_GetWideUiOffsetX(), 0x100 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
     sGfxData.nFrameNumber = 6;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x30c, 0x200, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x30c + VPRES_GetWideUiOffsetX(), 0x200 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
 }
 
 // Same as HELP_DrawDarkOverlay 00494eb0: the two bodies are byte-identical apart
@@ -143,13 +251,13 @@ void __stdcall HELP_DrawDarkOverlay_B() {
 void __stdcall DrawYellowBullet() {
     D2GfxDataStrc sGfxData;
     memset(&sGfxData, 0, 0x48);
-    int nPositionY = 0x49;
+    int nPositionY = 0x49 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
     sGfxData.pDC6 = HelpYellowBullet;
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 0;
     int nRemaining = 8;
     do {
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x68, nPositionY, -1, DRAW_SOLID, nullptr);
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x68 + VPRES_GetWideUiOffsetX(), nPositionY, -1, DRAW_SOLID, nullptr); // VP: site-5
       nPositionY += 0x14;
       nRemaining--;
     } while (nRemaining);
@@ -196,39 +304,39 @@ void __stdcall DrawWhiteBulletXpac() {
     sGfxData.pDC6 = HelpWhiteBullet;
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x37, 0x217, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x3a, 0x1e6, 0x3a, 0x214, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x3b, 0x1e6, 0x3b, 0x214, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x82, 0x234, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x85, 0x1bd, 0x85, 0x231, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x86, 0x1bd, 0x86, 0x231, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0xd9, 0x23f, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0xdc, 0x177, 0xdc, 0x23c, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0xdd, 0x177, 0xdd, 0x23c, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x104, 0x249, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x107, 0x20e, 0x107, 0x246, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x108, 0x20e, 0x108, 0x246, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x136, 0x249, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x139, 0x1e6, 0x139, 0x246, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x13a, 0x1e6, 0x13a, 0x246, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x16d, 0x235, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x170, 0x20d, 0x170, 0x232, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x171, 0x20d, 0x171, 0x232, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x1bd, 0x21c, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x1c0, 0x1c3, 0x1c0, 0x219, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x1c1, 0x1c3, 0x1c1, 0x219, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x212, 0x239, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x215, 0x20d, 0x215, 0x236, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x216, 0x20d, 0x216, 0x236, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x23c, 0x23f, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x23f, 0x177, 0x23f, 0x23c, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x240, 0x177, 0x240, 0x23c, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x29e, 0x234, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x2a1, 0x1bd, 0x2a1, 0x231, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x2a2, 0x1bd, 0x2a2, 0x231, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x2e4, 0x217, -1, DRAW_SOLID, nullptr);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x2e7, 0x1e6, 0x2e7, 0x214, 0xff, 0xff);
-    D2gfx::D2GFX::D2GFX_DrawLine(0x2e8, 0x1e6, 0x2e8, 0x214, 0xff, 0xff);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x37 + VPRES_GetWideUiOffsetX(), 0x217 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x3a + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x3a + VPRES_GetWideUiOffsetX(), 0x214 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x3b + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x3b + VPRES_GetWideUiOffsetX(), 0x214 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x82 + VPRES_GetWideUiOffsetX(), 0x234 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x85 + VPRES_GetWideUiOffsetX(), 0x1bd + VPRES_GetWideUiOffsetY(), 0x85 + VPRES_GetWideUiOffsetX(), 0x231 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x86 + VPRES_GetWideUiOffsetX(), 0x1bd + VPRES_GetWideUiOffsetY(), 0x86 + VPRES_GetWideUiOffsetX(), 0x231 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0xd9 + VPRES_GetWideUiOffsetX(), 0x23f + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0xdc + VPRES_GetWideUiOffsetX(), 0x177 + VPRES_GetWideUiOffsetY(), 0xdc + VPRES_GetWideUiOffsetX(), 0x23c + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0xdd + VPRES_GetWideUiOffsetX(), 0x177 + VPRES_GetWideUiOffsetY(), 0xdd + VPRES_GetWideUiOffsetX(), 0x23c + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x104 + VPRES_GetWideUiOffsetX(), 0x249 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x107 + VPRES_GetWideUiOffsetX(), 0x20e + VPRES_GetWideUiOffsetY(), 0x107 + VPRES_GetWideUiOffsetX(), 0x246 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x108 + VPRES_GetWideUiOffsetX(), 0x20e + VPRES_GetWideUiOffsetY(), 0x108 + VPRES_GetWideUiOffsetX(), 0x246 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x136 + VPRES_GetWideUiOffsetX(), 0x249 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x139 + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x139 + VPRES_GetWideUiOffsetX(), 0x246 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x13a + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x13a + VPRES_GetWideUiOffsetX(), 0x246 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x16d + VPRES_GetWideUiOffsetX(), 0x235 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x170 + VPRES_GetWideUiOffsetX(), 0x20d + VPRES_GetWideUiOffsetY(), 0x170 + VPRES_GetWideUiOffsetX(), 0x232 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x171 + VPRES_GetWideUiOffsetX(), 0x20d + VPRES_GetWideUiOffsetY(), 0x171 + VPRES_GetWideUiOffsetX(), 0x232 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x1bd + VPRES_GetWideUiOffsetX(), 0x21c + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x1c0 + VPRES_GetWideUiOffsetX(), 0x1c3 + VPRES_GetWideUiOffsetY(), 0x1c0 + VPRES_GetWideUiOffsetX(), 0x219 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x1c1 + VPRES_GetWideUiOffsetX(), 0x1c3 + VPRES_GetWideUiOffsetY(), 0x1c1 + VPRES_GetWideUiOffsetX(), 0x219 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x212 + VPRES_GetWideUiOffsetX(), 0x239 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x215 + VPRES_GetWideUiOffsetX(), 0x20d + VPRES_GetWideUiOffsetY(), 0x215 + VPRES_GetWideUiOffsetX(), 0x236 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x216 + VPRES_GetWideUiOffsetX(), 0x20d + VPRES_GetWideUiOffsetY(), 0x216 + VPRES_GetWideUiOffsetX(), 0x236 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x23c + VPRES_GetWideUiOffsetX(), 0x23f + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x23f + VPRES_GetWideUiOffsetX(), 0x177 + VPRES_GetWideUiOffsetY(), 0x23f + VPRES_GetWideUiOffsetX(), 0x23c + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x240 + VPRES_GetWideUiOffsetX(), 0x177 + VPRES_GetWideUiOffsetY(), 0x240 + VPRES_GetWideUiOffsetX(), 0x23c + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x29e + VPRES_GetWideUiOffsetX(), 0x234 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x2a1 + VPRES_GetWideUiOffsetX(), 0x1bd + VPRES_GetWideUiOffsetY(), 0x2a1 + VPRES_GetWideUiOffsetX(), 0x231 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x2a2 + VPRES_GetWideUiOffsetX(), 0x1bd + VPRES_GetWideUiOffsetY(), 0x2a2 + VPRES_GetWideUiOffsetX(), 0x231 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x2e4 + VPRES_GetWideUiOffsetX(), 0x217 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x2e7 + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x2e7 + VPRES_GetWideUiOffsetX(), 0x214 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
+    D2gfx::D2GFX::D2GFX_DrawLine(0x2e8 + VPRES_GetWideUiOffsetX(), 0x1e6 + VPRES_GetWideUiOffsetY(), 0x2e8 + VPRES_GetWideUiOffsetX(), 0x214 + VPRES_GetWideUiOffsetY(), 0xff, 0xff); // VP: site-5 + site-6
 }
 
 void __stdcall DrawSellBtn() {
@@ -238,8 +346,9 @@ void __stdcall DrawSellBtn() {
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = gpHelpCloseButton != 0 ? 11 : 10;
     DWORD eResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (eResMode == 2) {
-      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x2ad, 0x38, -1, DRAW_SOLID, nullptr);
+    // VP: [resolution site-5] wide modes ride the re-centered help screen
+    if (VPRES_IsWideLayoutMode(eResMode)) {
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x2ad + VPRES_GetWideUiOffsetX(), 0x38 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: site-5 + site-6
       return;
     }
 
@@ -272,12 +381,12 @@ void __stdcall INPUT_HelpCloseButtonDown(D2UIMouseMsgStrc * pMsg) {
     uint16_t nMouseY = pMsg->uLParam.sMousePos.nMouseY;
     uint32_t nRelX = (uint32_t)pMsg->uLParam.sMousePos.nMouseX;
     DWORD eResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (eResMode == 2) {
-      nRelX -= 0x2ad;
+    if (VPRES_IsWideLayoutMode(eResMode)) {
+      nRelX -= 0x2ad + VPRES_GetWideUiOffsetX(); // VP: site-5
     } else {
       nRelX -= 0x20d;
     }
-    if (nRelX <= 0x20 && nMouseY >= 0x18 && nMouseY <= 0x38) {
+    if (nRelX <= 0x20 && (uint32_t)(nMouseY - 0x18 - VPRES_GetWideUiOffsetY()) < 0x21) { // VP: [resolution site-6]
       gpHelpCloseButton = 1;
     } else {
       GAME::Game::GAMEDATA_ClearQueuedClicks();
@@ -301,7 +410,7 @@ void __stdcall HELP_HideMiniPanel() {
     gbMiniPanel = 0;
 }
 
-static BOOL __stdcall MouseIsInRange(int32_t nSizeX, int32_t nSizeY, int32_t nX, int32_t nY) {
+BOOL __stdcall MouseIsInRange(int32_t nSizeX, int32_t nSizeY, int32_t nX, int32_t nY) {
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX >= nX && nMouseX <= nX + nSizeX && nMouseY >= nY - nSizeY && nMouseY <= nY) {
@@ -460,7 +569,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     uint16_t* pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1066);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     int32_t nPrevFont = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1066), 0x17c - nPrevFont / 2, 0x11, 0, 0);
+    BOOL bCentered = 0;
+    int32_t nPosY = 0;
+    int32_t nLabelWidth = 0x11 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1066);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x17c + VPRES_GetWideUiOffsetX() - nPrevFont / 2, nLabelWidth, nPosY, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -468,54 +581,79 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1030);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nPrevFont = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1030), 0x2bd - nPrevFont / 2, 0x49, 0, 0);
+    bCentered = 0;
+    nPosY = 0;
+    nLabelWidth = 0x49 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1030);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x2bd + VPRES_GetWideUiOffsetX() - nPrevFont / 2, nLabelWidth, nPosY, bCentered); // VP: site-5
     nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(5);
     for (i = 0; i < 0x64; i++) {
       wszBuf4[i] = L'\0';
     }
 
     pStr = CmdTbl::CMD_GetKeyNameForCommand(0x22, 1);
-    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf4, D2Lang::StrTable::strtable::GetLocaleString(0x1067), pStr);
-    D2Win::Src::D2WinFont::DRAW_text(wszBuf4, 0x75, 0x4e, 0, 0);
+    uint16_t* pFormat = D2Lang::StrTable::strtable::GetLocaleString(0x1067);
+    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf4, pFormat, pStr);
+    D2Win::Src::D2WinFont::DRAW_text(wszBuf4, 0x75 + VPRES_GetWideUiOffsetX(), 0x4e + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 + site-6
     for (i = 0; i < 0x64; i++) {
       wszBuf1[i] = L'\0';
     }
 
     pStr = CmdTbl::CMD_GetKeyNameForCommand(0x25, 1);
-    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf1, D2Lang::StrTable::strtable::GetLocaleString(0x1068), pStr);
-    D2Win::Src::D2WinFont::DRAW_text(wszBuf1, 0x75, 0x62, 0, 0);
+    pFormat = D2Lang::StrTable::strtable::GetLocaleString(0x1068);
+    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf1, pFormat, pStr);
+    D2Win::Src::D2WinFont::DRAW_text(wszBuf1, 0x75 + VPRES_GetWideUiOffsetX(), 0x62 + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 + site-6
     for (i = 0; i < 0x64; i++) {
       wszBuf2[i] = L'\0';
     }
 
     pStr = CmdTbl::CMD_GetKeyNameForCommand(0x24, 1);
-    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf2, D2Lang::StrTable::strtable::GetLocaleString(0x1069), pStr);
-    D2Win::Src::D2WinFont::DRAW_text(wszBuf2, 0x75, 0x76, 0, 0);
+    pFormat = D2Lang::StrTable::strtable::GetLocaleString(0x1069);
+    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf2, pFormat, pStr);
+    D2Win::Src::D2WinFont::DRAW_text(wszBuf2, 0x75 + VPRES_GetWideUiOffsetX(), 0x76 + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 + site-6
     for (i = 0; i < 0x64; i++) {
       wszBuf3[i] = L'\0';
     }
 
     pStr = CmdTbl::CMD_GetKeyNameForCommand(7, 1);
-    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf3, D2Lang::StrTable::strtable::GetLocaleString(0x106a), pStr);
-    D2Win::Src::D2WinFont::DRAW_text(wszBuf3, 0x75, 0x8a, 0, 0);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x106b), 0x75, 0x9e, 0, 0);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x106c), 0x75, 0xb2, 0, 0);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x106d), 0x75, 0xc6, 0, 0);
+    pFormat = D2Lang::StrTable::strtable::GetLocaleString(0x106a);
+    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf3, pFormat, pStr);
+    D2Win::Src::D2WinFont::DRAW_text(wszBuf3, 0x75 + VPRES_GetWideUiOffsetX(), 0x8a + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 + site-6
+    bCentered = 0;
+    nPosY = 0;
+    nLabelWidth = 0x9e + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x106b);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x75 + VPRES_GetWideUiOffsetX(), nLabelWidth, nPosY, bCentered); // VP: site-5
+    bCentered = 0;
+    nPosY = 0;
+    nLabelWidth = 0xb2 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x106c);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x75 + VPRES_GetWideUiOffsetX(), nLabelWidth, nPosY, bCentered); // VP: site-5
+    bCentered = 0;
+    nPosY = 0;
+    nLabelWidth = 0xc6 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x106d);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x75 + VPRES_GetWideUiOffsetX(), nLabelWidth, nPosY, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf5[i] = L'\0';
     }
 
     pStr = CmdTbl::CMD_GetKeyNameForCommand(6, 1);
-    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf5, D2Lang::StrTable::strtable::GetLocaleString(0x106e), pStr);
-    D2Win::Src::D2WinFont::DRAW_text(wszBuf5, 0x75, 0xda, 0, 0);
+    pFormat = D2Lang::StrTable::strtable::GetLocaleString(0x106e);
+    D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszBuf5, pFormat, pStr);
+    D2Win::Src::D2WinFont::DRAW_text(wszBuf5, 0x75 + VPRES_GetWideUiOffsetX(), 0xda + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 + site-6
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
 
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x106f);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
-    int32_t nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x106f), 0x3b - nLabelWidth / 2, 0x1e1, 0, 0);
+    nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
+    bCentered = 0;
+    int32_t nColor_lcl = 0;
+    nPosY = 0x1e1 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x106f);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x3b + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -523,7 +661,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1070);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1070), 0x86 - nLabelWidth / 2, 0x19a, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x19a + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1070);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x86 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -531,7 +673,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1071);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1071), 0x86 - nLabelWidth / 2, 0x1a9, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1a9 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1071);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x86 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -539,7 +685,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1072);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1072), 0x86 - nLabelWidth / 2, 0x1b8, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1b8 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1072);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x86 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -547,7 +697,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0xf92);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0xf92), 0xde - nLabelWidth / 2, 0x177, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x177 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0xf92);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0xde + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -555,7 +709,7 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1074);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf) / 2;
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1074), 0x108 - nLabelWidth, 0x1fa, 0, 0);
+    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1074), 0x108 + VPRES_GetWideUiOffsetX() - nLabelWidth, 0x1fa + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 [resolution site-6]
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -563,7 +717,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1075);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1075), 0x108 - nLabelWidth / 2, 0x209, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x209 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1075);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x108 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -571,7 +729,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1076);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1076), 0x13a - nLabelWidth / 2, 0x1e1, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1e1 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1076);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x13a + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -579,7 +741,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1077);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1077), 0x171 - nLabelWidth / 2, 0x1f9, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1f9 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1077);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x171 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -587,7 +753,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1078);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1078), 0x171 - nLabelWidth / 2, 0x208, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x208 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1078);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x171 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -595,7 +765,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1079);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1079), 0x1c1 - nLabelWidth / 2, 0x191, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x191 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1079);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x1c1 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -603,7 +777,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107a);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x107a), 0x1c1 - nLabelWidth / 2, 0x1a0, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1a0 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107a);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x1c1 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -611,7 +789,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107b);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x107b), 0x1c1 - nLabelWidth / 2, 0x1af, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1af + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107b);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x1c1 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -619,7 +801,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107c);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x107c), 0x1c1 - nLabelWidth / 2, 0x1be, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1be + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107c);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x1c1 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -627,7 +813,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107d);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x107d), 0x216 - nLabelWidth / 2, 0x208, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x208 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107d);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x216 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -635,7 +825,7 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0xf93);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf) / 2;
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0xf93), 0x23c - nLabelWidth, 0x177, 0, 0);
+    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0xf93), 0x23c + VPRES_GetWideUiOffsetX() - nLabelWidth, 0x177 + VPRES_GetWideUiOffsetY(), 0, 0); // VP: site-5 [resolution site-6]
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -643,7 +833,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1073);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1073), 0x2a2 - nLabelWidth / 2, 0x19a, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x19a + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1073);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x2a2 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -651,7 +845,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1071);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1071), 0x2a2 - nLabelWidth / 2, 0x1a9, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1a9 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1071);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x2a2 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -659,7 +857,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1072);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x1072), 0x2a2 - nLabelWidth / 2, 0x1b8, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1b8 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x1072);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x2a2 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     for (i = 0; i < 0x64; i++) {
       wszBuf[i] = L'\0';
     }
@@ -667,7 +869,11 @@ void __stdcall DRAW_UI_HelpXpac() {
     pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107e);
     D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszBuf, pStr);
     nLabelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszBuf);
-    D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0x107e), 0x2e8 - nLabelWidth / 2, 0x1e1, 0, 0);
+    bCentered = 0;
+    nColor_lcl = 0;
+    nPosY = 0x1e1 + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pStr = D2Lang::StrTable::strtable::GetLocaleString(0x107e);
+    D2Win::Src::D2WinFont::DRAW_text(pStr, 0x2e8 + VPRES_GetWideUiOffsetX() - nLabelWidth / 2, nPosY, nColor_lcl, bCentered); // VP: site-5
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -889,7 +1095,9 @@ void __stdcall DrawBackgroundHelpMenu() {
     }
 
     DWORD eResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (eResMode == 2) {
+    // VP: [resolution site-5] wide modes take the xpac help path; the five
+    // draw helpers below re-center themselves via VPRES_GetWideUiOffsetX() // VP: site-5
+    if (VPRES_IsWideLayoutMode(eResMode)) {
       DrawBorderXpac();
       DrawSellBtn();
       DrawYellowBullet();
@@ -913,12 +1121,12 @@ void __stdcall INPUT_HelpCloseButtonUp(D2UIMouseMsgStrc * pMsg) {
     if (gpHelpCloseButton) {
       DWORD eResMode;
       eResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-      if (eResMode == 2) {
-        nRelX -= 0x2ad;
+      if (VPRES_IsWideLayoutMode(eResMode)) {
+        nRelX -= 0x2ad + VPRES_GetWideUiOffsetX(); // VP: site-5
       } else {
         nRelX -= 0x20d;
       }
-      if (nRelX <= 0x20 && nMouseY >= 0x18 && nMouseY <= 0x38) {
+      if (nRelX <= 0x20 && (uint32_t)(nMouseY - 0x18 - VPRES_GetWideUiOffsetY()) < 0x21) { // VP: [resolution site-6]
         ui::SetUIFlag(UI_HELPSCREEN, UI_TOGGLE, 0);
         HELP_HideMiniPanel();
         goto consume_click;
@@ -957,8 +1165,5 @@ void __fastcall HELP_SetUIVarW(eD2UIvars eUIVar, eD2UIvarsSetType eUIVarSetType,
 void __stdcall HELP_MiniPanelKeyNoOp_Unref_004e4040(D2UIMouseMsgStrc * pMsg) {
 
 }
-
-static void * keep_00494300 = (0 ? (SetSeenHelpMenu(*(BOOL *)0), (void *)0) : (void *)0);
-static void * keep_00494ff0 = (0 ? (MouseIsInRange(*(int32_t *)0, *(int32_t *)0, *(int32_t *)0, *(int32_t *)0), (void *)0) : (void *)0);
 
 } // namespace D2Client::UI::Help

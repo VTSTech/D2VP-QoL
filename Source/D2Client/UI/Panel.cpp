@@ -3,6 +3,7 @@
 #include "Source/D2Client/UI/Panel.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/Game/Game.h"
@@ -23,18 +24,157 @@
 #include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SkillStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Common/DATATBLS/BeltsTbls.h"
+#include "Source/D2Common/DATATBLS/DataTbls.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/TokTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/PATH/DynamicPath.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/File.h"
 #include "Source/Fog/Fog.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/D2gfx/D2gfx.globals.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/Inv.data.h"
 #include "Source/D2Client/UI/MiniPanel.data.h"
 #include "Source/D2Client/UI/Panel.data.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/Unit.h"
 #include "Source/D2Common/Units.inline.h"
+#include "Source/D2Game/ITEMS/ItemMode.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Launch/MainMenus.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: vanilla-plus globe_persistent gate
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -121,7 +261,7 @@ uint32_t __stdcall PANEL_GetBeltSlotHoverFlag_Unref_0047ec40() {
 
 void __stdcall PANEL_SetBottomPanelGlobals1_Unref_004880f0() {
     gnInvMouseX = 0;
-    gnInvMouseY = 0;
+    gpInvCursorItem = 0;
 }
 
 uint32_t __stdcall PANEL_GetBeltSlotHoverFlag_Unref_0048a690() {
@@ -132,7 +272,7 @@ void __stdcall LoadPanelImages() {
     char* ppszPath;
     btn = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\btn");
     uint32_t nLanguageCode = D2Lang::StrTable::strtable::MISC_GetLanguageCode();
-    int bExpansion = false;
+    bool bExpansion = false;
     BOOL bResult = Fog::D2CheckExpansionGame();
     if (bResult) {
       bResult = GAME::Game::CLIENT_CheckExpansion();
@@ -152,7 +292,12 @@ void __stdcall LoadPanelImages() {
 
       InvChar = Core::Archive::IMAGE_LoadDC6Ex(szPath, 0);
     } else {
-      InvChar = ui::ARCHIVE_LoadOverlayImageUsedInGame(bExpansion ? (char*)"Panel\\InvChar6" : (char*)"Panel\\InvChar");
+      ppszPath = "Panel\\InvChar6";
+      if (!bExpansion) {
+        ppszPath = "Panel\\InvChar";
+      }
+
+      InvChar = ui::ARCHIVE_LoadOverlayImageUsedInGame(ppszPath);
     }
 
     Arrow = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\Arrow");
@@ -248,7 +393,7 @@ void __stdcall FreePanelImages() {
 void __stdcall PANEL_DrawHostileIndicator() {
     D2GfxDataStrc sGfxData;
     memset(&sGfxData, 0, 0x48);
-    BOOL bSuppressed = 0;
+    bool bSuppressed = false;
     int nYOffset = 0;
     BOOL bUIFlag = GAME::Roster::ROSTER_CheckAnyPlayerHostileToMe();
     if (!bUIFlag) {
@@ -257,7 +402,7 @@ void __stdcall PANEL_DrawHostileIndicator() {
 
     bUIFlag = ui::GetUIFlag(UI_STASH);
     if (bUIFlag || (bUIFlag = ui::GetUIFlag(UI_NPCSHOP) , bUIFlag != 0) || (bUIFlag = ui::GetUIFlag(UI_MSGLOG) , bUIFlag != 0) || (bUIFlag = ui::GetUIFlag(UI_INVENTORY) , bUIFlag || (bUIFlag = ui::GetUIFlag(UI_SKILLTREE) , bUIFlag != 0))) {
-      bSuppressed = 1;
+      bSuppressed = true;
     }
 
     bUIFlag = ui::GetUIFlag(UI_MPTRADE);
@@ -350,7 +495,7 @@ void __stdcall PANEL_DrawSkillIcons() {
       }
     }
 
-    Panel::SPELLSEL_DrawSkillIcon(pUnit, pSkill, 0x75, Inv::ScreenSizeY, 1);
+    Panel::SPELLSEL_DrawSkillIcon(pUnit, pSkill, 0x75 + VPRES_GetWideUiOffsetX(), Inv::ScreenSizeY, 1); // VP: site-5, bar-anchored
     pSkill = D2Common::Units::GetRightSkill(pUnit);
     if (pSkill) {
       nSkillLevel = D2Common::Skills::GetSkillLevel(pUnit, pSkill, 1);
@@ -363,7 +508,7 @@ void __stdcall PANEL_DrawSkillIcons() {
       }
     }
 
-    Panel::SPELLSEL_DrawSkillIcon(pUnit, pSkill, ui::ScreenSizeX - 0xa5, Inv::ScreenSizeY, 0);
+    Panel::SPELLSEL_DrawSkillIcon(pUnit, pSkill, ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0xa5, Inv::ScreenSizeY, 0); // VP: site-5, bar-anchored
 }
 
 static int32_t PANEL_GetSmoothedStatValue(eD2UnitStat eUnitStat) {
@@ -372,7 +517,7 @@ static int32_t PANEL_GetSmoothedStatValue(eD2UnitStat eUnitStat) {
     int nAbsDiff;
     int32_t nInterp;
     int nSlotOffset;
-    BOOL bSkipLowClamp = true;
+    bool bSkipLowClamp = true;
     D2UnitStrc* pUnit = UNIT::Player::GetPlayerUnit_UI();
     int nCurValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, eUnitStat, 0);
     switch (eUnitStat) {
@@ -506,11 +651,11 @@ void __stdcall PANEL_DrawHealthOrb() {
       if (nRegenWidth > nPercentHideFromBottom) {
         eRenderer = D2gfx::D2GFX::D2GFX_GetRendererMode();
         if (eRenderer == RENDERER_Direct3D) {
-          nValue = 0x1c;
-          D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, 0x1c, Inv::ScreenSizeY - 0xd, nPercentHideFromBottom, nRegenWidth - nPercentHideFromBottom, DRAW_VERYTRANSPARENT);
+          nValue = 0x1c + VPRES_GetWideUiOffsetX(); // VP: site-5, bar-anchored
+          D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, nValue, Inv::ScreenSizeY - 0xd, nPercentHideFromBottom, nRegenWidth - nPercentHideFromBottom, DRAW_VERYTRANSPARENT);
         } else {
-          nValue = 0x1d;
-          D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, 0x1d, Inv::ScreenSizeY - 0xd, nPercentHideFromBottom, nRegenWidth - nPercentHideFromBottom, DRAW_VERYTRANSPARENT);
+          nValue = 0x1d + VPRES_GetWideUiOffsetX(); // VP: site-5, bar-anchored
+          D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, nValue, Inv::ScreenSizeY - 0xd, nPercentHideFromBottom, nRegenWidth - nPercentHideFromBottom, DRAW_VERYTRANSPARENT);
         }
       }
     }
@@ -520,12 +665,12 @@ void __stdcall PANEL_DrawHealthOrb() {
     sGfxData.nFrameNumber = eState ? 2 : 0;
     if (nPercentHideFromBottom) {
       D2gfx::D2GFX::D2GFX_GetRendererMode();
-      D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, 0x1d, Inv::ScreenSizeY - 0xd, 0, nPercentHideFromBottom, DRAW_SOLID);
+      D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, 0x1d + VPRES_GetWideUiOffsetX(), Inv::ScreenSizeY - 0xd, 0, nPercentHideFromBottom, DRAW_SOLID); // VP: site-5
     }
 
     sGfxData.pDC6 = overlap;
     sGfxData.nFrameNumber = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x1c, Inv::ScreenSizeY - 5, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x1c + VPRES_GetWideUiOffsetX(), Inv::ScreenSizeY - 5, -1, DRAW_SOLID, nullptr); // VP: site-5, bar-anchored
 }
 
 void __stdcall PANEL_DrawManaOrb() {
@@ -562,9 +707,9 @@ void __stdcall PANEL_DrawManaOrb() {
       if (nRegenWidth > nPercentHideFromBottom) {
         eRenderer = D2gfx::D2GFX::D2GFX_GetRendererMode();
         if (eRenderer == RENDERER_Direct3D) {
-          nPositionX = ui::ScreenSizeX - 0x70;
+          nPositionX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x70; // VP: site-5, bar-anchored
         } else {
-          nPositionX = ui::ScreenSizeX - 0x6f;
+          nPositionX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x6f; // VP: site-5, bar-anchored
         }
 
         D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, nPositionX, Inv::ScreenSizeY - 0xd, nPercentHideFromBottom, nRegenWidth - nPercentHideFromBottom, DRAW_VERYTRANSPARENT);
@@ -572,10 +717,10 @@ void __stdcall PANEL_DrawManaOrb() {
     }
 
     D2gfx::D2GFX::D2GFX_GetRendererMode();
-    D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, ui::ScreenSizeX - 0x6f, Inv::ScreenSizeY - 0xd, 0, nPercentHideFromBottom, DRAW_SOLID);
+    D2gfx::D2GFX::D2GFX_DrawVerticalCropImage(&sGfxData, ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x6f, Inv::ScreenSizeY - 0xd, 0, nPercentHideFromBottom, DRAW_SOLID); // VP: site-5
     sGfxData.pDC6 = overlap;
     sGfxData.nFrameNumber = 1;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - 0x6e, Inv::ScreenSizeY - 9, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x6e, Inv::ScreenSizeY - 9, -1, DRAW_SOLID, nullptr); // VP: site-5, bar-anchored
 }
 
 void __stdcall thunk_D2GFX_GetColorFromPalette_A() {
@@ -647,7 +792,7 @@ void __stdcall PANEL_DrawRunButton() {
     sGfxData.nDirection = 0;
     BOOL bAlwaysRun = GAME::Game::GetGlobalAlwaysRun();
     if (bAlwaysRun) {
-      if ((!gpPanelRunButton || nMouseX < ui::ScreenSizeX / 2 - 0x91) != 0 || nMouseX > ui::ScreenSizeX / 2 - 0x80 || nMouseY < Inv::ScreenSizeY - 0x1c || nMouseY > Inv::ScreenSizeY - 8) {
+      if (!gpPanelRunButton || nMouseX < ui::ScreenSizeX / 2 - 0x91 || nMouseX > ui::ScreenSizeX / 2 - 0x80 || nMouseY < Inv::ScreenSizeY - 0x1c || nMouseY > Inv::ScreenSizeY - 8) {
         sGfxData.nFrameNumber = 2;
       } else {
         sGfxData.nFrameNumber = 3;
@@ -669,6 +814,7 @@ void __stdcall PANEL_DrawRunButton() {
 void __stdcall PANEL_DrawStaminaBar() {
     BOOL eState;
     int nClearCount;
+    uint16_t* pwszCursor;
     uint16_t wszTooltip[100];
     D2UnitStrc* pUnit;
     pUnit = UNIT::Player::GetPlayerUnit_UI();
@@ -720,9 +866,13 @@ void __stdcall PANEL_DrawStaminaBar() {
     nCurStamina = 3;
     nCurStaminaUnits = nMaxStaminaUnits;
     show_stamina_tooltip:
-    for (nClearCount = 0; nClearCount < 0x64; nClearCount++) {
-      wszTooltip[nClearCount] = L'\0';
+    pwszCursor = wszTooltip;
+    for (nClearCount = 0x32; nClearCount; nClearCount--) {
+      pwszCursor[0] = L'\0';
+      pwszCursor[1] = L'\0';
+      pwszCursor += 2;
     }
+
     if (!(nMouseX >= ui::ScreenSizeX / 2 - 0x7f && nMouseX <= ui::ScreenSizeX / 2 - 0x19 && nMouseY >= Inv::ScreenSizeY - 0x1b && nMouseY <= Inv::ScreenSizeY - 9)) {
       return;
     }
@@ -784,7 +934,9 @@ static void __stdcall PANEL_HighlightBeltSlot(int32_t nBeltSlot, int32_t nHighli
     }
 
     D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, nRect, nBeltSlot);
-    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nRect[0], nRect[2], 0x1d, 0x1d, (uint32_t)gaPanelBeltColors[nHighlightColor], DRAW_VERYTRANSPARENT);
+    // VP: [resolution site-5] Belts.txt rects are 800-absolute (Inv::nScreenMode=1
+    // variant); re-center X on wide modes (offset 0 at retail)
+    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nRect[0] + VPRES_GetWideUiOffsetX(), nRect[2] + VPRES_GetWideUiOffsetY(), 0x1d, 0x1d, (uint32_t)gaPanelBeltColors[nHighlightColor], DRAW_VERYTRANSPARENT); // VP: site-5 X + site-6 Y
 }
 
 static void CLIENT_HandleBeltSlotClick(D2InventoryStrc * pInventory) {
@@ -935,7 +1087,7 @@ void __stdcall PANEL_DrawExperienceBar() {
 
 void __stdcall PANEL_DrawBeltSlots(int32_t nFrameNumber) {
     D2GfxDataStrc sGfxData;
-    int32_t nPositionX = ui::ScreenSizeX - 0x37;
+    int32_t nPositionX = ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x37; // VP: site-5, bar-anchored
     int nPositionY = 0x9b;
     uint32_t nSlotIndex = 0;
     do {
@@ -1179,7 +1331,7 @@ void __stdcall Draw_EquipmentNeedToRepairBody() {
       }
 
       pSlotLocEntry++;
-      if ((intptr_t)pSlotLocEntry >= (intptr_t)((char*)&gaBodySlotLocTable + sizeof(gaBodySlotLocTable))) {
+      if ((int)pSlotLocEntry >= (intptr_t)((char*)&gaBodySlotLocTable + sizeof(gaBodySlotLocTable))) {
         return;
       }
     } while (true);
@@ -1219,7 +1371,7 @@ void __stdcall Draw_EquipmentNeedToRepairBody() {
       }
 
       pSlotLocEntry2++;
-      if ((intptr_t)pSlotLocEntry2 >= (intptr_t)((char*)&gaBodySlotLocTable + sizeof(gaBodySlotLocTable))) {
+      if ((int)pSlotLocEntry2 >= (intptr_t)((char*)&gaBodySlotLocTable + sizeof(gaBodySlotLocTable))) {
         return;
       }
     }
@@ -1249,12 +1401,15 @@ void __stdcall PANEL_DrawPanelLayout() {
       wszHpFormatted[nClearCount] = L'\0';
     }
 
+    uint16_t* pwszBuf = wszMpFormatted;
     int nMouseYSaved = nMouseY;
-    for (nClearCount = 0; nClearCount < 0x64; nClearCount++) {
-      wszMpFormatted[nClearCount] = L'\0';
+    for (nClearCount = 0x32; nClearCount; nClearCount--) {
+      pwszBuf[0] = L'\0';
+      pwszBuf[1] = L'\0';
+      pwszBuf += 2;
     }
 
-    if (bShowHpText || nMouseX - 0x1eU <= 0x50 && nMouseY >= Inv::ScreenSizeY - 0x4b && nMouseY <= Inv::ScreenSizeY - 0xf) {
+    if (bShowHpText || VANILLAPLUS_GlobeTextPersistent() || nMouseX - VPRES_GetWideUiOffsetX() - 0x1eU < 0x51 && Inv::ScreenSizeY - 0x4b <= nMouseY && nMouseY <= Inv::ScreenSizeY - 0xf) { // VP: globe_persistent - retail orb text pinned on, 0 = vanilla; site-5 orb hover re-centered
       D2UnitStrc* pPlayerUnit_lcl;
       nTextWidth = PANEL_GetSmoothedStatValue(UNITSTAT_hitpoints);
       nStatValue = nTextWidth >> 8;
@@ -1268,11 +1423,11 @@ void __stdcall PANEL_DrawPanelLayout() {
       D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszHpFormatted, D2Lang::StrTable::strtable::GetLocaleString(0x1045), nStatValue, nMouseY);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszHpText, wszHpFormatted);
       nTextWidth = D2Win::Src::D2WinFont::DRAW_text0(wszHpText);
-      D2Win::Src::D2WinFont::DRAW_text(wszHpText, 0x41 - nTextWidth / 2, Inv::ScreenSizeY - 0x5f, 0, 0);
+      D2Win::Src::D2WinFont::DRAW_text(wszHpText, 0x41 + VPRES_GetWideUiOffsetX() - nTextWidth / 2, Inv::ScreenSizeY - 0x5f, 0, 0); // VP: site-5, orb-anchored
       nMouseY = nMouseYSaved;
       nMouseX = nMouseXSaved;
     }
-    if (!(bShowmpText || nMouseX >= ui::ScreenSizeX - 0x6f && nMouseX <= ui::ScreenSizeX - 0x1f && nMouseY >= Inv::ScreenSizeY - 0x4b && nMouseY <= Inv::ScreenSizeY - 0xf)) {
+    if (!(bShowmpText || VANILLAPLUS_GlobeTextPersistent() || ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x6f <= nMouseX && nMouseX <= ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x1f && Inv::ScreenSizeY - 0x4b <= nMouseY && nMouseY <= Inv::ScreenSizeY - 0xf)) { // VP: globe_persistent - retail orb text pinned on, 0 = vanilla; site-5 orb hover re-centered
       return;
     }
 
@@ -1283,7 +1438,7 @@ void __stdcall PANEL_DrawPanelLayout() {
     D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(100, wszMpFormatted, D2Lang::StrTable::strtable::GetLocaleString(0x1046), nMouseX, nMouseY);
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszMpText, wszMpFormatted);
     nTextWidth = D2Win::Src::D2WinFont::DRAW_text0(wszMpText);
-    D2Win::Src::D2WinFont::DRAW_text(wszMpText, ui::ScreenSizeX - nTextWidth / 2 - 0x50, Inv::ScreenSizeY - 0x5f, 0, 0);
+    D2Win::Src::D2WinFont::DRAW_text(wszMpText, ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - nTextWidth / 2 - 0x50, Inv::ScreenSizeY - 0x5f, 0, 0); // VP: site-5, orb-anchored
 }
 
 int Unreferenced_00498310() {
@@ -1327,62 +1482,90 @@ static void PANEL_DrawCharacterInfo(int32_t nPanelOffsetY) {
     D2GfxDataStrc sGfxData;
     memset(&sGfxData, 0, 0x48);
     DWORD eResolutionMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    switch (eResolutionMode) {
-      case 2:
-        {
-          if (CtrlPnl7) {
-            Core::Archive::DC6_FreeAndDelete(CtrlPnl7);
-            CtrlPnl7 = 0;
-          }
-          if (!_00CtrlPnl7) {
-            _00CtrlPnl7 = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\800CtrlPnl7");
-          }
+    // VP-BEGIN [resolution site-5]: modes 3/4 draw the same 800CtrlPnl7
+    // interface bar as retail 800x600, but as one rigid 800-px unit centered
+    // on the playfield. The retail 800 branch anchors the pieces at screen X
+    // offsets 0 / ui::ScreenSizeX/2-0xeb / -0x6b / +0x15 / +0x95 / ui::ScreenSizeX-
+    // 0x75, which at 800x600 is exactly 0 / 165 / 293 / 421 / 549 / 683 and
+    // spans 0..800; here those 800-space offsets get VPRES_GetWideUiOffsetX()
+    // added so the bar stays one piece, centered. Retail paths below are
+    // untouched; at mode 2 the offset is 0.
+    if (eResolutionMode != 2 && VPRES_IsWideLayoutMode(eResolutionMode)) {
+      int nBarX = VPRES_GetWideUiOffsetX();
+      if (CtrlPnl7) {
+        Core::Archive::DC6_FreeAndDelete(CtrlPnl7);
+        CtrlPnl7 = 0;
+      }
+      if (!_00CtrlPnl7) {
+        _00CtrlPnl7 = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\800CtrlPnl7");
+      }
 
-          sGfxData.pDC6 = _00CtrlPnl7;
-          sGfxData.nDirection = 0;
-          sGfxData.nFrameNumber = 0;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 1;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0xeb, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 2;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x6b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 3;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x15, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 4;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x95, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 5;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - 0x75, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
-          return;
-        }
-      default:
-        {
-          if (!CtrlPnl7) {
-            CtrlPnl7 = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\CtrlPnl7");
-          }
-          if (_00CtrlPnl7) {
-            Core::Archive::DC6_FreeAndDelete(_00CtrlPnl7);
-            _00CtrlPnl7 = 0;
-          }
-          if (_00BorderFrame) {
-            Core::Archive::DC6_FreeAndDelete(_00BorderFrame);
-            _00BorderFrame = 0;
-          }
-
-          sGfxData.pDC6 = CtrlPnl7;
-          sGfxData.nDirection = 0;
-          sGfxData.nFrameNumber = 0;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 1;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x9b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 2;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x1b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 3;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x65, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
-          sGfxData.nFrameNumber = 4;
-          D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - 0x75, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
-          return;
-        }
+      sGfxData.nDirection = 0;
+      sGfxData.nFrameNumber = 0;
+      sGfxData.pDC6 = _00CtrlPnl7;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 1;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0xa5, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 2;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0x125, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 3;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0x1a5, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 4;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0x225, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 5;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBarX + 0x2ab, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
+      return;
     }
+    // VP-END [resolution site-5]
+    if (eResolutionMode != 2) {
+      if (!CtrlPnl7) {
+        CtrlPnl7 = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\CtrlPnl7");
+      }
+      if (_00CtrlPnl7) {
+        Core::Archive::DC6_FreeAndDelete(_00CtrlPnl7);
+        _00CtrlPnl7 = 0;
+      }
+      if (_00BorderFrame) {
+        Core::Archive::DC6_FreeAndDelete(_00BorderFrame);
+        _00BorderFrame = 0;
+      }
+
+      sGfxData.pDC6 = CtrlPnl7;
+      sGfxData.nDirection = 0;
+      sGfxData.nFrameNumber = 0;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 1;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x9b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 2;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x1b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 3;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x65, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+      sGfxData.nFrameNumber = 4;
+      D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - 0x75, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
+      return;
+    }
+    if (CtrlPnl7) {
+      Core::Archive::DC6_FreeAndDelete(CtrlPnl7);
+      CtrlPnl7 = 0;
+    }
+    if (!_00CtrlPnl7) {
+      _00CtrlPnl7 = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\800CtrlPnl7");
+    }
+
+    sGfxData.nDirection = 0;
+    sGfxData.nFrameNumber = 0;
+    sGfxData.pDC6 = _00CtrlPnl7;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    sGfxData.nFrameNumber = 1;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0xeb, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+    sGfxData.nFrameNumber = 2;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 - 0x6b, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+    sGfxData.nFrameNumber = 3;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x15, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+    sGfxData.nFrameNumber = 4;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX / 2 + 0x95, Inv::ScreenSizeY, -1, DRAW_SOLID, nullptr);
+    sGfxData.nFrameNumber = 5;
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, ui::ScreenSizeX - 0x75, Inv::ScreenSizeY - nPanelOffsetY, -1, DRAW_SOLID, nullptr);
 }
 
 void __stdcall DRAW_UI_BorderLeft() {
@@ -1391,19 +1574,21 @@ void __stdcall DRAW_UI_BorderLeft() {
     if (!_00BorderFrame) {
       _00BorderFrame = ui::ARCHIVE_LoadOverlayImageUsedInGame("Panel\\800BorderFrame");
     }
+    // VP: [resolution site-5] the frame rides the re-centered panel on wide
+    int nBorderX = VPRES_GetWideUiOffsetX();
 
     sGfxData.pDC6 = _00BorderFrame;
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, 0xfd, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0, 0xfd + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 1;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x100, 0x3f, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0x100, 0x3f + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 2;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, 0x1e4, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0, 0x1e4 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 3;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0, 0x229, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0, 0x229 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 4;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x100, 0x229, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0x100, 0x229 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
 }
 
 void __stdcall DRAW_UI_BorderRight() {
@@ -1413,50 +1598,60 @@ void __stdcall DRAW_UI_BorderRight() {
     }
 
     DC6* pDVar1 = _00BorderFrame;
+    // VP: [resolution site-5] the frame rides the re-centered panel on wide
+    int nBorderX = VPRES_GetWideUiOffsetX();
     memset(&sGfxData, 0, 0x48);
     sGfxData.pDC6 = pDVar1;
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 5;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 400, 0x3f, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 400, 0x3f + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 6;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x220, 0xfd, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0x220, 0xfd + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 7;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x2c9, 0x1e4, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0x2c9, 0x1e4 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 8;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 0x220, 0x229, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 0x220, 0x229 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
     sGfxData.nFrameNumber = 9;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, 400, 0x229, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nBorderX + 400, 0x229 + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr); // VP: [resolution site-6]
 }
 
-static int32_t __stdcall PANEL_GetBeltBoxAtPoint(int32_t nMouseY, int32_t nMouseX) {
+static int32_t __stdcall PANEL_GetPanelLayoutHeight(int32_t nMouseX, int32_t nMouseY) {
     D2BeltsTxt sBeltsTxt;
     D2Common::DATATBLS::BeltsTbls::GetBeltsLine(gnBeltPanelState, Inv::nScreenMode, &sBeltsTxt);
     int nBoxId = 0;
-    int t1_c0 = sBeltsTxt.nBoxes;
-    if ((uint8_t)t1_c0 <= 0) {
+    if ((uint8_t)sBeltsTxt.nBoxes <= 0) {
       return -1;
     }
 
     do {
       D2BeltsEntryStrc sInvRect;
       D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, &sInvRect.nLeft, nBoxId);
-      if (nMouseX >= sInvRect.nLeft && nMouseX <= sInvRect.nRight && nMouseY >= sInvRect.nTop && nMouseY <= sInvRect.nBottom) {
+      // VP: [resolution site-5] nLeft/nRight are the 800-absolute X bounds;
+      // re-center them on wide modes (offset 0 at retail)
+      sInvRect.nLeft += VPRES_GetWideUiOffsetX();
+      sInvRect.nRight += VPRES_GetWideUiOffsetX();
+      // VP: [resolution site-6] nTop/nBottom are the Y pair - the hit test
+      // must follow the bottom-anchored bar art too, or clicks land one
+      // height-delta above the drawn slots
+      sInvRect.nTop += VPRES_GetWideUiOffsetY();
+      sInvRect.nBottom += VPRES_GetWideUiOffsetY();
+      if (sInvRect.nLeft <= nMouseY && nMouseY <= sInvRect.nRight && sInvRect.nTop <= nMouseX && nMouseX <= sInvRect.nBottom) {
         return nBoxId;
       }
 
       nBoxId++;
-    } while (nBoxId < (int)(uint32_t)(uint8_t)t1_c0);
+    } while (nBoxId < (int)(uint32_t)(uint8_t)sBeltsTxt.nBoxes);
 
     return -1;
 }
 
-void __stdcall ClickBelt(D2InventoryStrc * pInventory, int32_t nMouseX, int32_t nMouseY) {
+void __stdcall ClickBelt(D2InventoryStrc * pInventory, int32_t nMouseY, int32_t nMouseX) {
     BOOL BVar1;
     uint8_t nPacketId;
     int32_t nSoundArg1;
     int32_t nSoundArg3;
     uint32_t nBeltSlot;
-    nBeltSlot = PANEL_GetBeltBoxAtPoint(nMouseY, nMouseX);
+    nBeltSlot = PANEL_GetPanelLayoutHeight(nMouseX, nMouseY);
     if (nBeltSlot == -1) {
       return;
     }
@@ -1512,9 +1707,9 @@ void __stdcall ClickBelt(D2InventoryStrc * pInventory, int32_t nMouseX, int32_t 
     Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(pCursorItem_lcl), nullptr, 0, 0, nSoundArg3);
 }
 
-static void CLIENT_HandleBeltMouseDown(D2InventoryStrc * pInventory, int32_t nMouseX, int32_t nMouseY) {
+static void CLIENT_HandleBeltMouseDown(D2InventoryStrc * pInventory, int32_t nMouseY, int32_t nMouseX) {
     int aInvRect[4];
-    uint32_t nBeltSlot = PANEL_GetBeltBoxAtPoint(nMouseY, nMouseX);
+    uint32_t nBeltSlot = PANEL_GetPanelLayoutHeight(nMouseX, nMouseY);
     if ((int)nBeltSlot < 0) {
       return;
     }
@@ -1547,8 +1742,8 @@ static void CLIENT_HandleBeltMouseDown(D2InventoryStrc * pInventory, int32_t nMo
         D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, aInvRect, nItemXPos);
         gpPanelBeltHoverItem = pItem;
         gpPanelBeltLastHoverItem = pItem;
-        gnBeltTooltipX = aInvRect[0] + 0xe;
-        gnBeltTooltipY = aInvRect[2];
+        gnBeltTooltipX = aInvRect[0] + VPRES_GetWideUiOffsetX() + 0xe; // VP: site-5, belt rect re-centered
+        gnBeltTooltipY = aInvRect[2] + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6] anchor follows the re-centered rect
         return;
       }
     } else {
@@ -1558,7 +1753,7 @@ static void CLIENT_HandleBeltMouseDown(D2InventoryStrc * pInventory, int32_t nMo
     }
 }
 
-static BOOL __fastcall PANEL_CheckEquipmentClickable(D2ItemsTxt * pItemTxt, D2UnitStrc * pUnit, D2UnitStrc * nItemSlot) {
+static BOOL __fastcall PANEL_CheckEquipmentClickable(D2ItemsTxt * pItemTxt, D2UnitStrc * pUnit, int32_t nItemSlot) {
     if (!pItemTxt) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0xa3d);
       exit(-1);
@@ -1566,7 +1761,7 @@ static BOOL __fastcall PANEL_CheckEquipmentClickable(D2ItemsTxt * pItemTxt, D2Un
 
     BOOL bClickable = 1;
     if (pItemTxt->bUnique == '\x01' || pItemTxt->bQuest == '\x01') {
-      Text::TEXT_OpenQuestScroll(nItemSlot, pItemTxt);
+      Text::TEXT_OpenQuestScroll((D2UnitStrc*)nItemSlot, pItemTxt);
       bClickable = 0;
     } else if (pItemTxt->bUseable != '\x01') {
       UNIT::UnitSnd::UNITSND_PlayPlayerSound(pUnit, 0x14);
@@ -1608,7 +1803,7 @@ void __stdcall ClickBeltRight(uint32_t nBeltSlot, D2UnitStrc * pUnit, D2Inventor
       exit(-1);
     }
 
-    bClickable = PANEL_CheckEquipmentClickable(pItemTxt, pUnit, pItem);
+    bClickable = PANEL_CheckEquipmentClickable(pItemTxt, pUnit, (int32_t)pItem);
     if (bClickable != 1) {
       return;
     }
@@ -1770,14 +1965,21 @@ BOOL __fastcall PANEL_CalculateBeltSlotIndex(D2UIMouseMsgStrc * pMsg) {
     int32_t nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     int32_t nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     D2Common::DATATBLS::BeltsTbls::GetBeltsLine(gnBeltPanelState, Inv::nScreenMode, &sBeltsTxt);
-    if (gnPanelBeltRowsExpanded) {
-      if (nMouseX >= *(int*)(sBeltsTxt.pad0x01 + (uint32_t)(uint8_t)sBeltsTxt.nBoxes * 0x10 - 0x39) && nMouseX <= sBeltsTxt.beltBoxes[3].nRight && nMouseY >= *(int*)(sBeltsTxt.pad0x01 + (uint32_t)(uint8_t)sBeltsTxt.nBoxes * 0x10 - 0x31) && nMouseY <= sBeltsTxt.beltBoxes[3].nBottom) {
-        return 1;
-      }
-    } else {
+    // VP: [resolution site-5] expanded-belt rects are 800-absolute (Belts.txt
+    // Inv::nScreenMode=1 variant); compare X in virtual-800 space on wide modes
+    int nVirtualMouseX = nMouseX - VPRES_GetWideUiOffsetX();
+    // VP: [resolution site-6] ...and Y in virtual-600 space. The rect is drawn
+    // +WideUiOffsetY at 720p, so a raw mouse Y sat one height-delta below the
+    // rect: the popup opened (the HUD-rect open path uses real screen coords)
+    // and collapsed on the next mouse event - hover belt slots would not stay
+    // open. Offsets are 0 at retail 640x480/800x600 - vanilla there.
+    int nVirtualMouseY = nMouseY - VPRES_GetWideUiOffsetY();
+    if (!gnPanelBeltRowsExpanded) {
       if (nMouseY > Inv::ScreenSizeY - 0x30 && nMouseX >= ui::ScreenSizeX / 2 + 0x17 && nMouseX <= ui::ScreenSizeX / 2 + 0x91 && nMouseY >= Inv::ScreenSizeY - 0x27 && nMouseY <= Inv::ScreenSizeY - 10) {
         return 1;
       }
+    } else if (nVirtualMouseX >= *(int*)(sBeltsTxt.pad0x01 + (uint32_t)(uint8_t)sBeltsTxt.nBoxes * 0x10 - 0x39) && nVirtualMouseX <= sBeltsTxt.beltBoxes[3].nRight && nVirtualMouseY >= *(int*)(sBeltsTxt.pad0x01 + (uint32_t)(uint8_t)sBeltsTxt.nBoxes * 0x10 - 0x31) && nVirtualMouseY <= sBeltsTxt.beltBoxes[3].nBottom) {
+      return 1;
     }
 
     return 0;
@@ -1966,8 +2168,8 @@ void __stdcall PANEL_DrawBottomPanel() {
             if (pItem == gpPanelBeltHoverItem && gpPanelBeltSlot) {
               PANEL_InitBeltColors();
               D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, aRectGreen, nBeltState);
-              nDrawY = aRectGreen[0];
-              nRectYorW = aRectGreen[2];
+              nDrawY = aRectGreen[0] + VPRES_GetWideUiOffsetX(); // VP: site-5, belt rect re-centered
+              nRectYorW = aRectGreen[2] + VPRES_GetWideUiOffsetY(); // VP: site-6, belt rect rides the bar
               byRectColor = gaPanelBeltColors[1];
               Engine::Gfx::D2GFX_DrawSolidRectExBySize(nDrawY, nRectYorW, 0x1d, 0x1d, (uint32_t)byRectColor, DRAW_VERYTRANSPARENT);
             } else {
@@ -1979,14 +2181,14 @@ void __stdcall PANEL_DrawBottomPanel() {
             gaPanelBeltColors[2] = D2Win::Src::D2WinPalette::D2GFX_GetColorFromCurrentPallete(0, 0, 0x80);
             gaPanelBeltColors[3] = D2Win::Src::D2WinPalette::D2GFX_GetColorFromCurrentPallete(0x80, 0x80, 0);
             D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, aRectRed, nBeltState);
-            nDrawY = aRectRed[0];
-            nRectYorW = aRectRed[2];
+            nDrawY = aRectRed[0] + VPRES_GetWideUiOffsetX(); // VP: site-5, belt rect re-centered
+            nRectYorW = aRectRed[2] + VPRES_GetWideUiOffsetY(); // VP: site-6, belt rect rides the bar
             byRectColor = gaPanelBeltColors[0];
             Engine::Gfx::D2GFX_DrawSolidRectExBySize(nDrawY, nRectYorW, 0x1d, 0x1d, (uint32_t)byRectColor, DRAW_VERYTRANSPARENT);
           }
 
           D2Common::DATATBLS::BeltsTbls::GetInvRectFromBeltsTxt(gnBeltPanelState, Inv::nScreenMode, aRectItem, nBeltState);
-          Engine::Gfx::DrawItemGfx(pItem, aRectItem[0], aRectItem[2]);
+          Engine::Gfx::DrawItemGfx(pItem, aRectItem[0] + VPRES_GetWideUiOffsetX(), aRectItem[2] + VPRES_GetWideUiOffsetY()); // VP: site-5 X + site-6 Y, belt-absolute rects
           if (nSlotIndex < 4) {
             nRectXorLen = D2Common::ITEMS::Items::IsUseable(pItem);
             if (nRectXorLen) {
@@ -2009,7 +2211,7 @@ void __stdcall PANEL_DrawBottomPanel() {
                   } while (nRectXorLen > 0x1c);
                 }
 
-                D2Win::Src::D2WinFont::DRAW_text(awsHotkeyText, aRectItem[0] + 2, aRectItem[3] - 2, 4, 0);
+                D2Win::Src::D2WinFont::DRAW_text(awsHotkeyText, aRectItem[0] + VPRES_GetWideUiOffsetX() + 2, aRectItem[3] + VPRES_GetWideUiOffsetY() - 2, 4, 0); // VP: site-5 X + site-6 Y
               }
             }
           }
@@ -2029,7 +2231,9 @@ void __stdcall DRAW_UI_BordersAndOrbsAndFillers() {
     eD2LevelId eRoomLevelId;
     eD2RendererMode eRendererMode = D2gfx::D2GFX::D2GFX_GetRendererMode();
     DWORD eResolutionMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (eResolutionMode == 2) {
+    // VP: [resolution site-5] wide modes draw the same 800BorderFrame frames
+    // (the functions below add the centering offset internally)
+    if (VPRES_IsWideLayoutMode(eResolutionMode)) {
       uint32_t eBorderType;
       eBorderType = Path::DRAW_GetTypeOfBorder();
       if (eBorderType == 2 || (eBorderType = Path::DRAW_GetTypeOfBorder() , eBorderType == 3)) {
@@ -2042,13 +2246,29 @@ void __stdcall DRAW_UI_BordersAndOrbsAndFillers() {
       }
     }
 
-    PANEL_DrawCharacterInfo((uint32_t)(eRendererMode == RENDERED_DirectDraw));
+    // VP-BEGIN [transparent-hud R154]: with [features] transparent_hud=1 the
+    // three skip-set draws below render nothing - the console frame art (the
+    // CtrlPnl7/800CtrlPnl7 stone behind the globes and belt, incl. the chat
+    // background and the orb sockets/button wells baked into the frame DC6s),
+    // the run button and the menu button are skipped; the world shows through.
+    // The keep-list around them is untouched: globes, gold readout, stamina
+    // bar, belt internals, skill icons, XP bar all draw retail, and the
+    // hidden buttons keep their hit areas/tooltips (input paths untouched).
+    // Gate off (or ini missing) = every call executes exactly as retail.
+    if (!VANILLAPLUS_HudBarTransparent()) {
+      PANEL_DrawCharacterInfo((uint32_t)(eRendererMode == RENDERED_DirectDraw));
+    }
     PANEL_DrawHealthOrb();
     PANEL_DrawManaOrb();
     PANEL_DrawGoldAmount();
-    PANEL_DrawRunButton();
+    if (!VANILLAPLUS_HudBarTransparent()) { // VP: [transparent-hud R154] skip-set draw
+      PANEL_DrawRunButton();
+    }
     PANEL_DrawStaminaBar();
-    PANEL_DrawMenuButton();
+    if (!VANILLAPLUS_HudBarTransparent()) { // VP: [transparent-hud R154] skip-set draw
+      PANEL_DrawMenuButton();
+    }
+    // VP-END [transparent-hud R154]
     PANEL_DrawBottomPanel();
     PANEL_DrawSkillIcons();
     PANEL_DrawExperienceBar();
@@ -2091,14 +2311,14 @@ void __stdcall INPUT_PanelLeftClickDown(D2UIMouseMsgStrc * pMsg) {
         pMsg->bHandled = 0;
         return;
       }
-      if (nMouseX >= 0x75 && nMouseX <= 0xa5 && nMouseY <= Inv::ScreenSizeY) {
+      if (nMouseX - VPRES_GetWideUiOffsetX() >= 0x75 && nMouseX - VPRES_GetWideUiOffsetX() <= 0xa5 && nMouseY <= Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
         gpPanelClickedButton = 1;
         gbPanelLeftBeltArrowClicked = 1;
-      } else if (nMouseX < ui::ScreenSizeX - 0xa5 || nMouseX > ui::ScreenSizeX - 0x75 || nMouseY > Inv::ScreenSizeY) {
-        if (nMouseX >= 0x1e && nMouseX <= 0x6e && nMouseY >= Inv::ScreenSizeY - 0x4b && nMouseY <= Inv::ScreenSizeY - 0xf) {
+      } else if (nMouseX < ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0xa5 || nMouseX > ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x75 || nMouseY > Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
+        if (nMouseX - VPRES_GetWideUiOffsetX() >= 0x1e && nMouseX - VPRES_GetWideUiOffsetX() <= 0x6e && nMouseY >= Inv::ScreenSizeY - 0x4b && nMouseY <= Inv::ScreenSizeY - 0xf) { // VP: [resolution site-5] orb-anchored
           bShowHpText = (BOOL)!bShowHpText;
           Storm::Source::SReg::SRegSaveValue("Diablo II", "Show HP Text", 0, bShowHpText);
-        } else if (nMouseX < ui::ScreenSizeX - 0x6f || nMouseX > ui::ScreenSizeX - 0x1f || nMouseY < Inv::ScreenSizeY - 0x4b || nMouseY > Inv::ScreenSizeY - 0xf) {
+        } else if (nMouseX < ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x6f || nMouseX > ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x1f || nMouseY < Inv::ScreenSizeY - 0x4b || nMouseY > Inv::ScreenSizeY - 0xf) { // VP: [resolution site-5] orb-anchored
           bExitFlag = PANEL_IsMouseInMenuButton(nMouseX, nMouseY);
           if (bExitFlag) {
             gpPanelMenuButton = 1;
@@ -2192,7 +2412,7 @@ void __stdcall INPUT_PanelLeftClickUp(D2UIMouseMsgStrc * pMsg) {
           gpPanelRunButton = 0;
           return;
         }
-        if (nMouseX - 0x75U <= 0x30 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) {
+        if (nMouseX - VPRES_GetWideUiOffsetX() - 0x75U <= 0x30 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
           ui::SetUIFlag(UI_SKILLSELECT, UI_TOGGLE, 0);
           SpellSel::SPELLSEL_SetMouseHandFlag(1);
           gpPanelClickedButton = 0;
@@ -2200,7 +2420,7 @@ void __stdcall INPUT_PanelLeftClickUp(D2UIMouseMsgStrc * pMsg) {
           gpPanelRunButton = 0;
           return;
         }
-        if (nMouseX >= ui::ScreenSizeX - 0xa5 && nMouseX <= ui::ScreenSizeX - 0x75 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) {
+        if (nMouseX >= ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0xa5 && nMouseX <= ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x75 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
           ui::SetUIFlag(UI_SKILLSELECT, UI_TOGGLE, 0);
           SpellSel::SPELLSEL_SetMouseHandFlag(0);
           gpPanelClickedButton = 0;
@@ -2223,7 +2443,7 @@ void __stdcall INPUT_PanelLeftClickUp(D2UIMouseMsgStrc * pMsg) {
       if (!(nMouseY <= Inv::ScreenSizeY - 0x30)) {
         iVar1 = ui::ScreenSizeX / 2;
         if (nMouseX < iVar1 + 0x17 || nMouseX > iVar1 + 0x91 || nMouseY < Inv::ScreenSizeY - 0x27 || nMouseY > Inv::ScreenSizeY - 10) {
-          if (nMouseX - 0x75U <= 0x30 && nMouseY <= Inv::ScreenSizeY) {
+          if (nMouseX - VPRES_GetWideUiOffsetX() - 0x75U <= 0x30 && nMouseY <= Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
             iVar1 = Cursor::GetItemType();
             if (iVar1 == 6) {
               ui::UI_DropCursorItemOnGround();
@@ -2242,7 +2462,7 @@ void __stdcall INPUT_PanelLeftClickUp(D2UIMouseMsgStrc * pMsg) {
               ui::SetUIFlag(UI_SKILLSELECT, UI_SET, 0);
               SpellSel::SPELLSEL_SetMouseHandFlag(1);
             }
-          } else if (nMouseX < ui::ScreenSizeX - 0xa5 || nMouseX > ui::ScreenSizeX - 0x75 || nMouseY > Inv::ScreenSizeY) {
+          } else if (nMouseX < ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0xa5 || nMouseX > ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x75 || nMouseY > Inv::ScreenSizeY) { // VP: [resolution site-5] bar-anchored
             if (nMouseX < iVar1 - 0x91 || nMouseX > iVar1 - 0x80 || nMouseY < Inv::ScreenSizeY - 0x1c || nMouseY > Inv::ScreenSizeY - 8) {
               if (nMouseX >= iVar1 - 8 && nMouseX <= iVar1 + 5 && nMouseY >= Inv::ScreenSizeY - 0x27 && nMouseY <= Inv::ScreenSizeY - 0xd) {
                 bFlag = ui::GetUIFlag(UI_MINIPANEL);
@@ -2310,7 +2530,7 @@ void __stdcall INPUT_PanelLeftClickUp(D2UIMouseMsgStrc * pMsg) {
       gpPanelRunButton = 0;
       return;
     }
-    if (nMouseX - 0x75U <= 0x30 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY || nMouseX >= ui::ScreenSizeX - 0xa5 && nMouseX <= ui::ScreenSizeX - 0x75 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) {
+    if (nMouseX - VPRES_GetWideUiOffsetX() - 0x75U <= 0x30 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY || nMouseX >= ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0xa5 && nMouseX <= ui::ScreenSizeX - VPRES_GetWideUiOffsetX() - 0x75 && nMouseY >= Inv::ScreenSizeY - 0x30 && nMouseY <= Inv::ScreenSizeY) { // VP: [resolution site-5] belt-arrow release regions re-centered
       bFlag = ui::GetUIFlag(UI_SKILLSELECT);
       if (bFlag) {
         ui::SetUIFlag(UI_SKILLSELECT, UI_RESET, 0);
@@ -2418,13 +2638,13 @@ void __stdcall INPUT_PanelRightClick(D2UIMouseMsgStrc * pMsg) {
             }
           }
 
-          bIsDeadOrSlot = PANEL_GetBeltBoxAtPoint((uint32_t)wMouseY, (uint32_t)wMouseX);
+          bIsDeadOrSlot = PANEL_GetPanelLayoutHeight((uint32_t)wMouseY, (uint32_t)wMouseX);
           if ((int)bIsDeadOrSlot < 0) {
             pMsg->bHandled = 0;
             return;
           }
 
-          ClickBeltRight(bIsDeadOrSlot, pPlayer, pPlayer->pInventory, pMsg->nWParam >> 2 & 1);
+          ClickBeltRight(bIsDeadOrSlot, pPlayer, pPlayer->pInventory, (uint32_t)pMsg->nWParam >> 2 & 1);
           Storm::SMsgBreakHandlerChain(pMsg);
           return;
         }

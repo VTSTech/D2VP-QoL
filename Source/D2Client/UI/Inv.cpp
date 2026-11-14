@@ -3,12 +3,14 @@
 #include "Source/D2Client/UI/Inv.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/Engine/GfxUtil.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Msg.h"
+#include "Source/D2Client/GAME/PalShift.h"
 #include "Source/D2Client/GAME/Roster.h"
 #include "Source/D2Client/GAME/RosterPets.h"
 #include "Source/D2Client/SkillHelpers.h"
@@ -25,24 +27,183 @@
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Monster.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/UnitMode.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/D2Common.h"
-#include "Source/D2Common/D2CharStatsTxt.h"
+#include "Source/D2Common/D2BitBufferStrc.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MissilesTxt.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2SkillStrc.h"
+#include "Source/D2Common/D2SkillsTxt.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Game/D2Game.h"
+#include "Source/D2Common/DATATBLS/DataTbls.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DATATBLS/TokTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/Preset.h"
+#include "Source/D2Common/Environment.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Monsters/MONSTERS.h"
+#include "Source/D2Common/PATH/DynamicPath.h"
+#include "Source/D2Common/QuestRecord.h"
+#include "Source/D2Common/Stats/StatsEx.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Common/Units/Missile.h"
+#include "Source/D2Game/D2ParsedTreasureClassStrc.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/GAME/Server.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/File.h"
+#include "Source/Fog/Fog.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2Common.globals.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/Help.data.h"
 #include "Source/D2Client/UI/Inv.data.h"
+#include "Source/D2Client/UI/MiniPanel.h"
 #include "Source/D2Client/UI/Panel.data.h"
+#include "Source/D2Client/UI/QuestLog.h"
 #include "Source/D2Client/UI/npcmenu.data.h"
+#include "Source/D2Common/DATATBLS/DataTbls.inline.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.inline.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
+#include "Source/D2Common/Unit.h"
 #include "Source/D2Common/Units.inline.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Launch/MainMenus.h"
+// VP-BEGIN [resolution site-5]: wide-layout classifier + centering offset.
+#include "Source/D2Client/UI/VanillaPlusCore.h"
+// VP-END [resolution site-5]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -158,7 +319,7 @@ D2GridScreenCoordinates pTransmogrifyBoxGridScreenCoordinates = {}; D2_GLOBAL_GU
 D2GridScreenCoordinates pInventoryGridScreenCoordinated = {}; D2_GLOBAL_GUARD(pInventoryGridScreenCoordinated, "D2Client::UI::Inv::pInventoryGridScreenCoordinated");
 D2GridScreenCoordinates pHirelingGridScreenCoordinates = {}; D2_GLOBAL_GUARD(pHirelingGridScreenCoordinates, "D2Client::UI::Inv::pHirelingGridScreenCoordinates");
 } // namespace D2Client::UI::Inv
-int gnInvMouseY = 0; D2_GLOBAL_GUARD(gnInvMouseY, "gnInvMouseY");
+int gpInvCursorItem = 0; D2_GLOBAL_GUARD(gpInvCursorItem, "gpInvCursorItem");
 static int gbInvNpcScreenCoordsInitialized = 0; D2_STATIC_GUARD(gbInvNpcScreenCoordsInitialized, "gbInvNpcScreenCoordsInitialized");
 static uint32_t gpInvItemUnderCursor = 0; D2_STATIC_GUARD(gpInvItemUnderCursor, "gpInvItemUnderCursor");
 namespace D2Client::UI::Inv {
@@ -227,7 +388,7 @@ static DC6 * gpInvBodySlotImage4 = 0; D2_STATIC_GUARD(gpInvBodySlotImage4, "gpIn
 static DC6 * gpInvMercBodyImage = 0; D2_STATIC_GUARD(gpInvMercBodyImage, "gpInvMercBodyImage");
 static DC6 * gpInvCubeRecipeScrollImage = 0; D2_STATIC_GUARD(gpInvCubeRecipeScrollImage, "gpInvCubeRecipeScrollImage");
 static uint32_t gbInvPanelButtonPressed = 0; D2_STATIC_GUARD(gbInvPanelButtonPressed, "gbInvPanelButtonPressed");
-static int gnInvUnusedClearedOnClick = 0; D2_STATIC_GUARD(gnInvUnusedClearedOnClick, "gnInvUnusedClearedOnClick");
+static int gnInvMouseY = 0; D2_STATIC_GUARD(gnInvMouseY, "gnInvMouseY");
 static uint32_t gShopTradeUIState = 0; D2_STATIC_GUARD(gShopTradeUIState, "gShopTradeUIState");
 static uint32_t gnInvMercBodySlot2 = 0; D2_STATIC_GUARD(gnInvMercBodySlot2, "gnInvMercBodySlot2");
 static uint32_t gbInvRecipeScrollOpen = 0; D2_STATIC_GUARD(gbInvRecipeScrollOpen, "gbInvRecipeScrollOpen");
@@ -235,6 +396,41 @@ static uint8_t gpInvRecipeScrollImage[8192] = {}; D2_STATIC_GUARD(gpInvRecipeScr
 
 namespace D2Client::UI::Inv {
 
+// VP-BEGIN [resolution site-5/site-6]: D2Common layout tables
+// (inventory.txt nScreenMode=1 variants) hold 800x600-absolute screen
+// coordinates. Wide modes move the whole 800-px UI as one rigid unit, so
+// every fetched rect's X bounds shift by the centering offset (site-5) and
+// its Y bounds ride the bottom-anchored panel art by the height delta
+// (site-6: ScreenSizeY - 600). No-op at retail modes (both offsets clamp to
+// 0); the coord caches below are keyed on nScreenMode + offsets so an
+// in-game resolution change refetches them.
+static void VP_SHIFT_InvPageCoords(D2InventoryScreenCoordinates* pCoords) {
+    int nOffsetX = VPRES_GetWideUiOffsetX();
+    int nOffsetY = VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pCoords->nLeft += nOffsetX;
+    pCoords->nRight += nOffsetX;
+    pCoords->nTop += nOffsetY;
+    pCoords->nBottom += nOffsetY;
+}
+
+static void VP_SHIFT_InvGridCoords(D2GridScreenCoordinates* pCoords) {
+    int nOffsetX = VPRES_GetWideUiOffsetX();
+    int nOffsetY = VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pCoords->nPixelLeft += nOffsetX;
+    pCoords->nRight += nOffsetX;
+    pCoords->nTop += nOffsetY;
+    pCoords->nBottom += nOffsetY;
+}
+
+static void VP_SHIFT_InvBodyCoords(D2InventoryEntryStrc* pCoords) {
+    int nOffsetX = VPRES_GetWideUiOffsetX();
+    int nOffsetY = VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+    pCoords->nLeft += nOffsetX;
+    pCoords->nRight += nOffsetX;
+    pCoords->nTop += nOffsetY;
+    pCoords->nBottom += nOffsetY;
+}
+// VP-END [resolution site-5/site-6]
 void __stdcall InitializeiInventoryPages() {
     // Static local variables (originally global data)
     static D2GridScreenCoordinates pTrophyCasePageGridCoordinates = {}; D2_STATIC_GUARD(pTrophyCasePageGridCoordinates, "D2Client::UI::Inv::InitializeiInventoryPages::pTrophyCasePageGridCoordinates");
@@ -250,69 +446,115 @@ void __stdcall InitializeiInventoryPages() {
     eInventoryPage eNpcInvPage;
     D2UnitStrc* pNpc;
     int32_t nInteractedNpcGUID;
-    if (nScreenMode != gnInventoryPage) {
-      gnInventoryPage = nScreenMode;
-      bInventoryScreenCoordinatesInitialized = 0;
-      gbInvNpcScreenCoordsInitialized = 0;
-    } else {
+    // VP: [resolution site-5] key also distinguishes wide modes - 800x600
+    // and 1280x720 share nScreenMode 1 but need different centered coords.
+    int nCoordPageKey = nScreenMode + VPRES_GetWideUiOffsetX()
+        + 0x400 * VPRES_GetWideUiOffsetY(); // VP: [resolution site-6] mode 3 vs 4
+    if (nCoordPageKey == gnInventoryPage) {
       if (bInventoryScreenCoordinatesInitialized) {
         goto init_npc_coords;
       }
+    } else {
+      gnInventoryPage = nCoordPageKey;
+      bInventoryScreenCoordinatesInitialized = 0;
+      gbInvNpcScreenCoordsInitialized = 0;
     }
 
     BOOL bIsExpansion;
     bIsExpansion = GAME::Game::CLIENT_CheckExpansion();
-    int32_t iVar1;
-    iVar1 = D2Common::Units::GetInventoryPage(UNIT::Player::GetPlayerUnit_UI(), '\0', bIsExpansion);
-    D2Common::DATATBLS::TokTbls::GetInvDimensions(iVar1, nScreenMode, &pInventoryScreenCoordinates);
-    D2Common::DATATBLS::TokTbls::GetGridDimensions(iVar1, nScreenMode, &pInventoryGridScreenCoordinated);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 4, BODY_rArm);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 3, BODY_torso);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 5, BODY_lArm);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 1, BODY_head);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 2, BODY_neck);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 6, BODY_lHand);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 7, BODY_rHand);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 8, BODY_belt);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 9, BODY_feet);
-    D2Common::DATATBLS::TokTbls::GetBodyDimensions(iVar1, nScreenMode, gaPlayerBodySlotScreenCoords + 10, BODY_gloves);
+    int32_t nInvPageIndex;
+    nInvPageIndex = 0;
+    pNpc = UNIT::Player::GetPlayerUnit_UI();
+    nInvPageIndex = D2Common::Units::GetInventoryPage(pNpc, nInvPageIndex, bIsExpansion);
+    D2Common::DATATBLS::TokTbls::GetInvDimensions(nInvPageIndex, nScreenMode, &pInventoryScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pInventoryScreenCoordinates); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetGridDimensions(nInvPageIndex, nScreenMode, &pInventoryGridScreenCoordinated);
+    VP_SHIFT_InvGridCoords(&pInventoryGridScreenCoordinated); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 4, BODY_rArm);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 4); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 3, BODY_torso);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 3); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 5, BODY_lArm);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 5); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 1, BODY_head);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 1); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 2, BODY_neck);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 2); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 6, BODY_lHand);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 6); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 7, BODY_rHand);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 7); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 8, BODY_belt);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 8); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 9, BODY_feet);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 9); // VP: site-5
+    D2Common::DATATBLS::TokTbls::GetBodyDimensions(nInvPageIndex, nScreenMode, gaPlayerBodySlotScreenCoords + 10, BODY_gloves);
+    VP_SHIFT_InvBodyCoords(gaPlayerBodySlotScreenCoords + 10); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(0xd, nScreenMode, &pHirelingScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pHirelingScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(0xd, nScreenMode, &pHirelingGridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pHirelingGridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 4, BODY_rArm);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 4); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 3, BODY_torso);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 3); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 5, BODY_lArm);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 5); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 1, BODY_head);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 1); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 2, BODY_neck);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 2); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 6, BODY_lHand);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 6); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 7, BODY_rHand);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 7); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 8, BODY_belt);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 8); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 9, BODY_feet);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 9); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetBodyDimensions(0xd, nScreenMode, gaHirelingBodySlotScreenCoords + 10, BODY_gloves);
+    VP_SHIFT_InvBodyCoords(gaHirelingBodySlotScreenCoords + 10); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(6, nScreenMode, &pTradePage1ScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pTradePage1ScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(6, nScreenMode, &pTradePage1GridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pTradePage1GridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(7, nScreenMode, &pTradePage2ScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pTradePage2ScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(7, nScreenMode, &pTradePage2GridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pTradePage2GridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(8, nScreenMode, &pBankPageScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pBankPageScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(8, nScreenMode, &pBankPageGridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pBankPageGridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(0xc, nScreenMode, &BigBankPageScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&BigBankPageScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(0xc, nScreenMode, &pBigBankPageGridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pBigBankPageGridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(9, nScreenMode, &pTranspogrifyBoxScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pTranspogrifyBoxScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(9, nScreenMode, &pTransmogrifyBoxGridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pTransmogrifyBoxGridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(10, nScreenMode, &pGuildVaultPageScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pGuildVaultPageScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(10, nScreenMode, &pGuildVaultPageGridScreenCoordinates);
+    VP_SHIFT_InvGridCoords(&pGuildVaultPageGridScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetInvDimensions(0xb, nScreenMode, &pThrophyCasePageScreenCoordinates);
+    VP_SHIFT_InvPageCoords(&pThrophyCasePageScreenCoordinates); // VP: site-5
     D2Common::DATATBLS::TokTbls::GetGridDimensions(0xb, nScreenMode, &pTrophyCasePageGridCoordinates);
+    VP_SHIFT_InvGridCoords(&pTrophyCasePageGridCoordinates); // VP: site-5
     bInventoryScreenCoordinatesInitialized = 1;
     init_npc_coords:
     if (!gbInvNpcScreenCoordsInitialized && g_nCurrentInventoryPage) {
       bIsExpansion = npcmenu::GetInteractedUnitGuid(&nInteractedNpcGUID);
       if (bIsExpansion) {
-        pNpc = UNIT::CUnit::UNITS_FindClientSideUnit(nInteractedNpcGUID, UNIT_MONSTER);
+        pNpc = UNIT::Player::UNITS_FindClientSideUnit(nInteractedNpcGUID, UNIT_MONSTER);
         if (pNpc) {
           bIsExpansion = GAME::Game::CLIENT_CheckExpansion();
-          iVar1 = D2Common::Units::GetInventoryPage(pNpc, '\0', bIsExpansion);
-          D2Common::DATATBLS::TokTbls::GetInvDimensions(iVar1, nScreenMode, &pNpcInventoryScreenCoordinates);
-          D2Common::DATATBLS::TokTbls::GetGridDimensions(iVar1, nScreenMode, &pNpcInventoryGridScreenCoordinates);
+          nInvPageIndex = D2Common::Units::GetInventoryPage(pNpc, 0, bIsExpansion);
+          D2Common::DATATBLS::TokTbls::GetInvDimensions(nInvPageIndex, nScreenMode, &pNpcInventoryScreenCoordinates);
+          VP_SHIFT_InvPageCoords(&pNpcInventoryScreenCoordinates); // VP: site-5
+          D2Common::DATATBLS::TokTbls::GetGridDimensions(nInvPageIndex, nScreenMode, &pNpcInventoryGridScreenCoordinates);
+          VP_SHIFT_InvGridCoords(&pNpcInventoryGridScreenCoordinates); // VP: site-5
           gbInvNpcScreenCoordsInitialized = 1;
         }
       }
@@ -327,18 +569,18 @@ void __stdcall InitializeColors() {
     gaInvHighlightColors[4] = D2Win::Src::D2WinPalette::D2GFX_GetColorFromCurrentPallete(0x80, 0x40, 0x40);
 }
 
-static void __stdcall DrawItemSolidBackground(uint8_t nItemHeight, uint8_t nItemWidth, int32_t nCellX, int32_t nColorIndex, int32_t nCellY, D2GridScreenCoordinates * pCoords) {
+static void __stdcall DrawItemSolidBackground(uint8_t nGridX, uint8_t nGridY, int32_t nCellX, int32_t nColorIndex, int32_t nCellY, D2GridScreenCoordinates * pCoords) {
     int nStartX;
     int nStartY;
-    int nEndRow = (uint32_t)nItemHeight + nCellY;
-    if (nCellY >= nEndRow) {
+    int nEndCol = (uint32_t)nGridX + nCellY;
+    if (nCellY >= nEndCol) {
       return;
     }
 
-    int iCol = nCellX;
+    int iRow = nCellX;
     do {
-      for (; iCol < (int)((uint32_t)nItemWidth + nCellX); iCol++) {
-        nStartX = (uint32_t)pCoords->nCellWidth * iCol + pCoords->nPixelLeft;
+      for (; iRow < (int)((uint32_t)nGridY + nCellX); iRow++) {
+        nStartX = (uint32_t)pCoords->nCellWidth * iRow + pCoords->nPixelLeft;
         nStartY = (uint32_t)pCoords->nCellHeight * nCellY + pCoords->nTop;
         if (nStartX >= 0 && nStartX < SpellSel::WindowSizeX && nStartY >= 0 && nStartY < ui::WindowSizeY) {
           Engine::Gfx::D2GFX_DrawSolidRectExBySize(nStartX, nStartY, (uint32_t)pCoords->nCellWidth, (uint32_t)pCoords->nCellHeight, (uint32_t)gaInvHighlightColors[nColorIndex], DRAW_VERYTRANSPARENT);
@@ -346,22 +588,22 @@ static void __stdcall DrawItemSolidBackground(uint8_t nItemHeight, uint8_t nItem
       }
 
       nCellY++;
-      iCol = nCellX;
-    } while (nCellY < nEndRow);
+      iRow = nCellX;
+    } while (nCellY < nEndCol);
 }
 
-static void INV_DrawBodySlotHighlight(D2InventoryEntryStrc * pSlotRect, int32_t nColorIndex) {
+static void INV_DrawBodySlotHighlight(int * pSlotRect, int32_t nColorIndex) {
     if (nColorIndex == 2) {
       return;
     }
 
-    int nStartX = pSlotRect->nLeft;
-    int nStartY = pSlotRect->nTop;
+    int nStartX = *pSlotRect;
+    int nStartY = pSlotRect[2];
     if (!(nStartX >= 0 && nStartX < SpellSel::WindowSizeX && nStartY >= 0 && nStartY < ui::WindowSizeY)) {
       return;
     }
 
-    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nStartX, nStartY, (uint32_t)pSlotRect->nWidth, (uint32_t)pSlotRect->nHeight, (uint32_t)gaInvHighlightColors[nColorIndex], DRAW_VERYTRANSPARENT);
+    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nStartX, nStartY, (uint32_t)*(uint8_t*)(pSlotRect + 4), (uint32_t)*(uint8_t*)((int)pSlotRect + 0x11), (uint32_t)gaInvHighlightColors[nColorIndex], DRAW_VERYTRANSPARENT);
 }
 
 BOOL __fastcall IsInInventoryScreenRange(int32_t nX, int32_t nY) {
@@ -482,13 +724,13 @@ static void __stdcall INV_DrawGridPlacementHighlight(D2InventoryStrc * pInventor
       return;
     }
 
-    BVar1 = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory, pUnit, gpInventoryContextUi, gaInventorySelectState, nGridIndex, &pCollidedItem, byColor, 1);
+    BVar1 = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory, pUnit, gpInventoryContextUi, gaInventorySelectState, nGridIndex, (int*)&pCollidedItem, byColor, 1);
     if (!BVar1 && (!pCollidedItem || (pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(pCollidedItem->nClassId) , pItemsTxt->dwCode != 0x20786f62))) {
       DrawItemSolidBackground(nItemHeight, nItemWidth, gpInventoryContextUi, 0, gaInventorySelectState, pGridCoords);
       return;
     }
 
-    D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCollidedItem, (char*)&nCollidedWidth, (char*)((intptr_t)&pInventory + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+    D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCollidedItem, (char*)&nCollidedWidth, (char*)((uintptr_t)&pInventory + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
     int32_t nColorIndex = 3;
     int32_t nGridCol = D2Common::Units::GetYPosFromDynamicPathUnit(pCollidedItem);
     int32_t nGridRow = D2Common::Units::GetXPosFromDynamicPathUnit(pCollidedItem);
@@ -505,365 +747,73 @@ BOOL __stdcall INV_IsPlayerInventoryMode() {
 
 void __stdcall INV_DrawSocketedItems(D2UnitStrc * pUnit, D2GridScreenCoordinates * pGridCoords, int32_t nBaseX, int32_t nBaseY) {
     // Static local variables (originally global data)
-    static D2SocketOffsetStrc gaSocketOffsets[48][6] = {
+    static D2SocketOffsetStrc gaSocketOffsets[288] = {
     {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x4
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x1
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x2
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x4
-        },
-        {},
-        {},
-        {},
-        {},
-        {}
-    },
-    {},
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x4
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x5
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x1
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x4
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x6
-        },
-        {},
-        {},
-        {},
-        {}
-    },
-    {},
-    {},
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x5
-        },
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x6
-        },
-        {},
-        {},
-        {}
-    },
-    {},
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x5
-        },
-        {},
-        {},
-        {}
-    },
-    {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x6
-        },
-        {},
-        {},
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
     },
     {},
     {},
     {},
-    {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x5
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x7
-        },
-        {},
-        {}
-    },
+    {},
     {},
     {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x1
-        },
-        {},
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
     },
+    {},
+    {},
+    {},
+    {},
+    {},
     {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x2
-        },
-        {},
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
     },
+    {},
+    {},
+    {},
+    {},
+    {},
     {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x5
-        },
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x7
-        },
-        {},
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x4
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x1
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x2
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x4
     },
     {},
     {},
@@ -871,109 +821,445 @@ void __stdcall INV_DrawSocketedItems(D2UnitStrc * pUnit, D2GridScreenCoordinates
     {},
     {},
     {},
+    {},
+    {},
+    {},
+    {},
+    {},
     {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x5
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x5
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x1
-        },
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
     },
     {
-        {
-            /* .nX = */ 0x2,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x6
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x6
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x2
-        },
-        {}
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
     },
     {},
     {},
     {},
     {},
-    {},
-    {},
     {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x5
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x1
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x3
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x5
-        }
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
     },
     {
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x1,
-            /* .nY = */ 0x6
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x2
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x4
-        },
-        {
-            /* .nX = */ 0x3,
-            /* .nY = */ 0x6
-        }
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x4
+    },
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x5
+    },
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x1
+    },
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x4
+    },
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x6
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x5
+    },
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x6
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x5
+    },
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x6
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x7
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x1
+    },
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x2
+    },
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x7
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x1
+    },
+    {},
+    {
+        /* .nX = */ 0x2,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x6
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x6
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x2
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x1
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x3
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x5
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x1,
+        /* .nY = */ 0x6
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x2
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x4
+    },
+    {
+        /* .nX = */ 0x3,
+        /* .nY = */ 0x6
     }
 }; D2_STATIC_GUARD(gaSocketOffsets, "D2Client::UI::Inv::INV_DrawSocketedItems::gaSocketOffsets");
 
@@ -990,7 +1276,7 @@ void __stdcall INV_DrawSocketedItems(D2UnitStrc * pUnit, D2GridScreenCoordinates
     D2UnitStrc* pSocketedItem = D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pUnit->pInventory);
     D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pUnit, (char*)&nItemWidth, (char*)&nItemHeight, "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
     uint32_t nSocketCount = D2Common::ITEMS::Items::ITEM_GetSocketsCount(pUnit);
-    int iVar1 = nItemHeight - 0xd + ((uint32_t)nItemWidth + (uint32_t)(uint8_t)nSocketCount * 2) * 4;
+    int nSocketLayout = nItemHeight - 0xd + ((uint32_t)nItemWidth + (nSocketCount & 0xff) * 2) * 4;
     uint32_t nSocketIndex = 0;
     int32_t nSocketCountSigned = D2Common::ITEMS::Items::ITEM_GetSocketsCount(pUnit);
     if ((uint8_t)(char)nSocketCountSigned <= '\0') {
@@ -999,8 +1285,8 @@ void __stdcall INV_DrawSocketedItems(D2UnitStrc * pUnit, D2GridScreenCoordinates
 
     do {
       int nPositionY;
-      nPositionX = (int)((gaSocketOffsets[iVar1][nSocketIndex].nX - 1) * (uint32_t)pGridCoords->nCellWidth) / 2 + nBaseX;
-      nPositionY = (int)((*(int*)(iVar1 * 0x30 + (char*)((char*)&gaSocketOffsets + 4) + nSocketIndex * 8) + 1) * (uint32_t)pGridCoords->nCellHeight) / 2 + nBaseY;
+      nPositionX = (int)((gaSocketOffsets[nSocketLayout * 6 + nSocketIndex].nX - 1) * (uint32_t)pGridCoords->nCellWidth) / 2 + nBaseX;
+      nPositionY = (int)((*(int*)(nSocketLayout * 0x30 + (int)((char*)&gaSocketOffsets + 4) + nSocketIndex * 8) + 1) * (uint32_t)pGridCoords->nCellHeight) / 2 + nBaseY;
       memset(&sGfxData, 0, 0x48);
       sGfxData.pDC6 = Panel::GemSocket;
       sGfxData.nDirection = 0;
@@ -1257,7 +1543,7 @@ void __stdcall DRAW_UI_InventoryContent(D2UnitStrc * pUnit) {
     }
 
     draw_placement_highlight:
-    INV_DrawGridPlacementHighlight(pInventory, pPlayerUnit_lcl, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCoords >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage), nGridIndex, pCoords);
+    INV_DrawGridPlacementHighlight(pInventory, pPlayerUnit_lcl, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCoords >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage), nGridIndex, pCoords);
 }
 
 static uint32_t __fastcall ITEM_CanTheseBeSocketed(D2UnitStrc * pUnit, D2UnitStrc * pTargetItem) {
@@ -1362,7 +1648,7 @@ static void INV_DrawBodySlotCursorHighlight(D2InventoryStrc * pInventory) {
 
     bHighlightValid = 1;
     draw_highlight:
-    INV_DrawBodySlotHighlight(gaPlayerBodySlotScreenCoords + gnInvBodySlotUnderCursor, bHighlightValid);
+    INV_DrawBodySlotHighlight(&gaPlayerBodySlotScreenCoords[gnInvBodySlotUnderCursor].nLeft, bHighlightValid);
 }
 
 void __fastcall InitInventory() {
@@ -1404,60 +1690,30 @@ void __fastcall InitInventory() {
       if (pSlotItem) {
         D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pSlotItem, (char*)&nItemWidth, (char*)&nItemHeight, "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
         nHandedness = D2Common::INVENTORY::Inventory::INVENTORY_GetWeaponHandedness(pUnit, pInventory);
-        switch (nBodySlot) {
-          case 4:
-            {
-              pPairedArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 5);
-              if (nHandedness == 2) {
-                nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pPairedArmItem);
-                if (!nSlotDrawY) {
-                  nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pSlotItem);
-                  if (!nSlotDrawY) {
-                    Engine::Gfx::DrawItemGfx(pSlotItem, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[4].nWidth - (uint32_t)pInventoryGridScreenCoordinated.nCellWidth * (uint32_t)nItemWidth) >> 1) + gaPlayerBodySlotScreenCoords[5].nLeft + nXpacOffsetX, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[4].nHeight - (uint32_t)pInventoryGridScreenCoordinated.nCellHeight * (uint32_t)nItemHeight) >> 1) + gaPlayerBodySlotScreenCoords[5].nTop + nXpacOffsetY);
-                    if (gaPlayerBodySlotScreenCoords[5].nLeft >= 0 && gaPlayerBodySlotScreenCoords[5].nLeft < SpellSel::WindowSizeX && gaPlayerBodySlotScreenCoords[5].nTop >= 0) {
-                      nHandedness = gaPlayerBodySlotScreenCoords[5].nLeft;
-                      nSlotScreenY = gaPlayerBodySlotScreenCoords[5].nTop;
-                      nMaxSockets = gaPlayerBodySlotScreenCoords[5].nWidth;
-                      bySlotRectHeight = gaPlayerBodySlotScreenCoords[5].nHeight;
-                      if (gaPlayerBodySlotScreenCoords[5].nTop < ui::WindowSizeY) {
-                        goto LAB_004847e1;
-                      }
-                    }
+        if (nBodySlot != 4) {
+          if (nBodySlot == 5 && (pPairedArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 4) , nHandedness == 2) && (nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pPairedArmItem) , !nSlotDrawY && (nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pSlotItem) , !nSlotDrawY && (Engine::Gfx::DrawItemGfx(pSlotItem, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[5].nWidth - (uint32_t)pInventoryGridScreenCoordinated.nCellWidth * (uint32_t)nItemWidth) >> 1) + gaPlayerBodySlotScreenCoords[4].nLeft + nXpacOffsetX, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[5].nHeight - (uint32_t)pInventoryGridScreenCoordinated.nCellHeight * (uint32_t)nItemHeight) >> 1) + gaPlayerBodySlotScreenCoords[4].nTop + nXpacOffsetY) , gaPlayerBodySlotScreenCoords[4].nLeft >= 0)) && gaPlayerBodySlotScreenCoords[4].nLeft < SpellSel::WindowSizeX) && gaPlayerBodySlotScreenCoords[4].nTop >= 0 && (nHandedness = gaPlayerBodySlotScreenCoords[4].nLeft , nSlotScreenY = gaPlayerBodySlotScreenCoords[4].nTop , nMaxSockets = gaPlayerBodySlotScreenCoords[4].nWidth , bySlotRectHeight = gaPlayerBodySlotScreenCoords[4].nHeight , gaPlayerBodySlotScreenCoords[4].nTop < ui::WindowSizeY)) {
+            Engine::Gfx::D2GFX_DrawSolidRectExBySize(nHandedness, nSlotScreenY, (uint32_t)nMaxSockets, (uint32_t)bySlotRectHeight, (uint32_t)gaInvHighlightColors[0], DRAW_VERYTRANSPARENT);
+          }
+        } else {
+          pPairedArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 5);
+          if (nHandedness == 2) {
+            nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pPairedArmItem);
+            if (!nSlotDrawY) {
+              nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pSlotItem);
+              if (!nSlotDrawY) {
+                Engine::Gfx::DrawItemGfx(pSlotItem, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[4].nWidth - (uint32_t)pInventoryGridScreenCoordinated.nCellWidth * (uint32_t)nItemWidth) >> 1) + gaPlayerBodySlotScreenCoords[5].nLeft + nXpacOffsetX, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[4].nHeight - (uint32_t)pInventoryGridScreenCoordinated.nCellHeight * (uint32_t)nItemHeight) >> 1) + gaPlayerBodySlotScreenCoords[5].nTop + nXpacOffsetY);
+                if (gaPlayerBodySlotScreenCoords[5].nLeft >= 0 && gaPlayerBodySlotScreenCoords[5].nLeft < SpellSel::WindowSizeX && gaPlayerBodySlotScreenCoords[5].nTop >= 0) {
+                  nHandedness = gaPlayerBodySlotScreenCoords[5].nLeft;
+                  nSlotScreenY = gaPlayerBodySlotScreenCoords[5].nTop;
+                  nMaxSockets = gaPlayerBodySlotScreenCoords[5].nWidth;
+                  bySlotRectHeight = gaPlayerBodySlotScreenCoords[5].nHeight;
+                  if (gaPlayerBodySlotScreenCoords[5].nTop < ui::WindowSizeY) {
+                    Engine::Gfx::D2GFX_DrawSolidRectExBySize(nHandedness, nSlotScreenY, (uint32_t)nMaxSockets, (uint32_t)bySlotRectHeight, (uint32_t)gaInvHighlightColors[0], DRAW_VERYTRANSPARENT);
                   }
                 }
               }
-
-              break;
             }
-          case 5:
-            {
-              pPairedArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 4);
-              if (nHandedness == 2) {
-                nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pPairedArmItem);
-                if (!nSlotDrawY) {
-                  nSlotDrawY = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_quiver(pSlotItem);
-                  if (!nSlotDrawY) {
-                    Engine::Gfx::DrawItemGfx(pSlotItem, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[5].nWidth - (uint32_t)pInventoryGridScreenCoordinated.nCellWidth * (uint32_t)nItemWidth) >> 1) + gaPlayerBodySlotScreenCoords[4].nLeft + nXpacOffsetX, ((int)((uint32_t)gaPlayerBodySlotScreenCoords[5].nHeight - (uint32_t)pInventoryGridScreenCoordinated.nCellHeight * (uint32_t)nItemHeight) >> 1) + gaPlayerBodySlotScreenCoords[4].nTop + nXpacOffsetY);
-                    if (gaPlayerBodySlotScreenCoords[4].nLeft >= 0) {
-                      if (gaPlayerBodySlotScreenCoords[4].nLeft < SpellSel::WindowSizeX) {
-                        if (gaPlayerBodySlotScreenCoords[4].nTop >= 0) {
-                          nHandedness = gaPlayerBodySlotScreenCoords[4].nLeft;
-                          nSlotScreenY = gaPlayerBodySlotScreenCoords[4].nTop;
-                          nMaxSockets = gaPlayerBodySlotScreenCoords[4].nWidth;
-                          bySlotRectHeight = gaPlayerBodySlotScreenCoords[4].nHeight;
-                          if (gaPlayerBodySlotScreenCoords[4].nTop < ui::WindowSizeY) {
-                            LAB_004847e1:
-                            Engine::Gfx::D2GFX_DrawSolidRectExBySize(nHandedness, nSlotScreenY, (uint32_t)nMaxSockets, (uint32_t)bySlotRectHeight, (uint32_t)gaInvHighlightColors[0], DRAW_VERYTRANSPARENT);
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-
-              break;
-            }
+          }
         }
 
         nSlotDrawX = ((int)((uint32_t)gaPlayerBodySlotScreenCoords[nBodySlot].nWidth - (uint32_t)pInventoryGridScreenCoordinated.nCellWidth * (uint32_t)nItemWidth) >> 1) + gaPlayerBodySlotScreenCoords[nBodySlot].nLeft;
@@ -1816,7 +2072,7 @@ static void __stdcall INV_FormatReqStrText(D2ItemsTxt * pItemsTxt, int32_t nReqA
     wszNumBuffer[9] = 0;
     uint16_t* pwColorPrefix = D2Lang::StrTable::strtable::GetLocaleString(0xf9b);
     uint16_t* pwColorSuffix = D2Lang::StrTable::strtable::GetLocaleString(0xf9e);
-    int nReqStr = (uint32_t)pItemsTxt->nReqStr + nReqAdjust;
+    int nReqStr = (uint32_t)(uint16_t)pItemsTxt->nReqStr + nReqAdjust;
     if (nReqStr <= 0) {
       *wszText = L'\0';
       return;
@@ -1847,7 +2103,7 @@ static void __stdcall INV_FormatReqDexText(D2ItemsTxt * pItemsTxt, int32_t nReqA
     wszNumBuffer[9] = 0;
     uint16_t* pwColorPrefix = D2Lang::StrTable::strtable::GetLocaleString(0xf9b);
     uint16_t* pwColorSuffix = D2Lang::StrTable::strtable::GetLocaleString(0xf9e);
-    int nReqDex = (uint32_t)pItemsTxt->wReqDex + nReqAdjust;
+    int nReqDex = (uint32_t)(uint16_t)pItemsTxt->wReqDex + nReqAdjust;
     if (nReqDex <= 0) {
       *wszText = L'\0';
       return;
@@ -1863,7 +2119,6 @@ static void __stdcall INV_FormatReqDexText(D2ItemsTxt * pItemsTxt, int32_t nReqA
 }
 
 static void __stdcall INV_CalcWeaponDamageRange(D2UnitStrc * pUnit, eD2UnitStat eMinDmgStat, eD2UnitStat eMaxDmgStat, int * pnOutMin, int * pnOutMax, int * pbOutModified, D2UnitStrc * pItem) {
-    int32_t nUnit;
     D2UnitStrc* pStatOwner = pUnit;
     *pnOutMin = 1;
     *pnOutMax = 2;
@@ -1896,7 +2151,7 @@ static void __stdcall INV_CalcWeaponDamageRange(D2UnitStrc * pUnit, eD2UnitStat 
       nMaxDamage = nMinDamage;
     }
 
-    int nByTimeBonus = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pItem, UNITSTAT_item_maxdamage_bytime, 0);
+    uint32_t nByTimeBonus = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pItem, UNITSTAT_item_maxdamage_bytime, 0);
     if (nByTimeBonus && D2Common::ITEMS::Items::sgptDataTable->nTxtItemStatCostSize > 0x110 && D2Common::ITEMS::Items::sgptDataTable->pTxtItemStatCost != (D2ItemStatCostTxt*)-88128 && pUnit->pDrlgAct) {
       eMinDmgStat = UNITSTAT_strength;
       nServerMin = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(pUnit->pDrlgAct, (int32_t*)&eMinDmgStat);
@@ -1912,9 +2167,9 @@ static void __stdcall INV_CalcWeaponDamageRange(D2UnitStrc * pUnit, eD2UnitStat 
       D2DrlgActStrc** ppDVar1;
       ppDVar1 = &pUnit->pDrlgAct;
       if (*ppDVar1) {
-        nUnit = 0x0;
-        nServerMin = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(*ppDVar1, (int32_t*)&nUnit);
-        nServerMin = D2Common::ITEMS::ItemMods::ITEMMODS_CalculateRepairCost(nByTimeBonus, nServerMin, nUnit, nullptr, nullptr, nullptr);
+        pUnit = 0;
+        nServerMin = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(*ppDVar1, (int32_t*)&pUnit);
+        nServerMin = D2Common::ITEMS::ItemMods::ITEMMODS_CalculateRepairCost(nByTimeBonus, nServerMin, (int32_t)pUnit, nullptr, nullptr, nullptr);
         nServerMax = D2Common::DATATBLS::DataTbls::D2ApplyPercent(nMaxDamage, nServerMin, 100);
         nMaxDamage += nServerMax;
         if (nServerMin) {
@@ -1953,9 +2208,12 @@ void __stdcall szPrintfBuffer(D2UnitStrc * pUnit, uint16_t * wszText) {
     uint32_t nTypeCheck = D2Common::ITEMS::Items::ITEMS_IsA(pUnit, ITEMTYPE_MissilePotion);
     if (nTypeCheck) {
       nTypeCheck = D2Common::ITEMS::Items::ITEM_GetItemsTxt_wMissileType(pUnit);
+      pszBufCursor = wszDamageTextBuf;
       nMinDamage = nTypeCheck;
-      for (iDurationFrames = 0; iDurationFrames < 0x100; iDurationFrames++) {
-        wszDamageTextBuf[iDurationFrames] = L'\0';
+      for (iDurationFrames = 0x80; iDurationFrames; iDurationFrames--) {
+        pszBufCursor[0] = L'\0';
+        pszBufCursor[1] = L'\0';
+        pszBufCursor += 2;
       }
 
       int nUnit = 0x0;
@@ -1967,8 +2225,8 @@ void __stdcall szPrintfBuffer(D2UnitStrc * pUnit, uint16_t * wszText) {
       uint8_t bColorCode = D2Common::Units::Missile::GetElemTypeFromMissileId(nMinDamage);
       switch (bColorCode) {
         case 5:
-          nUnit = (int)0x2;
-        nElemDuration = D2Common::Units::Missile::GetElementalLength(nullptr, pPlayerUnit_lcl, nMinDamage, 1);
+          nUnit = (int)(void*)0x2;
+        nElemDuration = D2Common::Units::Missile::GetElementalLength(0, pPlayerUnit_lcl, nMinDamage, 1);
         iDurationFrames = nElemDuration / 0x19;
         if (iDurationFrames <= 0) {
           iDurationFrames = 1;
@@ -1984,7 +2242,7 @@ void __stdcall szPrintfBuffer(D2UnitStrc * pUnit, uint16_t * wszText) {
           nUnit = 0x1;
         break;
         case 2:
-          nUnit = (int)0x4;
+          nUnit = (int)(void*)0x4;
         break;
       }
 
@@ -2198,7 +2456,7 @@ static void __stdcall INV_FormatBlockChanceText(uint16_t * wszText, D2ItemsTxt *
 
     Storm::Source::SSTR::SStrPrintf(szNumBuffer, 0x20, "%d%%\n", nBlockChance);
     D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszNumBuffer, szNumBuffer, 0x20);
-    if (nBlockChance > (int)(uint32_t)pItemsTxt->bBlock) {
+    if (nBlockChance > (int)(uint32_t)(uint8_t)pItemsTxt->bBlock) {
       ui::AppendAsWideChar(wszNumBuffer, 3);
     }
 
@@ -2229,10 +2487,10 @@ static void __stdcall INV_FormatDefenseRangeText(D2UnitStrc * pUnit, D2ItemsTxt 
     wszTempConversionBuffer[9] = 0;
     uint16_t* pwSeparator = D2Lang::StrTable::strtable::GetLocaleString(0xf9b);
     uint16_t* pwColorSuffix = D2Lang::StrTable::strtable::GetLocaleString(0xf9e);
-    int nMinDefense = (int)pStatRecord->nMinDam;
+    D2ItemsTxt* nMinDefense = (D2ItemsTxt*)(uint32_t)pStatRecord->nMinDam;
     uint32_t nMaxDefense = (uint32_t)pStatRecord->nMaxDam;
     uint32_t nTypeCheck = D2Common::ITEMS::Items::ITEMS_IsA(pUnit, ITEMTYPE_AnyShield);
-    int nStatRecord = nMinDefense;
+    int nStatRecord = (int)nMinDefense;
     if (nTypeCheck) {
       D2UnitStrc* pPlayerUnit_lcl;
       *(uint16_t*)(char*)&pUnit = 0xd8c;
@@ -2243,7 +2501,7 @@ static void __stdcall INV_FormatDefenseRangeText(D2UnitStrc * pUnit, D2ItemsTxt 
         if (iStateCheck) {
           nSkillLevel = D2Common::Skills::GetSkillLevel(pPlayerUnit_lcl, pSkill, 1);
           nSkillDmgCalc = D2Common::Skills::SKILL_CalcMinDamage(pPlayerUnit_lcl, 0x75, nSkillLevel, 1);
-          nStatRecord = (int)(nMinDefense + (nSkillDmgCalc >> 8));
+          nStatRecord = (int)(nMinDefense->szFlippyFile + (nSkillDmgCalc >> 8));
           nSkillDmgCalc = D2Common::Skills::SKILL_CalcMaxDamage(pPlayerUnit_lcl, 0x75, nSkillLevel, 1);
           nMaxDefense += nSkillDmgCalc >> 8;
         }
@@ -2277,7 +2535,6 @@ void __stdcall INV_FormatArmorClassText(D2UnitStrc * pUnit, D2UnitStrc * pUnit2,
     int32_t nPercentApplied;
     uint16_t wszArmorValue[10];
     char szNumBuffer[12];
-    int32_t nUnit;
     D2UnitStrc* pEffectiveUnit = pUnit;
     if (!pUnit) {
       return;
@@ -2318,7 +2575,7 @@ void __stdcall INV_FormatArmorClassText(D2UnitStrc * pUnit, D2UnitStrc * pUnit2,
       bIsModified = 1;
     }
 
-    int nByTimeMod = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pEffectiveUnit, UNITSTAT_item_armor_bytime, 0);
+    uint32_t nByTimeMod = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pEffectiveUnit, UNITSTAT_item_armor_bytime, 0);
     if (nByTimeMod && D2Common::ITEMS::Items::sgptDataTable->nTxtItemStatCostSize > 0x10c && D2Common::ITEMS::Items::sgptDataTable->pTxtItemStatCost != (D2ItemStatCostTxt*)-86832 && pUnit->pDrlgAct) {
       nPeriodOfDay = 0;
       nServerOrMod = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(pUnit->pDrlgAct, (int32_t*)&nPeriodOfDay);
@@ -2334,9 +2591,9 @@ void __stdcall INV_FormatArmorClassText(D2UnitStrc * pUnit, D2UnitStrc * pUnit2,
       D2DrlgActStrc** ppDVar1;
       ppDVar1 = &pUnit->pDrlgAct;
       if (*ppDVar1) {
-        nUnit = 0x0;
-        nServerOrMod = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(*ppDVar1, (int32_t*)&nUnit);
-        nServerOrMod = D2Common::ITEMS::ItemMods::ITEMMODS_CalculateRepairCost(nByTimeMod, nServerOrMod, nUnit, nullptr, nullptr, nullptr);
+        pUnit = 0;
+        nServerOrMod = D2Common::Environment::DRLGENV_GetPeriodOfDayFromAct(*ppDVar1, (int32_t*)&pUnit);
+        nServerOrMod = D2Common::ITEMS::ItemMods::ITEMMODS_CalculateRepairCost(nByTimeMod, nServerOrMod, (int32_t)pUnit, nullptr, nullptr, nullptr);
         nPercentApplied = D2Common::DATATBLS::DataTbls::D2ApplyPercent(nArmorClass, nServerOrMod, 100);
         nArmorClass += nPercentApplied;
         if (nServerOrMod) {
@@ -2383,7 +2640,8 @@ static void AppendQuanity(uint16_t * wszText, D2UnitStrc * pUnit) {
       }
     }
 
-    D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, D2Lang::StrTable::strtable::GetLocaleString(0xd86));
+    uint16_t* pwQuantityString = D2Lang::StrTable::strtable::GetLocaleString(0xd86);
+    D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, pwQuantityString);
     nQuantity = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_quantity, 0);
     Storm::Source::SSTR::SStrPrintf(szPrintfBuffer, 10, "%ld", nQuantity);
     D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszTempBuffer, szPrintfBuffer, 9);
@@ -2477,7 +2735,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
         /* .wStringId = */ 0xfed
     }
 }; D2_STATIC_GUARD(gnAttackSpeedBoostDisplayValue, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnAttackSpeedBoostDisplayValue");
-    static int gnInventoryCursorX[104] = {
+    static int gnInventoryCursorX[90] = {
     0x1,
     0x1,
     0x1,
@@ -2567,7 +2825,9 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
     0x5,
     0x5,
     0x5,
-    0x5,
+    0x5
+}; D2_STATIC_GUARD(gnInventoryCursorX, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorX");
+    static int gnInventoryCursorY[14] = {
     0x0,
     0x2,
     0x1,
@@ -2582,7 +2842,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
     0x4,
     0x0,
     0x3
-}; D2_STATIC_GUARD(gnInventoryCursorX, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorX");
+}; D2_STATIC_GUARD(gnInventoryCursorY, "D2Client::UI::Inv::INV_FormatAttackSpeedText::gnInventoryCursorY");
 
     uint32_t bIsType;
     int bIsRanged;
@@ -2619,7 +2879,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
           nClassId = pPlayer->nClassId;
         }
 
-        nSpeedClass = gnInventoryCursorX[nWeaponSpeed * 5 - 0x32 + gnInventoryCursorX[bIsRanged + nClassId * 2 + 0x5a]];
+        nSpeedClass = gnInventoryCursorX[nWeaponSpeed * 5 - 0x32 + gnInventoryCursorY[bIsRanged + nClassId * 2]];
       }
     }
 
@@ -2640,7 +2900,7 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
       }
 
       nWeaponSpeed++;
-    } while ((intptr_t)&gnAttackSpeedBoostDisplayValue[nWeaponSpeed] < (intptr_t)((char*)&gnAttackSpeedBoostDisplayValue + sizeof(gnAttackSpeedBoostDisplayValue)));
+    } while ((int)&gnAttackSpeedBoostDisplayValue[nWeaponSpeed] < (intptr_t)((char*)&gnAttackSpeedBoostDisplayValue + sizeof(gnAttackSpeedBoostDisplayValue)));
 
     for (nWeaponSpeed = 0; nWeaponSpeed < 0x100; nWeaponSpeed++) {
       wszSpeedLabel[nWeaponSpeed] = L'\0';
@@ -2656,14 +2916,13 @@ static void __stdcall INV_FormatAttackSpeedText(uint16_t * wszText, D2UnitStrc *
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszNewline);
 }
 
-static void __stdcall INV_FormatItemSpellDescText(D2UnitStrc * pItem, D2ItemsTxt * pItemsTxt, uint16_t * wszText) {
+static void __stdcall INV_FormatItemSpellDescText(uint32_t nValue, D2ItemsTxt * pItemsTxt, uint16_t * wszText) {
     uint16_t* pwszLabel;
     uint16_t aWStack_42c[512];
     uint16_t wszValueBuf[10];
     char szValueAscii[12];
     uint32_t pnQuantity;
-    int32_t nItem;
-    if (!pItem) {
+    if (!nValue) {
       return;
     }
     if (!pItemsTxt) {
@@ -2691,17 +2950,17 @@ static void __stdcall INV_FormatItemSpellDescText(D2UnitStrc * pItem, D2ItemsTxt
       return;
       case 2:
         Fog::File::CONTAINER_InitializeBuffer(wszValueBuf, 2, 10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
-      nItem = (int32_t)D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, pItem, pItemsTxt->dwCalc1);
+      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       switch (pItemsTxt->wStat1) {
         case 6:
 
         case 0x4a:
-          nItem = D2Common::ITEMS::Items::ITEMS_ModifyPotionValueByDifficulty(pPlayer, nItem);
+          nValue = D2Common::ITEMS::Items::ITEMS_ModifyPotionValueByDifficulty(pPlayer, nValue);
         break;
         case 8:
 
         case 0x1a:
-          nItem = D2Common::ITEMS::Items::ITEMS_ModifyPotionSellValueByDifficulty(pPlayer, nItem);
+          nValue = D2Common::ITEMS::Items::ITEMS_ModifyPotionSellValueByDifficulty(pPlayer, nValue);
       }
 
       pwszLabel = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wSpellDescStr);
@@ -2709,12 +2968,12 @@ static void __stdcall INV_FormatItemSpellDescText(D2UnitStrc * pItem, D2ItemsTxt
       break;
       case 3:
         Fog::File::CONTAINER_InitializeBuffer(wszValueBuf, 2, 10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
-      nItem = (int32_t)D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, pItem, pItemsTxt->dwCalc1);
+      nValue = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       pwszLabel = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wSpellDescStr);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, pwszLabel);
       break;
       case 4:
-        pnQuantity = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, pItem, pItemsTxt->dwCalc1);
+        pnQuantity = D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable(pPlayer, nValue, pItemsTxt->dwCalc1);
       Fog::File::CONTAINER_InitializeBuffer(aWStack_42c, 2, 0x200, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
       D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x200, aWStack_42c, D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wSpellDescStr), pnQuantity);
       pwszLabel = aWStack_42c;
@@ -2725,7 +2984,7 @@ static void __stdcall INV_FormatItemSpellDescText(D2UnitStrc * pItem, D2ItemsTxt
         return;
     }
 
-    Storm::Source::SSTR::SStrPrintf(szValueAscii, 10, "%ld", (long int)nItem);
+    Storm::Source::SSTR::SStrPrintf(szValueAscii, 10, "%ld", nValue);
     D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszValueBuf, szValueAscii, 9);
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszSpace);
     pwszLabel = wszValueBuf;
@@ -2780,8 +3039,7 @@ static void __stdcall INV_FormatRunewordName(uint16_t * wszText, D2UnitStrc * pI
 
       bIsRune = D2Common::ITEMS::Items::ITEMS_IsA(pCarriedItem, ITEMTYPE_Rune);
       if (bIsRune) {
-        int t2_c1 = pCarriedItem->nClassId;
-        pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(t2_c1);
+        pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(pCarriedItem->nClassId);
         if (pItemsTxt->dwGemOffset > 0) {
           pGemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Gems_GetLine(pItemsTxt->dwGemOffset);
           if (pGemsTxt) {
@@ -2845,7 +3103,7 @@ static D2UnitStrc * GetSetItem(int32_t nId, D2InventoryStrc * pInventory) {
     return pCarriedItem;
 }
 
-static BOOL __stdcall INV_IsMouseInRect(int32_t nLeftX, int32_t nBottomY, int32_t nWidth, int32_t nHeight) {
+static BOOL __stdcall INV_IsMouseInRect(int32_t nWidth, int32_t nHeight, int32_t nBottomY, int32_t nLeftX) {
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX >= nLeftX && nMouseX <= nLeftX + nWidth && nMouseY >= nBottomY - nHeight && nMouseY <= nBottomY) {
@@ -2956,12 +3214,13 @@ void __stdcall INV_FreeBodySlotImages() {
     gpInvGoldCoinImage = 0;
 }
 
-uint8_t Unreferenced_00486ad0() {
+int Unreferenced_00486ad0() {
     // Static local variables (originally global data)
-    static bool gbInvImageLoadToggle; D2_STATIC_GUARD_BSS(gbInvImageLoadToggle, "D2Client::UI::Inv::Unreferenced_00486ad0::gbInvImageLoadToggle");
+    static uint8_t gbInvImageLoadToggle; D2_STATIC_GUARD_BSS(gbInvImageLoadToggle, "D2Client::UI::Inv::Unreferenced_00486ad0::gbInvImageLoadToggle");
 
-    gbInvImageLoadToggle = !gbInvImageLoadToggle;
-    return gbInvImageLoadToggle;
+    uint32_t in_EAX;
+    gbInvImageLoadToggle = gbInvImageLoadToggle == '\0';
+    return (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)in_EAX >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)gbInvImageLoadToggle);
 }
 
 int32_t __stdcall INV_GetGoldButtonX() {
@@ -3123,7 +3382,8 @@ BOOL __fastcall INV_IsMouseOverCloseButton(int32_t nMouseX, int32_t nMouseY) {
 
 static void __stdcall INV_HandleHighResDropClick(int32_t nMouseY, D2UIMouseMsgStrc * pMsg, int32_t nMouseX) {
     DWORD eResMode = D2gfx::D2GFX::D2GFX_GetResolutionMode();
-    if (eResMode != 2) {
+    // VP: [resolution site-5] wide modes get the 800x600 drop-click guard
+    if (!VPRES_IsWideLayoutMode(eResMode)) {
       return;
     }
 
@@ -3157,7 +3417,7 @@ void __stdcall INV_HandleInventoryRightClick(D2UIMouseMsgStrc * pMsg) {
     int32_t nY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     int32_t nX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gbInvPanelButtonPressed = 0;
-    gnInvUnusedClearedOnClick = 0;
+    gnInvMouseY = 0;
     D2UnitStrc* pPlayer = UNIT::Player::GetPlayerUnit_UI();
     D2InventoryStrc* pInventory = pPlayer->pInventory;
     BOOL nResult = Panel::PANEL_CalculateBeltSlotIndex(pMsg);
@@ -3201,11 +3461,11 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
     uint32_t nCol = (nMouseX - pGridLayout->nPixelLeft) / (uint32_t)pGridLayout->nCellWidth;
     uint32_t nRow = (uint32_t)(nMouseY - pGridLayout->nTop) / (uint32_t)pGridLayout->nCellHeight;
     if (pCursorItem) {
-      D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCursorItem, (char*)((intptr_t)&nPage + 3), (char*)((intptr_t)&pUnit + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+      D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pCursorItem, (char*)((uintptr_t)&nPage + 3), (char*)((uintptr_t)&pUnit + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
       Engine::GfxUtil::GFXUTIL_GetOverlayDimensions(pCursorItem, 0, 0, (uint32_t*)&pInventory, &nOverlayHeight);
       bool bCentered = !(nPage & 0x1000000);
       if (bCentered) {
-        nCol = (((uintptr_t)pInventory >> 2) - pGridLayout->nPixelLeft + nMouseX) / (uint32_t)pGridLayout->nCellWidth;
+        nCol = (((uint32_t)pInventory >> 2) - pGridLayout->nPixelLeft + nMouseX) / (uint32_t)pGridLayout->nCellWidth;
       }
 
       uint8_t byGridWidth = pGridLayout->nGridCols;
@@ -3213,7 +3473,7 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
         nCol = (uint32_t)(byGridWidth >> 1);
       }
 
-      bCentered = !((uintptr_t)pUnit & 0x1000000);
+      bCentered = !((uint32_t)pUnit & 0x1000000);
       if (bCentered) {
         nRow = ((nOverlayHeight >> 2) - pGridLayout->nTop + nMouseY) / (uint32_t)pGridLayout->nCellHeight;
       }
@@ -3254,10 +3514,10 @@ static void __stdcall INV_UpdateItemUnderCursor(D2UnitStrc * pUnit, D2InventoryS
     if (pItemAtCell) {
       gpInvItemUnderCursor = 1;
       if (pItemAtCell != gpInvHoveredItem) {
-        D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItemAtCell, (char*)((intptr_t)&pCursorItem + 3), (char*)((intptr_t)&nMouseX + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
+        D2Common::ITEMS::Items::ITEM_GetItemsTxt_nWidthAndHeight(pItemAtCell, (char*)((uintptr_t)&pCursorItem + 3), (char*)((uintptr_t)&nMouseX + 3), "d:\\diablo2\\Diablo2\\Source\\D2Common/CmnItems.h", 0x6dc);
         nMouseY = D2Common::Units::GetXPosFromDynamicPathUnit(pItemAtCell);
         nYPos = D2Common::Units::GetYPosFromDynamicPathUnit(pItemAtCell);
-        gaInventoryItemSlots = ((uintptr_t)pCursorItem >> 0x18) * (uint32_t)pGridLayout->nCellWidth / 2 + (uint32_t)pGridLayout->nCellWidth * nMouseY + pGridLayout->nPixelLeft;
+        gaInventoryItemSlots = ((uint32_t)pCursorItem >> 0x18) * (uint32_t)pGridLayout->nCellWidth / 2 + (uint32_t)pGridLayout->nCellWidth * nMouseY + pGridLayout->nPixelLeft;
         nInventoryContextMode = gaInventoryItemSlots;
         pItemToDescribe = pItemAtCell;
         gpInvHoveredItem = pItemAtCell;
@@ -3387,7 +3647,7 @@ void __stdcall INV_HandleMouseMove(D2UIMouseMsgStrc * pMsg) {
 
         while ((int)nMouseX < (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nLeft || (int)nMouseX > (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nRight || nMouseY < (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nTop || nMouseY > (int)(uint32_t)gaPlayerBodySlotScreenCoords[nBodyLoc].nBottom) {
           nBodyLoc++;
-          if ((intptr_t)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodyLoc].nRight >= (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4)) {
+          if ((int)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodyLoc].nRight >= (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4)) {
             gnInvBodySlotUnderCursor = 0;
             pMsg->bHandled = 0;
             gnItemDescTitleMaxWidth = 1;
@@ -3665,7 +3925,7 @@ void __stdcall INV_SetShopPageFromNpc(uint8_t byPage) {
       return;
     }
 
-    D2UnitStrc* pItem = UNIT::CUnit::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
+    D2UnitStrc* pItem = UNIT::Player::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
     if (!(pItem && pItem->pInventory)) {
       return;
     }
@@ -3691,7 +3951,7 @@ void __stdcall INV_SetShopPageFromNpc(uint8_t byPage) {
     }
 
     int nScanCount = 0;
-    uint8_t nNextPage = (uint32_t)byPage;
+    uint32_t nNextPage = (uint32_t)byPage;
     int nTabIdx = 0;
     CurrentInventoryPage = byPage;
     if (nTabCount > 0) {
@@ -3701,20 +3961,20 @@ void __stdcall INV_SetShopPageFromNpc(uint8_t byPage) {
         pTabState[-1] = 0;
         nTabIdx++;
         *pTabState = (uint32_t)(nCount != 0);
-        pTabState = (uint32_t*)((char*)pTabState + 0x12);
+        pTabState = (uint32_t*)((int)pTabState + 0x12);
       } while (nTabIdx < nTabCount);
     }
     if (!anPageItemCount[byPage]) {
       do {
         byNextPage = (char)nNextPage + 1;
-        nNextPage = byNextPage;
+        nNextPage = (uint32_t)byNextPage;
         nScanCount++;
         if (byNextPage > TypeOfShopMaybe || byNextPage == 0xff) {
           nNextPage = 0;
         }
       } while (!anPageItemCount[nNextPage] && nScanCount < 4);
 
-      CurrentInventoryPage = nNextPage;
+      CurrentInventoryPage = (uint8_t)nNextPage;
     }
 
     gaNpcShopTabs[nNextPage].nSelected = 1;
@@ -3725,7 +3985,7 @@ void __stdcall INV_ResetInventoryState() {
     CurrentInventoryPage = 0;
     gnInvInventoryGold = 0;
     gnInvMouseX = 0;
-    gnInvMouseY = 0;
+    gpInvCursorItem = 0;
     if (gpInvShopTabImage) {
       Core::Archive::DC6_FreeAndDelete(gpInvShopTabImage);
       gpInvShopTabImage = 0;
@@ -3743,7 +4003,7 @@ void __stdcall INV_SetMercInventoryMode() {
     g_nCurrentInventoryPage = 0x13;
 }
 
-static void __stdcall INV_HandleShopAction(DWORD nAction, D2UnitStrc * pTarget, D2UnitStrc * pUnit, DWORD dwSell, DWORD dwParam2, DWORD bSkipConfirm, DWORD dwMode) {
+void __stdcall INV_HandleShopAction(DWORD nAction, D2UnitStrc * pTarget, D2UnitStrc * pUnit, DWORD dwSell, DWORD dwParam2, DWORD bSkipConfirm, DWORD dwMode) {
     if (!pTarget) {
       return;
     }
@@ -3889,7 +4149,7 @@ void __stdcall INV_InitNpcButtonsByClass() {
     }
 
     D2UnitStrc* pNpcUnit;
-    pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
+    pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
     if (!pNpcUnit) {
       return;
     }
@@ -3995,6 +4255,7 @@ void __stdcall INV_InitNpcButtonsByClass() {
 void __fastcall DRAW_UI_INVENTORY_Gold(int32_t nGoldPanelMode) {
     D2UnitStrc* pPlayerUnit_lcl;
     uint16_t* pwString;
+    BOOL bIsExpansionGfx;
     int32_t iTmp;
     int nCoinY;
     char szGoldAmountBuffer[20];
@@ -4007,9 +4268,9 @@ void __fastcall DRAW_UI_INVENTORY_Gold(int32_t nGoldPanelMode) {
     int nButtonX;
     int nGoldY;
     int nCoinX;
-    int nTooltipY;
     eD2UnitStat eStatType;
     int32_t nColorFlag;
+    int nTooltipXPos;
     int32_t nPrevFont;
     nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
     int nTextY;
@@ -4045,7 +4306,7 @@ void __fastcall DRAW_UI_INVENTORY_Gold(int32_t nGoldPanelMode) {
         nTextY = gnPanelOffsetY - 0x45 + ScreenSizeY;
       }
     } else {
-      BOOL bIsExpansionGfx;
+      int nTooltipY;
       eStatType = UNITSTAT_goldbank;
       pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_UI();
       nGoldAmount = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pPlayerUnit_lcl, eStatType, nLayer);
@@ -4065,15 +4326,17 @@ void __fastcall DRAW_UI_INVENTORY_Gold(int32_t nGoldPanelMode) {
       nCoinFrame = (uint32_t)(gnInvStashGold != 0);
       bIsExpansionGfx = GAME::Game::CLIENT_CheckExpansion();
       if (bIsExpansionGfx) {
-        bIsExpansionGfx = INV_IsMouseInRect(gnPanelOffsetX + 0x49, gnPanelOffsetY - 0x1b6 + ScreenSizeY, 0x14, 0x12);
+        bIsExpansionGfx = INV_IsMouseInRect(0x14, 0x12, gnPanelOffsetY - 0x1b6 + ScreenSizeY, gnPanelOffsetX + 0x49);
         if (bIsExpansionGfx) {
           nTooltipY = gnPanelOffsetY - 0x1ca + ScreenSizeY;
           show_gold_button_tooltip:
           nColorFlag = 0;
-          D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(D2Lang::StrTable::strtable::GetLocaleString(0x101c), gnPanelOffsetX + 0x35, nTooltipY, 0, nColorFlag);
+          iTmp = 0;
+          nTooltipXPos = gnPanelOffsetX + 0x35;
+          D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(D2Lang::StrTable::strtable::GetLocaleString(0x101c), nTooltipXPos, nTooltipY, iTmp, nColorFlag);
         }
       } else {
-        bIsExpansionGfx = INV_IsMouseInRect(gnPanelOffsetX + 0x49, gnPanelOffsetY - 0xf2 + ScreenSizeY, 0x14, 0x12);
+        bIsExpansionGfx = INV_IsMouseInRect(0x14, 0x12, gnPanelOffsetY - 0xf2 + ScreenSizeY, gnPanelOffsetX + 0x49);
         if (bIsExpansionGfx) {
           nTooltipY = gnPanelOffsetY - 0x106 + ScreenSizeY;
           goto show_gold_button_tooltip;
@@ -4104,7 +4367,10 @@ void __fastcall DRAW_UI_INVENTORY_Gold(int32_t nGoldPanelMode) {
       iTmp = nCoinX + 2;
     } else {
       if (nGoldPanelMode != 1) {
-        D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0xcf3), gnPanelOffsetX + 0x15, nCoinY, 0, 0);
+        bIsExpansionGfx = 0;
+        iTmp = 0;
+        nTextY = gnPanelOffsetX + 0x15;
+        D2Win::Src::D2WinFont::DRAW_text(D2Lang::StrTable::strtable::GetLocaleString(0xcf3), nTextY, nCoinY, iTmp, bIsExpansionGfx);
         D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
         return;
       }
@@ -4154,7 +4420,7 @@ void __stdcall DRAW_UI_Inventory_DrawShop() {
     D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnPanelOffsetX + 0x100, gnPanelOffsetY - 0x30 + ScreenSizeY, -1, DRAW_SOLID, nullptr);
     BOOL bHasGuid = npcmenu::GetInteractedUnitGuid(&nNpcGuid);
     if (bHasGuid) {
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
       if (pUnit) {
         DRAW_UI_InventoryContent(pUnit);
       }
@@ -4200,7 +4466,7 @@ void __stdcall DRAW_UI_Inventory_DrawShop() {
 
         nTabX += 0x50;
         nTabIdx++;
-        pTabState = (PD2NpcShopTabHasItems)((char*)pTabState + 0x12);
+        pTabState = (PD2NpcShopTabHasItems)((int)pTabState + 0x12);
       } while (nTabIdx < AmountOfNPCTabs);
     }
 
@@ -4209,16 +4475,18 @@ void __stdcall DRAW_UI_Inventory_DrawShop() {
 
 void __stdcall INV_DrawNpcButtonTooltip() {
     D2UnitStrc* pNpcUnit;
+    int nTooltipX;
     uint16_t wszTooltipText[256];
     int nButtonAreaTop;
     int32_t nRepairAllCost;
     int32_t nNpcTypeId;
+    int32_t nTooltipColor;
     if (!(gnInvMouseX >= pNpcInventoryScreenCoordinates.nLeft && gnInvMouseX <= pNpcInventoryScreenCoordinates.nRight)) {
       return;
     }
 
     int nButtonX = gnPanelOffsetY - 0x6d + ScreenSizeY;
-    if (!(gnInvMouseY >= nButtonX && gnInvMouseY <= pNpcInventoryScreenCoordinates.nBottom)) {
+    if (!(gpInvCursorItem >= nButtonX && gpInvCursorItem <= pNpcInventoryScreenCoordinates.nBottom)) {
       return;
     }
 
@@ -4227,7 +4495,7 @@ void __stdcall INV_DrawNpcButtonTooltip() {
       return;
     }
 
-    while (gaNpcShopButtons[nButtonIdx].nSelectedState != 1 || gnInvMouseX <= NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX || gnInvMouseX >= NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX + 0x2d || gnInvMouseY <= nButtonX || gnInvMouseY >= gnPanelOffsetY - 0x41 + ScreenSizeY) {
+    while (gaNpcShopButtons[nButtonIdx].nSelectedState != 1 || gnInvMouseX <= NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX || gnInvMouseX >= NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX + 0x2d || gpInvCursorItem <= nButtonX || gpInvCursorItem >= gnPanelOffsetY - 0x41 + ScreenSizeY) {
       nButtonIdx++;
       if (nButtonIdx >= gaNpcShopButtonTable[0]) {
         return;
@@ -4247,7 +4515,11 @@ void __stdcall INV_DrawNpcButtonTooltip() {
         return;
       }
     } else {
-      D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(D2Lang::StrTable::strtable::GetLocaleString(gaNpcShopButtons[nButtonIdx].wStringId), NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX, gnPanelOffsetY - 100 + ScreenSizeY, 0, 0);
+      nTooltipColor = 0;
+      nNpcTypeId = 0;
+      nButtonX = gnPanelOffsetY - 100 + ScreenSizeY;
+      nTooltipX = NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX;
+      D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(D2Lang::StrTable::strtable::GetLocaleString(gaNpcShopButtons[nButtonIdx].wStringId), nTooltipX, nButtonX, nNpcTypeId, nTooltipColor);
     }
 }
 
@@ -4298,7 +4570,7 @@ void __stdcall INV_HandleShopEscapeKey(D2UIMouseMsgStrc * pMsg) {
     gShopTradeUIState = 0;
     npcmenu::NPCMENU_CloseShopUI();
     gnInvMouseX = 0;
-    gnInvMouseY = 0;
+    gpInvCursorItem = 0;
     gpInvItemUnderCursor = 0;
     gbInvBodySlotUnderCursorExists = 0;
     pItemToDescribe = 0;
@@ -4313,7 +4585,6 @@ void __stdcall INV_HandleShopEscapeKey(D2UIMouseMsgStrc * pMsg) {
 
 void __stdcall INV_HandleShopMouseMove(D2UIMouseMsgStrc * pMsg) {
     D2InventoryStrc* pInventory;
-    int32_t nMsg;
     D2UIMouseMsgStrc* pUnderMouse = pMsg;
     if (!(!g_nCurrentInventoryPage || g_nCurrentInventoryPage == 1 || g_nCurrentInventoryPage == 3 || g_nCurrentInventoryPage == 2 || g_nCurrentInventoryPage == 4)) {
       return;
@@ -4322,16 +4593,16 @@ void __stdcall INV_HandleShopMouseMove(D2UIMouseMsgStrc * pMsg) {
     int32_t nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     int32_t nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nMouseX;
-    gnInvMouseY = nMouseY;
+    gpInvCursorItem = nMouseY;
     D2UnitStrc* pUnit = Cursor::GetCursorItem();
     if (!(!pUnit || nMouseX < pNpcInventoryScreenCoordinates.nLeft || nMouseX > pNpcInventoryScreenCoordinates.nRight || nMouseY < pNpcInventoryScreenCoordinates.nTop || nMouseY > pNpcInventoryScreenCoordinates.nBottom)) {
       return;
     }
     if (g_nCurrentInventoryPage) {
       BOOL bHasGuid;
-      bHasGuid = npcmenu::GetInteractedUnitGuid((int*)&nMsg);
+      bHasGuid = npcmenu::GetInteractedUnitGuid((int*)&pMsg);
       if (bHasGuid) {
-        pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMsg, UNIT_MONSTER);
+        pUnit = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
         if (pUnit) {
           pInventory = pUnit->pInventory;
           if (nMouseX >= pNpcInventoryScreenCoordinates.nLeft && nMouseX <= pNpcInventoryScreenCoordinates.nRight && nMouseY >= pNpcInventoryScreenCoordinates.nTop && nMouseY <= pNpcInventoryScreenCoordinates.nBottom) {
@@ -4369,7 +4640,7 @@ void __stdcall INV_HandleShopLeftClick(D2UIMouseMsgStrc * pMsg) {
     bool bButtonHandled;
     bButtonHandled = false;
     gbInvPanelButtonPressed = 0;
-    gnInvUnusedClearedOnClick = 0;
+    gnInvMouseY = 0;
     D2UnitStrc* pUnit;
     pUnit = Cursor::GetCursorItem();
     if (pUnit) {
@@ -4401,7 +4672,7 @@ void __stdcall INV_HandleShopLeftClick(D2UIMouseMsgStrc * pMsg) {
       } else {
         pButton = &gaNpcShopButtons[0].nActionType;
         do {
-          if (((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nSelectedState == 1 && gnInvMouseX > gnPanelOffsetX + NPCButtonArray[nButtonCount + CurrentNpcButtonSelection * 4] && gnInvMouseX < gnPanelOffsetX + NPCButtonArray[nButtonCount + CurrentNpcButtonSelection * 4] + 0x2d && gnInvMouseY > gnPanelOffsetY - 0x6d + ScreenSizeY && gnInvMouseY < gnPanelOffsetY - 0x41 + ScreenSizeY && ((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nDrawCallback == 1) {
+          if (((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nSelectedState == 1 && gnInvMouseX > gnPanelOffsetX + NPCButtonArray[nButtonCount + CurrentNpcButtonSelection * 4] && gnInvMouseX < gnPanelOffsetX + NPCButtonArray[nButtonCount + CurrentNpcButtonSelection * 4] + 0x2d && gpInvCursorItem > gnPanelOffsetY - 0x6d + ScreenSizeY && gpInvCursorItem < gnPanelOffsetY - 0x41 + ScreenSizeY && ((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nDrawCallback == 1) {
             nActionType = ((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nActionType;
             if (nActionType == 9) {
               pMsg->bHandled = 1;
@@ -4416,7 +4687,7 @@ void __stdcall INV_HandleShopLeftClick(D2UIMouseMsgStrc * pMsg) {
 
               npcmenu::NPCMENU_CloseShopUI();
               gnInvMouseX = 0;
-              gnInvMouseY = 0;
+              gpInvCursorItem = 0;
               return;
             }
 
@@ -4564,7 +4835,7 @@ void __stdcall INV_HandleShopReturnAction() {
       return;
     }
 
-    pCursorItem_lcl = UNIT::CUnit::UNITS_FindClientSideUnit(nInteractedUnitGuid, UNIT_MONSTER);
+    pCursorItem_lcl = UNIT::Player::UNITS_FindClientSideUnit(nInteractedUnitGuid, UNIT_MONSTER);
     if (!pCursorItem_lcl) {
       return;
     }
@@ -4581,8 +4852,8 @@ void __stdcall INV_HandleShopReturnAction() {
 
 void __stdcall INV_HandleInventoryMouseMove(D2UIMouseMsgStrc * pMsg) {
     gnInvMouseX = (int)pMsg->uLParam.sMousePos.nMouseX;
-    gnInvMouseY = (int)pMsg->uLParam.sMousePos.nMouseY;
-    if (!(gnInvMouseX >= pInventoryScreenCoordinates.nLeft && gnInvMouseX < pInventoryScreenCoordinates.nRight && gnInvMouseY >= pInventoryScreenCoordinates.nTop && gnInvMouseY <= pInventoryScreenCoordinates.nBottom)) {
+    gpInvCursorItem = (int)pMsg->uLParam.sMousePos.nMouseY;
+    if (!(gnInvMouseX >= pInventoryScreenCoordinates.nLeft && gnInvMouseX < pInventoryScreenCoordinates.nRight && gpInvCursorItem >= pInventoryScreenCoordinates.nTop && gpInvCursorItem <= pInventoryScreenCoordinates.nBottom)) {
       return;
     }
 
@@ -4593,7 +4864,7 @@ BOOL __stdcall INV_HandleInventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
     int32_t nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     int32_t nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nMouseX;
-    gnInvMouseY = nMouseY;
+    gpInvCursorItem = nMouseY;
     pMsg->bHandled = 1;
     pMsg->dwResult = 0;
     Storm::SMsgBreakHandlerChain(pMsg);
@@ -4734,8 +5005,8 @@ void __stdcall INV_HandleTradeMouseMove(D2UIMouseMsgStrc * pMsg) {
     }
 
     gnInvMouseX = (int)pMsg->uLParam.sMousePos.nMouseX;
-    gnInvMouseY = (int)pMsg->uLParam.sMousePos.nMouseY;
-    if (gnInvMouseX >= pInventoryScreenCoordinates.nLeft && gnInvMouseX < pInventoryScreenCoordinates.nRight && gnInvMouseY >= pInventoryScreenCoordinates.nTop && gnInvMouseY <= pInventoryScreenCoordinates.nBottom || gnInvMouseX > pTradePage2GridScreenCoordinates.nPixelLeft && gnInvMouseX < pTradePage2GridScreenCoordinates.nRight && gnInvMouseY >= pTradePage2GridScreenCoordinates.nTop && gnInvMouseY <= pTradePage2GridScreenCoordinates.nBottom || gnInvMouseX > pTradePage1GridScreenCoordinates.nPixelLeft && gnInvMouseX < pTradePage1GridScreenCoordinates.nRight && gnInvMouseY >= pTradePage1GridScreenCoordinates.nTop && gnInvMouseY <= pTradePage1GridScreenCoordinates.nBottom) {
+    gpInvCursorItem = (int)pMsg->uLParam.sMousePos.nMouseY;
+    if (gnInvMouseX >= pInventoryScreenCoordinates.nLeft && gnInvMouseX < pInventoryScreenCoordinates.nRight && gpInvCursorItem >= pInventoryScreenCoordinates.nTop && gpInvCursorItem <= pInventoryScreenCoordinates.nBottom || gnInvMouseX > pTradePage2GridScreenCoordinates.nPixelLeft && gnInvMouseX < pTradePage2GridScreenCoordinates.nRight && gpInvCursorItem >= pTradePage2GridScreenCoordinates.nTop && gpInvCursorItem <= pTradePage2GridScreenCoordinates.nBottom || gnInvMouseX > pTradePage1GridScreenCoordinates.nPixelLeft && gnInvMouseX < pTradePage1GridScreenCoordinates.nRight && gpInvCursorItem >= pTradePage1GridScreenCoordinates.nTop && gpInvCursorItem <= pTradePage1GridScreenCoordinates.nBottom) {
       INV_HandleMouseMove(pMsg);
       return;
     }
@@ -4756,9 +5027,9 @@ void __stdcall INV_HandleTradeLeftClick(D2UIMouseMsgStrc * pMsg) {
     int32_t nMouseX;
     nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nMouseX;
-    gnInvMouseY = nMouseY;
+    gpInvCursorItem = nMouseY;
     gbInvPanelButtonPressed = 0;
-    gnInvUnusedClearedOnClick = 0;
+    gnInvMouseY = 0;
     D2UnitStrc* pCursorItem_lcl;
     pCursorItem_lcl = UNIT::Player::GetPlayerUnit_UI();
     D2InventoryStrc* pTradeInventory;
@@ -5021,9 +5292,11 @@ static BOOL INV_IsMouseOverStashGoldBtn(int32_t nMouseY, int32_t nMouseX) {
     return 0;
 }
 
-void Unreferenced_00489a10() {
+int Unreferenced_00489a10() {
+    int extraout_EAX;
     ui::SetUIFlag(UI_STASH, UI_RESET, 0);
     GAME::Msg::NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT(0x4f, 0x12, 0, 0);
+    return extraout_EAX;
 }
 
 void __stdcall INV_HandleStashMouseMove(D2UIMouseMsgStrc * pMsg) {
@@ -5032,10 +5305,10 @@ void __stdcall INV_HandleStashMouseMove(D2UIMouseMsgStrc * pMsg) {
     }
 
     gnInvMouseX = (int)pMsg->uLParam.sMousePos.nMouseX;
-    gnInvMouseY = (int)pMsg->uLParam.sMousePos.nMouseY;
-    if (gnInvMouseX < pInventoryScreenCoordinates.nLeft || gnInvMouseX >= pInventoryScreenCoordinates.nRight || gnInvMouseY < pInventoryScreenCoordinates.nTop || gnInvMouseY > pInventoryScreenCoordinates.nBottom) {
+    gpInvCursorItem = (int)pMsg->uLParam.sMousePos.nMouseY;
+    if (gnInvMouseX < pInventoryScreenCoordinates.nLeft || gnInvMouseX >= pInventoryScreenCoordinates.nRight || gpInvCursorItem < pInventoryScreenCoordinates.nTop || gpInvCursorItem > pInventoryScreenCoordinates.nBottom) {
       D2UnitStrc* pBankRangeResult;
-      pBankRangeResult = (D2UnitStrc*)IsInBankPageScreenRange(gnInvMouseX, gnInvMouseY);
+      pBankRangeResult = (D2UnitStrc*)IsInBankPageScreenRange(gnInvMouseX, gpInvCursorItem);
       if (!pBankRangeResult) {
         gpInvItemUnderCursor = (uint32_t)(uintptr_t)pBankRangeResult;
         gbInvBodySlotUnderCursorExists = (uint32_t)(uintptr_t)pBankRangeResult;
@@ -5062,9 +5335,9 @@ void __stdcall INV_HandleStashLeftClick(D2UIMouseMsgStrc * pMsg) {
     uint32_t uMouseY;
     uMouseY = (uint32_t)pMsg->uLParam.sMousePos.nMouseY;
     gbInvPanelButtonPressed = 0;
-    gnInvUnusedClearedOnClick = 0;
+    gnInvMouseY = 0;
     gnInvMouseX = uMouseX;
-    gnInvMouseY = uMouseY;
+    gpInvCursorItem = uMouseY;
     D2UnitStrc* pPlayerOrCursorItem;
     pPlayerOrCursorItem = UNIT::Player::GetPlayerUnit_UI();
     D2InventoryStrc* pInventory;
@@ -5103,6 +5376,21 @@ void __stdcall INV_HandleStashLeftClick(D2UIMouseMsgStrc * pMsg) {
       Storm::SMsgBreakHandlerChain(pMsg);
       return;
     }
+
+    // VP-BEGIN [vanilla-plus shared-stash] "Shared" tab (in the stash
+    // panel's top-right corner since R77 - the band between the panel's top
+    // edge and the gold display row; left of the right-panel art seam - the
+    // draw anchor is VPSHAREDUI_TAB_RIGHT_EDGE in VanillaPlusCore.cpp;
+    // d2vp.ini [features] shared_stash=1, no hotkey): flips the visible
+    // stash page by sending the VP 0x4F/0x7D toggle to the server, which
+    // swaps the page-4 contents (VanillaPlusStash.cpp).
+    if (VPSHAREDUI_HandleStashClick((int)uMouseX, (int)uMouseY)) {
+      pMsg->bHandled = 1;
+      pMsg->dwResult = 0;
+      Storm::SMsgBreakHandlerChain(pMsg);
+      return;
+    }
+    // VP-END [vanilla-plus shared-stash]
 
     gbInvStashPageOpen = 0;
     gbInvStashDepositClicked = 0;
@@ -5321,7 +5609,7 @@ void __stdcall CloseCube() {
       return;
     }
 
-    D2UnitStrc* pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnStashNpcGuid, UNIT_OBJECT);
+    D2UnitStrc* pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(gnStashNpcGuid, UNIT_OBJECT);
     if (pNpcUnit) {
       UNIT::UnitMode::INTERACT_AnyObject(2, gnStashNpcGuid);
     }
@@ -5339,8 +5627,8 @@ void __stdcall INV_HandleCubeMouseMove(D2UIMouseMsgStrc * pMsg) {
     }
 
     gnInvMouseX = (int)pMsg->uLParam.sMousePos.nMouseX;
-    gnInvMouseY = (int)pMsg->uLParam.sMousePos.nMouseY;
-    if ((gnInvMouseX < pInventoryScreenCoordinates.nLeft || gnInvMouseX >= pInventoryScreenCoordinates.nRight || gnInvMouseY < pInventoryScreenCoordinates.nTop || gnInvMouseY > pInventoryScreenCoordinates.nBottom) && (gnInvMouseX < pTransmogrifyBoxGridScreenCoordinates.nPixelLeft || gnInvMouseX >= pTransmogrifyBoxGridScreenCoordinates.nRight || gnInvMouseY < pTransmogrifyBoxGridScreenCoordinates.nTop || gnInvMouseY > pTransmogrifyBoxGridScreenCoordinates.nBottom)) {
+    gpInvCursorItem = (int)pMsg->uLParam.sMousePos.nMouseY;
+    if ((gnInvMouseX < pInventoryScreenCoordinates.nLeft || gnInvMouseX >= pInventoryScreenCoordinates.nRight || gpInvCursorItem < pInventoryScreenCoordinates.nTop || gpInvCursorItem > pInventoryScreenCoordinates.nBottom) && (gnInvMouseX < pTransmogrifyBoxGridScreenCoordinates.nPixelLeft || gnInvMouseX >= pTransmogrifyBoxGridScreenCoordinates.nRight || gpInvCursorItem < pTransmogrifyBoxGridScreenCoordinates.nTop || gpInvCursorItem > pTransmogrifyBoxGridScreenCoordinates.nBottom)) {
       gpInvItemUnderCursor = 0;
       gbInvBodySlotUnderCursorExists = 0;
       pItemToDescribe = 0;
@@ -5365,9 +5653,9 @@ void __stdcall INV_HandleCubeLeftClick(D2UIMouseMsgStrc * pMsg) {
     int32_t uMouseX;
     uMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gbInvPanelButtonPressed = 0;
-    gnInvUnusedClearedOnClick = 0;
+    gnInvMouseY = 0;
     gnInvMouseX = uMouseX;
-    gnInvMouseY = uMouseY;
+    gpInvCursorItem = uMouseY;
     D2UnitStrc* pPlayerOrCursorItem;
     pPlayerOrCursorItem = UNIT::Player::GetPlayerUnit_UI();
     D2InventoryStrc* pInventory;
@@ -5622,7 +5910,7 @@ void __stdcall INV_ResetShopState() {
     gShopTradeUIState = 0;
     g_nCurrentInventoryPage = 0;
     gnInvMouseX = 0;
-    gnInvMouseY = 0;
+    gpInvCursorItem = 0;
     D2UnitStrc* pPlayerOrCursorItem = UNIT::Player::GetPlayerUnit_UI();
     if (pPlayerOrCursorItem) {
       pPlayerOrCursorItem = D2Common::INVENTORY::Inventory::INVENTORY_GetHandItem(pPlayerOrCursorItem->pInventory);
@@ -5713,7 +6001,7 @@ void __stdcall INV_DrawHirelingName(D2UnitStrc * pUnit) {
       nTextWidth = D2Win::Src::D2WinFont::DRAW_text0(wszNameBuf);
     }
 
-    D2Win::Src::D2WinFont::DRAW_text(wszNameBuf, gnPanelOffsetX + 0xf, 0xd6 - gnPanelOffsetY, 0, 0);
+    D2Win::Src::D2WinFont::DRAW_text(wszNameBuf, gnPanelOffsetX + 0xf, 0xd6 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(), 0, 0); // VP: [resolution site-6]
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -5816,11 +6104,11 @@ void __stdcall INV_DrawHirelingStatLabels() {
         wszLabel[bHasColorCode] = L'\0';
       }
 
-      D2Lang::Unicode::UNISYS::WSTRING_PutWideCharIntoBuffer(wszLabel, D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)((intptr_t)&gaHirelingStatLabelX[0].wStrId + nFieldOffset)), 99);
-      nY = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nY + nFieldOffset) - gnPanelOffsetY;
+      D2Lang::Unicode::UNISYS::WSTRING_PutWideCharIntoBuffer(wszLabel, D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)((uintptr_t)&gaHirelingStatLabelX[0].wStrId + nFieldOffset)), 99);
+      nY = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nY + nFieldOffset) - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
       wszLabel[99] = L'\0';
-      nX = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nX + nFieldOffset) + gnPanelOffsetX;
-      nCenterWidth = *(int*)((intptr_t)&gaHirelingStatLabelX[0].nCenterWidth + nFieldOffset) + gnPanelOffsetX;
+      nX = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nX + nFieldOffset) + gnPanelOffsetX;
+      nCenterWidth = *(int*)((uintptr_t)&gaHirelingStatLabelX[0].nCenterWidth + nFieldOffset) + gnPanelOffsetX;
       bHasColorCode = ui::UI_AppendColorCodeToString(wszLabel, &__frame0.pwColorCodePart);
       if (bHasColorCode) {
         ui::UI_DrawTextCentered(nX, nY - 4, nCenterWidth, wszLabel, 0);
@@ -5926,12 +6214,11 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
     D2DifficultyLevelsTxt* pDiffLevelsTxt;
     int iDmgTypeLoopCount;
     int iStatBonusPct;
-    INV_DrawHirelingStats_Slotm10 uSlot10;
+    eD2UnitStat* pDmgTypeStatArray;
     int iStatValue;
     eD2UnitStat nColorCode;
     eD2UnitStat eStatId;
     uint32_t nStatArrayIdx;
-    int nDiffLevelsTxt;
     if (!pUnit) {
       return;
     }
@@ -5961,7 +6248,7 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
 
       iRightX = gaHirelingStatRows[nStatArrayIdx * 5] + gnPanelOffsetX;
       iLeftX = gaHirelingStatRows[nStatArrayIdx * 5 + 1] + gnPanelOffsetX;
-      iYCoord = gaHirelingStatRows[nStatArrayIdx * 5 + 2] - gnPanelOffsetY - 2;
+      iYCoord = gaHirelingStatRows[nStatArrayIdx * 5 + 2] - gnPanelOffsetY + VPRES_GetWideUiOffsetY() - 2; // VP: [resolution site-6]
       if (false) {
         default_case:
         iDamageValue = iStatValue;
@@ -5995,7 +6282,7 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
         iStatBonusPct = 0;
         iStatRaw = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_damagepercent, 0);
         iDmgTypeLoopCount = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_item_mindamage_percent, 0);
-        nDiffLevelsTxt = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_item_maxdamage_percent, 0);
+        pDiffLevelsTxt = (D2DifficultyLevelsTxt*)D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_item_maxdamage_percent, 0);
         if (iDmgTypeLoopCount + iStatRaw > 0) {
           nColorCode = UNITSTAT_vitality;
         } else {
@@ -6007,18 +6294,18 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
           pRightArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pUnit->pInventory, 4);
         }
 
-        uSlot10.nMaxDamage = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_maxdamage, 0);
+        pDmgTypeStatArray = (eD2UnitStat*)D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_maxdamage, 0);
         if (pRightArmItem) {
           bResult = D2Common::ITEMS::Items::IsTwoHanded(pRightArmItem);
           if (bResult) {
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pRightArmItem, UNITSTAT_mindamage, 0);
             iStatValue -= iDamageValue;
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pRightArmItem, UNITSTAT_maxdamage, 0);
-            uSlot10.nMaxDamage -= iDamageValue;
+            pDmgTypeStatArray = (eD2UnitStat*)((int)pDmgTypeStatArray - iDamageValue);
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_secondary_mindamage, 0);
             iStatValue += iDamageValue;
             iDamageValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_secondary_maxdamage, 0);
-            uSlot10.nMaxDamage += iDamageValue;
+            pDmgTypeStatArray = (eD2UnitStat*)((int)pDmgTypeStatArray + iDamageValue);
           }
 
           wBonus = D2Common::ITEMS::Items::ITEM_GetItemsTxt_wStrBonus(pRightArmItem);
@@ -6055,8 +6342,8 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
         }
 
         iDamageValue = (iDmgTypeLoopCount + 100 + iStatRaw) * iStatValue / 100 + iStatBonusPct;
-        iStatRaw = (nDiffLevelsTxt + 0x64 + iStatRaw) * uSlot10.nMaxDamage / 100 + iStatBonusPct;
-        uSlot10.pDmgTypeStatArray = nPropertyArray1 + 1;
+        iStatRaw = ((uintptr_t)&pDiffLevelsTxt[1].UberCodeOddsGood + iStatRaw) * (int)pDmgTypeStatArray / 100 + iStatBonusPct;
+        pDmgTypeStatArray = nPropertyArray1 + 1;
         nPropertyArray1[0] = UNITSTAT_firemindam;
         nPropertyArray1[1] = UNITSTAT_firemaxdam;
         nPropertyArray1[2] = UNITSTAT_energy;
@@ -6071,14 +6358,14 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
         nPropertyArray1[0xb] = UNITSTAT_vitality;
         iDmgTypeLoopCount = 4;
         do {
-          iStatValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, uSlot10.pDmgTypeStatArray[-1], 0);
-          iStatCheck = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, *uSlot10.pDmgTypeStatArray, 0);
+          iStatValue = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, pDmgTypeStatArray[-1], 0);
+          iStatCheck = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, *pDmgTypeStatArray, 0);
           if (iStatValue || iStatCheck) {
-            nColorCode = uSlot10.pDmgTypeStatArray[1];
+            nColorCode = pDmgTypeStatArray[1];
           }
 
           iDamageValue += iStatValue;
-          uSlot10.pDmgTypeStatArray += 3;
+          pDmgTypeStatArray += 3;
           iStatRaw += iStatCheck;
           iDmgTypeLoopCount--;
         } while (iDmgTypeLoopCount);
@@ -6229,15 +6516,15 @@ static void INV_DrawHirelingStats(D2UnitStrc * pUnit) {
       iLoopCounter = 0;
       D2Win::Src::D2WinFont::TEXT_CalcTextDimensions(wszStatText, &iTextWidth, &iLoopCounter);
       iDamageValue = iStatTableOffset;
-      iStatRaw = *(int*)((char*)gaHirelingStatRows + iStatTableOffset + 0xc);
+      iStatRaw = *(int*)((int)gaHirelingStatRows + iStatTableOffset + 0xc);
       iStatCheck = iYCoord;
       if (iStatRaw && iTextWidth > iStatRaw) {
         D2Win::Src::D2WinFont::SetAndReturnLastFont(6);
         iStatCheck = iYCoord + 1;
       }
-      if (!*(int*)((char*)gaHirelingStatRows + iDamageValue)) {
+      if (!*(int*)((int)gaHirelingStatRows + iDamageValue)) {
         D2Win::Src::D2WinFont::DRAW_text(wszStatText, iLeftX - D2Win::Src::D2WinFont::DRAW_text0(wszStatText), iStatCheck, nColorCode, 0);
-      } else if (!*(int*)((char*)gaHirelingStatRows + iDamageValue + 4)) {
+      } else if (!*(int*)((int)gaHirelingStatRows + iDamageValue + 4)) {
         D2Win::Src::D2WinFont::DRAW_text(wszStatText, iRightX, iStatCheck, nColorCode, 0);
       } else {
         ui::UI_DrawTextCentered(iRightX, iStatCheck, iLeftX, wszStatText, nColorCode);
@@ -6499,7 +6786,7 @@ void __fastcall INV_DrawHirelingCursorHighlight(D2UnitStrc * pUnit) {
       }
 
       nBodySlotIdx++;
-    } while ((intptr_t)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nHeight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 17));
+    } while ((int)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nHeight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 17));
 }
 
 static void INV_DrawHirelingEquippedItems(D2UnitStrc * pMercUnit) {
@@ -6539,21 +6826,21 @@ static void INV_DrawHirelingEquippedItems(D2UnitStrc * pMercUnit) {
       }
 
       nGridOffset++;
-    } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nGridOffset].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
+    } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nGridOffset].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
 }
 
-D2UnitStrc * Unreferenced_0048b640() {
+int Unreferenced_0048b640() {
     int32_t iVar2 = GAME::RosterPets::GetRosterPetGUID(UNIT::Player::GetPlayerUnit_UI(), 7, 0);
     if (iVar2 != -1) {
       D2UnitStrc* pDVar1;
-      pDVar1 = UNIT::CUnit::UNITS_FindClientSideUnit(iVar2, UNIT_MONSTER);
+      pDVar1 = UNIT::Player::UNITS_FindClientSideUnit(iVar2, UNIT_MONSTER);
       if (pDVar1) {
-        return pDVar1;
+        return (int)pDVar1;
       }
     }
 
     ui::SetUIFlag(UI_MERCINV, UI_TOGGLE, 0);
-    return nullptr;
+    return 0;
 }
 
 void __stdcall INV_HandleMercInvLeftDown(D2UIMouseMsgStrc * pMsg) {
@@ -6566,7 +6853,7 @@ void __stdcall INV_HandleMercInvLeftDown(D2UIMouseMsgStrc * pMsg) {
     int32_t nMercGuid = GAME::RosterPets::GetRosterPetGUID(UNIT::Player::GetPlayerUnit_UI(), 7, 0);
     if (nMercGuid != -1) {
       D2UnitStrc* pUnit;
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
       if (pUnit) {
         pMsg->bHandled = 0;
         nScreenBottom = ScreenSizeY - 0x31;
@@ -6620,7 +6907,7 @@ void __stdcall INV_HandleMercInvLeftClick(D2UIMouseMsgStrc * pMsg) {
     nMercGuid = GAME::RosterPets::GetRosterPetGUID(UNIT::Player::GetPlayerUnit_UI(), 7, 0);
     if (nMercGuid != -1) {
       D2UnitStrc* pPlayerUnit_lcl;
-      pMercUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
+      pMercUnit = UNIT::Player::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
       if (pMercUnit) {
         pMsg->bHandled = 0;
         Cursor::UI_HandleCursorMouseUp(pMsg);
@@ -6691,7 +6978,7 @@ void __stdcall INV_HandleMercInvLeftClick(D2UIMouseMsgStrc * pMsg) {
                 pEquippedItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pMercUnit->pInventory, nBodySlotIdx);
                 if (pEquippedItem) {
                   UNIT::ITEM_RemoveClientSide(pEquippedItem);
-                  GAME::Msg::NET_D2GS_CLIENT_Send_SHORT('a', (uint16_t)nBodySlotIdx);
+                  GAME::Msg::NET_D2GS_CLIENT_Send_SHORT('a', (short int)nBodySlotIdx);
                   gpInvItemUnderCursor = 0;
                   gbInvBodySlotUnderCursorExists = 0;
                   pItemToDescribe = 0;
@@ -6701,7 +6988,7 @@ void __stdcall INV_HandleMercInvLeftClick(D2UIMouseMsgStrc * pMsg) {
           }
 
           nBodySlotIdx++;
-        } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 4));
+        } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords) + 4));
 
         GAME::Game::GAMEDATA_ClearQueuedClicks();
         consume_click:
@@ -6725,7 +7012,7 @@ void __stdcall INV_HandleMercInvMouseMove(D2UIMouseMsgStrc * pMsg) {
     int32_t nMercGuid = GAME::RosterPets::GetRosterPetGUID(UNIT::Player::GetPlayerUnit_UI(), 7, 0);
     if (nMercGuid != -1) {
       D2UnitStrc* pUnit;
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
       if (pUnit) {
         pMsg->bHandled = 0;
         nScreenBottom = ScreenSizeY - 0x31;
@@ -6775,7 +7062,7 @@ void __stdcall INV_HandleMercInvMouseMove(D2UIMouseMsgStrc * pMsg) {
           }
 
           nMouseX++;
-        } while ((intptr_t)(uint32_t*)&gaHirelingBodySlotScreenCoords[nMouseX].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
+        } while ((int)(uint32_t*)&gaHirelingBodySlotScreenCoords[nMouseX].nLeft < (intptr_t)((char*)&gaHirelingBodySlotScreenCoords + sizeof(gaHirelingBodySlotScreenCoords)));
 
         return;
       }
@@ -6784,8 +7071,8 @@ void __stdcall INV_HandleMercInvMouseMove(D2UIMouseMsgStrc * pMsg) {
     ui::SetUIFlag(UI_MERCINV, UI_TOGGLE, 0);
 }
 
-void __thiscall CloseScrollOfWhatever(uint16_t * pThis, int32_t nColor) {
-    D2Lang::Unicode::UNISYS::STRING_CopyWideString((uint16_t*)gpInvRecipeScrollImage, pThis);
+void __thiscall CloseScrollOfWhatever(void * pThis, int32_t nColor) {
+    D2Lang::Unicode::UNISYS::STRING_CopyWideString((uint16_t*)gpInvRecipeScrollImage, (uint16_t*)pThis);
     gbInvRecipeScrollOpen = nColor;
     ui::SetUIFlag(UI_RECIPESCROLL, UI_SET, 0);
 }
@@ -6815,7 +7102,7 @@ void __stdcall INV_DrawRecipeScroll() {
     sGfxData.nFrameNumber = 3;
     D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnPanelOffsetX + 0x100, gnPanelOffsetY - 0x30 + ScreenSizeY, -1, DRAW_SOLID, nullptr);
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(4);
-    D2Win::Src::D2WinFont::DRAW_text((uint16_t*)gpInvRecipeScrollImage, gnPanelOffsetX + 0x50, 0x82 - gnPanelOffsetY, gbInvRecipeScrollOpen, 0);
+    D2Win::Src::D2WinFont::DRAW_text((uint16_t*)gpInvRecipeScrollImage, gnPanelOffsetX + 0x50, 0x82 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(), gbInvRecipeScrollOpen, 0); // VP: [resolution site-6]
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -6874,6 +7161,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     uint32_t _wszTokenBuf;
     va_list __va;
     va_start(__va, wszFormat);
+    short int* pwTokenPtr;
     int nArgIdxA;
     uint16_t* pwArgDest;
     uint16_t* pwArgSrc;
@@ -6881,7 +7169,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     uint16_t awszArgs[2000];
     uint16_t wszContainerA[6];
     uint16_t wszMsToken[6];
-    uint16_t* pwColonSaved;
+    short int* pwColonSaved;
     if (!wszFormat) {
       return;
     }
@@ -6910,28 +7198,29 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     }
 
     nTotalArgs = nArgIdxA;
-    pwColonSaved = (uint16_t*)(uint32_t)((uint32_t)(uint16_t)*(uint16_t*)((char*)&pwColonSaved + 2) << 16 | (uint32_t)(uint16_t)0x3a);
-    pwArgDest = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, L':');
-    pwColonSaved = pwArgDest;
-    if (pwArgDest) {
+    pwColonSaved = (short int*)(uint32_t)((uint32_t)(uint16_t)*(uint16_t*)((char*)&pwColonSaved + 2) << 16 | (uint32_t)(uint16_t)0x3a);
+    short int* pwColonPtr;
+    pwColonPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x3a);
+    pwColonSaved = pwColonPtr;
+    if (pwColonPtr) {
       __frame0.wszTokenBuf = 0x61;
       memcpy(wszMsToken, L"[ms]", 10);
       nArgIdxA = -1;
-      pwArgSrc = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, L'a');
-      if (pwArgSrc && pwArgSrc < pwArgDest) {
-        nArgIdxA = (uint16_t)pwArgSrc[1] - 0x30;
+      pwTokenPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x61);
+      if (pwTokenPtr && pwTokenPtr < pwColonPtr) {
+        nArgIdxA = (uint16_t)pwTokenPtr[1] - 0x30;
       }
 
       _wszTokenBuf = (uint32_t)(uint32_t)(uint16_t)0x6e;
       nArgIdxN = -1;
-      pwArgSrc = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, L'n');
-      if (pwArgSrc && pwArgSrc < pwArgDest) {
-        nArgIdxN = (uint16_t)pwArgSrc[1] - 0x30;
+      pwTokenPtr = D2Lang::Unicode::UNISYS::UNICODE_FindWideChar(wszFormat, 0x6e);
+      if (pwTokenPtr && pwTokenPtr < pwColonPtr) {
+        nArgIdxN = (uint16_t)pwTokenPtr[1] - 0x30;
       }
       if (nArgIdxA != -1) {
         if (nArgIdxN == -1) {
           INV_ExtractTextBetweenBrackets(awszArgs + nArgIdxA * 200, (short*)wszMsToken);
-          wszFormat = pwArgDest + 1;
+          wszFormat = (uint16_t*)(pwColonPtr + 1);
           goto substitute_args;
         }
 
@@ -6946,20 +7235,20 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
         }
 
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(pwArgDest, pwArgSrc);
-        pwArgDest = pwColonSaved;
+        pwColonPtr = pwColonSaved;
         if (awszArgs[nArgIdxA * 200] == L'[') {
           INV_ExtractTextBetweenBrackets(awszArgs + nArgIdxA * 200, (short*)wszContainerA);
-          pwArgDest = pwColonSaved;
+          pwColonPtr = pwColonSaved;
         }
       } else {
         if (nArgIdxN != -1) {
           D2Lang::Unicode::UNISYS::STRING_CopyWideString(awszArgs + nArgIdxN * 200, awszArgs + nArgIdxN * 200 + 4);
-          wszFormat = pwArgDest + 1;
+          wszFormat = (uint16_t*)(pwColonPtr + 1);
           goto substitute_args;
         }
       }
 
-      wszFormat = pwArgDest + 1;
+      wszFormat = (uint16_t*)(pwColonPtr + 1);
     }
 
     substitute_args:
@@ -6977,7 +7266,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     } while (nArgIdxA < nTotalArgs);
 }
 
-void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
+void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize) {
     // Frame slots -988..-56 are ONE object: &wszRareName is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
@@ -6991,14 +7280,12 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
     __frame0_t __frame0;
     uint16_t wStringId;
     uint8_t byEarLevel;
-    uint16_t* pwLocaleStr;
     D2LowQualityItemsTxt* pDVar1;
     uint32_t nIsOfType;
     char* pcNameSrc;
     D2MonStatsTxt* pMonStatsTxt;
     uint16_t nAffixId;
     D2MagicAffixTxt* pPrefixAffix;
-    uint8_t* pwRareNameSuffix;
     uint8_t* pcNameDst;
     char* pwLocaleStr2;
     uint16_t* pwFormatStr;
@@ -7016,7 +7303,8 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
     uint16_t wszBaseName[512];
     uint16_t wszSuffix[512];
     uint16_t wszScratch[512];
-    uint16_t wszNameScratch[512];
+    uint16_t wszNameScratch[256];
+    uint16_t wszPlayerName[256];
     char szEarLevelStr[20];
     uint8_t* wszEarLevel[2];
     D2MagicAffixTxt* pPrefixAffix2;
@@ -7030,10 +7318,13 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
       wszPrefix[iScratch] = L'\0';
     }
 
+    uint16_t* pwLocaleStr = wszSuffix;
     D2UnitStrc* pUnitSaved = pUnit;
     uint16_t* pwOutBuffer = wBuffer;
-    for (iScratch = 0; iScratch < 0x200; iScratch++) {
-      wszSuffix[iScratch] = L'\0';
+    for (iScratch = 0x100; iScratch; iScratch--) {
+      pwLocaleStr[0] = L'\0';
+      pwLocaleStr[1] = L'\0';
+      pwLocaleStr += 2;
     }
 
     for (iScratch = 0; iScratch < 0x200; iScratch++) {
@@ -7099,13 +7390,23 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
             switch (nAffixId) {
               case 0:
                 {
-                  pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(eItemType != ITEMTYPE_Book ? 0x898 : 0x897);
+                  wStringId = 0x897;
+                  if (eItemType != ITEMTYPE_Book) {
+                    wStringId = 0x898;
+                  }
+
+                  pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(wStringId);
                   D2Lang::Unicode::UNISYS::STRING_CopyWideString(pwOutBuffer, pwLocaleStr);
                   break;
                 }
               case 1:
                 {
-                  pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(eItemType != ITEMTYPE_Book ? 0x89a : 0x899);
+                  wStringId = 0x899;
+                  if (eItemType != ITEMTYPE_Book) {
+                    wStringId = 0x89a;
+                  }
+
+                  pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(wStringId);
                   D2Lang::Unicode::UNISYS::STRING_CopyWideString(pwOutBuffer, pwLocaleStr);
                   break;
                 }
@@ -7122,7 +7423,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
             byEarLevel = D2Common::ITEMS::Items::ITEM_GetItemData_nEarLevel(pUnit);
             Storm::Source::SSTR::SStrPrintf(szEarLevelStr, 3, "%d", (uint32_t)byEarLevel);
             D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize((uint16_t*)wszEarLevel, szEarLevelStr, 3);
-            Fog::File::CONTAINER_InitializeBuffer(wszNameScratch + 0x100, 2, 0x100, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
+            Fog::File::CONTAINER_InitializeBuffer(wszPlayerName, 2, 0x100, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
             pcNameSrc = D2Common::ITEMS::Items::ITEM_GetItemData_szPlayerName(pUnit);
             strcpy(__frame0.szPlayerNameCopy, pcNameSrc);
             D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize((uint16_t*)__frame0.szUtf8Buf, __frame0.szPlayerNameCopy, 0x100);
@@ -7205,11 +7506,11 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
           if (pPrefixAffix) {
             if (*(uint16_t*)(pPrefixAffix->name + 0xc)) {
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)(pPrefixAffix->name + 0xc));
-              pwRareNameSuffix = (uint8_t*)D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
+              pcNameDst = (uint8_t*)D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(*(uint16_t*)(pPrefixAffix2->name + 0xc));
               D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszPrefix, pwLocaleStr);
             } else {
-              pwLocaleStr2 = (char*)((intptr_t)&pPrefixAffix->mod[0].code + 2);
+              pwLocaleStr2 = (char*)((uintptr_t)&pPrefixAffix->mod[0].code + 2);
               __frame0.szUtf8Buf[0] = 0x28;
               __frame0.szUtf8Buf[1] = 0;
               strcat((char*)__frame0.szUtf8Buf, pwLocaleStr2);
@@ -7217,19 +7518,19 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
               strcat((char*)__frame0.szUtf8Buf, ")");
               pcNameDst = pcNameDst + strlen((char*)pcNameDst) + 1;
               D2Lang::UTF8_ConvertToWideChar(wszPrefix, (char*)__frame0.szUtf8Buf, 0x200);
-              pwRareNameSuffix = pcNameDst - (intptr_t)(__frame0.szUtf8Buf + 1);
+              pcNameDst += -(int)(__frame0.szUtf8Buf + 1);
               pUnit = pUnitSaved;
               pItemsTxt = pItemsTxtSaved;
             }
           } else {
             wszPrefix[0] = L'\0';
-            pwRareNameSuffix = wszEarLevel[0];
+            pcNameDst = wszEarLevel[0];
           }
           if (pSuffixAffix) {
             if (pSuffixAffix->wNameStrId) {
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pSuffixAffix->wNameStrId);
               nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-              pwRareNameSuffix += nErrorLine;
+              pcNameDst += nErrorLine;
               if (pPrefixAffix2) {
                 pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pSuffixAffix->wNameStrId);
                 D2Lang::Unicode::UNISYS::AppendToBuffer(wszSuffix, pwLocaleStr);
@@ -7246,7 +7547,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
               strcat((char*)__frame0.szUtf8Buf, ")");
               D2Lang::UTF8_ConvertToWideChar(wszNameScratch, (char*)__frame0.szUtf8Buf, 0x200);
               nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszNameScratch);
-              pwRareNameSuffix += nErrorLine;
+              pcNameDst += nErrorLine;
               if (pPrefixAffix2) {
                 D2Lang::Unicode::UNISYS::AppendToBuffer(wszSuffix, wszNameScratch);
                 pUnit = pUnitSaved;
@@ -7263,7 +7564,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
 
           pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxt->wNameStr);
           nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-          if ((intptr_t)(pwRareNameSuffix + nErrorLine + 3) >= nSize) {
+          if ((int)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
             Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x822);
             exit(-1);
           }
@@ -7364,23 +7665,23 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
           if (pPrefixAffix) {
             if (pPrefixAffix->wNameStr) {
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pPrefixAffix->wNameStr);
-              pwRareNameSuffix = (uint8_t*)D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
+              pcNameDst = (uint8_t*)D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pPrefixAffix->wNameStr);
               D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszPrefix, pwLocaleStr);
             } else {
               __frame0.szUtf8Buf[0] = 0x28;
               __frame0.szUtf8Buf[1] = 0;
               strcat((char*)__frame0.szUtf8Buf, pPrefixAffix->name);
-              pwRareNameSuffix = __frame0.szUtf8Buf;
+              pcNameDst = __frame0.szUtf8Buf;
               strcat((char*)__frame0.szUtf8Buf, ")");
-              pwRareNameSuffix = pwRareNameSuffix + strlen((char*)pwRareNameSuffix) + 1;
+              pcNameDst = pcNameDst + strlen((char*)pcNameDst) + 1;
               D2Lang::UTF8_ConvertToWideChar(wszPrefix, (char*)__frame0.szUtf8Buf, 0x200);
-              pwRareNameSuffix += -(intptr_t)(__frame0.szUtf8Buf + 1);
+              pcNameDst += -(int)(__frame0.szUtf8Buf + 1);
               pUnit = pUnitSaved;
             }
           } else {
             wszPrefix[0] = L'\0';
-            pwRareNameSuffix = wszEarLevel[0];
+            pcNameDst = wszEarLevel[0];
           }
 
           pPrefixAffix = pPrefixAffix2;
@@ -7388,7 +7689,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
             if (pPrefixAffix2->wNameStr) {
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pPrefixAffix2->wNameStr);
               nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-              pwRareNameSuffix += nErrorLine;
+              pcNameDst += nErrorLine;
               pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pPrefixAffix->wNameStr);
               D2Lang::Unicode::UNISYS::AppendToBuffer(wszSuffix, pwLocaleStr);
             } else {
@@ -7397,13 +7698,13 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
               __frame0.szUtf8Buf[1] = 0;
               pAffixNameTail = pPrefixAffix->name;
               pAffixNameTail = pAffixNameTail + strlen(pAffixNameTail) + 1;
-              pwLocaleStr2 = (char*)((char*)__frame0.wszPossessive + 199);
+              pwLocaleStr2 = (char*)((int)__frame0.wszPossessive + 199);
               do {
                 pcNameSrc = pwLocaleStr2 + 1;
                 pwLocaleStr2++;
               } while (*pcNameSrc != '\0');
 
-              nCopyLen = (uint32_t)((intptr_t)pAffixNameTail - (intptr_t)pPrefixAffix) >> 2;
+              nCopyLen = (uint32_t)((int)pAffixNameTail - (int)pPrefixAffix) >> 2;
               pAffixCopyPtr = pPrefixAffix->name;
               for (; nCopyLen; nCopyLen--) {
                 *(uint32_t*)pwLocaleStr2 = *(uint32_t*)((D2MagicAffixTxt*)pAffixCopyPtr)->name;
@@ -7411,7 +7712,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
                 pwLocaleStr2 += 4;
               }
 
-              for (nCopyLen = (intptr_t)pAffixNameTail - (intptr_t)pPrefixAffix & 3; nCopyLen; nCopyLen--) {
+              for (nCopyLen = (int)pAffixNameTail - (int)pPrefixAffix & 3; nCopyLen; nCopyLen--) {
                 *pwLocaleStr2 = *pAffixCopyPtr;
                 pAffixCopyPtr++;
                 pwLocaleStr2++;
@@ -7420,7 +7721,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
               pbyUtf8Scan = __frame0.szUtf8Buf;
               strcat((char*)__frame0.szUtf8Buf, ")");
               pbyUtf8Scan = pbyUtf8Scan + strlen((char*)pbyUtf8Scan) + 1;
-              pwRareNameSuffix = pbyUtf8Scan + ((intptr_t)pwRareNameSuffix - (intptr_t)(__frame0.szUtf8Buf + 1));
+              pcNameDst = pbyUtf8Scan + ((int)pcNameDst - (int)(__frame0.szUtf8Buf + 1));
               D2Lang::UTF8_ConvertToWideChar(wszScratch, (char*)__frame0.szUtf8Buf, 0x200);
               D2Lang::Unicode::UNISYS::AppendToBuffer(wszSuffix, wszScratch);
               pUnit = pUnitSaved;
@@ -7432,7 +7733,7 @@ void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
           pItemsTxt = pItemsTxtSaved;
           pwLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(pItemsTxtSaved->wNameStr);
           nErrorLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwLocaleStr);
-          if ((intptr_t)(pwRareNameSuffix + nErrorLine + 3) >= nSize) {
+          if ((int)(pcNameDst + nErrorLine + 3) >= (int)nSize) {
             Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x8c5);
             exit(-1);
           }
@@ -7609,6 +7910,7 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     BOOL bFlagCheck;
     uint16_t* pwAppendResult;
     int nSetItemLoopIdx;
+    int nColor;
     int32_t nReqAdjust;
     uint16_t* pwZeroCursor;
     uint16_t wszStatBuffs[1024];
@@ -7638,11 +7940,9 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     int nReqDexFailColor;
     int anReqFailColors;
     int nAdjReqDex;
+    D2SetItemsTxt** ppSetItemsTxtEntry;
     int32_t nAdjReqStr;
     D2ItemsTxt* pItemsTxtCopy;
-    ITEM_BuildSetItemTooltip_Slotm8 uSlot8;
-    memset(&uSlot8, 0, sizeof(uSlot8));
-    uSlot8.nAdjReqDexValue = 0x48d1dd;
     for (nSetItemLoopIdx = 0; nSetItemLoopIdx < 0x400; nSetItemLoopIdx++) {
       wszWorkBuf[nSetItemLoopIdx] = L'\0';
     }
@@ -7793,32 +8093,32 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     nIsOfType = D2Common::ITEMS::Items::ITEMS_IsA(pItemToDescribe, ITEMTYPE_Weapon);
     if (nIsOfType || (nIsOfType = D2Common::ITEMS::Items::ITEMS_IsA(pItemToDescribe, ITEMTYPE_AnyArmor) , nIsOfType != 0)) {
       nReqAdjust = 0;
-      memset(&uSlot8, 0, sizeof(uSlot8));
+      ppSetItemsTxtEntry = 0;
       nAdjReqStr = D2Common::Stats::StatsEx::ITEM_GetMinimalStatValueShifted(pItemToDescribe, UNITSTAT_item_req_percent, 0);
       if (nAdjReqStr) {
-        nReqAdjust = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)pItemsTxt->nReqStr, nAdjReqStr, 100);
-        uSlot8.nAdjReqDexValue = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)pItemsTxt->wReqDex, nAdjReqStr, 100);
+        nReqAdjust = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->nReqStr, nAdjReqStr, 100);
+        ppSetItemsTxtEntry = (D2SetItemsTxt**)D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->wReqDex, nAdjReqStr, 100);
       }
 
       bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_ETHEREAL, 0xd88, ".\\UI\\inv.cpp");
       pItemsTxtCopy = pItemsTxt;
       if (bFlagCheck) {
         nReqAdjust += -10;
-        uSlot8.nAdjReqDexValue += -10;
+        ppSetItemsTxtEntry = (D2SetItemsTxt**)((int)ppSetItemsTxtEntry - 10);
       }
-      if (pItemsTxt->nReqStr > 0) {
+      if ((uint16_t)pItemsTxt->nReqStr > 0) {
         if (!nAdjReqDex) {
           nReqStrColor = 1;
         }
 
         INV_FormatReqStrText(pItemsTxt, nReqAdjust, wszReqStr);
       }
-      if (pItemsTxtCopy->wReqDex > 0) {
+      if ((uint16_t)pItemsTxtCopy->wReqDex > 0) {
         if (!nReqDexFailColor) {
           nReqDexColor = 1;
         }
 
-        INV_FormatReqDexText(pItemsTxtCopy, uSlot8.nAdjReqDexValue, wszReqDex);
+        INV_FormatReqDexText(pItemsTxtCopy, (int32_t)ppSetItemsTxtEntry, wszReqDex);
       }
     }
 
@@ -7886,8 +8186,14 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     }
 
     GetItemName(pItemToDescribe, wszItemName, 0x100);
+    ITEMILVL_AppendNameSuffix(pItemToDescribe, wszItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
     bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_BROKEN, 0xddb, ".\\UI\\inv.cpp");
-    ui::AppendAsWideChar(wszItemName, bFlagCheck ? 1 : 2);
+    nSetItemLoopIdx = 1;
+    if (!bFlagCheck) {
+      nSetItemLoopIdx = 2;
+    }
+
+    ui::AppendAsWideChar(wszItemName, nSetItemLoopIdx);
     D2Lang::Unicode::UNISYS::AppendToBuffer(wszStatsBlock, wszItemName);
     wszStatBuffs[0] = L'\0';
     bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_SOCKETED, 0xde4, ".\\UI\\inv.cpp");
@@ -7905,26 +8211,25 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
       SkillDesc::SKILLDESC_AppendSetBonusTextByStateValue(pOwnerUnit, pItemToDescribe, wszItemBuffsAlt, 0x200);
     }
 
-    nSetItemLoopIdx = 0;
-    if (pSetsTxt->nTxtSetItemsCount > 0) {
-      uSlot8.ppSetItemsTxtEntry = pSetsTxt->pTxtSetItems;
-      do {
-        pSetItemsTxt = *uSlot8.ppSetItemsTxtEntry;
-        if (!pSetItemsTxt) {
-          break;
-        }
+    for (nSetItemLoopIdx = 0; nSetItemLoopIdx < pSetsTxt->nTxtSetItemsCount; nSetItemLoopIdx++) {
+      pSetItemsTxt = pSetsTxt->pTxtSetItems[nSetItemLoopIdx];
+      if (!pSetItemsTxt) {
+        break;
+      }
 
-        pOwnerUnit = GetSetItem((int)pSetItemsTxt->nId, pUnitInventory);
-        if (pSetItemsTxt->stringId) {
-          wsprintf(wszWorkBuf, D2Lang::StrTable::strtable::GetLocaleString(0x2769), D2Lang::StrTable::strtable::GetLocaleString(pSetItemsTxt->stringId), 0);
-          D2Lang::Unicode::UNISYS::AppendToBuffer(wszWorkBuf, pwSeparator);
-        }
+      pOwnerUnit = GetSetItem((int)pSetItemsTxt->nId, pUnitInventory);
+      if (pSetItemsTxt->stringId) {
+        wsprintf(wszWorkBuf, D2Lang::StrTable::strtable::GetLocaleString(0x2769), D2Lang::StrTable::strtable::GetLocaleString(pSetItemsTxt->stringId), 0);
+        D2Lang::Unicode::UNISYS::AppendToBuffer(wszWorkBuf, pwSeparator);
+      }
 
-        ui::AppendAsWideChar(wszWorkBuf, pOwnerUnit ? 2 : 1);
-        D2Lang::Unicode::UNISYS::AppendToBuffer(wszSetBonusList, wszWorkBuf);
-        uSlot8.ppSetItemsTxtEntry++;
-        nSetItemLoopIdx++;
-      } while (nSetItemLoopIdx < pSetsTxt->nTxtSetItemsCount);
+      nColor = 2;
+      if (!pOwnerUnit) {
+        nColor = 1;
+      }
+
+      ui::AppendAsWideChar(wszWorkBuf, nColor);
+      D2Lang::Unicode::UNISYS::AppendToBuffer(wszSetBonusList, wszWorkBuf);
     }
 
     pwLocaleStr = ui::AppendAsWideChar(wszSetBonusList, 2);
@@ -8318,7 +8623,7 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
                 nBound = 600;
               }
 
-              D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(wszWeaponSwapTip, nBound + gnPanelOffsetX, 0x15 - gnPanelOffsetY, 0, 1);
+              D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(wszWeaponSwapTip, nBound + gnPanelOffsetX, 0x15 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(), 0, 1); // VP: [resolution site-6]
             }
           }
         }
@@ -8436,8 +8741,8 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
         nTooltipFlag = 0;
         nTmpResult = D2Common::Stats::StatsEx::ITEM_GetMinimalStatValueShifted(pItemToDescribe, UNITSTAT_item_req_percent, 0);
         if (nTmpResult) {
-          nTooltipFlag = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)pItemsTxt->nReqStr, nTmpResult, 100);
-          nReqDexAdjust = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)pItemsTxt->wReqDex, nTmpResult, 100);
+          nTooltipFlag = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->nReqStr, nTmpResult, 100);
+          nReqDexAdjust = D2Common::DATATBLS::DataTbls::D2ApplyPercent((uint32_t)(uint16_t)pItemsTxt->wReqDex, nTmpResult, 100);
         }
 
         bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_ETHEREAL, 0xffa, ".\\UI\\inv.cpp");
@@ -8445,14 +8750,14 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
           nTooltipFlag += -10;
           nReqDexAdjust += -10;
         }
-        if (pItemsTxt->wReqDex > 0) {
+        if ((uint16_t)pItemsTxt->wReqDex > 0) {
           if (!nReqDexMet) {
             nReqDexColor = 1;
           }
 
           INV_FormatReqDexText(pItemsTxt, nReqDexAdjust, wszReqDex);
         }
-        if (pItemsTxt->nReqStr > 0) {
+        if ((uint16_t)pItemsTxt->nReqStr > 0) {
           if (!nReqStrMet) {
             nReqStrColor = 1;
           }
@@ -8544,8 +8849,9 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
         D2Lang::Unicode::UNISYS::AppendToBuffer(wszUnidentified, pwSeparator);
       }
 
-      INV_FormatItemSpellDescText(pItemToDescribe, pItemsTxt, wszStatCost);
+      INV_FormatItemSpellDescText((uint32_t)pItemToDescribe, pItemsTxt, wszStatCost);
       GetItemName(pItemToDescribe, szItemName, 0x100);
+      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
       pwTmp = ui::AppendAsWideChar(wszEtherealSock, 3);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszWorkBuf, pwTmp);
       nTmp = pItemsTxt->dwCode;
@@ -8639,6 +8945,7 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
       }
     } else {
       GetItemName(pItemToDescribe, szItemName, 0x80);
+      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
       pwTmp = D2Lang::StrTable::strtable::GetLocaleString(0xd7f);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszUnidentified, pwTmp);
       pwTmp = pwSeparator;
@@ -8754,11 +9061,10 @@ void __stdcall DRAW_UI_Inventory() {
     int32_t nDrawFlags;
     GLOBALPALLETE nGlobalPaletteShift;
     D2GamePalShiftGreenBloodStrc* pPalette;
-    int32_t nSlotItem;
     int nMouseX;
     nMouseX = Cursor::GetMouseX();
-    int32_t nLArmItem;
-    nLArmItem = Cursor::GetMouseY();
+    D2UnitStrc* pLArmItem;
+    pLArmItem = (D2UnitStrc*)Cursor::GetMouseY();
     if (g_nCurrentInventoryPage == 10) {
       return;
     }
@@ -8835,9 +9141,9 @@ void __stdcall DRAW_UI_Inventory() {
           }
 
           D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-          nSlotItem = nLArmItem;
+          pSlotItem = pLArmItem;
           bIsTwoHandedEquipped = nMouseX;
-          bIsExpansion = INV_IsMouseOverTransmuteBtn(nMouseX, nLArmItem);
+          bIsExpansion = INV_IsMouseOverTransmuteBtn(nMouseX, (int32_t)pLArmItem);
           if (bIsExpansion) {
             pwszText = D2Lang::StrTable::strtable::GetLocaleString(0x1030);
             nDrawFlags = 0;
@@ -8846,7 +9152,7 @@ void __stdcall DRAW_UI_Inventory() {
             nDrawTextWidth = D2Win::Src::D2WinFont::DRAW_text0(pwszText);
             nDrawY = gnPanelOffsetX - nDrawTextWidth / 2 + 0x121;
           } else {
-            bIsExpansion = CheckSomeCoords(bIsTwoHandedEquipped, nSlotItem);
+            bIsExpansion = CheckSomeCoords(bIsTwoHandedEquipped, (int32_t)pSlotItem);
             if (!bIsExpansion) {
               goto draw_inventory_panel;
             }
@@ -8909,6 +9215,8 @@ void __stdcall DRAW_UI_Inventory() {
         eDrawMode = DRAW_SOLID;
         D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, nDrawTextWidth, INV_GetGoldButtonY(), -1, eDrawMode, pPalette);
         DRAW_UI_INVENTORY_Gold(0);
+        VPSHAREDUI_DrawTab(); // VP: site-N [vanilla-plus shared-stash] "Shared" page tab (no-op when gated off)
+        VPCTRLXFER_TickPendingPlace(); // VP: [ctrl-click stash R141] releases the parked 0x18 one frame after the pick (no-op when idle)
         bIsTwoHandedEquipped = Cursor::GetMouseX();
         nTradeNameWidth = Cursor::GetMouseY();
         bIsExpansion = GAME::Game::CLIENT_CheckExpansion();
@@ -9034,17 +9342,15 @@ void __stdcall DRAW_UI_Inventory() {
       nTradeNameWidth = -4;
     }
 
-    D2UnitStrc* pLArmItem;
     pLArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 4);
     pRArmItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 5);
     nWeaponHandedness = D2Common::INVENTORY::Inventory::INVENTORY_GetWeaponHandedness(pUnit, pInventory);
-    uint32_t nUnit;
-    nUnit = (uint32_t)(nWeaponHandedness == 2);
+    pUnit = (D2UnitStrc*)(uint32_t)(nWeaponHandedness == 2);
     pSlotItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 5);
     if (!pSlotItem) {
       sGfxData.pDC6 = gpInvBodySlotImage2;
       sGfxData.nFrameNumber = 0;
-      if (!pLArmItem || !nUnit) {
+      if (!pLArmItem || !pUnit) {
         D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnInvLArmSlotImageOffsetX + gaPlayerBodySlotScreenCoords[5].nLeft + bIsTwoHandedEquipped, gnInvLArmSlotImageOffsetY + gaPlayerBodySlotScreenCoords[5].nBottom + nTradeNameWidth, -1, DRAW_SOLID, nullptr);
       }
     }
@@ -9052,7 +9358,7 @@ void __stdcall DRAW_UI_Inventory() {
     sGfxData.nFrameNumber = (int)D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 4);
     if (!(D2UnitStrc*)sGfxData.nFrameNumber) {
       sGfxData.pDC6 = gpInvBodySlotImage2;
-      if (!pRArmItem || !nUnit) {
+      if (!pRArmItem || !pUnit) {
         D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnHirelingRArmSlotImageOffsetX + gaPlayerBodySlotScreenCoords[4].nLeft + bIsTwoHandedEquipped, gnHirelingRArmSlotImageOffsetY + gaPlayerBodySlotScreenCoords[4].nBottom + nTradeNameWidth, -1, DRAW_SOLID, nullptr);
       }
     }
@@ -9061,7 +9367,7 @@ void __stdcall DRAW_UI_Inventory() {
     sGfxData.nFrameNumber = 0;
     if (pLArmItem) {
       if (pRArmItem) {
-        if (!nUnit) {
+        if (!pUnit) {
           pSlotItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, 5);
           if (!pSlotItem) {
             D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnInvLArmSlotImageOffsetX + gaPlayerBodySlotScreenCoords[5].nLeft, gnInvLArmSlotImageOffsetY + gaPlayerBodySlotScreenCoords[5].nBottom, -1, DRAW_SOLID, nullptr);
@@ -9164,7 +9470,7 @@ void __stdcall DRAW_UI_Inventory() {
         } while (nDrawTextWidth > 0x70);
       }
 
-      D2Win::Src::D2WinFont::DRAW_text(wszTradePartnerName, gnPanelOffsetX + 0x19, 0x1b - gnPanelOffsetY, 0, 0);
+      D2Win::Src::D2WinFont::DRAW_text(wszTradePartnerName, gnPanelOffsetX + 0x19, 0x1b - gnPanelOffsetY + VPRES_GetWideUiOffsetY(), 0, 0); // VP: [resolution site-6]
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszTradePartnerName, wszPlayerName);
       nDrawTextWidth = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszTradePartnerName);
       nDrawY = D2Win::Src::D2WinFont::DRAW_text0(wszTradePartnerName);
@@ -9177,9 +9483,9 @@ void __stdcall DRAW_UI_Inventory() {
         } while (nDrawTextWidth > 0x70);
       }
 
-      D2Win::Src::D2WinFont::DRAW_text(wszTradePartnerName, gnPanelOffsetX + 0x19, 0xf2 - gnPanelOffsetY, 0, 0);
+      D2Win::Src::D2WinFont::DRAW_text(wszTradePartnerName, gnPanelOffsetX + 0x19, 0xf2 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(), 0, 0); // VP: [resolution site-6]
       bIsExpansion = 0;
-      bIsTwoHandedEquipped = 0x1b - gnPanelOffsetY;
+      bIsTwoHandedEquipped = 0x1b - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
       nDrawY = 0;
       pwszText = D2Lang::StrTable::strtable::GetLocaleString(0x8a7);
       nDrawTextWidth = D2Win::Src::D2WinFont::DRAW_text0(pwszText);
@@ -9190,9 +9496,11 @@ void __stdcall DRAW_UI_Inventory() {
       bIsTwoHandedEquipped = D2CLIENT_GetTradeAcceptedFlags();
       Storm::Source::SSTR::SStrPrintf(szGoldCount, 0xf, "%d", bIsTwoHandedEquipped);
       D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszGoldText, szGoldCount, 0xf);
-      D2Win::Src::D2WinFont::DRAW_text(wszGoldText, gnPanelOffsetX - D2Win::Src::D2WinFont::DRAW_text0(wszGoldText) + 0x124, 0x1b - gnPanelOffsetY, 0, 0);
       bIsExpansion = 0;
-      bIsTwoHandedEquipped = 0xf2 - gnPanelOffsetY;
+      bIsTwoHandedEquipped = 0x1b - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+      D2Win::Src::D2WinFont::DRAW_text(wszGoldText, gnPanelOffsetX - D2Win::Src::D2WinFont::DRAW_text0(wszGoldText) + 0x124, bIsTwoHandedEquipped, 0, bIsExpansion);
+      bIsExpansion = 0;
+      bIsTwoHandedEquipped = 0xf2 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
       nDrawY = 0;
       pwszText = D2Lang::StrTable::strtable::GetLocaleString(0x8a7);
       nDrawTextWidth = D2Win::Src::D2WinFont::DRAW_text0(pwszText);
@@ -9202,7 +9510,9 @@ void __stdcall DRAW_UI_Inventory() {
       bIsTwoHandedEquipped = D2CLIENT_GetTradePlayerGoldAmount();
       Storm::Source::SSTR::SStrPrintf(szGoldCount, 0xf, "%d", bIsTwoHandedEquipped);
       D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszGoldText, szGoldCount, 0xf);
-      D2Win::Src::D2WinFont::DRAW_text(wszGoldText, gnPanelOffsetX - D2Win::Src::D2WinFont::DRAW_text0(wszGoldText) + 0x124, 0xf2 - gnPanelOffsetY, 0, 0);
+      bIsExpansion = 0;
+      bIsTwoHandedEquipped = 0xf2 - gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
+      D2Win::Src::D2WinFont::DRAW_text(wszGoldText, gnPanelOffsetX - D2Win::Src::D2WinFont::DRAW_text0(wszGoldText) + 0x124, bIsTwoHandedEquipped, 0, bIsExpansion);
     }
 
     byPrevInvPage = CurrentInventoryPage;
@@ -9224,7 +9534,7 @@ void __stdcall DRAW_UI_Inventory() {
     if (g_nCurrentInventoryPage - 1U <= 8 && nMouseX < ui::ScreenSizeX / 2) {
       bIsExpansion = npcmenu::GetInteractedUnitGuid(&nMouseX);
       if (bIsExpansion) {
-        pMonsterUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMouseX, UNIT_MONSTER);
+        pMonsterUnit = UNIT::Player::UNITS_FindClientSideUnit(nMouseX, UNIT_MONSTER);
         if (pMonsterUnit) {
           nDrawTextWidth = 1;
           pSlotItem = pMonsterUnit;
@@ -9233,6 +9543,16 @@ void __stdcall DRAW_UI_Inventory() {
     }
 
     LoadItemDesc(pSlotItem, nDrawTextWidth);
+    // VP: [shift-compare] (R125, FEATURES.md 0b) D2R hover-compare parity:
+    // with [features] shift_compare=1, holding the cmd-0x24 key (default
+    // VK_SHIFT) while an equippable item is hovered draws the equipped
+    // item's tooltip beside the primary. Fires immediately after the
+    // publish so it covers BOTH builder shapes that share this call site
+    // (the full builder :8532 and the shop-narrow name+price branch :8828)
+    // - owner decision 2026-11-06: vendor stock hovers compare too. All
+    // gating and the compose round trip live in the core hook; gate off /
+    // Shift up / paperdoll hover = zero side effects, retail byte-for-byte.
+    SHIFTCOMPARE_CompareForHover();
 }
 
 BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, DWORD x, DWORD y, D2UnitStrc * targetItem, D2InventoryLayout * pInvLayout, uint32_t nPage) {
@@ -9246,7 +9566,6 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
     int32_t nTxCost;
     D2ItemsTxt* pItemsTxt;
     uint32_t nCheckResult;
-    int32_t nTargetItemGUID;
     uint8_t nPacketId;
     uint32_t nDifficulty;
     bool bIsOwnUnit;
@@ -9256,13 +9575,8 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
     uint8_t byDifficulty;
     int dwPacketArg4;
     int32_t nSoundParam2;
-    int32_t nUnit;
-    int32_t nInventory;
-    int32_t nInventory2;
-    int32_t nTargetItem;
-    D2UnitStrc* pUnit2;
-    D2InventoryStrc* pInventory_00;
-    pInventory_00 = pInventory;
+    D2InventoryStrc* pInvWork;
+    pInvWork = pInventory;
     uint8_t cPage;
     cPage = (uint8_t)nPage;
     BOOL bReturnValue;
@@ -9285,7 +9599,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
     nCallResult = Cursor::GetItemType();
     if (nCallResult == 6) {
       pCursorItem_lcl = Cursor::GetCursorItem();
-      pTargetItem = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInventory_00, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
+      pTargetItem = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInvWork, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
       if (!pCursorItem_lcl) {
         return bReturnValue;
       }
@@ -9316,7 +9630,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
 
     nCallResult = Cursor::GetItemType();
     if (nCallResult == 8) {
-      pCursorItem_lcl = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInventory_00, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
+      pCursorItem_lcl = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInvWork, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
       if (!pCursorItem_lcl) {
         return bReturnValue;
       }
@@ -9354,7 +9668,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
     }
     if (!pCursorItem_lcl) {
       eInventoryPage ePage;
-      pCursorItem_lcl = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInventory_00, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
+      pCursorItem_lcl = D2Common::INVENTORY::Inventory::GetUnitAndXAndY(pInvWork, nGridCellX, nGridCellY, &nGridX, &nGridY, eInvPage, cPage);
       if (!pCursorItem_lcl) {
         return bReturnValue;
       }
@@ -9388,10 +9702,10 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
       }
 
       /* int vKey for GetAsyncKeyState */ /* 0x11 GetAsyncKeyState = Control Button */ sCtrlKeyState = GetAsyncKeyState(0x11);
-      if (sCtrlKeyState & 0x8000) {
-        nItemType = npcmenu::GetInteractedUnitGuid((int*)&nInventory2);
+      if (sCtrlKeyState < 0) {
+        nItemType = npcmenu::GetInteractedUnitGuid((int*)&pInventory);
         if (nItemType) {
-          pTargetItem = UNIT::CUnit::UNITS_FindClientSideUnit(nInventory2, UNIT_MONSTER);
+          pTargetItem = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pInventory, UNIT_MONSTER);
           if (pTargetItem) {
             nItemType = D2Common::ITEMS::Items::ITEM_CheckItemData_eD2ItemFlag_Monster(pCursorItem_lcl);
             if (nItemType) {
@@ -9416,8 +9730,98 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
             return 1;
           }
         }
+
+        // VP-BEGIN [ctrl-click stash R140]: Ctrl+Click moves an item between the
+        // inventory and the open stash (D2R parity, owner ask). Retail wires
+        // Ctrl+Click to the sell-to-shop path only; with no shop open this
+        // branch fell through to the pick-up tail without the 0x19 send - the
+        // item got the brief ITEM_RemoveClientSide lock, never reached the
+        // cursor, and no packet left the client: a dead click. Re-expressed as
+        // the real transfer: the clicked item's containing page picks the
+        // direction (INVENTORY -> STASH, STASH -> INVENTORY), the free cell
+        // comes from the same INVENTORY_FindItemGridPosition the put-in-cube
+        // branch below uses, and the move rides the SAME TWO-PACKET PAIR a
+        // manual drag sends: 0x19 remove-from-buffer (pick up to
+        // cursor) then 0x18 insert-into-buffer. The 0x18 server handler
+        // (SCMD_0x18_ItemToInventory) opens with SERVER_IsItemOnCursor and
+        // rejects the insert unless the item is already the player's hand
+        // item, so the 0x19 pick is mandatory - sending 0x18 alone was the
+        // first R140 field build's defect (sound played, item never moved).
+        // R141 field catch (owner: "the items move, but the slot they once
+        // occupied becomes unusable"): sending the pair BACK TO BACK made the
+        // client process the pick echo and the place echo in the same packet
+        // drain - no retail flow does that (a drag settles the pick on the
+        // hand, lifting the item out of the source grid, many frames before
+        // any place), and the source container's client-side grid entry went
+        // stale. Fix: the 0x18 is PARKED (VPCTRLXFER_ParkPlace) and released
+        // one full frame later by VPCTRLXFER_TickPendingPlace from the
+        // stash-panel draw site - a fast manual drag, the retail shape.
+        // Buffer = the UI page byte the place path puts on the wire: 4 =
+        // stash, 0 = inventory; the stash UI's two views, personal 0xc and
+        // shared 0xd, are both page-4 content (the shared stash swaps page-4
+        // content server-side), so the shared stash pages work unchanged. The
+        // hand is empty here by construction (this whole path only runs from
+        // the empty-hand branch), which is the 0x19 handler's precondition.
+        // A full target container plays the same refuse sound the cube path
+        // plays. Everything else - belt items, the cube-open and trade-open
+        // panels - keeps the old fall-through shape. The whole branch is
+        // gated on [features] ctrl_click_xfer (d2vp.ini / the Options page's
+        // "Ctrl Click Transfer" row, via VPCTRLXFER_Active's 2 s hot-read):
+        // off = the retail dead click, byte-for-byte pre-R140.
+        if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+          // R149 (issue #37, "Intermittent Crash when Ctrl+Click Xfer very
+          // fast"): a second Ctrl+Click while a pick+place pair is settling
+          // sent a second 0x19 the server rejects (the hand still holds item
+          // 1) AND re-parked over the stage, losing the first 0x18 outright:
+          // the client/server desync the crash rides. Consume the click,
+          // start nothing.
+          // R150 (field pass on the R149 build: the crash turned
+          // DETERMINISTIC on the deposit leg): the real window is the ROUND
+          // TRIP, not the park - the 0x19 echo hands the item client-side
+          // until the 0x18 echo lands, and hand-full clicks never even reach
+          // this branch (they take the retail place/swap path with mid-
+          // flight items - the desync). Two halves fix it: the echo no
+          // longer hands OUR pair's item (VPCTRLXFER_EchoSuppressHand,
+          // Item.cpp), so every click still dispatches empty-hand here, and
+          // THIS guard now spans the whole 500 ms round trip - park + send +
+          // both echoes + the server hand window. A click inside the window
+          // is a silent no-op; the next one transfers.
+          if (VPCTRLXFER_PairInFlight()) {
+            return 1;
+          }
+          eInventoryPage eClickedFromPage;
+          int nExpansionFlag;
+          int nTargetPage;
+          int nTargetPageByte;
+          int nTargetCellX;
+          int nTargetCellY;
+          eClickedFromPage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
+          if (eClickedFromPage == INVPAGE_INVENTORY || eClickedFromPage == INVPAGE_STASH) {
+            nTargetPageByte = (eClickedFromPage == INVPAGE_INVENTORY) ? 4 : 0;
+            nExpansionFlag = GAME::Game::CLIENT_CheckExpansion();
+            nTargetPage = (int)D2Common::Units::GetInventoryPage(pUnit, (uint8_t)nTargetPageByte, nExpansionFlag);
+            nTargetCellX = 0;
+            nTargetCellY = 0;
+            if (D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInvWork, pCursorItem_lcl, nTargetPage, &nTargetCellX, &nTargetCellY, (uint8_t)nTargetPageByte)) {
+              /* Remove item from buffer 19 [DWORD item] - pick up to cursor; the
+                 parked 0x18 below is rejected unless the item is the hand item */
+              GAME::Msg::NET_D2GS_CLIENT_Send_INT(0x19, pCursorItem_lcl->nUnitGUID);
+              /* R141: the 0x18 place is parked, not sent - the stash-panel draw
+                 releases it one frame later (VPCTRLXFER_TickPendingPlace), so the
+                 pick echo settles before the place echo, exactly a manual drag */
+              VPCTRLXFER_ParkPlace(pCursorItem_lcl->nUnitGUID, nTargetCellX, nTargetCellY, nTargetPageByte);
+              UNIT::ITEM_RemoveClientSide(pCursorItem_lcl);
+              Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(pCursorItem_lcl), nullptr, 0, 0, 0);
+              return 1;
+            }
+
+            UNIT::UnitSnd::UNITSND_PlayPlayerSound(pUnit, 0x13);
+            return 0;
+          }
+        }
+        // VP-END [ctrl-click stash R140]
       } else {
-        if ((uintptr_t)targetItem & 4) {
+        if ((uint32_t)targetItem & 4) {
           nTxCost = D2Common::ITEMS::Items::ITEM_GetTxtItemTypes_beltable(pCursorItem_lcl);
           if (nTxCost) {
             ePage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
@@ -9440,18 +9844,18 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
       return 1;
     }
 
-    D2Common::INVENTORY::Inventory::INVENTORY_CheckGridCollisions(pInventory_00, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, &targetItem, (int*)&nCollisionCount, nPage);
-    D2UnitStrc* nOccupancyItemPtr;
+    D2Common::INVENTORY::Inventory::INVENTORY_CheckGridCollisions(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, &targetItem, (int*)&nCollisionCount, nPage);
+    int nOccupancyItemPtr;
     nOccupancyItemPtr = 0;
     nGridCellY = 1;
     if (nCollisionCount >= 2) {
-      pUnit2 = 0;
-      D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory_00, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, (D2UnitStrc**)&pUnit2, nPage, 1);
-      if (!pUnit2 || (pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(*(uint32_t*)((char*)pUnit2 + 4)) , pItemsTxt->dwCode != 0x20786f62)) {
+      nGridCellX = 0;
+      D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, (int*)&nGridCellX, nPage, 1);
+      if (!nGridCellX || (pItemsTxt = D2Common::DATATBLS::ItemTbls::TXT_Items_GetLine(*(uint32_t*)(nGridCellX + 4)) , pItemsTxt->dwCode != 0x20786f62)) {
         goto place_or_use_on_item;
       }
 
-      targetItem = pUnit2;
+      targetItem = (D2UnitStrc*)nGridCellX;
       put_item_in_cube:
       nItemType = UNIT::PlayerIsUnInterruptable(pCursorItem_lcl);
       if (!nItemType) {
@@ -9460,7 +9864,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
           nItemType = GAME::Game::CLIENT_CheckExpansion();
           pTargetItem = pUnit;
           nTxCost = D2Common::Units::GetInventoryPage(pUnit, '\x03', nItemType);
-          nCallResult = D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInventory_00, pCursorItem_lcl, nTxCost, (int*)&y, (int*)&pInventory, 3);
+          nCallResult = D2Common::INVENTORY::Inventory::INVENTORY_FindItemGridPosition(pInvWork, pCursorItem_lcl, nTxCost, (int*)&y, (int*)&pInventory, 3);
           if (nCallResult) {
             if (!targetItem) {
               nTxCost = -1;
@@ -9483,7 +9887,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
       if (!nGridCellY) {
         return bReturnValue;
       }
-      nItemType = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInventory_00, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, &nOccupancyItemPtr, nPage, 0);
+      nItemType = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridOccupancy(pInvWork, pCursorItem_lcl, gpInventoryContextUi, gaInventorySelectState, eInvPage, &nOccupancyItemPtr, nPage, 0);
       if (!nItemType) {
         return bReturnValue;
       }
@@ -9501,16 +9905,16 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         return bReturnValue;
       }
       if (!nOccupancyItemPtr) {
-        nTargetItemGUID = -1;
+        pInvWork = (D2InventoryStrc*)-1;
       } else {
-        nTargetItemGUID = nOccupancyItemPtr->nUnitGUID;
+        pInvWork = *(D2InventoryStrc**)(nOccupancyItemPtr + 0xc);
       }
 
       /* 1f [DWORD cursor item id] [DWORD buffer item id] [DWORD xpos] [DWORD ypos] */ nPacketId = 0x1f;
-      nTargetItem = gpInventoryContextUi;
+      pTargetItem = (D2UnitStrc*)gpInventoryContextUi;
       dwPacketArg4 = gaInventorySelectState;
       send_place_item:
-      GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(nPacketId, pCursorItem_lcl->nUnitGUID, nTargetItemGUID, nTargetItem, dwPacketArg4);
+      GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT_INT(nPacketId, pCursorItem_lcl->nUnitGUID, (int32_t)pInvWork, (int32_t)pTargetItem, dwPacketArg4);
     } else {
       place_or_use_on_item:
       if (!targetItem || nCollisionCount != 1) {
@@ -9525,8 +9929,8 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
           }
         }
 
-        INV_CalcGridCellFromMouse(pCursorItem_lcl, x, y, (uint32_t*)&nInventory, (uint32_t*)&nUnit, &pInvLayout->slotWidth);
-        nItemType = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridCollisions(pInventory_00, pCursorItem_lcl, nInventory, nUnit, eInvPage, (D2UnitStrc**)&nGridCellY, (int*)&nGridCellX, nPage);
+        INV_CalcGridCellFromMouse(pCursorItem_lcl, x, y, (uint32_t*)&pInventory, (uint32_t*)&pUnit, &pInvLayout->slotWidth);
+        nItemType = D2Common::INVENTORY::Inventory::INVENTORY_CheckGridCollisions(pInvWork, pCursorItem_lcl, (int32_t)pInventory, (int32_t)pUnit, eInvPage, (D2UnitStrc**)&nGridCellY, (int*)&nGridCellX, nPage);
         if (!nItemType) {
           return bReturnValue;
         }
@@ -9544,8 +9948,8 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         /* Insert item into buffer 18 [DWORD id] [DWORD xpos] [DWORD ypos] [DWORD
                          buffer] */ dwPacketArg4 = (uint8_t)nPage;
         nPacketId = 0x18;
-        nTargetItemGUID = nInventory;
-        nTargetItem = nUnit;
+        pInvWork = pInventory;
+        pTargetItem = pUnit;
         goto send_place_item;
       }
       nItemType = D2Common::ITEMS::Items::IsItemSocketable(pCursorItem_lcl, targetItem);
@@ -9584,13 +9988,13 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
           if (nCheckResult) {
             nTargetSuffix = D2Common::ITEMS::Items::GetMagicSuffix(targetItem, 0);
             uVar1 = D2Common::ITEMS::Items::GetMagicSuffix(pCursorItem_lcl, 0);
-            pInventory_00 = pInventory;
+            pInvWork = pInventory;
             if (uVar1 == nTargetSuffix) {
               nItemType = UNIT::PlayerIsUnInterruptable(pCursorItem_lcl);
-              pInventory_00 = pInventory;
+              pInvWork = pInventory;
               if (!nItemType) {
                 nCallResult = INV_CheckActionThrottle();
-                pInventory_00 = pInventory;
+                pInvWork = pInventory;
                 if (nCallResult && g_nCurrentInventoryPage != 0xb) {
                   SpellSel::SPELLSEL_ClearChargedSkillBindings();
                   if (!targetItem) {
@@ -9604,7 +10008,7 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
                   Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(targetItem), nullptr, 0, 0, 0);
                   nGridCellY = 0;
                   bReturnValue = 1;
-                  pInventory_00 = pInventory;
+                  pInvWork = pInventory;
                 }
               }
             }
@@ -9812,7 +10216,7 @@ uint32_t __fastcall EQUIP_ItemRight(D2UnitStrc * pUnit, D2InventoryStrc * pInven
       }
 
       shop_action_on_item:
-      if (pRightArmItem && (nResult = npcmenu::ShopAction(pUnit, pRightArmItem, 1, gnInvMouseX, gnInvMouseY, 0, 0, 0) , nResult != 0)) {
+      if (pRightArmItem && (nResult = npcmenu::ShopAction(pUnit, pRightArmItem, 1, gnInvMouseX, gpInvCursorItem, 0, 0, 0) , nResult != 0)) {
         g_nCurrentInventoryPage = 5;
         Cursor::ITEM_SetItemOnHand(nullptr);
         return bReturnValue;
@@ -10061,7 +10465,7 @@ uint32_t __fastcall EQUIP_ItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInvent
       }
 
       shop_action_on_item:
-      if (pLeftArmItem && (nResult = npcmenu::ShopAction(pUnit, pLeftArmItem, 1, gnInvMouseX, gnInvMouseY, 0, 0, 0) , nResult != 0)) {
+      if (pLeftArmItem && (nResult = npcmenu::ShopAction(pUnit, pLeftArmItem, 1, gnInvMouseX, gpInvCursorItem, 0, 0, 0) , nResult != 0)) {
         g_nCurrentInventoryPage = 5;
         Cursor::ITEM_SetItemOnHand(nullptr);
         return bReturnValue;
@@ -10245,7 +10649,7 @@ uint32_t __fastcall EQUIP_ItemDefault(D2UnitStrc * pUnit, D2InventoryStrc * pInv
           if (bInteractiveMode) {
             bResult = INV_CheckActionThrottle();
             if (bResult) {
-              GAME::Msg::NET_D2GS_CLIENT_Send_SHORT('\x1c', (uint16_t)bodyLocation);
+              GAME::Msg::NET_D2GS_CLIENT_Send_SHORT('\x1c', (short int)bodyLocation);
               DrawShopRelated = 1;
               return 1;
             }
@@ -10253,7 +10657,7 @@ uint32_t __fastcall EQUIP_ItemDefault(D2UnitStrc * pUnit, D2InventoryStrc * pInv
             if (g_nCurrentInventoryPage < 0x13) {
               pItem = D2Common::INVENTORY::Inventory::INVENTORY_GetItemByGridOffset(pInventory, bodyLocation);
               if (pItem) {
-                bShopHandled = npcmenu::ShopAction(pUnit, pItem, 1, gnInvMouseX, gnInvMouseY, 0, 0, 0);
+                bShopHandled = npcmenu::ShopAction(pUnit, pItem, 1, gnInvMouseX, gpInvCursorItem, 0, 0, 0);
                 if (bShopHandled) {
                   g_nCurrentInventoryPage = 5;
                   Cursor::ITEM_SetItemOnHand(nullptr);
@@ -10429,7 +10833,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           }
 
           nBodySlotIdx++;
-        } while ((intptr_t)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4));
+        } while ((int)(uint32_t*)&gaPlayerBodySlotScreenCoords[nBodySlotIdx].nRight < (intptr_t)((char*)&gaPlayerBodySlotScreenCoords + sizeof(gaPlayerBodySlotScreenCoords) + 4));
 
         nClickResult = 0;
         bResult = GAME::Game::CLIENT_CheckExpansion();
@@ -10443,7 +10847,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           }
         }
       } else {
-        nClickResult = ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, (D2UnitStrc*)pMsg->nWParam, (D2InventoryLayout*)&pInventoryGridScreenCoordinated, (uintptr_t)pInventory & -256);
+        nClickResult = ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, (D2UnitStrc*)pMsg->nWParam, (D2InventoryLayout*)&pInventoryGridScreenCoordinated, (uint32_t)pInventory & -256);
         bHandled = true;
       }
 
@@ -10476,7 +10880,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
           if (g_nCurrentInventoryPage == 0xe && nMouseX >= pTransmogrifyBoxGridScreenCoordinates.nPixelLeft && nMouseX <= pTransmogrifyBoxGridScreenCoordinates.nRight && nMouseY >= pTransmogrifyBoxGridScreenCoordinates.nTop && nMouseY <= pTransmogrifyBoxGridScreenCoordinates.nBottom) {
             pCursorItem_lcl = (D2UnitStrc*)pMsg->nWParam;
             pInvLayout = &pTransmogrifyBoxGridScreenCoordinates;
-            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)3);
+            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)3);
             click_storage_grid:
             ClickItemLeft(pUnit, pInventory, nMouseX, nMouseY, pCursorItem_lcl, (D2InventoryLayout*)pInvLayout, nPage);
             pMsg->dwResult = 0;
@@ -10510,7 +10914,7 @@ void __stdcall ClickItemHandler(D2UIMouseMsgStrc * pMsg) {
               pInvLayout = &pBankPageGridScreenCoordinates;
             }
 
-            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4);
+            nPage = (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4);
             goto click_storage_grid;
           }
         }
@@ -10582,7 +10986,7 @@ void __stdcall INPUT_InventoryRightClick(D2UIMouseMsgStrc * pMsg) {
       pMsg->bHandled = 0;
     } else {
       int32_t iVar1;
-      iVar1 = ClickItemRight(nMouseY, nMouseX, (uintptr_t)pPlayerUnit_lcl & -256, pPlayerUnit_lcl, pInventory);
+      iVar1 = ClickItemRight(nMouseY, nMouseX, (uint32_t)pPlayerUnit_lcl & -256, pPlayerUnit_lcl, pInventory);
       if (iVar1) {
         goto resume_shop_and_consume;
       }
@@ -10638,7 +11042,7 @@ void __stdcall SelectDefaultTabForNPC() {
       do {
         pTabState[-1] = 0;
         *pTabState = 0;
-        pTabState = (uint32_t*)((char*)pTabState + 0x12);
+        pTabState = (uint32_t*)((int)pTabState + 0x12);
         nTabCount--;
       } while (nTabCount);
     }
@@ -10653,7 +11057,7 @@ void __stdcall SelectDefaultTabForNPC() {
     }
 
     D2UnitStrc* pNpcUnit;
-    pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
+    pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(nNpcGuid, UNIT_MONSTER);
     bool bPageSelected;
     bPageSelected = false;
     if (pNpcUnit) {
@@ -10772,7 +11176,6 @@ void __stdcall INV_HandleRightClick(D2UIMouseMsgStrc * pMsg) {
     D2UnitStrc* pCursorItem_lcl;
     pCursorItem_lcl = D2Common::INVENTORY::Inventory::INVENTORY_GetHandItem(pMyUnit->pInventory);
     if (!pCursorItem_lcl) {
-      int32_t nMsg;
       if (g_nCurrentInventoryPage != 1 && g_nCurrentInventoryPage != 2) {
         if (g_nCurrentInventoryPage == 0xe) {
           bResult = IsInTransmogrifyScreenRange(nMouseX, nMouseY);
@@ -10796,7 +11199,7 @@ void __stdcall INV_HandleRightClick(D2UIMouseMsgStrc * pMsg) {
 
           bResult = IsInBankPageScreenRange(nMouseX, nMouseY);
           if (bResult) {
-            ClickItemRight(nMouseY, nMouseX, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pMyUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4), pMyUnit, pMyUnit->pInventory);
+            ClickItemRight(nMouseY, nMouseX, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pMyUnit >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)4), pMyUnit, pMyUnit->pInventory);
             goto consume_click;
           }
         }
@@ -10817,9 +11220,9 @@ void __stdcall INV_HandleRightClick(D2UIMouseMsgStrc * pMsg) {
           goto consume_click;
         }
       } else {
-        bResult = npcmenu::GetInteractedUnitGuid((int*)&nMsg);
+        bResult = npcmenu::GetInteractedUnitGuid((int*)&pMsg);
         if (bResult) {
-          pMyUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMsg, UNIT_MONSTER);
+          pMyUnit = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
           if (pMyUnit) {
             if (pItemToDescribe) {
               nCallResult = npcmenu::ShopAction(pMyUnit, pItemToDescribe, 0, nMouseX, nMouseY, pMouseMsg->nWParam, 1, 0);
@@ -10849,7 +11252,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
       int nNpcTopY;
-      INPUT_InventoryLeftClick_Slotm8 uSlot8;
+      int32_t nSelectedShopTab;
     };
     static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 8, "frame group __frame0_t must reproduce the Ghidra frame layout");
     __frame0_t __frame0;
@@ -10861,11 +11264,8 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
     int bHasSelectedTab;
     uint8_t byNewShopPage;
     int32_t nBufferSize;
+    D2UIMouseMsgStrc* pClickedButton;
     uint16_t* pwszCostBuf;
-    int32_t nMsg;
-    int nMsg2;
-    int32_t nMsg3;
-    int nClickedButton;
     D2UIMouseMsgStrc* pUnderMouse2;
     pUnderMouse2 = pMsg;
     int32_t x;
@@ -10925,13 +11325,13 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             return;
           }
 
-          bHasNpcGuid = npcmenu::GetInteractedUnitGuid((int*)&nMsg3);
+          bHasNpcGuid = npcmenu::GetInteractedUnitGuid((int*)&pMsg);
           if (!bHasNpcGuid) {
             return;
           }
 
-          __frame0.uSlot8.pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMsg3, UNIT_MONSTER);
-          if (!__frame0.uSlot8.pNpcUnit) {
+          __frame0.nSelectedShopTab = (int32_t)UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
+          if (!(D2UnitStrc*)__frame0.nSelectedShopTab) {
             return;
           }
 
@@ -10950,7 +11350,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
             return;
           }
 
-          nCallResult = npcmenu::ShopAction(__frame0.uSlot8.pNpcUnit, pCursorItem_lcl, 1, x, y, dwMode, 1, 0);
+          nCallResult = npcmenu::ShopAction((D2UnitStrc*)__frame0.nSelectedShopTab, pCursorItem_lcl, 1, x, y, dwMode, 1, 0);
           if (!nCallResult) {
             return;
           }
@@ -10980,38 +11380,38 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
         if (y >= __frame0.nNpcTopY && y <= pNpcInventoryScreenCoordinates.nBottom) {
           nShopButtonIdx = 0;
           bHasSelectedTab = 0;
-          __frame0.uSlot8.nSelectedShopTab = 0;
-          nMsg2 = -1;
+          __frame0.nSelectedShopTab = 0;
+          pMsg = (D2UIMouseMsgStrc*)-1;
           if (gaNpcShopButtonTable[0] > 0) {
             pnButtonState = &gaNpcShopButtons[0].nDrawCallback;
             pnButtonXOffsets = NPCButtonArray + CurrentNpcButtonSelection * 4;
             do {
               if (*pnButtonState == 1) {
                 bHasSelectedTab = 1;
-                __frame0.uSlot8.nSelectedShopTab = nShopButtonIdx;
+                __frame0.nSelectedShopTab = nShopButtonIdx;
               }
-              if (gnInvMouseX > *pnButtonXOffsets + gnPanelOffsetX && gnInvMouseX < *pnButtonXOffsets + gnPanelOffsetX + 0x2d && gnInvMouseY > __frame0.nNpcTopY && gnInvMouseY < gnPanelOffsetY - 0x41 + ScreenSizeY) {
-                nMsg2 = nShopButtonIdx;
+              if (gnInvMouseX > *pnButtonXOffsets + gnPanelOffsetX && gnInvMouseX < *pnButtonXOffsets + gnPanelOffsetX + 0x2d && gpInvCursorItem > __frame0.nNpcTopY && gpInvCursorItem < gnPanelOffsetY - 0x41 + ScreenSizeY) {
+                pMsg = (D2UIMouseMsgStrc*)nShopButtonIdx;
               }
 
-              nClickedButton = nMsg2;
-              nShopButtonIdx = (intptr_t)&((D2UIMouseMsgStrc*)nShopButtonIdx)->hWnd + 1;
+              pClickedButton = pMsg;
+              nShopButtonIdx = (uintptr_t)&((D2UIMouseMsgStrc*)nShopButtonIdx)->hWnd + 1;
               pnButtonXOffsets++;
               pnButtonState += 5;
             } while (nShopButtonIdx < gaNpcShopButtonTable[0]);
 
-            if (nMsg2 != -1) {
-              if (gaNpcShopButtons[nMsg2].nSelectedState == 1) {
+            if (pMsg != (D2UIMouseMsgStrc*)-1) {
+              if (gaNpcShopButtons[(int)pMsg].nSelectedState == 1) {
                 Sound::SOUND_PlaySound(SOUND_CURSOR_PASS, nullptr, 0, 0, 0);
                 if (bHasSelectedTab == 1) {
-                  if (nMsg2 != __frame0.uSlot8.nSelectedShopTab) {
-                    gaNpcShopButtons[nClickedButton].nDrawCallback = 1;
-                    gaNpcShopButtons[__frame0.uSlot8.nSelectedShopTab].nDrawCallback = 0;
+                  if (pMsg != (D2UIMouseMsgStrc*)__frame0.nSelectedShopTab) {
+                    gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 1;
+                    gaNpcShopButtons[__frame0.nSelectedShopTab].nDrawCallback = 0;
                     gShopTradeUIState = 1;
                     goto consume_shop_button_click;
                   }
 
-                  gaNpcShopButtons[nClickedButton].nDrawCallback = 0;
+                  gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 0;
                   g_nCurrentInventoryPage = 1;
                   pCursorItem_lcl = UNIT::Player::GetPlayerUnit_UI();
                   if (pCursorItem_lcl) {
@@ -11026,7 +11426,7 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
                     }
                   }
                 } else {
-                  gaNpcShopButtons[nClickedButton].nDrawCallback = 1;
+                  gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 1;
                 }
 
                 gShopTradeUIState = 1;
@@ -11045,11 +11445,11 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
         }
         if (y >= pNpcInventoryScreenCoordinates.nTop && y <= pNpcInventoryScreenCoordinates.nBottom) {
           if ((g_nCurrentInventoryPage == 1 || g_nCurrentInventoryPage == 2) && x >= pNpcInventoryGridScreenCoordinates.nPixelLeft && x <= pNpcInventoryGridScreenCoordinates.nRight && y >= pNpcInventoryGridScreenCoordinates.nTop && y <= pNpcInventoryGridScreenCoordinates.nBottom) {
-            bHasNpcGuid = npcmenu::GetInteractedUnitGuid((int*)&nMsg);
+            bHasNpcGuid = npcmenu::GetInteractedUnitGuid((int*)&pMsg);
             if (bHasNpcGuid) {
-              pCursorItem_lcl = UNIT::CUnit::UNITS_FindClientSideUnit(nMsg, UNIT_MONSTER);
+              pCursorItem_lcl = UNIT::Player::UNITS_FindClientSideUnit((int32_t)pMsg, UNIT_MONSTER);
               if (pCursorItem_lcl) {
-                ClickItemLeft(pCursorItem_lcl, pCursorItem_lcl->pInventory, x, y, (D2UnitStrc*)pUnderMouse2->nWParam, (D2InventoryLayout*)&pNpcInventoryGridScreenCoordinates, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uintptr_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage));
+                ClickItemLeft(pCursorItem_lcl, pCursorItem_lcl->pInventory, x, y, (D2UnitStrc*)pUnderMouse2->nWParam, (D2InventoryLayout*)&pNpcInventoryGridScreenCoordinates, (uint32_t)((uint32_t)((uint32_t)((int32_t)((uint32_t)((uint32_t)pCursorItem_lcl >> 8) << 8) >> 8) & 0xffffffu) << 8 | (uint32_t)(uint8_t)CurrentInventoryPage));
               }
             }
           }
@@ -11107,7 +11507,7 @@ BOOL __stdcall INPUT_InventoryMouseMove(D2UIMouseMsgStrc * pMsg) {
     int32_t nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     int32_t nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nMouseX;
-    gnInvMouseY = nMouseY;
+    gpInvCursorItem = nMouseY;
     pMsg->bHandled = 1;
     pMsg->dwResult = 0;
     Storm::SMsgBreakHandlerChain(pMsg);
@@ -11125,16 +11525,16 @@ void __stdcall INPUT_TradeScreenLeftClick(D2UIMouseMsgStrc * pMsg) {
       return;
     }
 
-    int32_t nMouseY;
-    nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
-    int32_t nMouseX;
-    nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
-    gnInvMouseX = nMouseX;
-    gnInvMouseY = nMouseY;
+    int32_t nX;
+    nX = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
+    int32_t nY;
+    nY = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
+    gnInvMouseX = nY;
+    gpInvCursorItem = nX;
     BOOL nHitTest;
     nHitTest = Panel::PANEL_CalculateBeltSlotIndex(pMsg);
     if (!nHitTest) {
-      nHitTest = INV_IsMouseOverCloseButton(nMouseX, nMouseY);
+      nHitTest = INV_IsMouseOverCloseButton(nY, nX);
       if (nHitTest) {
         gbInvPanelButtonPressed = 1;
         consume_button_click:
@@ -11150,7 +11550,7 @@ void __stdcall INPUT_TradeScreenLeftClick(D2UIMouseMsgStrc * pMsg) {
     if (nHitTest == 1) {
       return;
     }
-    if (nMouseX >= pInventoryScreenCoordinates.nLeft && nMouseX < pInventoryScreenCoordinates.nRight && nMouseY >= pInventoryScreenCoordinates.nTop && nMouseY <= pInventoryScreenCoordinates.nBottom || (nHitTest = IsInTradePage2ScreenRange(nMouseX, nMouseY) , nHitTest != 0)) {
+    if (nY >= pInventoryScreenCoordinates.nLeft && nY < pInventoryScreenCoordinates.nRight && nX >= pInventoryScreenCoordinates.nTop && nX <= pInventoryScreenCoordinates.nBottom || (nHitTest = IsInTradePage2ScreenRange(nY, nX) , nHitTest != 0)) {
       ClickItemHandler(pMsg);
       return;
     }
@@ -11164,9 +11564,9 @@ void __stdcall INPUT_TradeScreenLeftClick(D2UIMouseMsgStrc * pMsg) {
       gbInvTradeAcceptClicked = 0;
       Trade::CancelTrade();
     } else {
-      nHitTest = INV_IsMouseOverAcceptTradeBtn(nMouseY, nMouseX);
+      nHitTest = INV_IsMouseOverAcceptTradeBtn(nX, nY);
       if (!nHitTest) {
-        nHitTest = INV_IsMouseOverCancelTradeBtn(nMouseY, nMouseX);
+        nHitTest = INV_IsMouseOverCancelTradeBtn(nX, nY);
         if (nHitTest) {
           gbInvTradeCancelClicked = 1;
           gbInvTradeAcceptClicked = 1;
@@ -11174,7 +11574,7 @@ void __stdcall INPUT_TradeScreenLeftClick(D2UIMouseMsgStrc * pMsg) {
           goto consume_button_click;
         }
 
-        nHitTest = INV_IsMouseOverGoldButton(nMouseX, nMouseY);
+        nHitTest = INV_IsMouseOverGoldButton(nY, nX);
         if (nHitTest) {
           gnInvInventoryGold = 1;
           gbInventoryDragInProgress = 0;
@@ -11227,7 +11627,7 @@ void __stdcall INPUT_StashLeftClick(D2UIMouseMsgStrc * pMsg) {
     int32_t nY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
     int32_t nX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nX;
-    gnInvMouseY = nY;
+    gpInvCursorItem = nY;
     uint32_t bBeltHover = Panel::PANEL_GetBeltSlotHoverFlag();
     if ((!bBeltHover || (bInRange = Panel::PANEL_CalculateBeltSlotIndex(pMsg) , !bInRange)) && nX >= ui::ScreenSizeX - gnPanelOffsetX - 0x12e && nX <= ui::ScreenSizeX - gnPanelOffsetX - 0x10e && nY >= gnPanelOffsetY - 0x60 + ScreenSizeY && nY <= gnPanelOffsetY - 0x40 + ScreenSizeY) {
       gbInvPanelButtonPressed = 1;
@@ -11343,7 +11743,7 @@ void __stdcall INPUT_CubeLeftClick(D2UIMouseMsgStrc * pMsg) {
     int32_t nX;
     nX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     gnInvMouseX = nX;
-    gnInvMouseY = nY;
+    gpInvCursorItem = nY;
     BOOL bInRange;
     bInRange = Panel::PANEL_CalculateBeltSlotIndex(pMsg);
     if (!bInRange) {
@@ -11460,7 +11860,7 @@ void __stdcall DrawMercInventory() {
       return;
     }
 
-    D2UnitStrc* pMercUnit = UNIT::CUnit::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
+    D2UnitStrc* pMercUnit = UNIT::Player::UNITS_FindClientSideUnit(nMercGuid, UNIT_MONSTER);
     if (!pMercUnit) {
       ui::SetUIFlag(UI_MERCINV, UI_TOGGLE, 0);
       return;
@@ -11497,8 +11897,6 @@ void StaticInit_gpInvRecipeScrollImage() {
       gpInvRecipeScrollImage[nDwordsRemaining] = 0;
     }
 }
-
-static void * keep_00487ba0 = (0 ? (INV_HandleShopAction(*(DWORD *)0, *(D2UnitStrc * *)0, *(D2UnitStrc * *)0, *(DWORD *)0, *(DWORD *)0, *(DWORD *)0, *(DWORD *)0), (void *)0) : (void *)0);
 
 } // namespace D2Client::UI::Inv
 

@@ -112,6 +112,7 @@ struct D2UIFlagStrc {
     /* 0x8C */ BOOL HireIcons;
     /* 0x90 */ BOOL MercMenu;
     /* 0x94 */ BOOL UnusedScroll;
+        BOOL VanillaPlus; // VP: vanilla-plus UI_VANILLAPLUS page flag (row 10)
 };
 #endif // D2_DEFINED_D2UIFlagStrc
 

@@ -113,12 +113,19 @@ namespace D2Client::UI::npcmenu {
 int __stdcall NPCMENU_EmptyDialogDrawHandler_Unref_00486e00();
 int32_t __stdcall GetInteractedUnitClassId_Unref_004b1020();
 void __thiscall NPCMENU_ConvertQuestId(short * nInput, uint16_t * pResult);
+bool inline_NPC_IsInteractableSideNpc(int32_t nNpcClassId);
+void __stdcall NPCMENU_HandleMenuSelection(int32_t bReopenMenu, struct D2UnitStrc * pUnit);
 struct D2UnitStrc * __stdcall GetInteractedUnit();
 int32_t __stdcall GetInteractedUnitClassId();
 void __stdcall NPCMENU_SelectRandomDialogOption(struct D2NPCSpeechStrc * pSpeech);
 void __stdcall NPCMENU_RandomizeAllNpcDialogs();
 uint16_t __fastcall NPCMENU_FindNextUnhandledMessage(int16_t nMsgTypeToFind);
 int __fastcall NPCMENU_ScrollCompleteShowNextMessage(void * pUserParam, uint32_t nReason, int bDismissed);
+extern uint16_t gnNpcMenuRepairCostGold;
+extern int16_t gnNpcMenuTradeActionGold;
+extern uint32_t gnNpcMenuScrollMessageHead;
+extern uint32_t gnNpcMenuShopMode;
+extern uint8_t gnNpcMenuActiveMode;
 void Unreferenced_004b1970();
 void __fastcall NPCMENU_AddHandledMessageId(short wMsgId);
 int __stdcall NPCMENU_ShowSelectedDialogOption();
@@ -156,6 +163,7 @@ BOOL __stdcall NPCMENU_ConfirmTransactionCallback();
 int __stdcall NPCMENU_ConfirmTransactionReturn();
 void __stdcall NPCMENU_ShowTransactionConfirmDialog();
 BOOL __fastcall GetInteractedUnitGuid(int * pNpcGUID);
+void SetInteractedUnitInfo(struct D2UnitStrc * pUnit);
 // Returns gpNpcMenuBitBuffer, the NPC menu's quest record.
 struct D2BitBufferStrc * __stdcall GetQuestInfo();
 // Resets the NPC menu: nMercNameId = -1, NPCMENU_Cleanup, NPCMENU_Initialize, clears gbNpcMenuRandomDialogSeed and the two flag bytes (+0x11, bUpdated) of every D2NPCSpeech entry.

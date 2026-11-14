@@ -63,6 +63,7 @@ namespace D2Sound {
 struct IDirectSound * __stdcall SOUND_GetDirectSoundDevice();
 DWORD __stdcall SOUND_GetPrimaryBufferModeFlag();
 DWORD __stdcall SOUND_GetSound3DFlag();
+DWORD __stdcall SOUND_GetDirectSoundInitializedFlag();
 } // namespace D2Sound
 namespace D2Sound::D2SoundUntil {
 // NOTE: Register params: pListHead (ECX): void *, pItem (EDX): void *
@@ -77,6 +78,7 @@ namespace D2Sound::Sound {
 void __fastcall SOUND_ApplyEAXEnvironment(struct D2SoundEaxEnvironStrc * pEnviron);
 void __stdcall SOUND_ShutdownDirectSound();
 void __fastcall SOUND_Initialize(uint32_t dwLanguageCode, BOOL bSoundInBackground);
+DWORD __stdcall SOUND_GetEAXEnabledFlag();
 } // namespace D2Sound::Sound
 namespace D2Sound::Src::D2SoundFast {
 BOOL __stdcall SOUND_IsAmbientStreaming();

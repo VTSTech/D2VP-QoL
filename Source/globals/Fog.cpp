@@ -1022,3 +1022,50 @@ namespace Fog::Debug {
 HMODULE hDbgHelpDll = 0; D2_GLOBAL_GUARD(hDbgHelpDll, "Fog::Debug::hDbgHelpDll");
 
 } // namespace Fog::Debug
+
+// =============================================================================
+// Fog::Src::ErrorManager - Language string definitions
+// =============================================================================
+
+namespace Fog::Src::ErrorManager {
+
+char s_Unknown_006cc780[8] = { 'U', 'n', 'k', 'n', 'o', 'w', 'n', '\x00' }; D2_GLOBAL_GUARD(s_Unknown_006cc780, "Fog::Src::LogManager::s_Unknown_006cc780");
+
+char s_English_with_Korean_Chat_006cc788[28] = {
+    'E', 'n', 'g', 'l', 'i', 's', 'h', ' ', 'w', 'i', 't', 'h', ' ', 'K', 'o', 'r', 'e', 'a', 'n', ' ', 'C', 'h', 'a', 't', '\x00', '\x00', '\x00', '\x00'
+}; D2_GLOBAL_GUARD(s_English_with_Korean_Chat_006cc788, "Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788");
+
+char s_Russian_006cc7a4[8] = { 'R', 'u', 's', 's', 'i', 'a', 'n', '\x00' }; D2_GLOBAL_GUARD(s_Russian_006cc7a4, "Fog::Src::ErrorManager::s_Russian_006cc7a4");
+
+char s_Polish_006cc7ac[8] = { 'P', 'o', 'l', 'i', 's', 'h', '\x00', '\x00' }; D2_GLOBAL_GUARD(s_Polish_006cc7ac, "Fog::Src::ErrorManager::s_Polish_006cc7ac");
+
+char s_Traditional_Chinese_006cc7b4[20] = {
+    'T', 'r', 'a', 'd', 'i', 't', 'i', 'o', 'n', 'a', 'l', ' ', 'C', 'h', 'i', 'n', 'e', 's', 'e', '\x00'
+}; D2_GLOBAL_GUARD(s_Traditional_Chinese_006cc7b4, "Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4");
+
+char s_Simplified_Chinese_006cc7c8[20] = {
+    'S', 'i', 'm', 'p', 'l', 'i', 'f', 'i', 'e', 'd', ' ', 'C', 'h', 'i', 'n', 'e', 's', 'e', '\x00', '\x00'
+}; D2_GLOBAL_GUARD(s_Simplified_Chinese_006cc7c8, "Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8");
+
+char s_Korean_006cc7dc[8] = { 'K', 'o', 'r', 'e', 'a', 'n', '\x00', '\x00' }; D2_GLOBAL_GUARD(s_Korean_006cc7dc, "Fog::Src::ErrorManager::s_Korean_006cc7dc");
+
+char s_Japanese_006cc7e4[12] = {
+    'J', 'a', 'p', 'a', 'n', 'e', 's', 'e', '\x00', '\x00', '\x00', '\x00'
+}; D2_GLOBAL_GUARD(s_Japanese_006cc7e4, "Fog::Src::ErrorManager::s_Japanese_006cc7e4");
+
+char s_Italian_006cc7f0[8] = { 'I', 't', 'a', 'l', 'i', 'a', 'n', '\x00' }; D2_GLOBAL_GUARD(s_Italian_006cc7f0, "Fog::Src::ErrorManager::s_Italian_006cc7f0");
+
+char s_Portuguese_006cc7f8[12] = {
+    'P', 'o', 'r', 't', 'u', 'g', 'u', 'e', 's', 'e', '\x00', '\x00'
+}; D2_GLOBAL_GUARD(s_Portuguese_006cc7f8, "Fog::Src::ErrorManager::s_Portuguese_006cc7f8");
+
+char s_French_006cc804[8] = { 'F', 'r', 'e', 'n', 'c', 'h', '\x00', '\x00' }; D2_GLOBAL_GUARD(s_French_006cc804, "Fog::Src::ErrorManager::s_French_006cc804");
+
+char s_German_006cc80c[8] = { 'G', 'e', 'r', 'm', 'a', 'n', '\x00', '\x00' }; D2_GLOBAL_GUARD(s_German_006cc80c, "Fog::Src::ErrorManager::s_German_006cc80c");
+
+char s_Spanish_006cc814[8] = { 'S', 'p', 'a', 'n', 'i', 's', 'h', '\x00' }; D2_GLOBAL_GUARD(s_Spanish_006cc814, "Fog::Src::ErrorManager::s_Spanish_006cc814");
+
+char s_English_006cc81c[8] = { 'E', 'n', 'g', 'l', 'i', 's', 'h', '\x00' }; D2_GLOBAL_GUARD(s_English_006cc81c, "Fog::Src::ErrorManager::s_English_006cc81c");
+
+} // namespace Fog::Src::ErrorManager
+

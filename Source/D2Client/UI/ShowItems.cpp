@@ -2,18 +2,133 @@
 
 #include "Source/D2Client/UI/ShowItems.h"
 #include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/GAME/Select.h"
 #include "Source/D2Client/UI/Path.h"
 #include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/File.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
 #include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: vanilla-plus ALTTOGGLE_LabelClickThrough
+#include "Source/D2Client/UNIT/CUnit.h" // VP: vanilla-plus HitTestScreen for the toggle stale-selection unload
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -178,7 +293,7 @@ void __stdcall DRAW_AltItems() {
               }
 
               D2gfx::D2GFX::D2GFX_AdjustPerspectivePosition(nWorldOffsetX, nPrecisionX, 0, &nItemPosX, &nPerspY);
-              uBorderType = Path::DRAW_GetTypeOfBorder();
+              uBorderType = PANELSHIFT_BorderForWorld(Path::DRAW_GetTypeOfBorder()); // VP: [issue #26 / R100] no-panel-shift - unit sprite path rides the border-0 camera
               nColorIdx = nPerspY;
               switch (uBorderType) {
                 case 1:
@@ -256,9 +371,34 @@ void __stdcall DRAW_AltItems() {
                 gaGroundItemLabels[nItemSlotIdx].nBottom = nItemVisY;
                 if (!bFoundMatch) {
                   if (nMouseX < nItemX || nMouseX > nPrecisionX || nMouseY < nItemNameHeight || nMouseY > nItemVisY + 4) {
-                    if (pCurrentItem != pPlayerUnit_lcl) {
+                    // VP-BEGIN [alt-toggle]: vanilla revokes the stale item
+                    // selection here (the selected item's label is no longer
+                    // under the cursor). Toggle mode keeps that revoke - it
+                    // is what makes the selection follow the cursor from one
+                    // label to the next - but spares it when the cursor is
+                    // over the item's SPRITE (the click surface extends below
+                    // the label rect to the sprite; field bug 2026-10-29:
+                    // without an unload the pinned label-hover selection
+                    // survived every cursor move and ClickMap re-targeted
+                    // even a far walk click to the item, picking it up).
+                    // Hold mode: vanilla condition byte-for-byte (the added
+                    // clause is dead there).
+                    // R58 (issue #15): the sprite test MUST pass a non-null
+                    // pObjectsTxt - HitTestScreen short-circuits on a null
+                    // 4th arg (CUnit.cpp "if (!pObjectsTxt) return 1;") to
+                    // validity-only with NO geometry, which made this spare
+                    // always-true and the revoke unreachable in toggle mode:
+                    // one label brush pinned the item selection forever and
+                    // every click-away re-targeted to it. The 0x1 marker cast
+                    // to the pObjectsTxt arg type = Select.cpp's own
+                    // real-geometry idiom for item candidates (never
+                    // dereferenced on the ITEM path).
+                    if (pCurrentItem != pPlayerUnit_lcl ||
+                        (ALTTOGGLE_LabelClickThrough() &&
+                         UNIT::CUnit::HitTestScreen(pCurrentItem, nMouseX, nMouseY, (D2ObjectsTxt*)0x1))) {
                       goto color_by_quality;
                     }
+                    // VP-END [alt-toggle]
 
                     gaGroundItemLabels[nItemSlotIdx].nColorKey = (uint32_t)bColorKey;
                     gaGroundItemLabels[nItemSlotIdx].nDrawPosition = 5;
@@ -338,6 +478,40 @@ void __stdcall DRAW_AltItems() {
     if (bFoundMatch) {
       return;
     }
+    // VP-BEGIN [alt-toggle]: vanilla clears the selection whenever the
+    // cursor is over no label - that wipe is what turns every click into a
+    // walk while labels are shown (attacks/interactions need a selected
+    // unit). Toggle mode keeps clicks working but must still unload STALE
+    // item selections: the label-hover select PINS the selection
+    // (bCanSelectUnit - SetSelectedUnit_I refuses all other setters and the
+    // per-frame machinery no-ops) and GetSelectedUnit only re-validates
+    // on-screen, so a pinned item never self-clears; ClickMap then
+    // re-targets the next click to it - rewriting the click coords to the
+    // item's position - so standing on loot and walk-clicking far away
+    // picked the item up (field report 2026-10-29). Vanilla's blanket wipe
+    // would kill sprite-clicks (the sprite extends below the label rect),
+    // so toggle mode clears only a ground-item selection the cursor is
+    // neither on (this path = over no label rect) nor over by sprite hit.
+    // Hold mode (feature off): vanilla byte-for-byte below.
+    // R58 (issue #15): the sprite hit MUST pass a non-null pObjectsTxt.
+    // HitTestScreen short-circuits on a null 4th arg (CUnit.cpp
+    // "if (!pObjectsTxt) return 1;" - validity-only, NO geometry), which
+    // made this unload's sprite-hit test always-true and the whole clear
+    // dead: the R58 root cause of the re-filed symptom (standing within
+    // pickup radius, click away to move = item picked up). The 0x1 marker
+    // cast to the pObjectsTxt arg type = the Select.cpp real-geometry
+    // idiom; on the ITEM path the pointer is never dereferenced (run-mode
+    // + hold-alt checks, then unit frame sprite bounds).
+    if (ALTTOGGLE_LabelClickThrough()) {
+      D2UnitStrc* pSelectedStale = GAME::Select::GetSelectedUnit();
+      if (pSelectedStale && pSelectedStale->eUnitType == UNIT_ITEM &&
+          !UNIT::CUnit::HitTestScreen(pSelectedStale, Cursor::GetMouseX(), Cursor::GetMouseY(), (D2ObjectsTxt*)0x1)) {
+        GAME::Select::ClearSelectedUnit();
+        D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(nullptr, 0, 0, 0, 0);
+      }
+      return;
+    }
+    // VP-END [alt-toggle]
 
     GAME::Select::ClearSelectedUnit();
     D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(nullptr, 0, 0, 0, 0);

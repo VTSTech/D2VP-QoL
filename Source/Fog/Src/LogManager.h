@@ -50,6 +50,8 @@ struct __attribute__((packed)) D2LogRecordStrc {
 
 #endif // D2_MODULE_Fog
 namespace Fog::Src::LogManager {
+extern char s_Unknown_006cc780[8];
+extern char s_Unknown_006cc780[8];
 
 // Function declarations
 BOOL __stdcall GetLoggerState_Stub();

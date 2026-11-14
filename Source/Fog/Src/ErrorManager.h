@@ -73,6 +73,20 @@ struct D2CrashReportStrc {
 
 #endif // D2_DEFINED_D2CrashReportStrc
 namespace Fog::Src::ErrorManager {
+extern char s_English_006cc81c[8];
+extern char s_Spanish_006cc814[8];
+extern char s_German_006cc80c[8];
+extern char s_French_006cc804[8];
+extern char s_Portuguese_006cc7f8[12];
+extern char s_Italian_006cc7f0[8];
+extern char s_Japanese_006cc7e4[12];
+extern char s_Korean_006cc7dc[8];
+extern char s_Simplified_Chinese_006cc7c8[20];
+extern char s_Traditional_Chinese_006cc7b4[20];
+extern char s_Polish_006cc7ac[8];
+extern char s_Russian_006cc7a4[8];
+extern char s_English_with_Korean_Chat_006cc788[28];
+extern char s_Unknown_006cc780[8];
 
 // Function declarations
 void __stdcall CrashGame();

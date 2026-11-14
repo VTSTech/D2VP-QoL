@@ -12,20 +12,114 @@
 #include <cstdint>
 #include <cstddef>
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Direct3D/Renderer/Direct3D.h"
+#include "Source/D2Direct3D/d3dFloorCache.h"
+#include "Source/D2Direct3D/d3dSubtileCache.h"
 #include "Source/D2Direct3D/d3dTextureCache.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Glide/Renderer/Glide.h"
+#include "Source/D2Glide/glFloorCache.h"
+#include "Source/D2Glide/glSubtileCache.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
 #include "Source/D2Launch/MainMenus.h"
+#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
+#include "3rdparty/Storm/H/stpl.h"
 
 // Forward declarations
 struct ARGLIST;
-struct BINK {
-    /* 0x00 */ uint32_t Width;
-    /* 0x04 */ uint32_t Height;
-    /* 0x08 */ uint32_t Frames;
-    /* 0x0C */ uint32_t FrameNum;
-};
 struct BetaScreenEntry;
 struct BnMessQueue;
-struct CELLIST;
 struct CMDPARAMS;
 struct D2Act5SpecialPresetStrc;
 struct D2AiDispatchCallbacksStrc;
@@ -45,44 +139,34 @@ struct D2BNetClientCallbacksStrc;
 struct D2BNetGatewayAccessStr;
 struct D2BNetRealmEntryStrc;
 struct D2BaalFxSpiritSpawnStrc;
-struct D2BnCacheBlockEntryStrc;
 struct D2BnCacheFileHeaderStrc;
-struct D2BnNewsEntryStrc;
 struct D2BnNewsTableStrc;
-struct D2BnReadUserDataStrc;
 struct D2BodyLocsTxt;
 struct D2BooksTableStrc;
 struct D2BooksTxt;
-struct D2ChannelUserNameNodeStrc;
 struct D2ChannelUserStrc;
 struct D2CharSelCompStrc;
 struct D2CharSelStrc;
 struct D2CharStatsTxt;
 struct D2CharTemplateTxt;
 struct D2ChatCommandStrc;
-struct D2ChatDlgUnknown_0x10;
-struct D2ChatPlayerNameNodeStrc;
 struct D2ClassIconWithNameStrc;
 struct D2ClientGameDataStrc;
-struct D2ClientMonAnimModeEntryStrc;
 struct D2ClientSoundChannelStrc;
 struct D2ClientStrc;
 struct D2ClientTimerStrc;
 struct D2CodecFrameComponentStrc;
 struct D2CodecPixelBufferEntryStrc;
 struct D2CofCacheStrc;
-struct D2CofTextureCacheEntryStrc;
 struct D2ColorsTxt;
 struct D2CompCharacterCompositeItemStrc;
 struct D2CompCodeTxt;
-struct D2CompCofCacheEntryStrc;
 struct D2CompositListStrc;
 struct D2CompositTxt;
 struct D2ConfigControlDescStrc;
 struct D2ControlMsg;
 struct D2ControlStrc;
 struct D2CoordStrc;
-struct D2CrashDumpRequestStrc;
 struct D2CursorDataStrc;
 struct D2D3DDeviceInfoStrc;
 struct D2D3DDeviceSlotStrc;
@@ -107,6 +191,7 @@ struct D2EscMenuUIFlagStrc;
 struct D2EventsTxt;
 struct D2ExpansionLvlTblsTxt;
 struct D2ExperienceTxt;
+struct D2FogArchiveStrc;
 struct D2FontCacheEntryStrc;
 struct D2FontGlyphStrc;
 struct D2FontTableHeaderStrc;
@@ -121,7 +206,6 @@ struct D2GameRecordStrc;
 struct D2GameViewStrc;
 struct D2GemsTxt;
 struct D2GfxHelperStrc;
-struct D2GfxLightExStrc;
 struct D2GfxMemoryStrc;
 struct D2GfxSettingsStrc;
 struct D2GlideVertexStrc;
@@ -201,7 +285,6 @@ struct D2MonsterAiParameterStruct;
 struct D2MonsterAnimModeFlagsStrc;
 struct D2MonsterForEachStruct;
 struct D2MonsterKillStrc;
-struct D2MonsterPalShiftSlotStrc;
 struct D2MonsterUModHandlerRowStrc;
 struct D2NET_CLIENT_D2GS_ServerToClient;
 struct D2NPCSpeechStrc;
@@ -223,12 +306,10 @@ struct D2ObjectSpawnOffsetGroupStrc;
 struct D2OnePacketClientStrc;
 struct D2OverlayTxt;
 struct D2PacketsClientStrc;
-struct D2PalShiftEntryStrc;
 struct D2PaletteEntryStrc;
 struct D2ParsedTreasureClassStrc;
 struct D2PassiveSkillsPerClassStrc;
 struct D2PathDirectionVectorStrc;
-struct D2PathPosStrc;
 struct D2PathTypeArg;
 struct D2PetTypeTxt;
 struct D2PlayerClassTxt;
@@ -241,7 +322,6 @@ struct D2PoolBlockEntryStrc;
 struct D2PoolBlockStrc;
 struct D2ProfilingDumpFrequency;
 struct D2PropertiesTxt;
-struct D2QServerStrc;
 struct D2QualityItemsTableStrc;
 struct D2QualityItemsTxt;
 struct D2QuestAreaIntroStrc;
@@ -259,7 +339,6 @@ struct D2RoomExStrc;
 struct D2RoomStrc;
 struct D2RunesTxt;
 struct D2RunesTxtTableStrc;
-struct D2SErrMessageSourceStrc;
 struct D2SFileSignatureKeyStrc;
 struct D2SLogStrc;
 struct D2SMemTablesStrc;
@@ -281,10 +360,8 @@ struct D2SkillsPerClassCounter;
 struct D2SkillsTxt;
 struct D2SoundChannelStrc;
 struct D2SoundEnvironTxt;
-struct D2SoundListNodeStrc;
 struct D2SoundSmpStrc;
 struct D2SoundStringKeyStrc;
-struct D2SoundWavCacheEntryStrc;
 struct D2SoundsTxt;
 struct D2SoundsTxtSmall;
 struct D2SpeechBankStrc;
@@ -299,10 +376,9 @@ struct D2StatesDataTbls;
 struct D2StatesTxt;
 struct D2StorePageTxt;
 struct D2StormAsyncOpStrc;
+struct D2StormListHead;
 struct D2SuperUniquesTxt;
-struct D2SystemInfoStrc;
 struct D2TextBoxStrc;
-struct D2TileLibraryEntryStrc;
 struct D2TombCanyonPresetRegionStrc;
 struct D2TooltipTextStrc;
 struct D2TxtLinkStrc;
@@ -311,7 +387,6 @@ struct D2UIFlagInitStrc;
 struct D2UIKeyBindingSetStrc;
 struct D2UIMouseMsgStrc;
 struct D2UberBossImmunityStrc;
-struct D2UnicodeKamapEntryStrc;
 struct D2UniqueCandidatePoolStrc;
 struct D2UniqueItemsTxt;
 struct D2UniqueNameTablesStrc;
@@ -343,7 +418,6 @@ struct GlFloorCacheNodeStrc;
 struct GlFloorCacheStrc;
 struct GlSubtileCacheNodeStrc;
 struct GlSubtileCacheStrc;
-struct GlTextureCacheNodeStrc;
 struct IDirect3DInterface7;
 struct IDirect3DTexture2;
 struct IDirect3DVertexBuffer;
@@ -368,7 +442,6 @@ struct WardenClientVtable;
 struct ct_data;
 struct deflate_state;
 struct static_tree_desc;
-typedef BOOL (*fpRequiredUserAction)();
 typedef BOOL (__fastcall *D2CubeSpecialOutput)(::SGAMEDATA * pGame, D2UnitStrc * pUnit);
 typedef BOOL (__fastcall *D2ItemSpellDestroy)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pItem, D2UnitStrc * pTarget, int nX, int nY, eD2Skills eD2Skill);
 typedef BOOL (__fastcall *D2ItemSpellInit)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pItem, D2UnitStrc * pTarget, int nX, int nY, eD2Skills eD2Skill);
@@ -388,10 +461,7 @@ typedef BOOL (__fastcall *fnSendChangeEmail)(char * szAcct, char * szOld, char *
 typedef BOOL (__fastcall *fnSendResetPassword)(char * szAcct, char * szEmail);
 typedef BOOL (__fastcall *fnWaitForChangePassword)(uint32_t * pOut);
 typedef BOOL (__fastcall *fnWaitForCreateAccount)(uint32_t * pOut);
-typedef BOOL (__fastcall *fpDrawGroundTile)(D2TileLibraryEntryStrc * a1, int a2, int a3, D2GfxLightExStrc * a4);
 typedef BOOL (__fastcall *fpLevelDataEntry)(D2DrlgLevelPlacementStrc * pLevelUnknown);
-typedef BOOL (__fastcall *fpLoadAllMediaMpqFiles)(::fpRequiredUserAction fpInsertPlayCd, ::fpRequiredUserAction fpInsertExpansionCd, int32_t nZero, D2IniConfigStrc * D2IniData);
-typedef BOOL (__fastcall *fpLoadVideoMpqFiles)(::fpRequiredUserAction fpRequiredUserAction, int32_t nZero, BOOL bExpansion);
 typedef BOOL (__fastcall *pfnComCallback)(uint32_t dwCbArg1, uint32_t dwCbArg2, char * szText1, char * szText2);
 typedef BOOL (__stdcall *OnPress)(D2ControlMsg * pControlMsg);
 typedef BOOL (__stdcall *SCMDCALLBACK)(CMDPARAMS * pParams, char * szCmdLine);
@@ -427,12 +497,9 @@ typedef FxBool (__stdcall *grSstWinClose)(GrContext_t context);
 typedef FxU32 (__stdcall *grTexMinAddress)(GrChipID_t tmu);
 typedef FxU32 (__stdcall *grTexTextureMemRequired)(FxU32 evenOdd, GrTexInfo * info);
 typedef GrProc (__stdcall *grGetProcAddress)(char * procName);
-typedef HANDLE (__fastcall *fnConnectToBattleNet)();
 typedef bool (__fastcall *fnObjectClientFn)(D2UnitStrc * pUnit);
-typedef bool (__fastcall *pfnAiMapDirectionHandler)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, void * pAiParam, D2PathPosStrc * nSeed);
+typedef bool (__fastcall *pfnAiMapDirectionHandler)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, void * pAiParam, uint32_t nSeed);
 typedef char (__stdcall *fnGetProtocolVersionChar)();
-typedef char * (__fastcall *fnSendGetChannelList)(int nProduct);
-typedef char * (__fastcall *fnSendQueryAdURL)(uint32_t dwParam);
 typedef char * (__stdcall *grGetString)(FxU32 pname);
 typedef eD2ClientAppMode (__stdcall *fnClientAppModeProc)();
 typedef eD2ServerIncomingStatus (__fastcall *D2NET_SERVER_CLTtoD2GS)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, char * pBytes, uint32_t nSize);
@@ -445,7 +512,6 @@ typedef int (__fastcall *fnCacheFreeMem)(void * pMem);
 typedef int (__fastcall *fnDequeueMessage)(int * pTypeOut, void * pBufOut);
 typedef int (__fastcall *fnEnterChatAndJoinChannel)(char * szUser, char * szStat, char * szAcct, char * szChan, uint32_t dwFlags);
 typedef int (__fastcall *fnGetStateAndClear)(int * pOut);
-typedef int (__fastcall *fnGetStoredReadUserData)(int nRow, int nCol, char * * ppOut, int * nMax);
 typedef int (__fastcall *fnSendChangePassword)(char * szUser, char * szOld, char * szNew);
 typedef int (__fastcall *fnSendClickAd)(uint32_t dwAdId, int nParam);
 typedef int (__fastcall *fnSendCreateAccount)(char * szUser, char * szPass);
@@ -453,8 +519,6 @@ typedef int (__fastcall *fnSendLogonRequest)(char * szUser, char * szPass);
 typedef int (__fastcall *fnSendNewsInfo)(uint32_t dw1, uint32_t dw2);
 typedef int (__fastcall *fpMissileSrvDoFuncData)(D2UnitStrc * pUnit, void * pContext);
 typedef int (__fastcall *pfnSkillCalcOp)(int32_t nOperand1, int32_t nOperand2, uint32_t nOperand3, void * pContext);
-typedef int (__fastcall *pfnTextScrollComplete)(void * pUserParam, uint32_t nReason, int bDismissed);
-typedef int (__stdcall *ChatDlgCallback)(D2ControlMsg * pControlMsg);
 typedef int (__stdcall *D2NpcMenuOptionFunc)();
 typedef int (__stdcall *fnGetDownloadProgress)();
 typedef int (__stdcall *fnGetGameVersion)();
@@ -462,13 +526,11 @@ typedef int (__stdcall *fnSendCheckAd)();
 typedef int (__stdcall *fnSendLeaveChat)();
 typedef int (__stdcall *fnSendLeaveGame)();
 typedef int (__stdcall *pfnSFileReadError)(void * pnBytesRead, uint32_t dwLastError, int32_t nRetryCount);
-typedef int32_t (*fpProfCoreInitCb)();
 typedef int32_t (__fastcall *D2MissileCltHitFunc)(D2UnitStrc * pMissile, D2UnitStrc * pTarget);
 typedef int32_t (__fastcall *D2ObjectPopulateFn)(::SGAMEDATA * pGame, D2RoomStrc * pRoom, D2DrlgRoomCoordsStrc * pRoomCoords);
-typedef int32_t (__fastcall *D2PropertyHandler_fn)(int32_t nType, D2UnitStrc * pUnit, D2UnitStrc * pItemUnit, D2SetsTxtFStrc * pProperty, eD2UnitStat eStatCode, int32_t nParam2, int32_t nParam3, uint32_t nParam, D2UnitStrc * pContextUnit);
+typedef int32_t (__fastcall *D2PropertyHandler_fn)(int32_t nType, D2UnitStrc * pUnit, D2UnitStrc * pItemUnit, D2SetsTxtFStrc * pProperty, eD2UnitStat eStatCode, int32_t nParam2, int32_t nParam3, uint32_t nParam, int32_t nContext);
 typedef int32_t (__fastcall *fnAppModeRun)(D2IniConfigStrc * pD2IniConfig);
 typedef fnAppModeRun * (__fastcall *D2AppModeInitFunc)(HMODULE hModule);
-typedef int32_t (__fastcall *fnCUnitEventCallback)(int nClientEvent, D2UnitStrc * pOwnerUnit, D2UnitStrc * pMissile, uint32_t dwArg2, uint32_t dwEventData1, uint32_t dwEventData2);
 typedef int32_t (__fastcall *pfnDeflateBlockFunc)(deflate_state * pDeflateState, int32_t nFlush);
 typedef int32_t (__fastcall *pfnPlrModeProcess)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, int32_t nArg1, int32_t nArg2);
 typedef uint32_t (__fastcall *D2ObjModeHandler_fn)(::SGAMEDATA * pGame, D2UnitStrc * pObject, int32_t nModeFlags);
@@ -476,7 +538,7 @@ typedef uint32_t (__fastcall *EQUIP_Handler)(D2UnitStrc * param_1, D2InventorySt
 typedef uint32_t (__fastcall *fnInitiatePatchDownload)(uint8_t * pbData, uint32_t nSize);
 typedef uint32_t (__fastcall *fnSendReadUserData)(char * szAccount, uint32_t nCount, uint32_t nRequestId, char * * pszKeys);
 typedef uint32_t (__fastcall *fnSendWriteUserData)(char * szAccount, uint32_t nCount, char * * pszKeys, char * * pszValues);
-typedef uint32_t (__fastcall *fpCelDecodeCachedByFormat)(::CELLIST * pDCCSrc, DC6 * pDCCDest);
+typedef uint32_t (__fastcall *fpCelDecodeCachedByFormat)(int32_t pDCCSrc, DC6 * pDCCDest);
 typedef uint32_t (__fastcall *fpMonsterAiForEach)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pOther, D2MonsterAiParameterStruct * test);
 typedef uint64_t (__stdcall *pfnSymGetModuleBase64)(HANDLE hProcess, DWORD qwAddrLow, DWORD qwAddrHigh);
 typedef uint64_t (__stdcall *pfnSymLoadModule64)(HANDLE hProcess, HANDLE hFile, char * ImageName, char * ModuleName, DWORD BaseOfDllLow, DWORD BaseOfDllHigh, DWORD SizeOfDll);
@@ -508,18 +570,14 @@ typedef void (__fastcall *fnSendJoinChannel)(char * szChan, int nFlags, int nPar
 typedef void (__fastcall *fnSendNotifyJoin)(char * szName, char * szPass);
 typedef void (__fastcall *fnSendSetEmail)(char * szEmail);
 typedef void (__fastcall *fnSendStartAdvEx3)(char * szName, char * szPass, char * szDesc, int nFlags);
-typedef void (__fastcall *fnSetLoggingFlag)(D2IniConfigStrc * dwParam);
 typedef void (__fastcall *fnShrineClientOverlayUpdate)(D2UnitStrc * pUnit, D2ShrinesTxt * pShrinesTxt);
-typedef void (__fastcall *fnShrineServerActivate)(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, D2ShrinesTxt * dwParam);
+typedef void (__fastcall *fnShrineServerActivate)(D2UnitStrc * pUnit, D2UnitStrc * pPlayer, uint32_t dwParam);
 typedef void (__fastcall *fnSpriteCacheEntryRelease)(void * pHashEntry);
 typedef void (__fastcall *fpCelAllocDecodedByFormat)(DC6 * pDCC, DC6 * pDCCDest, uint8_t * pPaletteRemapFunc, uint32_t dwColorKey);
-typedef void (__fastcall *fpCelDrawFrameByFormat)(uint8_t * pImageHeader, uint8_t * pbDecompressedOutput, int32_t nDrawX, int32_t nClipLeft, int32_t nClipRight, uint32_t nDstPitch, int32_t nStartRow, int32_t nRowCount, int32_t pLookupTable1, uint8_t * pBlendTable, int32_t pLookupTable2);
+typedef void (__fastcall *fpCelDrawFrameByFormat)(uint8_t * pImageHeader, uint8_t * pbDecompressedOutput, int32_t nDrawX, int32_t nClipLeft, int32_t nClipRight, uint32_t nDstPitch, int32_t nStartRow, int32_t nRowCount, int32_t pLookupTable1, int32_t pBlendTable, int32_t pLookupTable2);
 typedef void (__fastcall *fpCelRemapFrameByFormat)(DC6Block * pFrame, BYTE * pPaletteRemap);
 typedef void (__fastcall *fpD2ShrineTableHandler)(D2ObjectOperateFnArg * pArguments, D2ShrinesTxt * pTxtShrines);
-typedef void (__fastcall *fpDrawBlendedVisTile)(uint8_t * a1, int a2, int a3, int a4);
-typedef void (__fastcall *fpDrawRoofTile)(int a1, int a2, int a3, uint32_t * a4, BYTE a5);
 typedef void (__fastcall *fpDrawVisTile)(uint8_t * pbTileData, int32_t nScreenX, int32_t nScreenY);
-typedef void (__fastcall *fpDrawWallTile)(int a1, int a2, int a3, uint32_t * a4);
 typedef void (__fastcall *fpFillYBufferTable)(void * ppvBits, int nWidth, int nHeight, int a4);
 typedef void (__fastcall *fpMonsterUModHandler)(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint32_t dwParam1, int32_t nParam2);
 typedef void (__fastcall *fpServerInitFunctions)(D2IniConfigStrc * pIni);
@@ -540,14 +598,16 @@ typedef void (__fastcall *pfnRoomExActivationHandler)(D2RoomExStrc * pRoomEx);
 typedef void (__fastcall *pfnRoomExDeactivationHandler)(D2RoomExStrc * pRoomEx);
 typedef void (__fastcall *pfnSCompCodec)(void * pDst, uint32_t * pnDstLen, void * pSrc, uint32_t nSrcLen, uint32_t dwParam);
 typedef void (__fastcall *pfnSCompEncodeCodec)(short * pDst, uint32_t * pnDstLen, short * pSrc, uint32_t nSrcLen, void * pUserData, uint32_t nBitsPerSample);
-typedef void (__fastcall *pfnSpriteCacheValidate)(eD2UnitType eUnitType, int32_t nClassId, int32_t nMode);
+typedef void (__fastcall *pfnSpriteCacheValidate)(void * pCelContext, void * pCelData, void * pFrameInfo);
 typedef void (__stdcall *D2AppModeShutdownFunc)();
 typedef void (__stdcall *D2ClientQuestEventFn)();
+typedef void (__stdcall *D2WinWndHandlerFn)(D2UIMouseMsgStrc * pMsg);
 typedef void (__stdcall *fnD2InitUIFlagFunction)(D2UIMouseMsgStrc * param_1);
 typedef void (__stdcall *fnDecodeCDKeys)();
 typedef void (__stdcall *fnSetDownloadCancelFlag)();
 typedef void (__stdcall *fpD2CursorDraw)();
 typedef void (__stdcall *fpProfCoreRegisterSlotCb)(uint32_t nSlotId, uint8_t * pSlotData, uint32_t dwFlags);
+typedef int32_t (__stdcall *fpProfCoreInitCb)();
 typedef void (__stdcall *grAlphaBlendFunction)(GrAlphaBlendFnc_t rgb_sf, GrAlphaBlendFnc_t rgb_df, GrAlphaBlendFnc_t alpha_sf, GrAlphaBlendFnc_t alpha_df);
 typedef void (__stdcall *grClipWindow)(FxU32 minx, FxU32 miny, FxU32 maxx, FxU32 maxy);
 typedef void (__stdcall *grDepthBufferFunction)(GrCmpFnc_t function);
@@ -573,6 +633,14 @@ typedef void * (__stdcall *fnSendQueryRealms2)();
 typedef void * (__stdcall *pfnSymFunctionTableAccess64)(HANDLE hProcess, DWORD AddrBaseLow, DWORD AddrBaseHigh);
 
 // Full type definitions (used by value in globals)
+#ifndef D2_DEFINED_CLIENT_ID
+#define D2_DEFINED_CLIENT_ID
+struct CLIENT_ID {
+    /* 0x00 */ void * UniqueProcess;
+    /* 0x04 */ void * UniqueThread;
+};
+#endif // D2_DEFINED_CLIENT_ID
+
 #ifndef D2_DEFINED_D2AppModeBootstrapStrc
 #define D2_DEFINED_D2AppModeBootstrapStrc
 struct D2AppModeBootstrapStrc {
@@ -618,6 +686,15 @@ struct D2ClientLightPulseStrc {
     /* 0x28 */ uint32_t bApplied;
 };
 #endif // D2_DEFINED_D2ClientLightPulseStrc
+
+#ifndef D2_DEFINED_D2ClientMonAnimModeEntryStrc
+#define D2_DEFINED_D2ClientMonAnimModeEntryStrc
+struct D2ClientMonAnimModeEntryStrc {
+    /* 0x00 */ int32_t nField0;
+    /* 0x04 */ int32_t nField4;
+    /* 0x08 */ int32_t nField8;
+};
+#endif // D2_DEFINED_D2ClientMonAnimModeEntryStrc
 
 #ifndef D2_DEFINED_D2ClientSpriteLoadStatusStrc
 #define D2_DEFINED_D2ClientSpriteLoadStatusStrc
@@ -833,7 +910,7 @@ struct D2ObjModeFuncEntryStrc {
 #ifndef D2_DEFINED_D2PropertyFuncEntryStrc
 #define D2_DEFINED_D2PropertyFuncEntryStrc
 struct D2PropertyFuncEntryStrc {
-    /* 0x00 */ int32_t (__fastcall *pfnHandler)(int32_t, D2UnitStrc *, D2UnitStrc *, D2SetsTxtFStrc *, eD2UnitStat, int32_t, int32_t, uint32_t, D2UnitStrc *); // Property function handler pointer
+    /* 0x00 */ int32_t (__fastcall *pfnHandler)(int32_t, D2UnitStrc *, D2UnitStrc *, D2SetsTxtFStrc *, eD2UnitStat, int32_t, int32_t, uint32_t, int32_t); // Property function handler pointer
     /* 0x04 */ int32_t nStatCode; // Stat code parameter passed to handler
 };
 #endif // D2_DEFINED_D2PropertyFuncEntryStrc
@@ -889,7 +966,7 @@ struct D2RenderStatisticsStrc {
 #define D2_DEFINED_D2ShrineDispatchEntryStrc
 struct D2ShrineDispatchEntryStrc {
     /* 0x00 */ void (__fastcall *fpClientOverlayUpdate)(D2UnitStrc *, D2ShrinesTxt *); // Called by OBJECT_DispatchShrineClientFunc on client tick — updates GFX overlay state
-    /* 0x04 */ void (__fastcall *fpServerActivate)(D2UnitStrc *, D2UnitStrc *, D2ShrinesTxt *); // Called by OBJECT_HandleWellOpen when player activates shrine/well — server-side spawn or effect
+    /* 0x04 */ void (__fastcall *fpServerActivate)(D2UnitStrc *, D2UnitStrc *, uint32_t); // Called by OBJECT_HandleWellOpen when player activates shrine/well — server-side spawn or effect
     /* 0x08 */ int nOverlayIdActive; // GFX overlay ID shown when shrine is active/charged (-1 = none)
     /* 0x0C */ int nOverlayIdInactive; // GFX overlay ID shown when shrine is depleted/inactive (-1 = none)
     /* 0x10 */ int nSoundId; // Sound ID played when player activates shrine (0 = none)
@@ -993,7 +1070,7 @@ struct __attribute__((packed)) D2UIConfigTabEntryStrc {
 #ifndef D2_DEFINED_D2UIFlagDescStrc
 #define D2_DEFINED_D2UIFlagDescStrc
 struct D2UIFlagDescStrc {
-    /* 0x00 */ uint32_t anDismissMode[38]; // indexed by eD2UIvars; old nDismissMode@0x54 is anDismissMode[0x15]
+    /* 0x00 */ uint32_t anDismissMode[39]; // VP: vanilla-plus grown 38 -> 39 for UI_VANILLAPLUS; old nDismissMode@0x54 is anDismissMode[0x15]. Existing rows' new last column zero-initializes (dismiss action 0 = ignore), so no initializer edits.
 };
 #endif // D2_DEFINED_D2UIFlagDescStrc
 
@@ -1038,6 +1115,7 @@ struct D2UIFlagStrc {
     /* 0x8C */ BOOL HireIcons;
     /* 0x90 */ BOOL MercMenu;
     /* 0x94 */ BOOL UnusedScroll;
+    /* 0x98 */ BOOL VanillaPlus; // VP: vanilla-plus UI_VANILLAPLUS page flag (row 10); keeps (&GFX_bShowUIFlag.Game)[38] in enum order
 };
 #endif // D2_DEFINED_D2UIFlagStrc
 
@@ -1059,6 +1137,15 @@ struct __attribute__((packed)) D2UniqueCandidatePoolStrc {
     /* 0x08 */ D2UniqueCandidateStrc aCandidates[4096];
 };
 #endif // D2_DEFINED_D2UniqueCandidatePoolStrc
+
+#ifndef D2_DEFINED_D2WinWndHandlerStrc
+#define D2_DEFINED_D2WinWndHandlerStrc
+struct D2WinWndHandlerStrc {
+    /* 0x00 */ int32_t nType; // Handler kind, selecting the branch in D2WIN_RegisterWindowHandler @00506c40: 0 message, 1 command, 2 key down, 3 key up.
+    /* 0x04 */ int32_t nMessage; // Windows message id the handler is registered for, e.g. 0x200 WM_MOUSEMOVE.
+    /* 0x08 */ void (__stdcall *pfnCallback)(D2UIMouseMsgStrc *); // Handler. Must stay a POINTER type: emitted as an integer it carries the ORIGINAL binary's address and the call goes nowhere.
+};
+#endif // D2_DEFINED_D2WinWndHandlerStrc
 
 #ifndef D2_DEFINED_D2ZlibExtraLBitsBlOrderStrc
 #define D2_DEFINED_D2ZlibExtraLBitsBlOrderStrc
@@ -1152,6 +1239,123 @@ struct __attribute__((packed)) D2ShrinesTableEntryStrc {
 // Global data (referenced by multiple functions)
 // =============================================================================
 
+extern uint8_t IMAGE_DOS_HEADER__00400000[128];
+// lpDefault parameter of GetPrivateProfileStringA
+extern char lpDefault_006cc837[1];
+extern uint8_t gbChatDlgUpdateMarker;
+extern uint8_t gbFloatConstantBase;
+extern char gpCutsceneVideoFrameBuffer[8];
+// param_2 parameter of wsprintfA
+extern char param_2_006d57bc[3];
+// NOT a D2CharSelStrc: .rdata string pool starting with "*", then "<%s> ", "<%s%s> ", channel messages
+extern char gsCharSelContext[4];
+extern uint8_t gaMonsterDenEnvironmentData;
+extern uint8_t gaWeatherTransitionConstant;
+// NOT a pool manager: .rdata string pool starting with "end". D2PoolManagerStrc (6092 B, correct type, correctly applied at 00800000 and 0088cadc) was misapplied here
+extern char gTxtCompilationMemPool[4];
+extern double gdConst255;
+extern char * gpszPaletteAct1Dat;
+extern char * gpszPaletteAct1Pl2;
+extern char * gpszPaletteActPathFormat;
+extern char * gpszPalDatName;
+extern char * gpszPalPl2Name;
+extern unsigned int gaItemTypeTxtIndexData;
+extern char s_C_006ed5b4[2];
+extern char s_SAM_006fad3c[4];
+extern char s_unknown_006cd5fc[];
+extern char * gaAtlRegistryRootKeys[12];
+extern char * gaLanguageNames_00705000[15];
+extern char * gaMonthAbbreviations[12];
+extern char * gaLanguageNames_0072d994[15];
+extern char * gaLanguageNames_0072d9d0[15];
+extern char * gaLanguageNames_0072da0c[15];
+extern char * gaszLanguageNames[32];
+extern double DOUBLE_0074adb4;
+// CRT x87 dispatch: maps the FXAM condition bits (C3,C2,C1,C0 folded into 4 bits) to a byte offset into the caller's per-class jump table.
+// Provenance: 00698548/006985af MOV EBX,0x74adbc; XLAT; MOVSX; ADD EBX,EDX+0x10; JMP [EBX] (code not yet in a function).
+extern uint8_t gabyFxamClassOffset[16];
+extern unsigned int gaCRT_FPremData_3;
+extern int RENDERER_nWindowWidth;
+extern int RENDERER_nWindowHeight;
+extern int gnGlideWindowHandle;
+extern uint32_t gbBloodFlag;
+extern uint32_t gnFrameDrawCounter;
+extern ::D2GfxHelperStrc * D2GfxRendereInitFunctionsStrc;
+extern unsigned int UINT_0096d6a8;
+extern uint32_t LastErrorValue;
+extern uint32_t CountOfOwnedCriticalSections;
+extern void * CsrClientThread;
+extern void * Win32ThreadInfo;
+extern uint32_t User32Reserved[26];
+extern uint32_t UserReserved[5];
+extern void * WOW32Reserved;
+extern uint32_t CurrentLocale;
+extern uint32_t FpSoftwareStatusRegister;
+extern void * SystemReserved1[54];
+extern uint32_t ExceptionCode;
+extern void * ActivationContextStackPointer;
+extern uint8_t SpareBytes[36];
+extern uint32_t TxFsContext;
+extern uint32_t GdiTebBatch;
+extern CLIENT_ID RealClientId;
+extern void * GdiCachedProcessHandle;
+extern uint32_t GdiClientPID;
+extern uint32_t GdiCLientTID;
+extern void * GdiThreadLocalInfo;
+extern void * Win32ClientInfo[62];
+extern void * glDispatchTable[233];
+extern void * glReserved1[29];
+extern void * glReserved2;
+extern void * glSectionInfo;
+extern void * glSection;
+extern void * glTable;
+extern void * glCurrentRC;
+extern void * glContext;
+extern uint32_t LastStatusValue;
+extern uint16_t StaticUnicodeBuffer[261];
+extern void * DeallocationStack;
+extern void * TlsSlots[64];
+extern void * TlsLinks_Flink;
+extern void * TlsLinks_Blink;
+extern void * Vdm;
+extern void * ReservedForNtRpc;
+extern void * DbgSsReserved[2];
+extern uint32_t HardErrorMode;
+extern void * Instrumentation[9];
+extern GUID ActivityId;
+extern void * SubProcessTag;
+extern void * EtwLocalData;
+extern void * EtwTraceData;
+extern void * WinSockData;
+extern uint32_t GdiBatchCount;
+extern uint32_t IdealProcessorValue;
+extern uint32_t GuaranteedStackBytes;
+extern void * ReservedForPerf;
+extern void * ReservedForOle;
+extern uint32_t WaitingOnLoaderLock;
+extern void * SavedPriorityState;
+extern void * SoftPatchPtr1;
+extern void * ThreadPoolData;
+extern void * TlsExpansionSlots;
+extern uint32_t MuiGeneration;
+extern uint32_t IsImpersonating;
+extern void * NlsCache;
+extern void * pShimData;
+extern uint32_t HeapVirtualAffinity;
+extern void * CurrentTransactionHandle;
+extern void * ActiveFrame;
+extern void * FlsData;
+extern void * PreferredLanguages;
+extern void * UserPrefLanguages;
+extern void * MergedPrefLanguages;
+extern uint32_t MuiImpersonation;
+extern unsigned short CrossTebFlags;
+extern unsigned short SameTebFlags;
+extern void * TxnScopeEnterCallback;
+extern void * TxnScopeExitCallback;
+extern void * TxnScopeContext;
+extern uint32_t LockCount;
+extern void * ResourceRetValue;
 
 namespace D2Game::PLAYER::PlayerModes {
 
@@ -1163,10 +1367,65 @@ namespace D2Common::Drlg::Maze {
 
 } // namespace D2Common::Drlg::Maze
 
+namespace Fog::Src::LogManager {
+
+
+} // namespace Fog::Src::LogManager
+
+namespace Fog::Src::ErrorManager {
+
+
+} // namespace Fog::Src::ErrorManager
+
+namespace Storm::Source::SSignature {
+
+
+} // namespace Storm::Source::SSignature
+
+namespace Fog::Engine::Application {
+
+
+} // namespace Fog::Engine::Application
+
+namespace Fog::Source::SFile {
+
+
+} // namespace Fog::Source::SFile
+
+namespace Fog::Src::DataArrays {
+
+
+} // namespace Fog::Src::DataArrays
+
+namespace Storm::Source::SSTR {
+
+
+} // namespace Storm::Source::SSTR
+
+namespace Fog::Debug {
+
+
+} // namespace Fog::Debug
+
+namespace Storm::Source::SFile {
+
+
+} // namespace Storm::Source::SFile
+
 namespace Fog::BitBuffer {
 
 
 } // namespace Fog::BitBuffer
+
+namespace Storm::Source::SErr {
+
+
+} // namespace Storm::Source::SErr
+
+namespace Storm::Source::SLog {
+
+
+} // namespace Storm::Source::SLog
 
 namespace Storm::_3rdparty::zlib::deflate {
 
@@ -1178,10 +1437,25 @@ namespace D2Launch::CharSel {
 
 } // namespace D2Launch::CharSel
 
+namespace D2Lang::StrTable::strtable {
+
+
+} // namespace D2Lang::StrTable::strtable
+
+namespace D2Multi::ChatDlg {
+
+
+} // namespace D2Multi::ChatDlg
+
 namespace D2Client::ClientModeInGame {
 
 
 } // namespace D2Client::ClientModeInGame
+
+namespace D2Common::Txt::Cube {
+
+
+} // namespace D2Common::Txt::Cube
 
 namespace D2Common::DATATBLS::LvlTbls {
 
@@ -1198,6 +1472,11 @@ namespace D2Client::UI::Inv {
 
 } // namespace D2Client::UI::Inv
 
+namespace D2Common::DATATBLS::DataTbls {
+
+
+} // namespace D2Common::DATATBLS::DataTbls
+
 namespace D2Client::Warden::NWardenClient {
 
 
@@ -1207,6 +1486,31 @@ namespace D2Client::Warden {
 
 
 } // namespace D2Client::Warden
+
+namespace D2Client::Sound::SoundHdr {
+
+
+} // namespace D2Client::Sound::SoundHdr
+
+namespace D2Client::UI::ui {
+
+
+} // namespace D2Client::UI::ui
+
+namespace D2Client::UI::npcmenu {
+
+
+} // namespace D2Client::UI::npcmenu
+
+namespace D2Client::UI::QuestLog {
+
+
+} // namespace D2Client::UI::QuestLog
+
+namespace D2Sound::Src::D2SoundSmp {
+
+
+} // namespace D2Sound::Src::D2SoundSmp
 
 namespace D2Client::UI {
 
@@ -1273,20 +1577,25 @@ namespace Bnclient::BnSend {
 
 } // namespace Bnclient::BnSend
 
+namespace Bnclient::BnDownload {
+
+
+} // namespace Bnclient::BnDownload
+
 namespace Bnclient::_net_sid {
 
 
 } // namespace Bnclient::_net_sid
 
-namespace D2Lang::StrTable::strtable {
-
-
-} // namespace D2Lang::StrTable::strtable
-
 namespace D2Game::GAME::Event::Dispatch {
 
 
 } // namespace D2Game::GAME::Event::Dispatch
+
+namespace D2Game::UNIT::SUnitDmg {
+
+
+} // namespace D2Game::UNIT::SUnitDmg
 
 namespace D2Game::GAME::Event::Dispatch::Player {
 
@@ -1328,10 +1637,25 @@ namespace D2Common::Chat::Ignorelist::IgnoreList {
 
 } // namespace D2Common::Chat::Ignorelist::IgnoreList
 
+namespace D2Common {
+
+
+} // namespace D2Common
+
 namespace D2Common::DATATBLS::ItemTbls {
 
 
 } // namespace D2Common::DATATBLS::ItemTbls
+
+namespace D2Common::Monsters::MONSTERS {
+
+
+} // namespace D2Common::Monsters::MONSTERS
+
+namespace D2Common::Drlg::Preset {
+
+
+} // namespace D2Common::Drlg::Preset
 
 namespace D2Common::Drlg::OutSiege {
 
@@ -1353,30 +1677,72 @@ namespace D2Common::Drlg {
 
 } // namespace D2Common::Drlg
 
+namespace Define_the_symbol__ATL_MIXED {
+
+// meta pointer for Define_the_symbol__ATL_MIXED::Thank_you::vftable
+extern void* vftable_meta_ptr;
+
+} // namespace Define_the_symbol__ATL_MIXED
+
 namespace Storm::Source {
 
 
 } // namespace Storm::Source
+
+namespace Fog::File {
+
+
+} // namespace Fog::File
 
 namespace Fog::_3rdparty::crashy {
 
 
 } // namespace Fog::_3rdparty::crashy
 
+namespace D2Hell {
+
+
+} // namespace D2Hell
+
 namespace Fog::Source::SSComp {
 
 
 } // namespace Fog::Source::SSComp
 
-namespace Storm::Source::SFile {
+namespace Class::FILEREC {
 
+// struct FILEREC RTTI Type Descriptor
+extern uint8_t RTTI_Type_Descriptor;
 
-} // namespace Storm::Source::SFile
+} // namespace Class::FILEREC
 
-namespace Storm::Source::SErr {
+namespace Class::EVENTREC {
 
+// struct EVENTREC RTTI Type Descriptor
+extern uint8_t RTTI_Type_Descriptor;
 
-} // namespace Storm::Source::SErr
+} // namespace Class::EVENTREC
+
+namespace Class::REQUEST {
+
+// struct REQUEST RTTI Type Descriptor
+extern uint8_t RTTI_Type_Descriptor;
+
+} // namespace Class::REQUEST
+
+namespace Class::AUDIOSTREAM {
+
+// struct AUDIOSTREAM RTTI Type Descriptor
+extern uint8_t RTTI_Type_Descriptor;
+
+} // namespace Class::AUDIOSTREAM
+
+namespace Class::HANDLER {
+
+// struct HANDLER RTTI Type Descriptor
+extern uint8_t RTTI_Type_Descriptor;
+
+} // namespace Class::HANDLER
 
 namespace D2Launch::MainMenus {
 
@@ -1418,10 +1784,10 @@ namespace D2Client::Engine {
 
 } // namespace D2Client::Engine
 
-namespace D2Client::UI::ui {
+namespace D2Client::GAME::SCmd {
 
 
-} // namespace D2Client::UI::ui
+} // namespace D2Client::GAME::SCmd
 
 namespace D2Client::UNIT::CUnit {
 
@@ -1438,15 +1804,15 @@ namespace D2Client::GAME::Rendering {
 
 } // namespace D2Client::GAME::Rendering
 
-namespace D2Client::UI::QuestLog {
+namespace D2Client::UI::Panel {
 
 
-} // namespace D2Client::UI::QuestLog
+} // namespace D2Client::UI::Panel
 
-namespace D2Client::UI::npcmenu {
+namespace D2Client::UI::Party {
 
 
-} // namespace D2Client::UI::npcmenu
+} // namespace D2Client::UI::Party
 
 namespace D2Client::NPC {
 
@@ -1467,6 +1833,11 @@ namespace D2Client::UNIT::UnitSnd {
 
 
 } // namespace D2Client::UNIT::UnitSnd
+
+namespace D2Client::UI::SkillDesc {
+
+
+} // namespace D2Client::UI::SkillDesc
 
 namespace D2Win::Src::D2Comp {
 
@@ -1556,9 +1927,11 @@ namespace D2Game::Quests::QUESTS::A1Q0 {
 namespace D2Game::Quests::QUESTS::A1Q1 {
 
 
+
 } // namespace D2Game::Quests::QUESTS::A1Q1
 
 namespace D2Game::Quests::QUESTS::A1Q2 {
+
 
 
 } // namespace D2Game::Quests::QUESTS::A1Q2
@@ -1601,6 +1974,7 @@ namespace D2Game::Quests::QUESTS::A2Q0 {
 namespace D2Game::Quests::QUESTS::A2Q1 {
 
 
+
 } // namespace D2Game::Quests::QUESTS::A2Q1
 
 namespace D2Game::Quests::QUESTS::A2Q2 {
@@ -1637,6 +2011,11 @@ namespace D2Game::Quests::QUESTS::A2Q8 {
 
 
 } // namespace D2Game::Quests::QUESTS::A2Q8
+
+namespace D2Game::Monster::Create {
+
+
+} // namespace D2Game::Monster::Create
 
 namespace D2Game::Quests::QUESTS::A4Q0 {
 
@@ -1733,11 +2112,6 @@ namespace D2Common::Chat::Ignorelist::StringEntryNode {
 
 } // namespace D2Common::Chat::Ignorelist::StringEntryNode
 
-namespace D2Common {
-
-
-} // namespace D2Common
-
 namespace D2Common::Chat::Ignorelist {
 
 
@@ -1748,10 +2122,25 @@ namespace D2Common::ITEMS::Items {
 
 } // namespace D2Common::ITEMS::Items
 
+namespace D2Common::Logging::ProfCore {
+
+
+} // namespace D2Common::Logging::ProfCore
+
+namespace D2Common::DUNGEON::Dungeon {
+
+
+} // namespace D2Common::DUNGEON::Dungeon
+
 namespace D2Common::Environment {
 
 
 } // namespace D2Common::Environment
+
+namespace D2Common::Units {
+
+
+} // namespace D2Common::Units
 
 namespace D2Common::Merc {
 
@@ -1783,10 +2172,10 @@ namespace D2Gdi::Renderer::Windowed {
 
 } // namespace D2Gdi::Renderer::Windowed
 
-namespace Fog::Debug {
+namespace Storm::Source::SEVT {
 
 
-} // namespace Fog::Debug
+} // namespace Storm::Source::SEVT
 
 namespace D2Launch::Launcher {
 
@@ -1923,11 +2312,6 @@ namespace Bnclient::Bnet {
 
 } // namespace Bnclient::Bnet
 
-namespace Bnclient::BnDownload {
-
-
-} // namespace Bnclient::BnDownload
-
 namespace Bnclient {
 
 
@@ -1978,16 +2362,6 @@ namespace D2Common::DATATBLS::BeltsTbls {
 
 } // namespace D2Common::DATATBLS::BeltsTbls
 
-namespace D2Common::Drlg::Preset {
-
-
-} // namespace D2Common::Drlg::Preset
-
-namespace D2Common::Txt::Cube {
-
-
-} // namespace D2Common::Txt::Cube
-
 // =============================================================================
 // Globals recovered from multi-function body references
 // (classified static-local by xref count, but named in other bodies too)
@@ -2009,30 +2383,153 @@ namespace D2Client::UNIT::CUnit {
 // =============================================================================
 
 // Ghidra names for untyped data (the address is in the name)
+extern char s_14_006cc77c[];
 extern char s_207_82_87_133_0070f130[];
+extern char s_AppID_006fad8c[];
+extern char s_Assertion_Failure_006ccb6c[];
 extern char s_BLIZZARDKEY_006cef6c[];
+extern char s_BNNews_D2DV_006df210[];
+extern char s_Blizzard_Entertainment__Inc__006deb80[];
+extern char s_CLSID_006fad84[];
+extern char s_CLen_006e163c[];
+extern char s_Cold_006e164c[];
+extern char s_Component_Categories_006fad6c[];
+extern char s_D2X_INTRO__s_BIK_006d913c[];
+extern char s_D2_LNG_006d5ee0[];
 extern char s_DIABLO2SRV_007065dc[];
+extern char s_Deadlock_006ccb34[];
+extern char s_Diablo_2_EXE_006cc838[];
+extern char s_Diablo_II_006cc8b8[];
 extern char s_Direct3D_Enumeration_0074c058[];
+extern char s_Do_you_wish_to_terminate_the_appl_006cf1f4[];
+extern char s_ERROR___u__0x_08x__006cf2e0[];
 extern char s_Enumeration_Class_0074c044[];
 extern char s_Error_1__Diablo_II_is_unable_to_p_0072daa8[];
 extern char s_Error_1__Diablo_II_is_unable_to_p_0072daf0[];
+extern char s_FLen_006e1634[];
+extern char s_FileType_006fad60[];
+extern char s_File_Read_Error_006ccb94[];
+extern char s_File_Write_Error_006ccb80[];
+extern char s_File___s_Line___d__006cf284[];
+extern char s_Fire_006e165c[];
+extern char s_Font16_006dc970[];
+extern char s_Font24_006dc930[];
+extern char s_Font30_006dc968[];
+extern char s_Font42_006dc960[];
+extern char s_Font6_006dc938[];
+extern char s_Font8_006dc978[];
+extern char s_FontExocet10_006dc910[];
+extern char s_FontExocet8_006dc8f4[];
+extern char s_FontFormal10_006dc950[];
+extern char s_FontFormal11_006dc920[];
+extern char s_FontFormal12_006dc940[];
+extern char s_FontInGameChat_006dc8d0[];
+extern char s_FontRidiculous_006dc900[];
+extern char s_Function___s__006cf274[];
+extern char s_Game_006d5b14[];
+extern char s_Gaunt_006d6b80[];
+extern char s_Halt_006ccb64[];
+extern char s_Handle___s__006cf25c[];
+extern char s_Hardware_006fad48[];
+extern char s_Interface_006fad54[];
+extern char s_Mana_006e1614[];
+extern char s_Mime_006fad40[];
+extern char s_Missing_Dll_006ccb50[];
+extern char s_No_Error_006ccbc8[];
+extern char s_Object___s__006cf268[];
+extern char s_Out_of_Memory_Error_006ccba4[];
 extern char s_PKWARE_Data_Compression_Library_f_0074be60[];
+extern char s_PLen_006e162c[];
+extern char s_Press_OK_to_terminate_the_applica_006cf220[];
+extern char s_Program___s__006cf298[];
+extern char s_ReallyTheLastSucker_006dc8e0[];
+extern char s_Registry_Error_006ccb40[];
+extern char s_SECURITY_006fad30[];
+extern char s_SYSTEM_006fad28[];
+extern char s_Software_006d71ec[];
+extern char s_Stupid_Lng_cpp_error__006d5ea8[];
+extern char s_The_syntax_of_the_command_is_inco_006fcbe4[];
+extern char s_This_application_has_encountered__006cf2a8[];
+extern char s_TypeLib_006fad20[];
+extern char s_Unable_to_start_LNG_manager__006d5ec0[];
+extern char s_Unknown_Error_006ccbb8[];
+extern char s_Warning_006ccb5c[];
+extern char s___006d727c[];
+extern char s___H__006ed5a4[];
+extern char s___N__006ed59c[];
+extern char s_____006ccb30[];
 extern char s__not_xlated_call_ken_w_00730520[];
+extern char s__s_palette_act_d__s_006dc7d0[];
+extern char s_block_006e1730[];
+extern char s_blocks_006e1738[];
 extern char s_buffer_error_006d37e0[];
 extern char s_buysell_006d6b50[];
+extern char s_client_006cc920[];
+extern char s_cmncof_a1_d2_006d6c44[];
+extern char s_cmncof_a2_d2_006d6c54[];
+extern char s_cmncof_a3_d2_006d6c64[];
+extern char s_cmncof_a4_d2_006d6c74[];
+extern char s_cmncof_a6_d2_006d6c84[];
+extern char s_d2_promo_bik_006d91ac[];
+extern char s_d2data_mpq_006dc770[];
+extern char s_d2exp_mpq_006cd3a0[];
 extern char s_data_error_006d3804[];
+extern char s_data_global_music_act1_caves_wav_006dea30[];
+extern char s_data_global_music_act1_crypt_wav_006de9e4[];
+extern char s_data_global_music_act1_monastery__006dea08[];
+extern char s_data_global_music_act2_desert_wav_006de8c4[];
+extern char s_data_global_music_act2_harem_wav_006de9c0[];
+extern char s_data_global_music_act2_sewer_wav_006de8a0[];
+extern char s_data_global_music_act2_tombs_wav_006de99c[];
+extern char s_data_global_music_act3_kurast_wav_006de87c[];
+extern char s_data_global_music_act3_kurastsewe_006de950[];
+extern char s_data_global_music_act3_spider_wav_006de978[];
+extern char s_data_global_music_act4_diablo_wav_006de858[];
+extern char s_data_global_music_act5_icecaves_w_006de90c[];
+extern char s_data_global_music_act5_xtemple_wa_006de8e8[];
+extern char s_data_global_music_common_options__006dea54[];
+extern char s_data_global_music_introedit_wav_006de930[];
+extern char s_data_local_font__s_default_map_006e02d8[];
 extern char s_data_local_lng__s_expansionstring_006e028c[];
 extern char s_data_local_lng__s_patchstring_tbl_006e02b4[];
+extern char s_data_local_lng__s_string_tbl_006e02f8[];
 extern char s_dialogbackground_00727498[];
+extern char s_expand_006cc8f8[];
 extern char s_file_error_006d3820[];
+extern char s_grasp_006d6b78[];
 extern char s_incompatible_version_006d37c8[];
 extern char s_insufficient_memory_006d37f0[];
+extern char s_launcher_006cc900[];
+extern char s_mode_006d5bc4[];
+extern char s_modstate0_006cc928[];
+extern char s_multiplayer_006cc90c[];
 extern char s_need_dictionary_006d3838[];
+extern char s_ohand_006d6b70[];
+extern char s_orotate_006d6b68[];
+extern char s_pal_dat_006dc7c8[];
+extern char s_pal_pl2_006dc7c0[];
+extern char s_palette_act1_pal_dat_006dc7fc[];
+extern char s_palette_act1_pal_pl2_006dc7e4[];
 extern char s_palette_fechar_pal_dat_006d39e8[];
 extern char s_palette_fechar_pal_pl2_006d39d0[];
 extern char s_palette_sky_pal_dat_006d39bc[];
 extern char s_palette_sky_pal_pl2_006d39a8[];
+extern char s_patch_d2_mpq_006dc728[];
+extern char s_ppress_006d6b60[];
+extern char s_profile_description_006d4eb8[];
+extern char s_profile_location_006d4ecc[];
+extern char s_profile_sex_006d4ee0[];
+extern char s_protate_006d6b58[];
+extern char s_screen01_006d5d10[];
+extern char s_screen02_006d5d04[];
+extern char s_screen03_006d5cf8[];
+extern char s_screen04_006d5cec[];
+extern char s_screen05_006d5ce0[];
+extern char s_screen06_006d5cd4[];
+extern char s_screen07_006d5cc8[];
+extern char s_screen08_006d5cbc[];
+extern char s_screen09_006d5cb0[];
+extern char s_screen10_006d5ca4[];
+extern char s_server_006cc918[];
 extern char s_stream_end_006d382c[];
 extern char s_stream_error_006d3810[];
-extern char s_unknown_006cd5fc[];
-#undef D2_GATE_FROM_ROOT

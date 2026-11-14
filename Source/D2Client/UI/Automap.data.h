@@ -21,7 +21,7 @@ extern int nAutoMapCenters;
 extern int nAutoMapParty;
 extern uint32_t AutoMapPartyNames;
 extern uint32_t MiniMapType;
-extern uint16_t * pClientAutomapCellActual;
+extern void * pClientAutomapCellActual;
 extern size_t nAutomapCellListSize;
 extern DC6 * pAutoMapDC6[4];
 extern int nAutoMapDC6FrameCount[4];

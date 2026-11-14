@@ -166,7 +166,7 @@ void __stdcall INPUT_HandlePrimaryClickUp(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall INPUT_HandleRightClick(struct D2UIMouseMsgStrc * pMsg);
 // Process queued secondary click: build flags (run/modifier) and call ClickMap(4,x,y,flags).
 void __stdcall ProcessQueuedSecondaryClick();
-void Unreferenced_0044c340();
+int Unreferenced_0044c340();
 void __stdcall INPUT_HandleSecondaryClick(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall INPUT_HandleMouseWheel(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall INPUT_HandleScrollDown(struct D2UIMouseMsgStrc * pMsg);
@@ -316,7 +316,7 @@ uint32_t __stdcall GAMEDATA_GetFpsDrawn();
 uint32_t __stdcall GetFPSSkip();
 int32_t __stdcall gnRecordingIndex();
 uint32_t __stdcall GetStepsOfMissileMovement();
-struct D2PoolManagerStrc * __stdcall GetStepsOfMissileMovement_Unref_0044db20();
+uint32_t __stdcall GetStepsOfMissileMovement_Unref_0044db20();
 eD2GSGameType __stdcall CLIENT_GetD2GSGameType();
 void __fastcall GAMEDATA_ExtendTimeout(int32_t nDelayMs);
 void __stdcall GAMEDATA_LoadActTiles(uint32_t nAct);

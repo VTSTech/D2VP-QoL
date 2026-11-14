@@ -35,7 +35,7 @@ struct _CONTEXT;
 #endif // _WIN32
 #ifndef RECON_FPTD_pfnTextScrollComplete
 #define RECON_FPTD_pfnTextScrollComplete
-typedef int (__fastcall *pfnTextScrollComplete)(void * pUserParam, uint32_t nReason, int bDismissed);
+typedef int (__fastcall *pfnTextScrollComplete)(void * pUserParam, uint32_t nReason, void * pDismissCallback);
 #endif
 
 struct ScreenMessage_t;
@@ -126,7 +126,7 @@ void __fastcall TEXT_DrawTextBoxAtPosition(struct D2TextBoxStrc * pTextBox, int3
 void __stdcall TEXT_OnClickCloseNpcDialog(struct D2UIMouseMsgStrc * pMsg);
 void __fastcall TEXT_SetNpcMenuSelection(struct D2UnitStrc * pUnit);
 void __stdcall TEXT_ClearNpcMenuSelection();
-void __fastcall Unreferenced_0049da60(int bRegister);
+int __fastcall Unreferenced_0049da60(int param_1);
 int __fastcall Unreferenced_0049dac0(uint8_t * param_1);
 int __fastcall Unreferenced_0049dae0(struct D2TextBoxStrc * param_1, struct D2CoordStrc * param_2);
 struct ScreenMessage_t * __fastcall TEXT_AllocScreenMessage(struct ScreenMessage_t * ppwszText);
@@ -142,8 +142,8 @@ void __fastcall TEXT_SetScrollCompleteCallback(pfnTextScrollComplete pfnCallback
 void __stdcall TEXT_OnPanelUnregister_NoOp_Unref_0049e7f0();
 void __stdcall TEXT_OnPanelUnregister_NoOp_Unref_0049e800();
 void __stdcall TEXT_SetTextBoxExclusionRect();
-void Unreferenced_0049e860();
-uint32_t __stdcall TEXT_GetOverheadGlobalPointer_Unref_0049e8a0();
+int Unreferenced_0049e860();
+struct D2GSPacketSrv0x27_TextStrc * __stdcall TEXT_GetOverheadGlobalPointer_Unref_0049e8a0();
 struct D2UnitStrc * __stdcall TEXT_GetOverheadSpeakerUnit();
 // Handles the 0x5a event message packet: switches on pMessageCtx->nMessageType, formats the localized message from the packet's names and argument, and prints it in pMessageCtx->nColor. pEventData is the format argument for message type 0x12, which also shakes the view and plays sound 0x1220.
 void __fastcall TEXT_HandleEventMessagePacket(struct D2Packet0x5aEventStructure * pMessageCtx);

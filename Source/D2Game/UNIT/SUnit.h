@@ -158,7 +158,7 @@ BOOL __fastcall SUNIT_RelocateUnit(::SGAMEDATA * pGame, struct D2UnitStrc * pUni
 void __fastcall TakeStairs(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * pObject);
 // Server-side unit factory. Position is WORLD SUBTILES; bPlaceInRoom=1 routes through UNITS_PlaceUnitInRoom + AllocObjectData.
 // Dispatches on eUnitType through the jump table at 005554e8 (label UNIT_FillFunctions) - a switch, not an array of callbacks. Its six branch labels (FillPlayer/FillMonster/FillObject/FillMissile/FillItem/FillWarp) and the shared tail UNITS_RestoreUnitInRoom are case blocks of this function, not callable functions.
-struct D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int32_t nPosX, int32_t nPosY, ::SGAMEDATA * pGame, struct D2RoomStrc * pRoom, uint8_t bPlaceInRoom, int32_t nInitialMode, uint32_t pMonsterData);
+struct D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int32_t nPosX, int32_t nPosY, ::SGAMEDATA * pGame, struct D2RoomStrc * pRoom, uint8_t bPlaceInRoom, int32_t nInitialMode, void * pMonsterData);
 void __fastcall UNITS_UnlinkUnitFromRoom(struct D2UnitStrc * pUnit, ::SGAMEDATA * pGame, int32_t bDisallowNotify);
 // Fully tears down a server-side unit: unlinks it from its room, frees quest-event data, then dispatches per-type cleanup (player: portals, party, resources, path; monster: target nodes, resources, path; object: object data, static path, unit data; missile: path, missile data; item: inventory+timers, item data; warp: static path). Finishes by freeing unit events, queued packets, and the unit itself. Asserts pGame/pUnit non-null and eUnitType < 6.
 // @sourcefile .\UNIT\SUnit.cpp

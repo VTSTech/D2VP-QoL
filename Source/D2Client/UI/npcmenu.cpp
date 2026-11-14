@@ -3609,8 +3609,8 @@ namespace D2Client::_Interaction {
 eD2NpcUiState geNpcUiState = 0; D2_GLOBAL_GUARD(geNpcUiState, "D2Client::_Interaction::geNpcUiState");
 } // namespace D2Client::_Interaction
 static int PLAYER_CurrentGold = 0; D2_STATIC_GUARD(PLAYER_CurrentGold, "PLAYER_CurrentGold");
-static uint16_t gnNpcMenuRepairCostGold = 0; D2_STATIC_GUARD(gnNpcMenuRepairCostGold, "gnNpcMenuRepairCostGold");
-static int16_t gnNpcMenuTradeActionGold = 0; D2_STATIC_GUARD(gnNpcMenuTradeActionGold, "gnNpcMenuTradeActionGold");
+uint16_t gnNpcMenuRepairCostGold = 0; D2_STATIC_GUARD(gnNpcMenuRepairCostGold, "gnNpcMenuRepairCostGold");
+int16_t gnNpcMenuTradeActionGold = 0; D2_STATIC_GUARD(gnNpcMenuTradeActionGold, "gnNpcMenuTradeActionGold");
 // also labelled: g_nNpcTradeMenuState
 static D2NPCSpeechStrc * gpNpcCurrentSpeech = 0; D2_STATIC_GUARD(gpNpcCurrentSpeech, "gpNpcCurrentSpeech");
 static uint32_t gnNpcMenuCainIdentifyGUID = 0; D2_STATIC_GUARD(gnNpcMenuCainIdentifyGUID, "gnNpcMenuCainIdentifyGUID");
@@ -3655,7 +3655,7 @@ static D2GSPacketSrv0x2A D2GSPacketSrv0x2A_007c0d87 = {}; D2_STATIC_GUARD(D2GSPa
 static uint32_t gnNpcMenuActiveContainer = 0; D2_STATIC_GUARD(gnNpcMenuActiveContainer, "gnNpcMenuActiveContainer");
 static short gaNpcMenuHandledMessageIds[9] = {}; D2_STATIC_GUARD(gaNpcMenuHandledMessageIds, "gaNpcMenuHandledMessageIds");
 static uint16_t gnNpcMenuScrollMessageHead = 0; D2_STATIC_GUARD(gnNpcMenuScrollMessageHead, "gnNpcMenuScrollMessageHead");
-static uint32_t gnNpcMenuShopMode = 0; D2_STATIC_GUARD(gnNpcMenuShopMode, "gnNpcMenuShopMode");
+uint32_t gnNpcMenuShopMode = 0; D2_STATIC_GUARD(gnNpcMenuShopMode, "gnNpcMenuShopMode");
 static uint32_t gnNpcMenuNpcSoundIndex = 0; D2_STATIC_GUARD(gnNpcMenuNpcSoundIndex, "gnNpcMenuNpcSoundIndex");
 static uint32_t gnNpcMenuNpcClassId = 0; D2_STATIC_GUARD(gnNpcMenuNpcClassId, "gnNpcMenuNpcClassId");
 static uint32_t gnNpcMenuDialogX = 0; D2_STATIC_GUARD(gnNpcMenuDialogX, "gnNpcMenuDialogX");

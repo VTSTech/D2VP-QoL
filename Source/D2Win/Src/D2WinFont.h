@@ -99,6 +99,7 @@ void __fastcall D2WINFONT_FreeWordWrapList(void * * ppNodeList);
 struct D2TextLineStrc * __fastcall D2WINFONT_WordWrapString(uint16_t * wszText, int * pnLineCount, int32_t nMaxWidth);
 int32_t __fastcall SetAndReturnLastFont(int32_t nFontId);
 void __stdcall Draw_UnitNameUnderCursor();
+void __stdcall DRAW_CompareTooltipUnderCursor();
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Win)
 struct D2FontGlyphStrc * __fastcall FONT_GetCharWidthCallback(uint16_t wCharCode);
@@ -120,6 +121,7 @@ void __fastcall D2WINFONT_DrawTextWithProgressBar(uint16_t * wszText, uint32_t n
 struct D2TextLineStrc * __stdcall D2WINFONT_AllocWordWrapNode(uint16_t * pwszText, size_t nSize, int32_t bTrimLeadingSpace);
 int __fastcall Unreferenced_00502c40(int param_1);
 void __stdcall D2WINFONT_InitFontSystem();
+void __stdcall DRAW_CompareTooltipUnderCursor();
 void StaticInit_DisplayedTooltip();
 void StaticInit_gwFontHeightDefault();
 void StaticInit_gnFontTableCharWidthCache();

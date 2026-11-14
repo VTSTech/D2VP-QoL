@@ -13,6 +13,7 @@
 # crashy under 3rdparty/, the shared headers in Source/D2Headers/, and the
 # project's own support code in Redivivus/. The executable links every library
 # whole, in the 1.14d link order. A wrong-direction include between modules is
+include(vanilla-plus/cmake/sources.cmake)
 # reported in build/module-gates.tsv; in a module marked strict it is an error.
 #
 # The target is 32-bit Windows and the code assumes the MSVC x86 ABI, so the
@@ -75,8 +76,8 @@ file(GLOB_RECURSE D2_HEADERS CONFIGURE_DEPENDS
 foreach(list D2_SOURCES D2_HEADERS)
     # Vendored C library, built as its own target below; its headers (config.h,
     # internal.h) must not land on the game's include path.
-    list(FILTER ${list} EXCLUDE REGEX "^${D2_ROOT}/3rdparty/libbacktrace/")
-    list(FILTER ${list} EXCLUDE REGEX "^${CMAKE_BINARY_DIR}/")
+    d2_list_exclude_prefix(${list} "${D2_ROOT}/3rdparty/libbacktrace/")
+    d2_list_exclude_prefix(${list} "${CMAKE_BINARY_DIR}")
 endforeach()
 list(SORT D2_SOURCES)
 
@@ -181,7 +182,7 @@ if(REDIVIVUS_MODULE_LIBRARIES)
             continue()
         endif()
         set(srcs ${D2_UNCLAIMED})
-        list(FILTER srcs INCLUDE REGEX "^${dir}/")
+        d2_list_keep_prefix(srcs "${dir}/")
         # Its units in the 1.14d link's order (D2_MODULE_<m>_UNITS, project.json
         # "unitOrder"), any unit the list does not name after them in path order: the
         # archive's members follow the list, and the executable links them whole in

@@ -2,10 +2,14 @@
 
 #include "Source/D2Client/UI/Text.h"
 #include "Source/D2Client/Core/Archive.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
+#include "Source/D2Client/D2ClientStrc.h"
+#include "Source/D2Client/D2DialogStrc.h"
 #include "Source/D2Client/D2GSPacketSrv0x27.h"
 #include "Source/D2Client/D2GSPacketSrv0x76.h"
+#include "Source/D2Client/D2GameViewStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
+#include "Source/D2Client/D2RosterStrc.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/Game/Game.h"
 #include "Source/D2Client/GAME/Msg.h"
@@ -25,22 +29,166 @@
 #include "Source/D2Client/UI/npcmenu.h"
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
+#include "Source/D2Client/UNIT/Item.h"
 #include "Source/D2Client/UNIT/Player.h"
 #include "Source/D2Client/UNIT/PlayerList.h"
 #include "Source/D2Client/UNIT/UnitSnd.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/Chat.h"
+#include "Source/D2Common/Chat/Ignorelist.h"
 #include "Source/D2Common/Chat/Ignorelist/IgnoreList.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2MonStatsTxt.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Game/D2Game.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DATATBLS/ObjectTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgStrc.h"
+#include "Source/D2Common/Environment.h"
+#include "Source/D2Common/Text.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/GAME/Server.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
 #include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Sound/D2Sound.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Sound/Src/D2SoundFast.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "3rdparty/crashy/Report.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/Debug.h"
+#include "Source/Fog/File.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/MessageStrc.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Source/SSTR.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/Bnclient/BNGatewayAccess.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/Help.data.h"
 #include "Source/D2Client/UI/Party.data.h"
 #include "Source/D2Client/UI/Text.data.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Launch/MainMenus.h"
+#include "Source/Fog/Engine/Application.data.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h"
+#include "Redivivus/d2_boot.h" // [d2boot] quest gossip diagnostics [R54] (issue #13)
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -65,7 +213,7 @@ static_assert(sizeof(void*) != 4 || sizeof(::D2TextBoxStrc) == 0x2c, "D2_NEW_AT(
 
 #ifndef RECON_FPTD_pfnTextScrollComplete
 #define RECON_FPTD_pfnTextScrollComplete
-typedef int (__fastcall *pfnTextScrollComplete)(void * pUserParam, uint32_t nReason, int bDismissed);
+typedef int (__fastcall *pfnTextScrollComplete)(void * pUserParam, uint32_t nReason, void * pDismissCallback);
 #endif
 #ifndef RECON_FPTD_fpDialogFunc
 #define RECON_FPTD_fpDialogFunc
@@ -2222,7 +2370,8 @@ static uint32_t gbTextScrollBoxAnimating = 0; D2_STATIC_GUARD(gbTextScrollBoxAni
 static uint32_t gbTextScrollBoxActive = 0; D2_STATIC_GUARD(gbTextScrollBoxActive, "gbTextScrollBoxActive");
 static uint32_t gbTextStaticPopupActive = 0; D2_STATIC_GUARD(gbTextStaticPopupActive, "gbTextStaticPopupActive");
 static uint32_t gpTextStaticPopupBox = 0; D2_STATIC_GUARD(gpTextStaticPopupBox, "gpTextStaticPopupBox");
-static int gaTextStaticPopupRect[2] = {}; D2_STATIC_GUARD(gaTextStaticPopupRect, "gaTextStaticPopupRect");
+static int gaTextStaticPopupRect = 0; D2_STATIC_GUARD(gaTextStaticPopupRect, "gaTextStaticPopupRect");
+static unsigned int gnTextStaticPopupHeight = {}; D2_STATIC_GUARD(gnTextStaticPopupHeight, "gnTextStaticPopupHeight");
 static int gaQuestScrollRect = 0; D2_STATIC_GUARD(gaQuestScrollRect, "gaQuestScrollRect");
 static D2ScreenMessageListStrc ScreenMessagesMaybe = {}; D2_STATIC_GUARD(ScreenMessagesMaybe, "ScreenMessagesMaybe");
 static D2ScreenMessageListStrc ScreenPartyMessages = {}; D2_STATIC_GUARD(ScreenPartyMessages, "ScreenPartyMessages");
@@ -2238,7 +2387,7 @@ uint32_t gnTextOverheadCounter = 0; D2_GLOBAL_GUARD(gnTextOverheadCounter, "D2Cl
 static uint16_t gnTextScrollBoxWidth = 0; D2_STATIC_GUARD(gnTextScrollBoxWidth, "gnTextScrollBoxWidth");
 static RECT lprcTextOverheadRect = {}; D2_STATIC_GUARD(lprcTextOverheadRect, "lprcTextOverheadRect");
 static uint32_t gbTextOverheadActive = 0; D2_STATIC_GUARD(gbTextOverheadActive, "gbTextOverheadActive");
-static D2ItemsTxt * gpQuestScrollTextBlock = 0; D2_STATIC_GUARD(gpQuestScrollTextBlock, "gpQuestScrollTextBlock");
+static void * gpQuestScrollTextBlock = 0; D2_STATIC_GUARD(gpQuestScrollTextBlock, "gpQuestScrollTextBlock");
 static unsigned int gbTextNpcMenuActive = {}; D2_STATIC_GUARD(gbTextNpcMenuActive, "gbTextNpcMenuActive");
 static uint32_t gpTextScrollBoxImage = 0; D2_STATIC_GUARD(gpTextScrollBoxImage, "gpTextScrollBoxImage");
 static short gpOverHeadUnitClassId = 0; D2_STATIC_GUARD(gpOverHeadUnitClassId, "gpOverHeadUnitClassId");
@@ -2334,6 +2483,7 @@ void __stdcall TEXT_InitTextDisplaySettings() {
     memset(&gbTextStaticPopupActive, 0, sizeof(gbTextStaticPopupActive));
     memset(&gpTextStaticPopupBox, 0, sizeof(gpTextStaticPopupBox));
     memset(&gaTextStaticPopupRect, 0, sizeof(gaTextStaticPopupRect));
+    memset(&gnTextStaticPopupHeight, 0, sizeof(gnTextStaticPopupHeight));
     memset(&gaQuestScrollRect, 0, sizeof(gaQuestScrollRect));
     memset(&ScreenMessagesMaybe, 0, sizeof(ScreenMessagesMaybe));
     memset(&ScreenPartyMessages, 0, sizeof(ScreenPartyMessages));
@@ -2424,19 +2574,18 @@ int __fastcall Unreferenced_0049d590(int param_1) {
     return 0x70 - ((uint32_t)param_1 >> 10);
 }
 
-static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
+static BOOL TEXT_DrawScrollingTextBox(uint16_t * * ppwszText) {
     // Static local variables (originally global data)
     static uint32_t gnTextScrollBoxLineHeight; D2_STATIC_GUARD_BSS(gnTextScrollBoxLineHeight, "D2Client::UI::Text::TEXT_DrawScrollingTextBox::gnTextScrollBoxLineHeight");
 
-    D2TextLineStrc* pTmpLine;
+    uint16_t* pTmpLine;
     int nYTop;
     uint32_t nFontHeight;
     RECT rcFrame;
-    TEXT_DrawScrollingTextBox_Slotm10 uSlot10;
+    uint16_t* pLastVisibleLine;
     int nBottomCropOffset;
     int nSingleLineY;
     int nTopCropHeight;
-    int nLastVisibleLine;
     if (!ppwszText) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x70d);
       exit(-1);
@@ -2446,28 +2595,28 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
     nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(8);
     DWORD dwNow;
     dwNow = timeGetTime();
-    if (!ppwszText->dwUnused1E) {
-      ppwszText->dwUnused1A = dwNow;
-      ppwszText->dwUnused1E = dwNow;
+    if (!*(int*)((int)ppwszText + 0x1e)) {
+      *(DWORD*)((int)ppwszText + 0x1a) = dwNow;
+      *(DWORD*)((int)ppwszText + 0x1e) = dwNow;
     } else {
-      nLastVisibleLine = 0x0;
-      if (ppwszText->dwUnused1A == dwNow) {
-        if (!ppwszText->dwUnused22) {
-          ppwszText->wUnused2A++;
+      pLastVisibleLine = 0;
+      if (*(DWORD*)((int)ppwszText + 0x1a) == dwNow) {
+        if (!*(int*)((int)ppwszText + 0x22)) {
+          (*(short int*)((int)ppwszText + 0x2a))++;
         } else {
-          ppwszText->dwUnused26 += ppwszText->dwUnused22;
-          nLastVisibleLine = (int)ppwszText->dwUnused26;
+          *(int*)((int)ppwszText + 0x26) += *(int*)((int)ppwszText + 0x22);
+          pLastVisibleLine = *(uint16_t**)((int)ppwszText + 0x26);
         }
       } else {
-        ppwszText->dwUnused26 = 0;
-        if (!ppwszText->dwUnused22 && ppwszText->wUnused2A) {
-          ppwszText->dwUnused22 = (dwNow - ppwszText->dwUnused1A) / (uint32_t)ppwszText->wUnused2A;
+        *(uint32_t*)((int)ppwszText + 0x26) = 0;
+        if (!*(int*)((int)ppwszText + 0x22) && *(uint16_t*)((int)ppwszText + 0x2a)) {
+          *(uint32_t*)((int)ppwszText + 0x22) = (dwNow - *(DWORD*)((int)ppwszText + 0x1a)) / (uint32_t)*(uint16_t*)((int)ppwszText + 0x2a);
         }
 
-        ppwszText->dwUnused1A = dwNow;
+        *(DWORD*)((int)ppwszText + 0x1a) = dwNow;
       }
 
-      ppwszText->unk0x08 = (nLastVisibleLine + (dwNow - ppwszText->dwUnused1E >> 2)) * ppwszText->nScrollRateCopy;
+      ppwszText[2] = (uint16_t*)(((int)pLastVisibleLine + (dwNow - *(int*)((int)ppwszText + 0x1e) >> 2)) * (int)ppwszText[3]);
     }
     if (!gnTextScrollBoxHeight && (gnTextDisplayMode || gbTextScrollBoxVisible)) {
       Engine::Gfx::D2GFX_DrawSolidRectExBySize(gnTextBoxExclusionX, gnScrollingTextBoxTopY - 5, 0x145, 0x7a, 0, DRAW_TRANSPARENT);
@@ -2478,24 +2627,24 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
       ui::DRAW_Direct_RectFrame(&rcFrame);
     }
 
-    D2TextLineStrc* pLine;
-    pLine = ppwszText->pLineList;
-    D2TextLineStrc* pLastVisibleLine;
+    uint16_t* pLine;
+    pLine = *ppwszText;
     pLastVisibleLine = 0;
-    uSlot10.nFirstVisibleYOffset = 0;
+    uint32_t* nFirstVisibleYOffset;
+    nFirstVisibleYOffset = 0;
     uint32_t nLastVisibleYOffset;
     nLastVisibleYOffset = 0;
     uint32_t nLineYOffset;
-    nLineYOffset = ppwszText->unk0x08;
-    D2TextLineStrc* pFirstVisibleLine;
+    nLineYOffset = (uint32_t)ppwszText[2];
+    uint16_t* pFirstVisibleLine;
     pFirstVisibleLine = 0;
-    D2TextLineStrc* pFirstVisibleLine2;
+    uint16_t* pFirstVisibleLine2;
     pFirstVisibleLine2 = 0;
-    if (nLineYOffset && pLine) {
+    if ((uint16_t*)nLineYOffset && pLine) {
       do {
         if (nLineYOffset < 0x17800) {
           if (gnTextDisplayMode || gbTextScrollBoxVisible) {
-            D2Win::Src::D2WinFont::DRAW_text(pLine->wszLine, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + (0x70 - (nLineYOffset >> 10)), 0, 0);
+            D2Win::Src::D2WinFont::DRAW_text(*(uint16_t**)pLine, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + (0x70 - (nLineYOffset >> 10)), 0, 0);
           }
 
           pFirstVisibleLine = pFirstVisibleLine2;
@@ -2503,7 +2652,7 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
           pLastVisibleLine = pLine;
           if (!pFirstVisibleLine2) {
             pFirstVisibleLine = pLine;
-            uSlot10.nFirstVisibleYOffset = nLineYOffset;
+            nFirstVisibleYOffset = (uint32_t*)nLineYOffset;
             pFirstVisibleLine2 = pLine;
           }
         }
@@ -2511,38 +2660,38 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
           break;
         }
 
-        pLine = pLine->pNext;
+        pLine = *(uint16_t**)(pLine + 2);
         nLineYOffset -= 0x4800;
       } while (pLine);
 
       if (pFirstVisibleLine) {
-        pLine = ppwszText->pLineList;
-        if (ppwszText->pLineList != pFirstVisibleLine) {
+        pLine = *ppwszText;
+        if (*ppwszText != pFirstVisibleLine) {
           do {
             pTmpLine = pLine;
-            pLine = pTmpLine->pNext;
-          } while (pTmpLine->pNext != pFirstVisibleLine);
+            pLine = *(uint16_t**)(pTmpLine + 2);
+          } while (*(uint16_t**)(pTmpLine + 2) != pFirstVisibleLine);
 
           if (pTmpLine) {
-            nYTop = 0x5e - (uSlot10.nFirstVisibleYOffset >> 10);
+            nYTop = 0x5e - ((uint32_t)nFirstVisibleYOffset >> 10);
             nTopCropHeight = nYTop;
             if (nYTop >= 0x12) {
               nTopCropHeight = 0x12;
             }
             if (gnTextDisplayMode || gbTextScrollBoxVisible) {
-              D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText(pTmpLine->wszLine, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + nYTop, 3, 0, nTopCropHeight);
+              D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText(*(uint16_t**)pTmpLine, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + nYTop, 3, 0, nTopCropHeight);
             }
           }
         }
       }
       if (pLastVisibleLine) {
-        uSlot10.pBottomLine = pLastVisibleLine->pNext;
-        if (uSlot10.pBottomLine) {
+        nFirstVisibleYOffset = *(uint32_t**)(pLastVisibleLine + 2);
+        if (nFirstVisibleYOffset) {
           nYTop = -(nLastVisibleYOffset + 0x400 >> 10);
           nBottomCropOffset = nYTop + 0x12;
           nFontHeight = D2Win::Src::D2WinFont::D2WINFONT_GetCurrentFontHeight();
           if (nBottomCropOffset < (int)nFontHeight && (gnTextDisplayMode || gbTextScrollBoxVisible)) {
-            D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText(uSlot10.pBottomLine->wszLine, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + nYTop + 0x83, 0, nBottomCropOffset, nFontHeight - nBottomCropOffset);
+            D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText((uint16_t*)*nFirstVisibleYOffset, gnTextBoxExclusionX + 0x10, gnScrollingTextBoxTopY + nYTop + 0x83, 0, nBottomCropOffset, nFontHeight - nBottomCropOffset);
           }
         }
       }
@@ -2551,16 +2700,15 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
       }
     }
 
-    uint32_t pTmp;
-    pTmp = ppwszText->unk0x08;
-    pLine = ppwszText->pLineList;
-    for (pFirstVisibleLine = ppwszText->pLineList->pNext; pFirstVisibleLine; pFirstVisibleLine = pFirstVisibleLine->pNext) {
-      pTmp -= 0x4800;
-      pLine = pFirstVisibleLine;
+    pLine = ppwszText[2];
+    pFirstVisibleLine = *ppwszText;
+    for (pTmpLine = *(uint16_t**)(*ppwszText + 2); pTmpLine; pTmpLine = *(uint16_t**)(pTmpLine + 2)) {
+      pLine += -0x2400;
+      pFirstVisibleLine = pTmpLine;
     }
 
-    if (pTmp < 0x1c000) {
-      nSingleLineY = 0x70 - (pTmp + 0x400 >> 10);
+    if (pLine < (uint16_t*)0x1c000) {
+      nSingleLineY = 0x70 - ((uint32_t)(pLine + 0x200) >> 10);
       if (nSingleLineY < 0x12) {
         nYTop = nSingleLineY;
         if (!nSingleLineY) {
@@ -2570,17 +2718,17 @@ static BOOL TEXT_DrawScrollingTextBox(D2TextBoxStrc * ppwszText) {
         nYTop = 0x12;
       }
       if (gnTextDisplayMode || gbTextScrollBoxVisible) {
-        D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText(pLine->wszLine, gnTextBoxExclusionX + 0x10, nSingleLineY + gnScrollingTextBoxTopY, 3, 0, nYTop);
+        D2Win::Src::D2WinFont::D2WINFONT_DrawVerticalCroppedText(*(uint16_t**)pFirstVisibleLine, gnTextBoxExclusionX + 0x10, nSingleLineY + gnScrollingTextBoxTopY, 3, 0, nYTop);
       }
     }
 
     restore_font_check_scrolled:
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
-    int nMaxLineIndex = ppwszText->nLineCount - 1;
+    int nMaxLineIndex = (int)ppwszText[1] - 1;
     if (nMaxLineIndex <= 0) {
       nMaxLineIndex = 1;
     }
-    if ((uint32_t)ppwszText->unk0x08 >> 10 > nMaxLineIndex * 0x12 + 0x70U) {
+    if ((uint32_t)ppwszText[2] >> 10 > nMaxLineIndex * 0x12 + 0x70U) {
       if (gnTextScrollBoxLineHeight == 1) {
         gnTextScrollBoxLineHeight = 0;
       }
@@ -2603,11 +2751,18 @@ void __fastcall TEXT_DrawTextBoxAtPosition(D2TextBoxStrc * pTextBox, int32_t nSc
     }
 
     Engine::Gfx::D2GFX_DrawSolidRectExBySize(nScreenX, nScreenY + 4, (uint32_t)pTextBox->nWidth, pTextBox->nHeight - 5, 0, DRAW_TRANSPARENT);
-    int nLineIdx = 0;
     int32_t nSavedFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(0xd);
-    for (; nLineIdx < nLineCount && pCurLine; nLineIdx++) {
-      D2Win::Src::D2WinFont::DRAW_text(pCurLine->wszLine, nScreenX + 10, (nLineIdx - nLineCount + pTextBox->nLineCount) * 0xf + 0x12 + nScreenY, 0, 0);
-      pCurLine = pCurLine->pNext;
+    if (nLineCount > 0) {
+      int nLineIdx = 0;
+      do {
+        if (!pCurLine) {
+          break;
+        }
+
+        D2Win::Src::D2WinFont::DRAW_text(pCurLine->wszLine, nScreenX + 10, (nLineIdx - nLineCount + pTextBox->nLineCount) * 0xf + 0x12 + nScreenY, 0, 0);
+        pCurLine = pCurLine->pNext;
+        nLineIdx++;
+      } while (nLineIdx < nLineCount);
     }
 
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nSavedFont);
@@ -2668,23 +2823,29 @@ void __stdcall TEXT_ClearNpcMenuSelection() {
     gbTextNpcMenuSelection = 0;
 }
 
-void __fastcall Unreferenced_0049da60(int bRegister) {
-    if (!bRegister) {
-      int32_t iVar2;
+int __fastcall Unreferenced_0049da60(int param_1) {
+    int in_EAX;
+    int extraout_EAX_00;
+    int32_t iVar2;
+    if (!param_1) {
+      int extraout_EAX;
       if (gbTextEventHandlersRegistered == 1) {
         iVar2 = 7;
-        gbTextEventHandlersRegistered = bRegister;
+        gbTextEventHandlersRegistered = param_1;
         _Message::MESSAGE_UnregisterEventHandlerBatch(D2gfx::D2GFX::GetHwnd(), gsUITextFlagInit, iVar2);
-        return;
+        return extraout_EAX;
       }
-    } else if (bRegister == 1 && !gbTextEventHandlersRegistered) {
-      gbTextEventHandlersRegistered = bRegister;
+    } else if (param_1 == 1 && !gbTextEventHandlersRegistered) {
+      gbTextEventHandlersRegistered = param_1;
       gbTextNpcMenuActive = GetTickCount();
       _Message::MESSAGE_RegisterEventHandlerBatch(D2gfx::D2GFX::GetHwnd(), gsUITextFlagInit, 7);
+      in_EAX = extraout_EAX_00;
     }
+
+    return in_EAX;
 }
 
-int __fastcall Unreferenced_0049dac0(uint8_t * param_1) {
+int __fastcall Unreferenced_0049dac0(int param_1) {
     if (!param_1) {
       return 0;
     }
@@ -2695,39 +2856,39 @@ int __fastcall Unreferenced_0049dac0(uint8_t * param_1) {
     return 1;
 }
 
-int __fastcall Unreferenced_0049dae0(D2TextBoxStrc * param_1, D2CoordStrc * param_2) {
+int __fastcall Unreferenced_0049dae0(int param_1, int param_2) {
     int iVar2;
-    uint16_t uVar1 = param_1->nWidth;
-    param_2->nX -= (uint32_t)(uVar1 >> 1);
-    param_2->nY += -0x32;
-    iVar2 = param_2->nY + param_1->nLineCount * -0xf - 3;
-    param_2->nY = iVar2;
+    uint16_t uVar1 = *(uint16_t*)(param_1 + 0x10);
+    *(int*)(param_2 + 4) += -0x32;
+    *(uint32_t*)param_2 = *(int*)param_2 - (uint32_t)(uVar1 >> 1);
+    iVar2 = *(int*)(param_2 + 4) + *(int*)(param_1 + 4) * -0xf - 3;
+    *(int*)(param_2 + 4) = iVar2;
     return iVar2;
 }
 
-ScreenMessage_t * __fastcall TEXT_AllocScreenMessage(ScreenMessage_t * ppwszText) {
-    ScreenMessage_t* ppwszSrcLine;
+ScreenMessage_t * __fastcall TEXT_AllocScreenMessage(uint16_t * * ppwszText) {
+    uint16_t** ppwszSrcLine;
     ScreenMessage_t* pMessage = D2_NEW_AT(ScreenMessage_t, ".\\UI\\text.cpp", 0x9d0);
     memset(pMessage, 0, sizeof(*pMessage));
     int i = 0;
-    if (ppwszText->nLineCount > 0) {
+    if ((uint16_t)*(short int*)(ppwszText + 6) > 0) {
       uint16_t* pwszCopy;
       ppwszSrcLine = ppwszText;
       do {
-        pwszCopy = (uint16_t*)D2_ALLOC_AT(D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(ppwszSrcLine->apwszLines[0]) * 2 + 2, ".\\UI\\text.cpp", 0x9d4);
-        *(uint16_t**)((intptr_t)pMessage - (intptr_t)ppwszText + (char*)ppwszSrcLine) = (uint16_t*)pwszCopy;
-        D2Lang::Unicode::UNISYS::STRING_CopyWideString(pwszCopy, ppwszSrcLine->apwszLines[0]);
+        pwszCopy = (uint16_t*)D2_ALLOC_AT(D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(*ppwszSrcLine) * 2 + 2, ".\\UI\\text.cpp", 0x9d4);
+        *(uint16_t**)((int)pMessage - (int)ppwszText + (int)ppwszSrcLine) = (uint16_t*)pwszCopy;
+        D2Lang::Unicode::UNISYS::STRING_CopyWideString(pwszCopy, *ppwszSrcLine);
         i++;
-        ppwszSrcLine = (ScreenMessage_t*)(ppwszSrcLine->apwszLines + 1);
-      } while (i < (int)(uint32_t)ppwszText->nLineCount);
+        ppwszSrcLine++;
+      } while (i < (int)(uint32_t)*(uint16_t*)(ppwszText + 6));
     }
 
-    pMessage->nLineCount = ppwszText->nLineCount;
-    pMessage->color = ppwszText->color;
+    pMessage->nLineCount = *(uint16_t*)(ppwszText + 6);
+    pMessage->color = *(int*)((int)ppwszText + 0x1a);
     return pMessage;
 }
 
-void __fastcall TEXT_InsertScreenMessage(ScreenMessage_t * ppwszText) {
+void __fastcall TEXT_InsertScreenMessage(uint16_t * * ppwszText) {
     ScreenMessage_t* pNext;
     ScreenMessage_t* pNextNext;
     ScreenMessage_t* pPrev;
@@ -2737,7 +2898,12 @@ void __fastcall TEXT_InsertScreenMessage(ScreenMessage_t * ppwszText) {
       pNextNext = AllMessagesMaybe.pHead->pNext;
       pPrev = 0;
       pCurrent = AllMessagesMaybe.pHead;
-      while (pNext = pNextNext) {
+      while (true) {
+        pNext = pNextNext;
+        if (!pNext) {
+          break;
+        }
+
         pPrev = pCurrent;
         pCurrent = pNext;
         pNextNext = pNext->pNext;
@@ -2763,10 +2929,9 @@ void __stdcall TEXT_DrawChatMessages() {
     int nScreenY;
     uint16_t* pwszClear;
     int nWrapLineCount;
+    uint32_t pWrapNext;
+    ScreenMessage_t* pPrevMessage;
     uint16_t* pwszLine;
-    D2TextLineStrc* pTextLine;
-    int nPrevMessage;
-    int nListHead;
     if (!ScreenMessagesMaybe.nCount) {
       return;
     }
@@ -2801,10 +2966,10 @@ void __stdcall TEXT_DrawChatMessages() {
         break;
       }
 
-      nPrevMessage = 0x0;
+      pPrevMessage = 0;
       do {
-        nListHead = nPrevMessage;
-        pwszLine = pMessage->apwszLines[nPrevMessage];
+        pListHead = pPrevMessage;
+        pwszLine = pMessage->apwszLines[(int)pPrevMessage];
         if (pwszLine) {
           if (bWordWrap) {
             for (nScreenY = 0; nScreenY < 400; nScreenY++) {
@@ -2817,7 +2982,7 @@ void __stdcall TEXT_DrawChatMessages() {
             if (pWrapNode) {
               nScreenY = nLineIdx * 0xf + nBaseY;
               do {
-                pTextLine = pWrapNode->pNext;
+                pWrapNext = (uint32_t)pWrapNode->pNext;
                 nPixelWidth = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pWrapNode->wszLine);
                 nPixelWidth = D2Win::Src::D2WinFont::D2WINFONT_GetStringPixelWidthN((uint16_t*)pWrapNode->wszLine, nPixelWidth);
                 if (nPixelWidth) {
@@ -2829,33 +2994,37 @@ void __stdcall TEXT_DrawChatMessages() {
 
                 D2_FREE_AT(pWrapNode->wszLine, ".\\UI\\text.cpp", 0xa47);
                 D2_FREE_AT(pWrapNode, ".\\UI\\text.cpp", 0xa48);
-                pWrapNode = pTextLine;
+                pWrapNode = (D2TextLineStrc*)pWrapNext;
                 pMessage = pMessageHead;
-              } while (pTextLine);
+              } while (pWrapNext);
             }
           } else {
             nPixelWidth = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwszLine);
-            nPixelWidth = D2Win::Src::D2WinFont::D2WINFONT_GetStringPixelWidthN((uint16_t*)pMessage->apwszLines[nListHead], nPixelWidth);
+            nPixelWidth = D2Win::Src::D2WinFont::D2WINFONT_GetStringPixelWidthN((uint16_t*)pMessage->apwszLines[(int)pListHead], nPixelWidth);
             if (nPixelWidth) {
               nScreenY = nLineIdx * 0xf + nBaseY;
               Engine::Gfx::D2GFX_DrawSolidRectExBySize(nScreenX - 4, nScreenY - 0xe, nPixelWidth + 8, 0x10, 0, DRAW_TRANSPARENT);
-              D2Win::Src::D2WinFont::DRAW_text(pMessage->apwszLines[nPrevMessage], nScreenX, nScreenY, pMessage->color, 0);
+              D2Win::Src::D2WinFont::DRAW_text(pMessage->apwszLines[(int)pPrevMessage], nScreenX, nScreenY, pMessage->color, 0);
               nLineIdx++;
             }
           }
         }
 
-        nPrevMessage++;
-      } while (nPrevMessage < 6);
+        pPrevMessage = (ScreenMessage_t*)((int)pPrevMessage + 1);
+      } while ((int)pPrevMessage < 6);
 
       pMessage = pMessage->pNext;
       pListHead = ScreenMessagesMaybe.pHead;
       pMessageHead = pMessage;
     }
 
-    ScreenMessage_t* pPrevMessage = 0;
-    uint32_t pWrapNext = GetTickCount();
-    while (pMessage = pListHead) {
+    pPrevMessage = 0;
+    pWrapNext = GetTickCount();
+    while (true) {
+      pMessage = pListHead;
+      if (!pMessage) {
+        break;
+      }
       if (pMessage->dwMessageExpiration < pWrapNext) {
         ScreenMessagesMaybe.nCount--;
         pListHead = pMessage->pNext;
@@ -2887,12 +3056,12 @@ void __stdcall TEXT_DrawChatMessages() {
 
 void __stdcall TEXT_DrawPartyMessages() {
     int nLineY;
+    ScreenMessage_t* pPrevMessage;
     int nRowY;
     DRAWMODE eDrawMode;
     int32_t nRectColor;
     int32_t nRectH;
     ScreenMessage_t* pNext;
-    int nPrevMessage;
     if (!ScreenPartyMessages.nCount) {
       return;
     }
@@ -2907,7 +3076,7 @@ void __stdcall TEXT_DrawPartyMessages() {
     }
     if (pMessage) {
       int32_t nPixelWidth;
-      nPrevMessage = 0x0;
+      pPrevMessage = 0;
       nRowY = 0;
       do {
         nLineY = 0;
@@ -2921,7 +3090,7 @@ void __stdcall TEXT_DrawPartyMessages() {
             nPixelWidth = D2Win::Src::D2WinFont::D2WINFONT_GetStringPixelWidthN((uint16_t*)pMessage->apwszLines[0], nPixelWidth);
             nPixelWidth += 10;
             Engine::Gfx::D2GFX_DrawSolidRectExBySize(nScreenX - 5, nRowY - nLineY / 2 - 0x81 + Inv::ScreenSizeY, nPixelWidth, nRectH, nRectColor, eDrawMode);
-            D2Win::Src::D2WinFont::DRAW_text(pMessage->apwszLines[0], nScreenX, nPrevMessage - nLineY / 2 - 0x73 + Inv::ScreenSizeY, pMessageHead->color, 0);
+            D2Win::Src::D2WinFont::DRAW_text(pMessage->apwszLines[0], nScreenX, (int)pPrevMessage - nLineY / 2 - 0x73 + Inv::ScreenSizeY, pMessageHead->color, 0);
           }
 
           nLineY += 0x19;
@@ -2930,12 +3099,12 @@ void __stdcall TEXT_DrawPartyMessages() {
 
         pMessageHead = pMessageHead->pNext;
         nRowY += -0x19;
-        nPrevMessage += -0x19;
+        pPrevMessage = (ScreenMessage_t*)((int)pPrevMessage - 0x19);
       } while (pMessageHead);
     }
 
     pMessage = ScreenPartyMessages.pHead;
-    ScreenMessage_t* pPrevMessage = 0;
+    pPrevMessage = 0;
     DWORD dwNow = GetTickCount();
     while (pMessage) {
       if (pMessage->dwMessageExpiration < dwNow) {
@@ -2980,7 +3149,7 @@ static uint8_t __stdcall TEXT_FindNonOverlappingRect(int32_t nExistingRectCount,
     tagRECT rcCandidate;
     int nDirIdx;
     int nDistX;
-    TEXT_FindNonOverlappingRect_Slotmc uSlotC;
+    RECT* pExistingRect;
     char bOverlaps;
     if (nExistingRectCount >= 0x10) {
       return 0;
@@ -2996,17 +3165,17 @@ static uint8_t __stdcall TEXT_FindNonOverlappingRect(int32_t nExistingRectCount,
     BOOL bIntersects;
     i = 0;
     if (nExistingRectCount > 0) {
-      uSlotC.pExistingRect = gnTextBoxExclusionLeft;
+      pExistingRect = gnTextBoxExclusionLeft;
       do {
-        /* RECT * lprcSrc2 for IntersectRect */ /* RECT * lprcSrc1 for IntersectRect */ /* LPRECT lprcDst for IntersectRect */ bIntersects = IntersectRect(&rcCandidate, uSlotC.pExistingRect, pRect);
+        /* RECT * lprcSrc2 for IntersectRect */ /* RECT * lprcSrc1 for IntersectRect */ /* LPRECT lprcDst for IntersectRect */ bIntersects = IntersectRect(&rcCandidate, pExistingRect, pRect);
         if (bIntersects) {
           nDistX = 0x32;
           do {
-            uSlotC.nDistY = 0x23;
+            pExistingRect = (RECT*)0x23;
             do {
               for (nDirIdx = 0; nDirIdx < gnTextNonOverlapRectCount; nDirIdx++) {
                 rcCandidate.left = pRect->left + gaTextNonOverlapRects[nDirIdx] * nDistX;
-                rcCandidate.top = pRect->top + gaTextNonOverlapRects[nDirIdx] * uSlotC.nDistY;
+                rcCandidate.top = pRect->top + gaTextNonOverlapRects[nDirIdx] * (int)pExistingRect;
                 rcCandidate.right = rcCandidate.left + 400;
                 rcCandidate.bottom = rcCandidate.top + 0x118;
                 if (rcCandidate.left >= 0 && rcCandidate.right <= ui::ScreenSizeX && rcCandidate.top >= 0 && rcCandidate.bottom <= Inv::ScreenSizeY) {
@@ -3037,8 +3206,8 @@ static uint8_t __stdcall TEXT_FindNonOverlappingRect(int32_t nExistingRectCount,
                 }
               }
 
-              uSlotC.nDistY += 0x23;
-            } while (uSlotC.nDistY < 0x118);
+              pExistingRect = (RECT*)((int)pExistingRect + 0x23);
+            } while ((int)pExistingRect < 0x118);
 
             nDistX += 0x32;
             if (nDistX >= 400) {
@@ -3047,7 +3216,7 @@ static uint8_t __stdcall TEXT_FindNonOverlappingRect(int32_t nExistingRectCount,
           } while (true);
         }
 
-        uSlotC.pExistingRect++;
+        pExistingRect++;
         i++;
       } while (i < nExistingRectCount);
     }
@@ -3130,8 +3299,8 @@ void __fastcall TEXT_PrintGameString(uint16_t * wMessage, uint8_t nColor) {
     ScreenMessage_t* pNewMsg = D2_NEW_AT(ScreenMessage_t, ".\\UI\\text.cpp", 0xd46);
     memset(pNewMsg->apwszLines, 0, 6 * sizeof(pNewMsg->apwszLines[0]));
     *(uint32_t*)&pNewMsg->nLineCount = 0;
-    *(uint32_t*)((intptr_t)&pNewMsg->color + 2) = 0;
-    *(uint32_t*)((intptr_t)&pNewMsg->dwMessageExpiration + 2) = 0;
+    *(uint32_t*)((uintptr_t)&pNewMsg->color + 2) = 0;
+    *(uint32_t*)((uintptr_t)&pNewMsg->dwMessageExpiration + 2) = 0;
     pNewMsg->pNext = 0;
     DWORD dwNow = GetTickCount();
     pNewMsg->dwMessageExpiration = dwNow + 10000;
@@ -3190,7 +3359,7 @@ void __fastcall TEXT_PrintGameString(uint16_t * wMessage, uint8_t nColor) {
       ppIgnoreList->_vfptr->AddAccountMapping(ppIgnoreList, szUtf8, 0x100);
     }
 
-    TEXT_InsertScreenMessage(pNewMsg);
+    TEXT_InsertScreenMessage(pNewMsg->apwszLines);
     uint16_t nPrevChatCount = ScreenMessagesMaybe.nCount;
     pNewMsg = ScreenMessagesMaybe.pHead;
     ScreenMessagesMaybe.nCount++;
@@ -3236,12 +3405,12 @@ void __fastcall TEXT_PrintPartyMessage(uint16_t * wszText, uint8_t byColor) {
     ScreenMessage_t* pNewMsg = D2_NEW_AT(ScreenMessage_t, ".\\UI\\text.cpp", 0xdad);
     memset(pNewMsg->apwszLines, 0, 6 * sizeof(pNewMsg->apwszLines[0]));
     *(uint32_t*)&pNewMsg->nLineCount = 0;
-    *(uint32_t*)((intptr_t)&pNewMsg->color + 2) = 0;
-    *(uint32_t*)((intptr_t)&pNewMsg->dwMessageExpiration + 2) = 0;
+    *(uint32_t*)((uintptr_t)&pNewMsg->color + 2) = 0;
+    *(uint32_t*)((uintptr_t)&pNewMsg->dwMessageExpiration + 2) = 0;
     pNewMsg->pNext = 0;
     DWORD dwNow = GetTickCount();
     pNewMsg->dwMessageExpiration = dwNow + 10000;
-    int nTotalLen = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszText);
+    size_t nTotalLen = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszText);
     pNewMsg->nLineCount = 0;
     size_t nSegLen = nTotalLen;
     size_t nOffset = 0;
@@ -3315,7 +3484,7 @@ void __fastcall TEXT_PrintPartyMessage(uint16_t * wszText, uint8_t byColor) {
 
     ScreenPartyMessages.pHead = pSVar1;
     ScreenPartyMessages.nCount++;
-    TEXT_InsertScreenMessage(pNewMsg);
+    TEXT_InsertScreenMessage(pNewMsg->apwszLines);
     pNewMsg = ScreenPartyMessages.pHead;
     if (ScreenPartyMessages.nCount > 2) {
       ScreenPartyMessages.pHead = ScreenPartyMessages.pHead->pNext;
@@ -3360,39 +3529,44 @@ void __stdcall TEXT_SetTextBoxExclusionRect() {
     GAME::Select::ClearSelectedUnit();
 }
 
-void Unreferenced_0049e860() {
+int Unreferenced_0049e860() {
+    int in_EAX;
+    int extraout_EAX;
     if (gpTextScrollBoxDC6) {
       int nSoundId;
       nSoundId = Sound::SOUND_StopSound(gpTextScrollBoxDC6);
+      in_EAX = 0;
       if (nSoundId) {
         Sound::SOUND_StopChannelGracefully(nSoundId, 0, 0, 4);
+        in_EAX = extraout_EAX;
       }
 
       gpTextScrollBoxDC6 = 0;
     }
 
     gpTextScrollBoxBuffer = 0;
+    return in_EAX;
 }
 
-uint32_t __stdcall TEXT_GetOverheadGlobalPointer_Unref_0049e8a0() {
-    return gnTextDisplayMode;
+D2GSPacketSrv0x27_TextStrc * __stdcall TEXT_GetOverheadGlobalPointer_Unref_0049e8a0() {
+    return (D2GSPacketSrv0x27_TextStrc*)gnTextDisplayMode;
 }
 
 D2UnitStrc * __stdcall TEXT_GetOverheadSpeakerUnit() {
     D2UnitStrc* pUnit;
     if (gnTextNpcInteractGuid) {
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
       return pUnit;
     }
     if (gbTextScrollBoxActive) {
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gpOverHeadUnitGUID, UNIT_OBJECT);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(gpOverHeadUnitGUID, UNIT_OBJECT);
       return pUnit;
     }
 
     return nullptr;
 }
 
-static BOOL TEXT_FormatEventMessage(D2Packet0x5aEventStructure * pEventData, uint16_t * wszText) {
+static BOOL TEXT_FormatEventMessage(int32_t pEventData, uint16_t * wszText) {
     uint16_t* pwszLocale;
     uint16_t nStrId;
     uint16_t awszPlayerName[16];
@@ -3401,7 +3575,7 @@ static BOOL TEXT_FormatEventMessage(D2Packet0x5aEventStructure * pEventData, uin
     int32_t nPlayerGUID;
     uint16_t* pwszArg;
     D2RosterStrc* pRoster;
-    pRoster = GAME::Roster::GetRosterByGUID(pEventData->nArg);
+    pRoster = GAME::Roster::GetRosterByGUID(*(int32_t*)(pEventData + 3));
     memset(awszPlayerName, 0, 16 * sizeof(awszPlayerName[0]));
     D2UnitStrc* pPlayerUnit_lcl;
     pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_UI();
@@ -3414,53 +3588,53 @@ static BOOL TEXT_FormatEventMessage(D2Packet0x5aEventStructure * pEventData, uin
     }
 
     D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(awszPlayerName, szRosterName, 0x10);
-    switch (pEventData->nArgTypes) {
-      case '\x01':
+    switch (*(uint8_t*)(pEventData + 7)) {
+      case 1:
         nStrId = 0x277a;
       goto format_with_player_name;
-      case '\x02':
+      case 2:
         nStrId = 0x277b;
       goto format_with_player_name;
-      case '\x03':
+      case 3:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfba);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       Sound::SOUND_PlaySound(SOUND_CURSOR_AMAZON_DESELECT, nullptr, 0, 0, 0);
       return 1;
-      case '\x04':
+      case 4:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfbb);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       return 1;
-      case '\x05':
+      case 5:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfbc);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       break;
-      case '\x06':
+      case 6:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfbd);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       break;
-      case '\a':
+      case 7:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfbe);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       break;
-      case '\b':
+      case 8:
         pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfbf);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, pwszLocale);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, awszPlayerName);
       break;
-      case '\t':
+      case 9:
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszText, awszPlayerName);
       pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(0xfc0);
       D2Lang::Unicode::UNISYS::AppendToBuffer(wszText, pwszLocale);
       break;
-      case '\n':
+      case 10:
         nStrId = 0x277c;
       goto format_with_player_name;
-      case '\v':
+      case 0xb:
         nStrId = 0x277d;
       format_with_player_name:
       pwszArg = awszPlayerName;
@@ -3487,7 +3661,6 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
     D2MonStatsTxt* pMonStatsTxt;
     D2SuperUniquesTxt* pSuperUniqueTxt;
     uint16_t* pwszArg;
-    uint16_t* pwszLocale;
     uint16_t nNameStrId;
     int nNameCmp;
     uint16_t nKillFmtStrId;
@@ -3503,10 +3676,14 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
     uint32_t pnFmtArg;
     char* pszName;
     pszName = pMessageCtx->szName1;
+    uint16_t* pwszLocale;
+    pwszLocale = awszMessage;
     D2Packet0x5aEventStructure* pMsgCtxSaved;
     pMsgCtxSaved = pMessageCtx;
-    for (nNameCmp = 0; nNameCmp < 0x132; nNameCmp++) {
-      awszMessage[nNameCmp] = L'\0';
+    for (nNameCmp = 0x99; nNameCmp; nNameCmp--) {
+      pwszLocale[0] = L'\0';
+      pwszLocale[1] = L'\0';
+      pwszLocale += 2;
     }
 
     memset(awszName, 0, 16 * sizeof(awszName[0]));
@@ -3514,7 +3691,7 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
     char* pNameCursor;
     pNameCursor = pszName;
     pNameCursor = pNameCursor + strlen(pNameCursor) + 1;
-    if ((uint32_t)((intptr_t)pNameCursor - (intptr_t)(pMessageCtx->szName1 + 1)) >= 0xf) {
+    if ((uint32_t)((int)pNameCursor - (int)(pMessageCtx->szName1 + 1)) >= 0xf) {
       pMessageCtx->szName1[0xf] = '\0';
     }
 
@@ -3593,7 +3770,9 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
       nLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwszLocale);
       if (nLine < 0x104) {
         D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(awszName, pszName, 0x10);
-        if (strlen(pMessageCtx->szName2) != 0) {
+        pszName = pMessageCtx->szName2;
+        pszName = pszName + strlen(pszName) + 1;
+        if (pszName != pMessageCtx->szName2 + 1) {
           Fog::File::CONTAINER_InitializeBuffer(awszName2, 2, 0x10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
           D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(awszName2, pMessageCtx->szName2, 0x10);
           D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x132, awszMessage, D2Lang::StrTable::strtable::GetLocaleString(0xe3b), awszName, awszName2);
@@ -3613,7 +3792,9 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
       nLine = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(pwszLocale);
       if (nLine < 0x104) {
         D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(awszName, pszName, 0x10);
-        if (strlen(pMessageCtx->szName2) != 0) {
+        pszName = pMessageCtx->szName2;
+        pszName = pszName + strlen(pszName) + 1;
+        if (pszName != pMessageCtx->szName2 + 1) {
           Fog::File::CONTAINER_InitializeBuffer(awszName2, 2, 0x10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
           D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(awszName2, pMessageCtx->szName2, 0x10);
           D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x132, awszMessage, D2Lang::StrTable::strtable::GetLocaleString(0xe3c), awszName, awszName2);
@@ -3713,7 +3894,9 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
 
         pwszLocale = D2Lang::StrTable::strtable::GetLocaleString(nNameStrId);
       } else {
-        if (strlen(pMessageCtx->szName2) == 0) {
+        pszName = pMessageCtx->szName2;
+        pszName = pszName + strlen(pszName) + 1;
+        if (pszName == pMessageCtx->szName2 + 1) {
           goto print_without_killer;
         }
 
@@ -3737,7 +3920,7 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
       TEXT_PrintGameString(awszMessage, pMsgCtxSaved->nColor);
       return;
       case '\a':
-        bEclipseEvent = TEXT_FormatEventMessage(pMessageCtx, awszMessage);
+        bEclipseEvent = TEXT_FormatEventMessage((int32_t)pMessageCtx, awszMessage);
       if (!bEclipseEvent) {
         return;
       }
@@ -3779,9 +3962,9 @@ void __fastcall TEXT_HandleEventMessagePacket(D2Packet0x5aEventStructure * pMess
 }
 
 void __fastcall TEXT_FreeHoverText(D2HoverTextStrc * pHover) {
-    D2TextLineStrc** pMemoryToFree = (D2TextLineStrc**)D2Common::Chat::HOVERTEXT_GetTextLineList(pHover);
+    uint32_t* pMemoryToFree = (uint32_t*)D2Common::Chat::HOVERTEXT_GetTextLineList(pHover);
     if (pMemoryToFree) {
-      TEXT_FreeTextLineList(*pMemoryToFree);
+      TEXT_FreeTextLineList((D2TextLineStrc*)*pMemoryToFree);
       D2_FREE_AT(pMemoryToFree, ".\\UI\\text.cpp", 0x68e);
       D2Common::Chat::HOVERTEXT_SetTextLineList(pHover, nullptr);
     }
@@ -3830,7 +4013,6 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
     char szNameBuf[20];
     char byChar;
     int32_t nMaxName;
-    uint16_t wcNext;
     if (!pMessage->entityType) {
       nCheckResult = GAME::Roster::ROSTER_CheckPlayerNotHostile(pMessage->id);
       if (!nCheckResult) {
@@ -3838,7 +4020,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
       }
     }
 
-    D2UnitStrc* unit = UNIT::CUnit::UNITS_FindClientSideUnit(pMessage->id, (eD2UnitType)pMessage->entityType);
+    D2UnitStrc* unit = UNIT::Player::UNITS_FindClientSideUnit(pMessage->id, (eD2UnitType)pMessage->entityType);
     memset(szNameBuf, 0, 17 * sizeof(szNameBuf[0]));
     if (unit && unit->eUnitType == UNIT_PLAYER || pMessage->name[0] != '\0') {
       ::IgnoreList* pIgnoreList;
@@ -3895,7 +4077,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
       pbNameScan = pMessage->name;
       pbNameScan = pbNameScan + strlen(pbNameScan) + 1;
       pszName = pszName + strlen(pszName) + 1;
-      if (pbNameScan + (-1 - (intptr_t)(pMessage->name + 1)) < (char*)0xf) {
+      if (pbNameScan + (-1 - (int)(pMessage->name + 1)) < (char*)0xf) {
         D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszShortName, pMessage->name, 0x10);
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszFormatBuf, wszShortName);
         pszWideOut = D2Lang::StrTable::strtable::GetLocaleString(0xe46);
@@ -3905,7 +4087,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
         TEXT_PrintGameString(wszFormatBuf, 2);
         return;
       }
-      if ((intptr_t)pszName - (intptr_t)(pMessage->message + 1) <= 0x131) {
+      if ((int)pszName - (int)(pMessage->message + 1) <= 0x131) {
         D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszFormatBuf, wszMessage);
         TEXT_PrintGameString(wszFormatBuf, 2);
         return;
@@ -3922,7 +4104,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
             pbNameScan = pMessage->name;
             pbNameScan = pbNameScan + strlen(pbNameScan) + 1;
             pszName = pszName + strlen(pszName) + 1;
-            if (pbNameScan + (-1 - (intptr_t)(pMessage->name + 1)) < (char*)0xf) {
+            if (pbNameScan + (-1 - (int)(pMessage->name + 1)) < (char*)0xf) {
               Fog::File::CONTAINER_InitializeBuffer(wszNameBuf2, 2, 0x10, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
               D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszNameBuf2, pMessage->name, 0x10);
               D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszFormatBuf, wszNameBuf2);
@@ -3935,7 +4117,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
               TEXT_PrintGameString(wszFormatBuf, pMessage->messageColor);
               return;
             }
-            if ((intptr_t)pszName - (intptr_t)(pMessage->message + 1) <= 0x131) {
+            if ((int)pszName - (int)(pMessage->message + 1) <= 0x131) {
               D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszFormatBuf, wszMessage);
               TEXT_PrintGameString(wszFormatBuf, pMessage->messageColor);
               return;
@@ -3960,10 +4142,9 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
             nCheckResult = D2Lang::StrTable::strtable::MISC_GetLanguageCode();
             if (byMsgType != nCheckResult) {
               pszWideOut = wcWideStart;
-              wcNext = wcWideStart[0];
-              while (wcNext != L'\0') {
+              while (wcWideStart[0] != L'\0') {
                 pszWideOut++;
-                wcNext = *pszWideOut;
+                wcWideStart[0] = *pszWideOut;
               }
             }
 
@@ -3975,7 +4156,7 @@ void __fastcall TEXT_ProcessChatMessage(MessageStrc * pMessage) {
 }
 
 void __fastcall TEXT_ClearUnitHoverText(D2GSPacketSrv0x76 * pPacket) {
-    D2UnitStrc* pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(pPacket->nUnitGUID, (eD2UnitType)pPacket->nUnitType);
+    D2UnitStrc* pUnit = UNIT::Player::UNITS_FindClientSideUnit(pPacket->nUnitGUID, (eD2UnitType)pPacket->nUnitType);
     if (!pUnit) {
       return;
     }
@@ -6350,7 +6531,7 @@ void __stdcall TEXT_DrawQuestScrollUI() {
       return;
     }
 
-    int nBlockTag = gpQuestScrollTextBlock->dwCode;
+    int nBlockTag = *(int*)((int)gpQuestScrollTextBlock + 0x80);
     if (nBlockTag == 0x20736b62) {
       TEXT_DrawQuestScrollAnimation(0);
       return;
@@ -6383,7 +6564,7 @@ void __fastcall TEXT_OpenQuestScroll(D2UnitStrc * pUnit, D2ItemsTxt * pTextBlock
     gpQuestScrollTextBlock = pTextBlock;
     ui::SetUIFlag(UI_QUESTSCROLL, UI_TOGGLE, 0);
     GAME::Game::UI_ResetInputState();
-    if (gpQuestScrollTextBlock->dwCode == 0x20646b62) {
+    if (*(int*)((int)gpQuestScrollTextBlock + 0x80) == 0x20646b62) {
       int nUnitId;
       gpQuestScrollUI = 1;
       if (!pUnit) {
@@ -6417,7 +6598,11 @@ int __stdcall TEXT_CloseMessageLogDialog() {
 
 void __stdcall TEXT_OpenMessageLogDialog() {
     fpDialogFunc pfnCloseCallback;
+    uint32_t nEnabled;
     int32_t nEntryIdx;
+    int32_t nField;
+    uint32_t nPosX;
+    uint32_t nPosY;
     uint32_t nSehTryLevel = -1;
     pfnEHHandlerRoutine puStack12 = __GSHandlerCheck_EH_6ca07b;
     void* pSavedExceptionList = ExceptionList;
@@ -6429,7 +6614,11 @@ void __stdcall TEXT_OpenMessageLogDialog() {
       Dialog::AddStringData(Dialog::DialogHandle, D2Lang::StrTable::strtable::GetLocaleString(0xfc3), 0x15, 0, 4, 1, 0, 0);
       nEntryIdx = 1;
       pfnCloseCallback = TEXT_CloseMessageLogDialog;
-      Dialog::AddStringData(Dialog::DialogHandle, D2Lang::StrTable::strtable::GetLocaleString(0x1030), Inv::ScreenSizeY - 0xa5, 0, 0, 1, pfnCloseCallback, nEntryIdx);
+      nEnabled = 1;
+      nField = 0;
+      nPosY = 0;
+      nPosX = Inv::ScreenSizeY - 0xa5;
+      Dialog::AddStringData(Dialog::DialogHandle, D2Lang::StrTable::strtable::GetLocaleString(0x1030), nPosX, nPosY, nField, nEnabled, pfnCloseCallback, nEntryIdx);
       pLogListAlloc = (::ListBoxWrapper*)Storm::Source::SMem::SMemAlloc(0xc, "new", -1, 0);
       nSehTryLevel = 0;
       if (pLogListAlloc) {
@@ -6548,6 +6737,7 @@ D2TextLineStrc * __stdcall TEXT_ParseMultilineString(uint16_t * pwszInput, int *
     uint16_t* pwszLineCopy;
     int iLineLen;
     int nLine2Len;
+    char szLogBuf[80];
     uint16_t wszLineBuf[100];
     D2TextLineStrc* pHeadOrNew;
     D2TextLineStrc* pHead;
@@ -6560,7 +6750,7 @@ D2TextLineStrc * __stdcall TEXT_ParseMultilineString(uint16_t * pwszInput, int *
     bool bIsFirstLine;
     bIsFirstLine = true;
     do {
-      char szUtf8Buf[100];
+      char szUtf8Buf[20];
       if (wCur == L'\0') {
         return pHead;
       }
@@ -6637,7 +6827,7 @@ D2TextLineStrc * __stdcall TEXT_ParseMultilineString(uint16_t * pwszInput, int *
             nScrollRate = atoi(szUtf8Buf);
             *pnScrollRate = (uint16_t)nScrollRate;
           } else {
-            /* LPCSTR param_2 for wsprintfA */ /* LPSTR param_1 for wsprintfA */ wsprintfA(szUtf8Buf + 0x14, "line 0 of string does not contain scroll rate");
+            /* LPCSTR param_2 for wsprintfA */ /* LPSTR param_1 for wsprintfA */ wsprintfA(szLogBuf, "line 0 of string does not contain scroll rate");
             *pnScrollRate = 8;
           }
         }
@@ -6694,7 +6884,7 @@ D2TextLineStrc * __stdcall TEXT_ParseMultilineString(uint16_t * pwszInput, int *
       nLineWStrLen = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszLineBuf);
       nPixelWidth = D2Win::Src::D2WinFont::DRAW_text0(wszLineBuf);
       if (nPixelWidth >= 0x134) {
-        /* LPCSTR param_2 for wsprintfA */ /* LPSTR param_1 for wsprintfA */ wsprintfA(szUtf8Buf + 0x14, "line %d of string is too long", *pnLineCount);
+        /* LPCSTR param_2 for wsprintfA */ /* LPSTR param_1 for wsprintfA */ wsprintfA(szLogBuf, "line %d of string is too long", *pnLineCount);
       }
 
       pwszLineCopy = (uint16_t*)D2_ALLOC_AT(nLineWStrLen * 2 + 2, ".\\UI\\text.cpp", 0x5eb);
@@ -6775,10 +6965,10 @@ void __stdcall TEXT_FreeEverything() {
     gpTextScrollBoxBuffer = 0;
 }
 
-static int __stdcall TEXT_UpdateScrollingText(int32_t bClose, D2TextBoxStrc * pTextBox) {
+static int __stdcall TEXT_UpdateScrollingText(int32_t bClose, void * pTextBox) {
     int32_t nCount;
     if (bClose) {
-      pTextBox->nState = 2;
+      *(uint32_t*)((int)pTextBox + 0x16) = 2;
       return 0;
     }
 
@@ -6792,7 +6982,7 @@ static int __stdcall TEXT_UpdateScrollingText(int32_t bClose, D2TextBoxStrc * pT
     }
 
     gpTextScrollBoxBuffer = 0;
-    BOOL BVar1 = TEXT_DrawScrollingTextBox(pTextBox);
+    BOOL BVar1 = TEXT_DrawScrollingTextBox((uint16_t**)pTextBox);
     if (BVar1) {
       gbTextScrollBoxAnimating = 1;
       if (!gnTextNpcInteractGuid && gpTextScrollingBox) {
@@ -6803,7 +6993,7 @@ static int __stdcall TEXT_UpdateScrollingText(int32_t bClose, D2TextBoxStrc * pT
 
       TEXT_CloseScrollingText();
       if (gpTextScrollCompleteCallback) {
-        nHandlerCount = (*gpTextScrollCompleteCallback)(gpTextScrollCompleteParam, 0, 0);
+        nHandlerCount = (*gpTextScrollCompleteCallback)(gpTextScrollCompleteParam, 0, nullptr);
         return nHandlerCount;
       }
       if (gbTextStaticPopupActive == 1) {
@@ -6846,7 +7036,7 @@ int __stdcall TEXT_HandleEscapeKey() {
       if (gpTextScrollCompleteCallback) {
         TEXT_CloseScrollingText();
         ui::UI_UpdateCursorAnimationTimer();
-        nResult = (*gpTextScrollCompleteCallback)(gpTextScrollCompleteParam, 1, gpTextDismissCallback);
+        nResult = (*gpTextScrollCompleteCallback)(gpTextScrollCompleteParam, 1, (void*)gpTextDismissCallback);
         if (nResult) {
           gpTextDismissCallback = 0;
           return 1;
@@ -6964,7 +7154,7 @@ void __fastcall TEXT_DrawMonsterHoverText(D2UnitStrc * pUnit) {
     D2Common::Units::GetTargetCoords(pUnit, &ptScreenPos2);
     ptScreenPos2.x -= lprcTextOverheadRect.left;
     ptScreenPos2.y += -0x1e - lprcTextOverheadRect.top;
-    nBorderType = Path::DRAW_GetTypeOfBorder();
+    nBorderType = PANELSHIFT_BorderForWorld(Path::DRAW_GetTypeOfBorder()); // VP: [issue #26 / R100] no-panel-shift - unit sprite path rides the border-0 camera
     switch (nBorderType) {
       case 1:
         {
@@ -7038,7 +7228,7 @@ void __fastcall TEXT_DrawObjectHoverText(D2UnitStrc * pUnit) {
     D2Common::Units::GetTargetCoords(pUnit, &ptScreenPos);
     ptScreenPos.x -= lprcTextOverheadRect.left;
     ptScreenPos.y += -10 - lprcTextOverheadRect.top;
-    nBorderType = Path::DRAW_GetTypeOfBorder();
+    nBorderType = PANELSHIFT_BorderForWorld(Path::DRAW_GetTypeOfBorder()); // VP: [issue #26 / R100] no-panel-shift - unit sprite path rides the border-0 camera
     switch (nBorderType) {
       case 1:
         {
@@ -7114,7 +7304,7 @@ void __fastcall TEXT_DrawMessageLogAndOverhead(D2GameViewStrc * pGameView) {
       nVisibleCount = TEXT_UpdateScrollingText(gbTextScrollBoxAnimating, gpTextScrollingBox);
       pNpcUnit = 0;
       if (gnTextNpcInteractGuid) {
-        pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
+        pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
       }
 
       bPlayerDead = UNIT::Player::IsPlayerDead();
@@ -7145,7 +7335,7 @@ void __fastcall TEXT_DrawMessageLogAndOverhead(D2GameViewStrc * pGameView) {
         gbTextStaticPopupActive = 0;
         gnTextNpcInteractGuid = 0;
       } else {
-        TEXT_DrawTextBoxWithBorderCheck(gpStaticTextPopup, gaTextStaticPopupRect);
+        TEXT_DrawTextBoxWithBorderCheck(gpStaticTextPopup, &gaTextStaticPopupRect);
       }
 
       nVisibleCount += (uint32_t)bPopupAlive;
@@ -7210,7 +7400,7 @@ void __fastcall TEXT_ShowNpcDialog(D2UnitStrc * pUnit, uint16_t wDialogStringId,
       gnTextNpcGuid = 0;
     } else {
       if (gnTextNpcInteractGuid) {
-        pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
+        pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
         if (pNpcUnit && pNpcUnit != pUnit) {
           GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT(0x30, 1, gnTextNpcGuid);
           npcmenu::NPCMENU_ClearHireListAndStopNpcSound(gnTextNpcGuid);
@@ -7273,7 +7463,7 @@ void __fastcall TEXT_ShowScrollingText(uint16_t wDialogStringId, int32_t bAlignT
       gnTextBoxExclusionX = (ui::ScreenSizeX - 0x145) / 2;
       gnScrollingTextBoxTopY = 0xc;
     } else {
-      gnScrollingTextBoxTopY = 0x105 - Inv::gnPanelOffsetY;
+      gnScrollingTextBoxTopY = 0x105 - Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(); // VP: [resolution site-6]
       gnTextBoxExclusionX = Inv::gnPanelOffsetX;
     }
 
@@ -7364,16 +7554,20 @@ void __fastcall TEXT_ShowStaticTextPopup(uint16_t wStringId) {
     gdwTextPopupExpireTime = dwTickCount + (nSavedFont + 0x19) * 200;
     gpTextStaticPopupBox = 1;
     gbTextStaticPopupActive = 1;
-    gaTextStaticPopupRect[1] = 100 - (uint32_t)(gpStaticTextPopup->nHeight >> 2);
-    gaTextStaticPopupRect[0] = 0x140 - (uint32_t)(gpStaticTextPopup->nWidth >> 1);
+    gnTextStaticPopupHeight = 100 - (gpStaticTextPopup->nHeight >> 2);
+    gaTextStaticPopupRect = 0x140 - (uint32_t)(gpStaticTextPopup->nWidth >> 1);
 }
 
 void __fastcall TEXT_HandleOverheadTextPacket(D2GSPacketSrv0x27 * pPacket) {
     D2UnitStrc* pUnit;
     char szMsgBuffer[20];
+    // VP-BEGIN [quest-gossip-mark]: issue #13 — every s2c 0x27 arrival; the gossip
+    // batch (eUnitType 1) is what feeds the NPC-menu scroll-message check.
+    D2BOOT_MarkFmt("s2c 0x27 overhead type=%u guid=%08x msgs=%u", (unsigned)pPacket->eUnitType, (unsigned)pPacket->nUnitGUID, (unsigned)pPacket->nMessageCount);
+    // VP-END [quest-gossip-mark]
     if (pPacket->eUnitType == 1) {
       D2HoverTextStrc* pHoverText;
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(pPacket->nUnitGUID, UNIT_MONSTER);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(pPacket->nUnitGUID, UNIT_MONSTER);
       if (pUnit && pPacket->nMessageCount == 1 && pPacket->aMessages[0].bShow == '\x03') {
         if (pUnit->pHoverText) {
           D2Common::Chat::Free(nullptr, pUnit->pHoverText);
@@ -7391,10 +7585,15 @@ void __fastcall TEXT_HandleOverheadTextPacket(D2GSPacketSrv0x27 * pPacket) {
       gpOverHeadStrc = D2Common::Text::STRUCT_AllocTxtMessageForPacket0x27(nullptr);
       D2Common::Text::StoreMessages(gpOverHeadStrc, &pPacket->nMessageCount);
       D2Common::Text::TEXT_SortMessageList(gpOverHeadStrc);
+      // VP-BEGIN [quest-gossip-mark]: the value UI_HandleNpcInteractionPacket will
+      // read back; 0xffff = no scroll msg = the NPC menu opens with no 0x31 echo
+      // (the issue #13 field shape: talk -> nothing).
+      D2BOOT_MarkFmt("s2c 0x27 overhead msgType0=0x%04x (0xffff = no scroll msg, no 0x31 echo)", (unsigned)D2Common::Text::OVERHEAD_GetMessageType0(gpOverHeadStrc, 0));
+      // VP-END [quest-gossip-mark]
       return;
     }
     if (pPacket->eUnitType == 2) {
-      pUnit = UNIT::CUnit::UNITS_FindClientSideUnit(pPacket->nUnitGUID, UNIT_OBJECT);
+      pUnit = UNIT::Player::UNITS_FindClientSideUnit(pPacket->nUnitGUID, UNIT_OBJECT);
       if (pPacket->aMessages[0].bShow == '\x03') {
         TEXT_ShowStaticTextPopup(pPacket->aMessages[0].nMessage);
         return;
@@ -7458,7 +7657,7 @@ void __stdcall INPUT_TextClickHandler(D2UIMouseMsgStrc * pMsg) {
     D2UnitStrc* pSelectedUnit = GAME::Select::GetSelectedUnit();
     if (pSelectedUnit) {
       if (gnTextNpcInteractGuid) {
-        pSelectedUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
+        pSelectedUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
         pNpcUnit = GAME::Select::GetSelectedUnit();
         if (pSelectedUnit == pNpcUnit) {
           return;
@@ -7467,12 +7666,12 @@ void __stdcall INPUT_TextClickHandler(D2UIMouseMsgStrc * pMsg) {
     } else {
       pSelectedUnit = GAME::Select::GetSelectedUnit();
       if (!pSelectedUnit && gbTextNpcMenuSelection != '\0') {
-        pSelectedUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcMenuIndex, UNIT_MONSTER);
+        pSelectedUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcMenuIndex, UNIT_MONSTER);
         if (!pSelectedUnit) {
           return;
         }
 
-        pNpcUnit = UNIT::CUnit::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
+        pNpcUnit = UNIT::Player::UNITS_FindClientSideUnit(gnTextNpcGuid, UNIT_MONSTER);
         if (pSelectedUnit != pNpcUnit) {
           return;
         }

@@ -27,7 +27,7 @@ extern D2RendererFunctionsStrc * RENDERER_CurrentRenderedFunctions;
 extern uint8_t gaDirectDrawDitherPaletteRemap[1024];
 extern D2RenderStatisticsStrc gnTextureMemoryUsageBytes;
 extern D2RendererCoreStrc * RENDERER_SelectedRendererCore;
-extern HWND gnGlideWindowHandle;
+extern int gnGlideWindowHandle;
 extern int gnRenderState;
 extern D2GfxSettingsStrc * pD2GFXRenderedDataStrc;
 extern BYTE * * gpPaletteTable;

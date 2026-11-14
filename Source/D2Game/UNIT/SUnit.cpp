@@ -1930,7 +1930,7 @@ void __fastcall TakeStairs(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc *
 
 // Server-side unit factory. Position is WORLD SUBTILES; bPlaceInRoom=1 routes through UNITS_PlaceUnitInRoom + AllocObjectData.
 // Dispatches on eUnitType through the jump table at 005554e8 (label UNIT_FillFunctions) - a switch, not an array of callbacks. Its six branch labels (FillPlayer/FillMonster/FillObject/FillMissile/FillItem/FillWarp) and the shared tail UNITS_RestoreUnitInRoom are case blocks of this function, not callable functions.
-D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int32_t nPosX, int32_t nPosY, ::SGAMEDATA * pGame, D2RoomStrc * pRoom, uint8_t bPlaceInRoom, int32_t nInitialMode, uint32_t pMonsterData) {
+D2UnitStrc * __fastcall CreateUnit(eD2UnitType eUnitType, int32_t nClassId, int32_t nPosX, int32_t nPosY, ::SGAMEDATA * pGame, D2RoomStrc * pRoom, uint8_t bPlaceInRoom, int32_t nInitialMode, void * pMonsterData) {
     eAct eUnitAct;
     eD2LevelId nLevelId;
     D2ObjectsTxt* pDVar1;

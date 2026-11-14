@@ -233,7 +233,7 @@ BOOL __stdcall D2GFX_DrawShadowTile(struct D2TileLibraryEntryStrc * pTile, int32
 // Globals
 extern ::D2GfxHelperStrc * D2GfxRendereInitFunctionsStrc;
 extern uint8_t gaDirectDrawDitherPaletteRemap[1024];
-extern HWND gnGlideWindowHandle;
+extern int gnGlideWindowHandle;
 extern int gnRenderState;
 extern D2RenderStatisticsStrc gnTextureMemoryUsageBytes;
 extern BYTE * * gpPaletteTable;

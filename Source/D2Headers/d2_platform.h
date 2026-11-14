@@ -864,10 +864,19 @@ extern "C" void* D2_SetSeTranslator(void* pfnTranslator);
 static inline void* _set_se_translator(void* pfnTranslator) { return D2_SetSeTranslator(pfnTranslator); }
 #endif
 extern "C" int _except_handler3(struct _EXCEPTION_RECORD* pExceptionRecord, EH3_EXCEPTION_REGISTRATION* pRegistration, CONTEXT* pContext, void* pDispatcherContext);
-extern "C" int ___init_ctype(threadlocinfo* _LocInfo);
-extern "C" int ___init_monetary(threadlocinfo* _LocInfo);
-extern "C" int ___init_numeric(threadlocinfo* _LocInfo);
-extern "C" int ___init_time(threadlocinfo* _LocInfo);
+
+// ___init_* take MSVCRT's per-thread locale struct: MSVC <internal.h> and
+// mingw-w64 <= 12.0.0 (corecrt.h) spelled it threadlocinfo; post-12.0.0
+// mingw-w64 renamed the tag to threadlocaleinfostruct (pointer typedef
+// pthreadlocinfo) and dropped the old spelling. These externs have no call
+// sites or definitions in-tree, so the parameter is spelled as the
+// ABI-identical void* to stay toolchain-neutral (C linkage: symbol name and
+// calling convention are unaffected).
+extern "C" int ___init_ctype(void* _LocInfo);
+extern "C" int ___init_monetary(void* _LocInfo);
+extern "C" int ___init_numeric(void* _LocInfo);
+extern "C" int ___init_time(void* _LocInfo);
+
 extern "C" __stdcall HRESULT DirectDrawCreate(GUID* lpGUID, struct IDirectDraw1** lplpDD, struct IUnknown* pUnkOuter);
 extern "C" __stdcall int32_t DirectSoundCreate(const GUID* pcGuidDevice, struct IDirectSound** ppDS, struct IUnknown* pUnkOuter);
 extern "C" __stdcall int32_t DirectSoundEnumerateA(BOOL (__stdcall* pCallback)(int, char*, char*, DWORD), void* pContext);

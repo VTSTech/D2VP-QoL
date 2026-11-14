@@ -23,6 +23,7 @@ namespace D2Sound {
 struct IDirectSound * __stdcall SOUND_GetDirectSoundDevice();
 DWORD __stdcall SOUND_GetPrimaryBufferModeFlag();
 DWORD __stdcall SOUND_GetSound3DFlag();
+DWORD __stdcall SOUND_GetDirectSoundInitializedFlag();
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Sound)
 BOOL __stdcall SOUND_DetectLegacySoundDrivers(int nUnused, char * szDeviceName, char * szDriverVxd, DWORD dwUnused);

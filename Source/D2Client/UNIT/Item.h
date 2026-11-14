@@ -188,6 +188,7 @@ void __fastcall ITEM_CltRecalcAllEquippedItems(struct D2GSPacketSrv0x47 * pBytes
 // Client-side handler for S2C packet 0x48. Identical logic to ITEM_CltRecalcAllEquippedItems (0x47 handler) — recalculates equipped item requirement states, enables/disables items based on current stats, handles set bonuses and GFX reload.
 void __fastcall ITEM_CltRecalcAllEquippedItems2(struct D2GSPacketSrv0x48 * pBytes);
 void __fastcall ITEM_RecalcAllEquippedItems_ECX(struct D2UnitStrc * pUnit);
+void __fastcall ITEM_RecalcAllEquippedItems_EBX(struct D2UnitStrc * pUnit);
 uint32_t __fastcall ITEM_SetItemInBodyLocation(struct D2InventoryStrc * pInventory, struct D2UnitStrc * pItem, uint32_t eBodyLoc);
 // Returns the drop-sound ID for an item unit. First reads wDropSound from the item's ItemsTxt row. If the item is unique (quality 7), overrides with the UniqueItemsTxt dropsound field; if set (quality 5), overrides with SetItemsTxt dropsound. Returns 0 for null input or when no positive sound is found.
 int32_t __fastcall SOUND_GetIdFromUnit(struct D2UnitStrc * pUnit);

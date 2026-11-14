@@ -1,7 +1,1 @@
-.idea/
-.DS_Store
-metrics/
-compile-errors.txt
-sites2.tsv
-/build/
-a.out
+/build

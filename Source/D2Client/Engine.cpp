@@ -3,7 +3,9 @@
 #include "Source/D2Client/Engine.h"
 #include "Source/D2Client/Core/Archive.h"
 #include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2ClientStrc.h"
 #include "Source/D2Client/D2GfxDataStrc.h"
+#include "Source/D2Client/D2LightMapStrc.h"
 #include "Source/D2Client/Draw/LightMap.h"
 #include "Source/D2Client/Engine/Gfx.h"
 #include "Source/D2Client/GAME/Game/Game.h"
@@ -15,18 +17,145 @@
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/CUnit.h"
 #include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Path.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2Common.h"
+using D2Client::UNIT::Player::LOADER_PopupGameLoopCallback;
+#include "Source/D2Client/UNIT/UnitMode.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2RoomExStrc.h"
+#include "Source/D2Common/D2RoomStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
+#include "Source/D2Common/DATATBLS/ItemStats.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/Drlg/D2DrlgDeleteStrc.h"
+#include "Source/D2Common/Monsters/MONSTERS.h"
+#include "Source/D2Common/PATH/DynamicPath.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2Win/Src/D2WinPalette.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/Fog.h"
+#include "3rdparty/Storm/D2ArchiveStrc.h"
+#include "3rdparty/Storm/D2MPQFileStrc.h"
+#include "3rdparty/Storm/Source/SFile.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+using D2Client::UNIT::Player::LOADER_PopupGameLoopCallback;
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2Win.globals.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
-#include "Source/D2Client/D2ClientRoot.h"
+#include "Source/D2Client/D2Client.h"
 #include "Source/D2Client/Engine.data.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Common/DATATBLS/MonsterTbls.inline.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -93,7 +222,7 @@ void __fastcall LOADER_SetConnectionLostFlag_Unref_0045ae70(BOOL bConnectionLost
     gaScreenResolutionModeArray = bConnectionLost;
 }
 
-static BOOL __stdcall UI_IsMouseInRect(int32_t nRectLeftX, int32_t nRectBottomY, int32_t nRectWidth, int32_t nRectHeight) {
+BOOL __stdcall UI_IsMouseInRect(int32_t nRectLeftX, int32_t nRectBottomY, int32_t nRectWidth, int32_t nRectHeight) {
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX >= nRectLeftX && nMouseX <= nRectLeftX + nRectWidth && nMouseY >= nRectBottomY - nRectHeight && nMouseY <= nRectBottomY) {
@@ -114,20 +243,20 @@ void __stdcall DrawPopupOk(int32_t bDiscPrompt) {
 
     sGfxData.nDirection = 0;
     sGfxData.nFrameNumber = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0xbc, 0x148 - UI::Inv::gnPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0xbc, 0x148 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr);
     sGfxData.nFrameNumber = 1;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x1bc, 0x148 - UI::Inv::gnPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x1bc, 0x148 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr);
 }
 
 void __stdcall LOADER_CheckForInsertedDiscs() {
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-    /* Please Insert the Diablo II */ UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 190 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(5168), 0);
+    /* Please Insert the Diablo II */ UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 190 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(5168), 0); // VP: [resolution site-6]
     BOOL bIsExpansion = Fog::D2CheckExpansionGame();
     int32_t nColor_lcl = 0;
     if (bIsExpansion) {
-      UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 205 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(21880), nColor_lcl);
+      UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 205 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(21880), nColor_lcl);
     } else {
-      UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 205 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(5169), nColor_lcl);
+      UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 132, 205 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 452, D2Lang::StrTable::strtable::GetLocaleString(5169), nColor_lcl);
     }
 
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
@@ -139,12 +268,12 @@ void __stdcall DrawOkCancel(int32_t nFrameNumber) {
     sGfxData.pDC6 = (DC6*)IMG_okcancelbtn;
     sGfxData.nFrameNumber = nFrameNumber;
     sGfxData.nDirection = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x110, 0x13e - UI::Inv::gnPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x110, 0x13e - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr);
 }
 
 void __stdcall LOADER_DrawInsertDiscMessage() {
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0x110, 0x136 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 0x170, D2Lang::StrTable::strtable::GetLocaleString(0x13ee), 0);
+    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0x110, 0x136 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 0x170, D2Lang::StrTable::strtable::GetLocaleString(0x13ee), 0);
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -171,7 +300,7 @@ void __fastcall LOADER_DrawInsertDiscScreen(int32_t nUnused) {
 
 void __stdcall INPUT_CharScreenOkDown(D2UIMouseMsgStrc * pMsg) {
     int nBaseX = UI::Inv::gnPanelOffsetX;
-    int nBaseY = -UI::Inv::gnPanelOffsetY;
+    int nBaseY = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
     int nLeftEdge = UI::Inv::gnPanelOffsetX + 0x110;
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
@@ -196,7 +325,7 @@ void __stdcall INPUT_CharScreenOkUp(D2UIMouseMsgStrc * pMsg) {
     gnCharScreenOkButtonPressed = 0;
     if (gnCharScreenInputState) {
       int nMouseX;
-      nBaseY = -UI::Inv::gnPanelOffsetY;
+      nBaseY = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
       nLeftEdge = UI::Inv::gnPanelOffsetX + 0x110;
       nMouseX = Cursor::GetMouseX();
       nMouseY = Cursor::GetMouseY();
@@ -232,13 +361,13 @@ void __stdcall INPUT_CharScreenOkCancel(D2UIMouseMsgStrc * pMsg) {
 
 void __stdcall LOADER_DrawConnectionLostMessage() {
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-    UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 0x84, 0xbe - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 0x1c4, D2Lang::StrTable::strtable::GetLocaleString(0x1430), 0);
+    UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 0x84, 0xbe - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 0x1c4, D2Lang::StrTable::strtable::GetLocaleString(0x1430), 0);
     uint16_t wStrTableId = 0x1432;
     if (gbConnectionLost) {
       wStrTableId = 0x5578;
     }
 
-    UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 0x84, 0xcd - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 0x1c4, D2Lang::StrTable::strtable::GetLocaleString(wStrTableId), 0);
+    UI::ui::UI_DrawTextCentered(UI::ui::ScreenSizeX / 2 - 0x84, 0xcd - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 0x1c4, D2Lang::StrTable::strtable::GetLocaleString(wStrTableId), 0);
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -248,15 +377,15 @@ void __stdcall LOADER_DrawOkCancelButtons(int32_t nOkFrame, int32_t nCancelFrame
     sGfxData.pDC6 = (DC6*)IMG_okcancelbtn;
     sGfxData.nFrameNumber = nOkFrame;
     sGfxData.nDirection = 0;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0xce, 0x13e - UI::Inv::gnPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0xce, 0x13e - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr);
     sGfxData.nFrameNumber = nCancelFrame;
-    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x152, 0x13e - UI::Inv::gnPanelOffsetY, -1, DRAW_SOLID, nullptr);
+    D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, UI::Inv::gnPanelOffsetX + 0x152, 0x13e - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), -1, DRAW_SOLID, nullptr);
 }
 
 void __stdcall DRAW_UI_OkCancel() {
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0xce, 0x136 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 0x12e, D2Lang::StrTable::strtable::GetLocaleString(0x13ee), 0);
-    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0x152, 0x136 - UI::Inv::gnPanelOffsetY, UI::Inv::gnPanelOffsetX + 0x1b2, D2Lang::StrTable::strtable::GetLocaleString(0x13ef), 0);
+    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0xce, 0x136 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 0x12e, D2Lang::StrTable::strtable::GetLocaleString(0x13ee), 0);
+    UI::ui::UI_DrawTextCentered(UI::Inv::gnPanelOffsetX + 0x152, 0x136 - UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY(), UI::Inv::gnPanelOffsetX + 0x1b2, D2Lang::StrTable::strtable::GetLocaleString(0x13ef), 0);
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }
 
@@ -291,13 +420,13 @@ void __fastcall LOADER_DrawConnectionLostScreen(int32_t nUnused) {
 
 void __stdcall INPUT_CharScreenDualButtonDown(D2UIMouseMsgStrc * pMsg) {
     int nBaseX = UI::Inv::gnPanelOffsetX;
-    int nBaseY = -UI::Inv::gnPanelOffsetY;
+    int nBaseY = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
     int nLeftEdge = UI::Inv::gnPanelOffsetX + 0xce;
     int nMouseX = Cursor::GetMouseX();
     int nMouseY = Cursor::GetMouseY();
     if (nMouseX < nLeftEdge || nMouseX > nBaseX + 0x12e || nMouseY < nBaseY + 0x116 || nMouseY > nBaseY + 0x136) {
       int nBaseX2 = UI::Inv::gnPanelOffsetX;
-      nBaseY = -UI::Inv::gnPanelOffsetY;
+      nBaseY = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
       nMouseY = UI::Inv::gnPanelOffsetX + 0x152;
       nBaseX = Cursor::GetMouseX();
       nMouseX = Cursor::GetMouseY();
@@ -331,7 +460,7 @@ void __stdcall INPUT_CharScreenDualButtonUp(D2UIMouseMsgStrc * pMsg) {
     gnConnectionLostScreenState = 0;
     if (gnCharScreenInputState) {
       int nMouseX;
-      nBaseY = -UI::Inv::gnPanelOffsetY;
+      nBaseY = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
       nLeftEdge = UI::Inv::gnPanelOffsetX + 0xce;
       nMouseX = Cursor::GetMouseX();
       nMouseY = Cursor::GetMouseY();
@@ -341,7 +470,7 @@ void __stdcall INPUT_CharScreenDualButtonUp(D2UIMouseMsgStrc * pMsg) {
         gnCharScreenInputState = 0;
       }
 
-      nBaseX = -UI::Inv::gnPanelOffsetY;
+      nBaseX = -UI::Inv::gnPanelOffsetY + VPRES_GetWideUiOffsetY();
       nMouseY = UI::Inv::gnPanelOffsetX + 0x152;
       nBaseY = Cursor::GetMouseX();
       nMouseX = Cursor::GetMouseY();
@@ -452,7 +581,7 @@ uint32_t __fastcall ENGINE_RunDrawModeGameLoop(int32_t nDrawMode) {
 }
 
 // Alternate draw mode game loop with different event handler table and loop function
-static uint32_t ENGINE_RunDrawModeGameLoopAlt(int32_t nDrawMode, uint32_t dwRetVal) {
+uint32_t ENGINE_RunDrawModeGameLoopAlt(int32_t nDrawMode, uint32_t dwRetVal) {
     GAME::Game::GAMEDATA_SetDrawFunction(nDrawMode);
     _Message::MESSAGE_RegisterEventHandlerBatch(D2gfx::D2GFX::GetHwnd(), gsUIEngineFlagInit2, 4);
     _Message::MessageGameLoop((::fpGameLoopFunction)LOADER_PopupGameLoopCallback);
@@ -467,55 +596,87 @@ static uint32_t ENGINE_RunDrawModeGameLoopAlt(int32_t nDrawMode, uint32_t dwRetV
 }
 
 void __fastcall CLIENT_SetUnitFlag(D2UnitStrc * pUnit, uint16_t wFlag, BOOL bSet) {
-    if (!(pUnit && pUnit->eUnitType == UNIT_MONSTER && pUnit->pUnitData.pUnitDataMonster)) {
+    uint32_t* pFlags;
+    if (!(pUnit && pUnit->eUnitType == UNIT_MONSTER && pUnit->pUnitData.pUnitDataPlayer)) {
       return;
     }
     if (bSet) {
-      *(uint16_t*)&pUnit->pUnitData.pUnitDataMonster->pAiGeneral |= wFlag;
+      pFlags = &pUnit->pUnitData.pUnitDataPlayer->unk0x28;
+      *(uint16_t*)pFlags |= wFlag;
       return;
     }
 
-    *(uint16_t*)&pUnit->pUnitData.pUnitDataMonster->pAiGeneral &= ~wFlag;
+    pFlags = &pUnit->pUnitData.pUnitDataPlayer->unk0x28;
+    *(uint16_t*)pFlags &= ~wFlag;
 }
 
-void __fastcall Unreferenced_00460760(D2UnitStrc * param_1, int param_2) {
-    if (!(param_1 && param_1->eUnitType == UNIT_PLAYER && param_1->pUnitData.pUnitDataPlayer)) {
+void __fastcall Unreferenced_00460760(int param_1, int param_2) {
+    if (!(param_1 && !*(int*)param_1 && *(int*)(param_1 + 0x14))) {
       return;
     }
 
-    param_1->pUnitData.pUnitDataPlayer->bHasPendingInteract = param_2;
+    *(int*)(*(int*)(param_1 + 0x14) + 0x150) = param_2;
 }
 
-int __fastcall Unreferenced_004607d0(D2UnitStrc * param_1) {
-    if (param_1 && param_1->eUnitType == UNIT_PLAYER && param_1->pUnitData.pUnitDataPlayer) {
-      return param_1->pUnitData.pUnitDataPlayer->eQueuedSkillId;
+int __fastcall Unreferenced_004607d0(int param_1) {
+    if (param_1 && !*(int*)param_1 && *(int*)(param_1 + 0x14)) {
+      return *(int*)(*(int*)(param_1 + 0x14) + 0x154);
     }
 
     return 0;
 }
 
-int __fastcall Unreferenced_004607f0(D2UnitStrc * param_1) {
-    if (param_1 && param_1->eUnitType == UNIT_PLAYER && param_1->pUnitData.pUnitDataPlayer) {
-      return param_1->pUnitData.pUnitDataPlayer->eTargetUnitType;
+int __fastcall Unreferenced_004607f0(int param_1) {
+    if (param_1 && !*(int*)param_1 && *(int*)(param_1 + 0x14)) {
+      return *(int*)(*(int*)(param_1 + 0x14) + 0x158);
     }
 
     return 0;
 }
 
-int __fastcall Unreferenced_00460810(D2UnitStrc * param_1) {
-    if (param_1 && param_1->eUnitType == UNIT_PLAYER && param_1->pUnitData.pUnitDataPlayer) {
-      return param_1->pUnitData.pUnitDataPlayer->nTargetUnitGUID;
+int __fastcall Unreferenced_00460810(int param_1) {
+    if (param_1 && !*(int*)param_1 && *(int*)(param_1 + 0x14)) {
+      return *(int*)(*(int*)(param_1 + 0x14) + 0x15c);
     }
 
     return 0;
 }
 
-// GetType as its callers inlined it: two returns, the value in a register of its own.
-static inline eD2UnitType GetTypeInline(D2UnitStrc * pUnit) {
-    if (pUnit) {
-        return pUnit->eUnitType;
+void __stdcall CLIENT_SetAnimModeAndMoveToCurrentPos(eD2PlayerAnimMode nAnimMode, BOOL bMovePlayerUnit, D2UnitStrc * pUnit) {
+    int nX;
+    int nY;
+    UNIT::UnitMode::UNITMODE_SetAnimMode(pUnit, nAnimMode);
+    if (!bMovePlayerUnit) {
+      return;
     }
-    return (eD2UnitType)6;
+
+    D2UnitStrc* pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_Net();
+    if (pUnit != pPlayerUnit_lcl) {
+      return;
+    }
+
+    eD2UnitType eUnitType = pUnit->eUnitType;
+    if (eUnitType == UNIT_OBJECT || (int)eUnitType > 3 && (int)eUnitType <= 5) {
+      nX = pUnit->pPath.pStaticPath->nPosX;
+    } else if (pUnit->pPath.pDynamicPath) {
+      nX = D2Common::PATH::DynamicPath::GetXPos(pUnit->pPath.pDynamicPath);
+    } else {
+      nX = 0;
+    }
+
+    eUnitType = pUnit->eUnitType;
+    if (eUnitType == UNIT_OBJECT || (int)eUnitType > 3 && (int)eUnitType <= 5) {
+      nY = pUnit->pPath.pStaticPath->nPosY;
+    } else if (pUnit->pPath.pDynamicPath) {
+      nY = D2Common::PATH::DynamicPath::GetYPos(pUnit->pPath.pDynamicPath);
+    } else {
+      nY = 0;
+    }
+    if (!(nX && nY)) {
+      return;
+    }
+
+    UNIT::Path::PATH_MoveUnitToPoint(pUnit, (uint16_t)nX, nY, 0, 0, 0);
 }
 
 void __stdcall CLIENT_PreloadMonsterCofsInAdjacentRooms() {
@@ -536,7 +697,7 @@ void __stdcall CLIENT_PreloadMonsterCofsInAdjacentRooms() {
     D2Common::DUNGEON::Dungeon::DRLGROOM_GetAdjacentRoomsList(pRoom, &pAdjacentRooms, (int*)&nRoomCount);
     for (nCount = 0; nCount < nRoomCount; nCount++) {
       for (pUnit = pAdjacentRooms[nCount]->pUnitList; pUnit; pUnit = pUnit->pRoomNext) {
-        if (GetTypeInline(pUnit) == UNIT_MONSTER) {
+        if (pUnit->eUnitType == UNIT_MONSTER) {
           eState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_dopplezon);
           if (eState) {
             Gfx::GFX_LoadUnitModeCof(pUnit, 0);
@@ -565,7 +726,7 @@ void __fastcall CLIENT_UpdateUnitLightRadius(D2UnitStrc * pUnit, int32_t nRadius
     if (eUnitType == UNIT_PLAYER) {
       nLightRadius = 0xd;
     } else {
-      int32_t bVar1;
+      uint8_t bVar1;
       pMonStats2 = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetMonStats2(pUnit->nClassId);
       if (!pMonStats2) {
         return;
@@ -573,7 +734,7 @@ void __fastcall CLIENT_UpdateUnitLightRadius(D2UnitStrc * pUnit, int32_t nRadius
 
       bVar1 = D2Common::Monsters::MONSTERS::MONSTERS_GetMaxLightRadiusFromEquipment(pUnit);
       nLightRadius = (uint32_t)bVar1;
-      if (bVar1 < pMonStats2->byLight) {
+      if ((uint32_t)bVar1 < (uint32_t)pMonStats2->byLight) {
         nLightRadius = (uint32_t)pMonStats2->byLight;
       }
     }
@@ -596,8 +757,8 @@ void __fastcall CLIENT_SetUnitLightColor(D2UnitStrc * pUnit, int32_t dwRGB) {
     uint8_t byGreen = 0xff;
     uint8_t byBlue = 0xff;
     if (dwRGB) {
-      byRed = (uint8_t)(dwRGB >> 0x10);
-      byGreen = (uint8_t)(dwRGB >> 8);
+      byRed = (uint8_t)((uint32_t)dwRGB >> 0x10);
+      byGreen = (uint8_t)((uint32_t)dwRGB >> 8);
       byBlue = (uint8_t)dwRGB;
     }
 
@@ -607,8 +768,5 @@ void __fastcall CLIENT_SetUnitLightColor(D2UnitStrc * pUnit, int32_t dwRGB) {
 void __fastcall LOADER_SetConnectionLostFlag_Unref_00468000(BOOL bConnectionLost) {
     Cursor::gnCursorInitialized = bConnectionLost;
 }
-
-static void * keep_0045fb80 = (0 ? (UI_IsMouseInRect(*(int32_t *)0, *(int32_t *)0, *(int32_t *)0, *(int32_t *)0), (void *)0) : (void *)0);
-static void * keep_004606de = (0 ? (ENGINE_RunDrawModeGameLoopAlt(*(int32_t *)0, *(uint32_t *)0), (void *)0) : (void *)0);
 
 } // namespace D2Client::Engine

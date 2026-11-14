@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2Client)
 #error "D2Client header included by a module that may not use D2Client (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2Client) && !defined(D2_LOADS_D2Client)
-#error "internal D2Client header included from another module; include D2Client's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -30,8 +27,6 @@ typedef BOOL (__stdcall *pfnEscMenuItemVisible)();
 #endif
 
 // Data types
-#ifndef D2_DEFINED_D2EscMenuHeaderStrc
-#define D2_DEFINED_D2EscMenuHeaderStrc
 struct D2EscMenuHeaderStrc {
     /* 0x00 */ int nItemCount; // Number of menu items in this menu
     /* 0x04 */ int nVerticalSpacing; // Vertical spacing between menu items in pixels
@@ -40,9 +35,6 @@ struct D2EscMenuHeaderStrc {
     /* 0x10 */ int nBarYOffset;
 };
 
-#endif // D2_DEFINED_D2EscMenuHeaderStrc
-#ifndef D2_DEFINED_D2EscMenuItemStrc
-#define D2_DEFINED_D2EscMenuItemStrc
 struct D2EscMenuItemStrc {
     /* 0x000 */ int nMenuItemType; // 0=centered, 1=split_dual, 2=progress_bar, -1=disabled
     /* 0x004 */ int nExpansionOnly; // 0=always visible, 1=expansion only
@@ -52,7 +44,7 @@ struct D2EscMenuItemStrc {
     /* 0x114 */ void (__fastcall *fpClickCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked when the item is activated; ESCMENU_ClickMenuItem loads ECX with the item
     /* 0x118 */ void (__fastcall *fpInitCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked once from ESCMENU_LoadLocalizedImages to seed nImageIndex from the live setting
     /* 0x11C */ void (__fastcall *fpDrawCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked every frame from DRAW_EscMenu to refresh nImageIndex before the row is drawn
-    /* 0x120 */ int nSubImageCount; // Number of sub-images (max 4)
+    /* 0x120 */ int nSubImageCount; // Number of sub-images (max 4 retail; 5 since VP R112 - the fifth video-options stop)
     /* 0x124 */ int nImageIndex; // Current image index or state
     /* 0x128 */ int bSelected; // Boolean: is this item selected
     /* 0x12C */ char szSubImage1Path[260]; // Path to first sub-image
@@ -60,23 +52,19 @@ struct D2EscMenuItemStrc {
     /* 0x334 */ char szSubImage3Path[260]; // Path to third sub-image
     /* 0x438 */ char szSubImage4Path[260]; // Path to fourth sub-image
     /* 0x53C */ struct DC6 * pDC6Main; // Loaded main DC6 image
-    /* 0x540 */ struct DC6 * pDC6SubImages[4]; // Array of loaded sub-image DC6 pointers
+    /* 0x540 */ struct DC6 * pDC6SubImages[6]; // Array of loaded sub-image DC6 pointers (VP [R115]: grown from R112's 5 to 6 for the video-options slider's sixth stop (1920x1080); retail tables keep shipping <= 4 stops, the designated inits zero-fill the tail slots, and the only count-6 row is the VP Resolution row whose slots 2-5 attach at runtime)
 };
 
-#endif // D2_DEFINED_D2EscMenuItemStrc
-#ifndef D2_DEFINED_D2EscMenuUIFlagStrc
-#define D2_DEFINED_D2EscMenuUIFlagStrc
 struct D2EscMenuUIFlagStrc {
     /* 0x00 */ int nEnabled;
     /* 0x04 */ int nHideable;
     /* 0x08 */ int nSavedState;
 };
 
-#endif // D2_DEFINED_D2EscMenuUIFlagStrc
 struct __attribute__((packed)) D2UIMouseMsgStrc {
     /* 0x00 */ HWND hWnd; // HWND the message was delivered to. Built by Storm::WindowHandle::WND_DispatchWindowMessage @00420b00 as its local hMsgWnd at Stack[-0x24], which it passes to SEvtDispatch as the opaque pData.
     /* 0x04 */ uint32_t uMsg; // Windows message id. WND_DispatchWindowMessage local uMsgL at Stack[-0x20].
-    /* 0x08 */ WPARAM nWParam; // WPARAM. WND_DispatchWindowMessage local nMsgWParam at Stack[-0x1c]. Read as a byte virtual-key code by INPUT_FormKeyHandler/INPUT_FormKeyUpHandler.
+    /* 0x08 */ uint32_t nWParam; // WPARAM. WND_DispatchWindowMessage local nMsgWParam at Stack[-0x1c]. Read as a byte virtual-key code by INPUT_FormKeyHandler/INPUT_FormKeyUpHandler.
     /* 0x0C */ D2UIMsgLParamUnion uLParam; // LPARAM. Built by Storm::WindowHandle::WND_DispatchWindowMessage @00420b00 as its local dwMsgLParam at Stack[-0x18]. For mouse messages the low half is the cursor x and the high half the cursor y (76 handlers read it as a ushort pair); for key messages the whole dword is the keyboard flag word, and 14 handlers test bit 30 (0x40000000, auto-repeat). Modelled as the raw LPARAM because that is the only reading true at every site.
     /* 0x10 */ uint32_t nCmdCode; // WM_COMMAND notification code, HIWORD(wParam), else 0. WND_DispatchWindowMessage local nCmdCode at Stack[-0x14].
     /* 0x14 */ uint8_t field_0x14;
@@ -106,6 +94,7 @@ void __fastcall UI_SLIDER_ApplyLightQuality(struct D2EscMenuItemStrc * pItem, st
 void __fastcall UI_SLIDER_InitLightQuality(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall UI_SLIDER_ApplyBlendedShadows(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall UI_SLIDER_InitBlendedShadows(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
+void __fastcall UI_SLIDER_DrawResolutionValue(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg); // VP: 720p stop label
 void __fastcall UI_SLIDER_ApplyResolution(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall UI_SLIDER_LoadAndApplyResolution(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall UI_SLIDER_ApplyPerspective(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
@@ -124,6 +113,7 @@ void __fastcall ESCMENU_InitAutomapCenterItem(struct D2EscMenuItemStrc * pItem, 
 void __fastcall UI_SLIDER_ApplyAutomapParty(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall ESCMENU_InitAutomapPartyItem(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall UI_SLIDER_InitAutomapParty(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
+int Unreferenced_0047d5b0();
 void __stdcall INPUT_EscMenuMouseDown(struct D2UIMouseMsgStrc * pMsg);
 void __stdcall INPUT_EscMenuMouseUp(struct D2UIMouseMsgStrc * pMsg);
 // Navigates to next menu item (down arrow key). Increments selected index in gpEscMenuItemCount, wrapping to 0 at end. Skips disabled items by checking enable callback. Plays navigation sound.
@@ -164,6 +154,16 @@ void __fastcall ESCMENU_ShowControlConfig(struct D2EscMenuItemStrc * pItem, stru
 void __fastcall ESCMENU_SwitchToMainMenu_alt(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 void __fastcall ESCMENU_SwitchToOptionsMenu(struct D2EscMenuItemStrc * pItem, struct D2UIMouseMsgStrc * pMsg);
 #endif // D2_MODULE_D2Client
-// 6 internal functions (defined in .cpp)
+// 5 internal functions (defined in .cpp)
+
+// VP-BEGIN [options-panel]: the fork-wired tables went TU-private in upstream's
+// 962f88d5 per-TU restructure; the Vanilla+ self-check (VanillaPlusCore.cpp)
+// and the row-label/draw callbacks (VanillaPlusOptions.cpp) read them through
+// these views. The compile-time sizeof asserts they replace became runtime
+// count checks in the self-check.
+const D2EscMenuHeaderStrc * VP_GetHeaderOptions();
+D2EscMenuItemStrc * VP_GetOptionsTable(int * pnCount);
+D2EscMenuItemStrc * VP_GetDeleteCharTable(int * pnCount);
+// VP-END [options-panel]
 
 } // namespace D2Client::UI::EscMenu

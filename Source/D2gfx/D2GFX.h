@@ -4,9 +4,6 @@
 #if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_SEES_D2gfx)
 #error "D2gfx header included by a module that may not use D2gfx (original DLL import graph; see module-gates.tsv)"
 #endif
-#if defined(D2_MODULE_LIBRARIES) && defined(D2_MODULE_STRICT) && !defined(D2_GATE_FROM_ROOT) && !defined(D2_MODULE_D2gfx) && !defined(D2_LOADS_D2gfx)
-#error "internal D2gfx header included from another module; include D2gfx's public header (see module-gates.tsv)"
-#endif
 
 #include <cstdint>
 #include <cstddef>
@@ -26,7 +23,6 @@ struct D2SmackerContextStrc;
 struct D2TileLibraryEntryStrc;
 typedef uint32_t DRAWMODE;
 typedef uint32_t GLOBALPALLETE;
-typedef uint32_t eD2RendererMode;
 #ifndef RECON_FPTD_D2RendererFunctionsStrc_fpDrawGroundTile
 #define RECON_FPTD_D2RendererFunctionsStrc_fpDrawGroundTile
 typedef void (__fastcall *D2RendererFunctionsStrc_fpDrawGroundTile)(struct D2TileLibraryEntryStrc * pTile, struct D2GfxLightExStrc * pLight, int nPosX, int nPosY, int nWorldXpos, int nWorldYpos, BYTE nAlpha, int nScreenPanels, void * pTileData);
@@ -272,8 +268,8 @@ struct __attribute__((packed)) D2GFXWindowPlacementStrc {
     /* 0x00 */ HWND pHWND;
     /* 0x04 */ WINDOWPLACEMENT pWindowPLacement;
 };
-
 #endif // D2_DEFINED_D2GFXWindowPlacementStrc
+
 #ifndef D2_DEFINED_D2RendererFunctionsStrc
 #define D2_DEFINED_D2RendererFunctionsStrc
 struct D2RendererFunctionsStrc {
@@ -332,8 +328,8 @@ struct D2RendererFunctionsStrc {
     /* 0xD0 */ void (__fastcall *nfpDebugFillBackBuffer)(int, int);
     /* 0xD4 */ void (__fastcall *nfpClearCaches)();
 };
-
 #endif // D2_DEFINED_D2RendererFunctionsStrc
+
 namespace D2gfx::D2GFX {
 
 // Function declarations
@@ -369,6 +365,15 @@ void __stdcall D2GFX_OnActivationChange(BOOL bActive);
 HWND __stdcall GetHwnd();
 int32_t __stdcall D2GFX_GetScreenSize(int * pWidth, int * pHeight);
 void __stdcall UpdateOSCursorVisibilty(int32_t shouldHide);
+// VP [vpres stretch / R112]: hosted-stop presentation state. The D3D
+// renderer calls the setter when it hosts a stop whose exact display mode
+// the driver does not list (frame rendered at the logical size, stretched
+// over the listed host mode at present); (0, 0) clears it. The cursor
+// capture (D2Win::MOUSE_CaptureMousePosition) reads the getter to scale
+// raw host-space cursor coords into the logical frame. Kept in D2gfx
+// because D2Win must reach it and renderers must not import D2Client.
+void __stdcall D2GFX_SetPresentationStretch(int nHostWidth, int nHostHeight);
+void __stdcall D2GFX_GetPresentationStretch(int * pHostWidth, int * pHostHeight);
 uint32_t __stdcall IsFullscreen();
 BOOL __stdcall D2GFX_ResizeWindow(int32_t nResolution, BOOL bForceResize);
 BOOL __stdcall D2GFX_UpdateWindowSize(int32_t nResolutionMode);
@@ -410,6 +415,14 @@ void __stdcall D2GFX_DrawImageColoredShape(struct D2GfxDataStrc * pDC6Context, i
 void __stdcall D2GFX_UpdateScaleFactor();
 int32_t __stdcall D2GFX_GetScaleFactor();
 void __stdcall D2GFX_SetDefaultScaleFactor();
+// VP: [camera-zoom R155] the zoom publish point (D2GFX.cpp for the why) -
+// one factor (8.8, 0x100 = retail) + one world-phase bracket flag; read by
+// the D3D world draw sites and the D2Client cursor inverse, written by the
+// D2Client gate/frame poll. See plans/CAMERA-ZOOM-PLAN.md.
+void __stdcall D2GFX_SetCameraZoomFactor(int32_t nFactor8Dot8);
+int32_t __stdcall D2GFX_GetCameraZoomFactor();
+void __stdcall D2GFX_SetCameraZoomWorldPass(int32_t bActive);
+int32_t __stdcall D2GFX_GetCameraZoomWorldPass();
 void __stdcall D2GFX_SetPerspectiveScale(int32_t nXScale, int32_t nYScale);
 uint32_t __stdcall D2GFX_IsInPerspectiveBounds(int32_t nXpos, int32_t nYpos);
 void __stdcall D2GFX_AdjustPerspectivePosition(int32_t nXpos, int32_t nYpos, int32_t nBais, int * pXAdjust, int * pYAdjust);
@@ -423,6 +436,8 @@ BOOL __stdcall D2GFX_DrawTransWallTile(struct D2TileLibraryEntryStrc * pTile, in
 BOOL __stdcall D2GFX_DrawShadowTile(struct D2TileLibraryEntryStrc * pTile, int32_t nPosX, int32_t nPosY, int32_t nDrawMode, int32_t nScreenPanels);
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2gfx)
+void __stdcall RENDERER_TogglePerspective_Unref_0044dc40();
+void __stdcall RENDERER_TogglePerspective_Unref_004769b0();
 void __stdcall RENDERER_TogglePerspective_Unref_00477be0();
 void thunk_D2GFX_ResetViewport();
 int __stdcall Unreferenced_004f5040(int param_1, int param_2, int param_3);
@@ -449,7 +464,7 @@ void __stdcall D2GFX_InitializeLineBuffer();
 void __fastcall D2GFX_FillYBufferFast(int32_t nScreenWidth, int32_t nScreenHeight);
 // Initializes color lookup tables for palette blending. Populates gPaletteBlendLookupTable (256x256 entries) by blending all combinations of source and destination palette indices. Used by rendering functions for alpha blending and color effects.
 void __fastcall PALETTE_InitColorLookupTables(BYTE * * ppPaletteTable);
-void Unreferenced_004f8e90();
+int Unreferenced_004f8e90();
 void __stdcall D2GFX_InitializeWindowSize();
 void StaticInit_gpszWindowClassName();
 void StaticInit_szWindowClassName();

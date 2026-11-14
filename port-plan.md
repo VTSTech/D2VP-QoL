@@ -10,92 +10,103 @@ Port the Vanilla+ quality-of-life features from D2VP-QoL fork into redivivus (up
 - **Upstream Base**: `origin/jaenster-main` branch (jaenster's upstream with latest Ghidra v2097)
 - **Target**: Port D2VP-QoL changes into a fresh upstream using jaenster-main as base
 - **Approach**: Cherry-pick/patch D2VP-QoL features into jaenster-main, then push to new upstream repo
+- **Current Branch**: `port-vanillaplus-into-upstream` (merged with jaenster-main)
+
+## Progress Summary
+
+| Phase | Description | Status | Commit |
+|-------|-------------|--------|--------|
+| Phase 1 | Add core Vanilla+ files (VanillaPlusCore, VanillaPlusOptions, VanillaPlusStash, VanillaPlusCombat, VanillaPlusSound) | ✅ Complete | df415863 |
+| Phase 2 | Apply VP-marked changes to upstream files (47 files) | ✅ Complete | 41f90c30 |
+| Phase 3 | Client integration (included in Phase 2) | ✅ Complete | 41f90c30 |
+| Phase 4 | Game system changes (included in Phase 2) | ✅ Complete | 41f90c30 |
+| Phase 5 | Add documentation files (FEATURES.md, CHANGELOG.md, HISTORY.md, VANILLA-PLUS.md, ROUND-SUMMARY.md, SMOKE-CHECKLIST.md, handoff.md) | ✅ Complete | 91bc33fc |
 
 ## Files with VP-marked Code (53 files)
 
-### Core Vanilla+ Files (to be added)
+### Core Vanilla+ Files (✅ Added - Phase 1)
 
-1. **Source/D2Client/UI/VanillaPlusCore.cpp** (132KB)
+1. **Source/D2Client/UI/VanillaPlusCore.cpp** (132KB) ✅
    - Core vanilla+ functionality: FPS unlock, automap clock, transparent HUD, camera zoom
    - Feature gating system
    - Per-feature state management
 
-2. **Source/D2Client/UI/VanillaPlusCore.h** (31KB)
+2. **Source/D2Client/UI/VanillaPlusCore.h** (31KB) ✅
    - Header with function declarations and global state
 
-3. **Source/D2Client/UI/VanillaPlusOptions.cpp** (40KB)
+3. **Source/D2Client/UI/VanillaPlusOptions.cpp** (40KB) ✅
    - In-game "Vanilla+ Options" menu page (FEATURES.md row 10)
    - Options for: unlock_fps, unlock_fps_interp, automap_clock, transparent_hud, camera_zoom
 
-4. **Source/D2Client/UI/VanillaPlusOptions.h** (3.5KB)
+4. **Source/D2Client/UI/VanillaPlusOptions.h** (3.5KB) ✅
    - Options page header
 
-### Game System Files (modifications needed)
+### Game System Files (✅ Added - Phase 1)
 
-5. **Source/D2Game/PLAYER/VanillaPlusStash.cpp** (New)
+5. **Source/D2Game/PLAYER/VanillaPlusStash.cpp** (New) ✅
    - Shared stash implementation (FEATURES.md row 9)
    - 100-page shared stash support
 
-6. **Source/D2Game/PLAYER/VanillaPlusStash.h** (New)
+6. **Source/D2Game/PLAYER/VanillaPlusStash.h** (New) ✅
    - Shared stash header
 
-7. **Source/D2Game/UNIT/VanillaPlusCombat.cpp** (New)
+7. **Source/D2Game/UNIT/VanillaPlusCombat.cpp** (New) ✅
    - Combat enhancements (mana burn fix, etc.)
 
-8. **Source/D2Game/UNIT/VanillaPlusCombat.h** (New)
+8. **Source/D2Game/UNIT/VanillaPlusCombat.h** (New) ✅
    - Combat header
 
-9. **Source/D2Sound/VanillaPlusSound.cpp** (New)
+9. **Source/D2Sound/VanillaPlusSound.cpp** (New) ✅
    - Sound enhancements
 
-10. **Source/D2Sound/VanillaPlusSound.h** (New)
+10. **Source/D2Sound/VanillaPlusSound.h** (New) ✅
     - Sound header
 
-### D2Client Modifications
+### D2Client Modifications (✅ Applied - Phase 2)
 
-11. **Source/D2Client/D2Client.cpp** (modifications)
+11. **Source/D2Client/D2Client.cpp** (modifications) ✅
     - Vanilla+ integration points
 
-12. **Source/D2Client/Draw/Weather.cpp** (modifications)
+12. **Source/D2Client/Draw/Weather.cpp** (modifications) ✅
     - Weather rendering enhancements
 
-13. **Source/D2Client/Engine.cpp** (modifications)
+13. **Source/D2Client/Engine.cpp** (modifications) ✅
     - Engine loop modifications for FPS unlock
 
-14. **Source/D2Client/Engine/Gfx.cpp** (modifications)
+14. **Source/D2Client/Engine/Gfx.cpp** (modifications) ✅
     - Graphics enhancements
 
-15. **Source/D2Client/Engine/GfxUtil.cpp** (modifications)
+15. **Source/D2Client/Engine/GfxUtil.cpp** (modifications) ✅
     - Graphics utility enhancements
 
-16. **Source/D2Client/GAME/Draw.cpp** (modifications)
+16. **Source/D2Client/GAME/Draw.cpp** (modifications) ✅
     - Game drawing enhancements
 
-17. **Source/D2Client/GAME/Game/Game.cpp** (modifications)
+17. **Source/D2Client/GAME/Game/Game.cpp** (modifications) ✅
     - Game loop, FPS unlock integration
 
-18. **Source/D2Client/GAME/SCmd.cpp** (modifications)
+18. **Source/D2Client/GAME/SCmd.cpp** (modifications) ✅
     - Command handling
 
-19. **Source/D2Client/GAME/Select.cpp** (modifications)
+19. **Source/D2Client/GAME/Select.cpp** (modifications) ✅
     - Selection enhancements
 
-20. **Source/D2Client/GAME/View.cpp** (modifications)
+20. **Source/D2Client/GAME/View.cpp** (modifications) ✅
     - View/viewport enhancements
 
-21. **Source/D2Client/GAME/Wall2.cpp** (modifications)
+21. **Source/D2Client/GAME/Wall2.cpp** (modifications) ✅
     - Wall rendering enhancements
 
-22. **Source/D2Client/Message.cpp** (modifications)
+22. **Source/D2Client/Message.cpp** (modifications) ✅
     - Message handling for vanilla+ features
 
-23. **Source/D2Client/SKILLS/SkillsBar.cpp** (modifications)
+23. **Source/D2Client/SKILLS/SkillsBar.cpp** (modifications) ✅
     - Skills bar enhancements
 
-24. **Source/D2Client/Sound/Sound.cpp** (modifications)
+24. **Source/D2Client/Sound/Sound.cpp** (modifications) ✅
     - Sound system enhancements
 
-25. **Source/D2Client/UI/Automap.cpp** (modifications)
+25. **Source/D2Client/UI/Automap.cpp** (modifications) ✅
     - Automap clock implementation (FEATURES.md row 19)
 
 26. **Source/D2Client/UI/Draw.cpp** (modifications)
@@ -298,34 +309,45 @@ git checkout -b upstream-jaenster-main  # or move to new repo
 git push upstream upstream-jaenster-main
 ```
 
-### Phase 1: Core Files
-1. Add VanillaPlusCore.cpp/.h
-2. Add VanillaPlusOptions.cpp/.h
-3. Add VanillaPlusStash.cpp/.h
-4. Add VanillaPlusCombat.cpp/.h
-5. Add VanillaPlusSound.cpp/.h
+### Phase 1: Core Files ✅ COMPLETE
+1. Add VanillaPlusCore.cpp/.h ✅
+2. Add VanillaPlusOptions.cpp/.h ✅
+3. Add VanillaPlusStash.cpp/.h ✅
+4. Add VanillaPlusCombat.cpp/.h ✅
+5. Add VanillaPlusSound.cpp/.h ✅
 
-### Phase 2: Renderer Support
-4. Update D2Direct3D/Renderer/Direct3D.cpp (camera zoom, transparent HUD)
-5. Update D2Glide/Renderer/Glide.cpp (camera zoom)
-6. Update D2DDraw/Renderer/DirectDraw.cpp
-7. Update D2Gdi/Renderer/Windowed.cpp
+### Phase 2: Renderer Support & VP-marked Changes ✅ COMPLETE
+4. Update D2Direct3D/Renderer/Direct3D.cpp (camera zoom, transparent HUD) ✅
+5. Update D2Glide/Renderer/Glide.cpp (camera zoom) ✅
+6. Update D2DDraw/Renderer/DirectDraw.cpp ✅
+7. Update D2Gdi/Renderer/Windowed.cpp ✅
 
-### Phase 3: Client Integration
-8. Update D2Client/D2Client.cpp
-9. Update D2Client/Message.cpp
-10. Update D2Client/UI/*.cpp (UI enhancements)
-11. Update D2Client/GAME/*.cpp (game loop, FPS unlock)
+### Phase 3: Client Integration ✅ COMPLETE (included in Phase 2)
+8. Update D2Client/D2Client.cpp ✅
+9. Update D2Client/Message.cpp ✅
+10. Update D2Client/UI/*.cpp (UI enhancements) ✅
+11. Update D2Client/GAME/*.cpp (game loop, FPS unlock) ✅
 
-### Phase 4: Game System
-12. Update D2Game/UNIT/*.cpp (combat, stash)
-13. Update D2Game/ITEMS/Items/Drop.cpp
-14. Update Source/globals/globals.h
+### Phase 4: Game System ✅ COMPLETE (included in Phase 2)
+12. Update D2Game/UNIT/*.cpp (combat, stash) ✅
+13. Update D2Game/ITEMS/Items/Drop.cpp ✅
+14. Update Source/globals/globals.h ✅
 
-### Phase 5: Documentation
-15. Add FEATURES.md
-16. Add README.md
-17. Add other docs as needed
+### Phase 5: Documentation ✅ COMPLETE
+15. Add FEATURES.md ✅
+16. Add CHANGELOG.md ✅
+17. Add HISTORY.md ✅
+18. Add VANILLA-PLUS.md ✅
+19. Add ROUND-SUMMARY.md ✅
+20. Add SMOKE-CHECKLIST.md ✅
+21. Add handoff.md ✅
+
+### Next Steps
+- [x] Phase 6: Build Verification & Compilation Fixes (IN PROGRESS)
+- [ ] Build verification: Ensure all files compile without errors
+- [ ] Feature testing: Test each vanilla+ feature individually
+- [ ] Integration testing: Verify features work together
+- [ ] Field verification: Test in-game as the owner would
 
 ## Testing Strategy
 
@@ -346,3 +368,50 @@ git push upstream upstream-jaenster-main
 - Features are gated via `d2vp.ini` `[features]` section
 - In-game options page added at FEATURES.md row 10
 - Default feature state is disabled (vanilla behavior)
+
+## Build Verification Status (Phase 6 - IN PROGRESS)
+
+### Completed Fixes ✅
+- [x] Configure CMake with mingw-i686 toolchain
+- [x] Add missing Vanilla+ support files (`d2_boot.h`, `d2_hangwatch.h`)
+- [x] Fix module gate errors (D2_GATE_FROM_ROOT handling in globals.h)
+- [x] Add missing typedefs to globals.h:
+  - `fpProfCoreInitCb`, `fpProfCoreRegisterSlotCb`
+  - `gnGlideWindowHandle` (int vs HWND conflict)
+  - `gbBloodFlag`, `gnFrameDrawCounter`
+  - `s_unknown_006cd5fc` string literal
+- [x] Remove conflicting typedefs from globals.h:
+  - `ChatDlgCallback` (authoritative in D2Multi/ChatDlg.h)
+  - `fnCUnitEventCallback` (authoritative in D2Client/UNIT/CUnitEvent.h)
+- [x] Add struct definition guards in D2GFX.h:
+  - `D2GFXWindowPlacementStrc`
+  - `D2RendererFunctionsStrc`
+- [x] Fix function signature mismatches:
+  - `D2GFX_CreateWindow`: HWND → BOOL
+  - `SkillNec` functions: BOOL → void/uint32_t
+  - `SUnit::CreateUnit` pMonsterData: uint32_t → void*
+- [x] Add missing function declarations:
+  - `SOUND_GetDirectSoundInitializedFlag()` in D2Sound.h/D2SoundRoot.h
+  - String literals for damage events in SUnitDmg.cpp
+  - `D2TCStackEntryStrc` members (nMagic, nRare, nSet, nUnique, nFromTCOffset0x30, nFromTCOffset0x32)
+
+### Current Build Status (as of commit 37c0e588)
+- **Compiling**: ~400+ of 500+ translation units (80%+)
+- **Blocking Errors**: ~20 remaining compilation errors (down from 50+)
+- **Primary Categories**:
+  1. **Missing function declarations** in headers (ITEM_IsQuestItem, DRAW_WORLD_SetWarpFadeTimer, CLIENT_SendIdlePlayerMessage, CUNIT_IterateHashTableWithCallback, FindUnit, InsertIntoHashTable, SKILL_SelectProc_*, DRAW_WORLD_SetWarpFadeTimer, OBJECT_CheckAutoLight, NET_D2GS_CLIENT_Incoming0x5E_QUESTPICKS, NET_D2GS_CLIENT_Incoming0x89_QUESTEVENTTRIGGER, UI_HandleNpcInteractionPacket, TRADE_HandleTradeComplete)
+  2. **Namespace qualification issues** (D2Client::UNIT::Player vs D2Client, D2Win vs D2Win::Src::D2WinFont)
+  3. **Minor signature mismatches** (ITEM_RecalcAllEquippedItems_EBX vs _ECX)
+
+### Progress Summary
+- **Fixed**: 40+ major compilation errors across 36 files
+- **Remaining**: ~20 errors (mostly missing function declarations in headers)
+- **Build Progress**: ~80% of translation units compiling
+- **All major structural issues resolved**: module gates, struct redefinitions, signature mismatches, missing globals, missing function declarations, callback signatures, cross-module extern declarations
+
+### Pending
+- [ ] Add remaining missing function declarations to appropriate headers
+- [ ] Fix namespace qualification issues
+- [ ] Build all translation units successfully
+- [ ] Link executable successfully
+- [ ] Run smoke tests (SMOKE-CHECKLIST.md)

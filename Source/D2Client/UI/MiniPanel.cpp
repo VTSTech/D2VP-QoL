@@ -13,17 +13,130 @@
 #include "Source/D2Client/UI/QuestLog.h"
 #include "Source/D2Client/UI/ui.h"
 #include "Source/D2Client/UNIT/Player.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2InventoryStrc.h"
+#include "Source/D2Common/D2StatListExStrc.h"
 #include "Source/D2Common/D2UnitStrc.h"
-#include "Source/D2Lang/D2Lang.h"
-#include "Source/D2Win/D2Win.h"
-#include "Source/D2gfx/D2gfx.public.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2Common/Drlg/D2DrlgActStrc.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/Units.h"
+#include "Source/D2Game/GAME/Event.h"
+#include "Source/D2Game/UNIT/SUnitMsg.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Lang/Unicode/UNISYS.h"
+#include "Source/D2Win/DC6.h"
+#include "Source/D2Win/DC6Block.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/File.h"
+#include "3rdparty/Storm/Source/SReg.h"
+#include "3rdparty/Storm/Storm.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Automap.h"
 #include "Source/D2Client/UI/EscMenu.data.h"
 #include "Source/D2Client/UI/MiniPanel.data.h"
 #include "Source/D2Common/Units.inline.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Lang/Unicode/UNISYS.inline.h"
+#include "Source/D2Launch/MainMenus.h"
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -55,7 +168,7 @@ void __stdcall UpdateGlobalAlwaysRun() {
     Storm::Source::SReg::SRegSaveValue("Diablo II", "Always Run", 0, nValue);
 }
 
-static void MINIPANEL_DrawBackground(int32_t nPanelSection) {
+void MINIPANEL_DrawBackground(int32_t nPanelSection) {
     int nXOffset;
     D2GfxDataStrc sGfxData;
     if (!nPanelSection) {
@@ -377,19 +490,6 @@ static void MINIPANEL_HandleButtonClick(int32_t nButtonId) {
         _bFlagActive = ui::GetUIFlag(UI_SKILLTREE);
       eUI = UI_SKILLTREE;
       goto toggle_panel;
-      case 3:
-        eGameType = GAME::Game::CLIENT_GetD2GSGameType();
-      if (eGameType != GAMETYPE_SINGLEPLAYER) {
-        _bFlagActive = ui::GetUIFlag(UI_PARTYSCREEN);
-        eUI = UI_PARTYSCREEN;
-        goto toggle_panel;
-      }
-
-      break;
-      case 4:
-        _bFlagActive = ui::GetUIFlag(UI_AUTOMAP);
-      eUI = UI_AUTOMAP;
-      goto toggle_panel;
       case 5:
         bFlagSet = ui::GetUIFlag(UI_BELTROWS);
       if (bFlagSet) {
@@ -405,6 +505,19 @@ static void MINIPANEL_HandleButtonClick(int32_t nButtonId) {
       }
       ui::SetUIFlag(eUI, UI_RESET, 0);
       return;
+      case 3:
+        eGameType = GAME::Game::CLIENT_GetD2GSGameType();
+      if (eGameType != GAMETYPE_SINGLEPLAYER) {
+        _bFlagActive = ui::GetUIFlag(UI_PARTYSCREEN);
+        eUI = UI_PARTYSCREEN;
+        goto toggle_panel;
+      }
+
+      break;
+      case 4:
+        _bFlagActive = ui::GetUIFlag(UI_AUTOMAP);
+      eUI = UI_AUTOMAP;
+      goto toggle_panel;
       case 6:
         /* LPCSTR lpOutputString for OutputDebugStringA */ OutputDebugStringA("Panel quest log toggle\n");
       QuestLog::QUESTLOG_ToggleQuestScreen(0);
@@ -670,10 +783,29 @@ void __stdcall SetupMiniPanel() {
     if (!bReadOk) {
       nResolution = 1;
     }
+    // VP: the registry value is the slider position (0/1/2/3/4/5; stops
+    // 2/3/4/5 are attached by the Resolution row's init callback). Clamp
+    // foreign values to 800x600.
+    if (nResolution < 0 || nResolution > 5) {
+      nResolution = 1;
+    }
 
     DWORD nScreenMode_lcl = 2;
     if (!nResolution) {
       nScreenMode_lcl = 0;
+    } else if (nResolution == 3) {
+      // Vanilla Plus: dormant 1344x700 - test before the >= 2 arm, which
+      // would fold it into 720p. This path re-applies the saved stop at
+      // every game-enter (GAME_InitClientSide) and cutscene-exit (pkt 0x61).
+      nScreenMode_lcl = 3;
+    } else if (nResolution == 4) {
+      // Vanilla Plus [R112]: 1366x768 - same ahead-of->= 2 ordering.
+      nScreenMode_lcl = 5;
+    } else if (nResolution == 5) {
+      // Vanilla Plus [R115]: 1920x1080 - same ordering.
+      nScreenMode_lcl = 6;
+    } else if (nResolution >= 2) {
+      nScreenMode_lcl = 4; // Vanilla Plus: 1280x720
     }
 
     ClientModeInGame::CLIENT_SetScreenResolution(nScreenMode_lcl);
@@ -711,7 +843,7 @@ static void __stdcall MINIPANEL_ShowTooltip(int32_t nX, int32_t nY, int32_t nBut
     int i;
     uint16_t nStringIndex;
     uint16_t wszTooltip[200];
-    int bHasCommand = false;
+    bool bHasCommand = false;
     int nCommandId = 0x39;
     switch (nButtonFrame) {
       case 0:
@@ -878,7 +1010,5 @@ void __stdcall DRAW_UI_MiniPanel() {
     gnMiniPanelMouseOverButton = 0;
     return;
 }
-
-static void * keep_0047e770 = (0 ? (MINIPANEL_DrawBackground(*(int32_t *)0), (void *)0) : (void *)0);
 
 } // namespace D2Client::UI::MiniPanel

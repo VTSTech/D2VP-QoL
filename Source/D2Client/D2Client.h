@@ -873,46 +873,7 @@ struct D2ElemDmgStatTripleStrc {
     /* 0x08 */ int nMasteryStat;
 };
 #endif // D2_DEFINED_D2ElemDmgStatTripleStrc
-#ifndef D2_DEFINED_D2EscMenuHeaderStrc
-#define D2_DEFINED_D2EscMenuHeaderStrc
-struct D2EscMenuHeaderStrc {
-    /* 0x00 */ int nItemCount; // Number of menu items in this menu
-    /* 0x04 */ int nVerticalSpacing; // Vertical spacing between menu items in pixels
-    /* 0x08 */ int nRowHeight; // Height of each menu row
-    /* 0x0C */ int nStarOffset; // Horizontal offset for rotating star decoration
-    /* 0x10 */ int nBarYOffset;
-};
-#endif // D2_DEFINED_D2EscMenuHeaderStrc
-#ifndef D2_DEFINED_D2EscMenuItemStrc
-#define D2_DEFINED_D2EscMenuItemStrc
-struct D2EscMenuItemStrc {
-    /* 0x000 */ int nMenuItemType; // 0=centered, 1=split_dual, 2=progress_bar, -1=disabled
-    /* 0x004 */ int nExpansionOnly; // 0=always visible, 1=expansion only
-    /* 0x008 */ int nYPosition; // Calculated Y position on screen
-    /* 0x00C */ char szLocalizedImagePath[260]; // Path to main localized DC6 image
-    /* 0x110 */ BOOL (__stdcall *fpVisibilityCheck)(); // Returns whether the row is available on this system; called with no arguments
-    /* 0x114 */ void (__fastcall *fpClickCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked when the item is activated; ESCMENU_ClickMenuItem loads ECX with the item
-    /* 0x118 */ void (__fastcall *fpInitCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked once from ESCMENU_LoadLocalizedImages to seed nImageIndex from the live setting
-    /* 0x11C */ void (__fastcall *fpDrawCallback)(struct D2EscMenuItemStrc *, struct D2UIMouseMsgStrc *); // Invoked every frame from DRAW_EscMenu to refresh nImageIndex before the row is drawn
-    /* 0x120 */ int nSubImageCount; // Number of sub-images (max 4)
-    /* 0x124 */ int nImageIndex; // Current image index or state
-    /* 0x128 */ int bSelected; // Boolean: is this item selected
-    /* 0x12C */ char szSubImage1Path[260]; // Path to first sub-image
-    /* 0x230 */ char szSubImage2Path[260]; // Path to second sub-image
-    /* 0x334 */ char szSubImage3Path[260]; // Path to third sub-image
-    /* 0x438 */ char szSubImage4Path[260]; // Path to fourth sub-image
-    /* 0x53C */ struct DC6 * pDC6Main; // Loaded main DC6 image
-    /* 0x540 */ struct DC6 * pDC6SubImages[4]; // Array of loaded sub-image DC6 pointers
-};
-#endif // D2_DEFINED_D2EscMenuItemStrc
-#ifndef D2_DEFINED_D2EscMenuUIFlagStrc
-#define D2_DEFINED_D2EscMenuUIFlagStrc
-struct D2EscMenuUIFlagStrc {
-    /* 0x00 */ int nEnabled;
-    /* 0x04 */ int nHideable;
-    /* 0x08 */ int nSavedState;
-};
-#endif // D2_DEFINED_D2EscMenuUIFlagStrc
+// D2EscMenuHeaderStrc, D2EscMenuItemStrc, D2EscMenuUIFlagStrc are defined in EscMenu.h
 #ifndef D2_DEFINED_D2GameNpcArrayStrc
 #define D2_DEFINED_D2GameNpcArrayStrc
 struct D2GameNpcArrayStrc {
@@ -4005,6 +3966,20 @@ extern D2UnitStrc * pPlayerUnit;
 namespace D2Client::Waypoint {
 extern D2WaypointStrc * pWaypoint;
 } // namespace D2Client::Waypoint
+
+// VP: Missing function declarations from D2VP-QoL fork
+eD2ArenaFlags __stdcall CLIENT_GetArenaFlags();
+void __fastcall CLIENT_SetArenaFlags(eD2ArenaFlags eArenaFlags);
+void __fastcall TRADE_HandleTradeComplete(int32_t nValue, char bIsGoldAmount);
+void __fastcall NET_D2GS_CLIENT_Handle0x50_QuestSpecial(struct D2GSPacketSrv0x50 * pPacket);
+void __fastcall NET_D2GS_CLIENT_Incoming0x5E_QUESTPICKS(char * pBytes);
+void __fastcall NET_D2GS_CLIENT_Incoming0x89_QUESTEVENTTRIGGER(char * pBytes);
+int32_t __fastcall UI_GetDialogLineCount(int16_t nDialogId);
+void __fastcall CLIENT_ToggleDefaultActiveFlag(int32_t bSet);
+void __fastcall ROSTER_SetArenaKillCountGlobal(eD2PlayerClassIDDWORD dwValue);
+void __fastcall ExitGamePlayCutScene(int32_t nCutsceneId);
+void __stdcall INV_ResetItemDescFlags();
+void __fastcall thunk_ExitGamePlayCutScene(int32_t pPacket);
 
 // Inline functions: the module compiled these into each caller
 namespace D2Client::Archive {

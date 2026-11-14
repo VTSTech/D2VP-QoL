@@ -2,15 +2,116 @@
 
 #include "Source/D2Client/Message.h"
 #include "Redivivus/d2_control.h"
+#include "Source/D2Client/Engine.h"
 #include "Source/D2Client/GAME/Record.h"
 #include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [unlock-fps R142] UNLOCKFPS_IdleSleepMs
 #include "Source/D2Client/UI/ui.h"
-#include "Source/D2gfx/D2gfx.public.h"
-#include "Source/Fog/Fog.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/Src/ErrorManager.h"
+#include "3rdparty/Storm/WindowHandle.h"
+#include "Source/globals/globals.h"
+#include "Source/Bnclient/BnSend.h"
+#include "Source/Bnclient/SRP.h"
+#include "Source/Bnclient/net_sid.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Client/ClientModeInGame.h"
+#include "Source/D2Client/Cursor.h"
+#include "Source/D2Client/D2BNetGatewayAccessStr.h"
 #include "Source/D2Client/D2Client.globals.h"
-#include "Source/D2Win/D2Win.h"
+#include "Source/D2Client/D2GSPacketSrv0x2A.h"
+#include "Source/D2Client/D2GfxMemoryStrc.h"
+#include "Source/D2Client/D2GfxSettingsStrc.h"
+#include "Source/D2Client/D2IniConfigStrc.h"
+#include "Source/D2Client/Draw/LightMap.h"
+#include "Source/D2Client/Draw/Weather.h"
+#include "Source/D2Client/Engine/Gfx.h"
+#include "Source/D2Client/GAME/Draw.h"
+#include "Source/D2Client/GAME/Game/Game.h"
+#include "Source/D2Client/GAME/Record.h"
+#include "Source/D2Client/GAME/SCmd.h"
+#include "Source/D2Client/GAME/Sound.h"
+#include "Source/D2Client/Sound/Sound.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Client/UI/Chat.h"
+#include "Source/D2Client/UI/CmdTbl.h"
+#include "Source/D2Client/UI/EscMenu.h"
+#include "Source/D2Client/UI/Inv.h"
+#include "Source/D2Client/UI/Path.h"
+#include "Source/D2Client/UI/QuestLog.h"
+#include "Source/D2Client/UI/ShowItems.h"
+#include "Source/D2Client/UI/SkillDesc.h"
+#include "Source/D2Client/UI/SpellSel.h"
+#include "Source/D2Client/UI/Text.h"
+#include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/Waypoint.h"
+#include "Source/D2Client/UI/npcmenu.h"
+#include "Source/D2Client/UI/npcmenu/Merc.h"
+#include "Source/D2Client/UI/ui.h"
+#include "Source/D2Client/UNIT/Item.h"
+#include "Source/D2Client/UNIT/Missile.h"
+#include "Source/D2Client/UNIT/Monster.h"
+#include "Source/D2Client/UNIT/Object.h"
+#include "Source/D2Client/UNIT/Player.h"
+#include "Source/D2Client/UNIT/PlrSkills.h"
+#include "Source/D2Client/UNIT/UnitSnd.h"
+#include "Source/D2Client/Warden/WardenClient.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Game/D2QuestDataStrc.h"
+#include "Source/D2Game/GAME/Arena.h"
+#include "Source/D2Game/GAME/Task.h"
+#include "Source/D2Game/Monster/AI/AI.h"
+#include "Source/D2Game/Monster/AI/Baal.h"
+#include "Source/D2Game/Monster/MonsterMode.h"
+#include "Source/D2Game/Objects/Objects.h"
+#include "Source/D2Game/PLAYER/PlayerMsg.h"
+#include "Source/D2Game/Quests/QUESTS.h"
+#include "Source/D2Game/SKILLS/Items.h"
+#include "Source/D2Game/SKILLS/SkillAss.h"
+#include "Source/D2Game/UNIT/SUnitDmg.h"
+#include "Source/D2Game/UNIT/sunitproxy.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Win/D2WinAnimImage.h"
+#include "Source/D2Win/Src/D2Comp.h"
+#include "Source/D2Win/Src/D2WinFont.h"
+#include "Source/D2gfx/D2GFX.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Client/GAME/Game/Game.data.h"
+#include "Redivivus/d2_hangwatch.h" // [vanilla-plus hangwatch]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -29,7 +130,7 @@ static D2UIFlagInitStrc gaUIFlagInitMessageHandlers[4] = {
     {
         /* .eEventType = */ 0x0,
         /* .nMessageOrKeyCode = */ 0x84,
-        /* .pfHandler = */ &D2Client::_Message::WndProcD
+        /* .pfHandler = */ (fnD2InitUIFlagFunction)&D2Client::_Message::WndProcD
     },
     {
         /* .eEventType = */ 0x1,
@@ -51,10 +152,10 @@ void __stdcall MESSAGE_OnActivate(D2UIMouseMsgStrc * pMsg) {
     pMsg->bHandled = 0;
 }
 
-void __stdcall WndProcD(D2UIMouseMsgStrc * phWnd) {
-    /* LPARAM lParam for DefWindowProcA */ /* WPARAM wParam for DefWindowProcA */ /* UINT Msg for DefWindowProcA */ /* HWND hWnd for DefWindowProcA */ phWnd->bHandled = 1;
-    uint32_t lResult = DefWindowProcA(phWnd->hWnd, phWnd->uMsg, phWnd->nWParam, phWnd->uLParam.nLParam);
-    phWnd->dwResult = lResult;
+void __stdcall WndProcD(HWND * phWnd) {
+    /* LPARAM lParam for DefWindowProcA */ /* WPARAM wParam for DefWindowProcA */ /* UINT Msg for DefWindowProcA */ /* HWND hWnd for DefWindowProcA */ phWnd[6] = (HWND)0x1;
+    HWND lResult = (HWND)DefWindowProcA(*phWnd, (UINT)phWnd[1], (uint32_t)phWnd[2], (int32_t)phWnd[3]);
+    phWnd[7] = lResult;
 }
 
 void __stdcall MESSAGE_OnClose(HWND * phWnd) {
@@ -64,11 +165,11 @@ void __stdcall MESSAGE_OnClose(HWND * phWnd) {
 }
 
 LRESULT __stdcall WndProcB(HWND hWnd, uint32_t uMsg, WPARAM wParam, LPARAM lParam) {
-    BOOL bHandled = 0;
     int32_t lDispatchResult = 0;
     GAME::Record::HandleWinProcMsg(uMsg, wParam, lParam);
     BOOL nHandled = GAME::Record::IsPlaybackActive();
     if (!nHandled || uMsg == 0x10) {
+      BOOL bHandled = 0;
       nHandled = Storm::WindowHandle::SMsgDispatchMessage(hWnd, uMsg, wParam, lParam, &bHandled, (LRESULT*)&lDispatchResult);
       if (nHandled && bHandled) {
         return lDispatchResult;
@@ -81,6 +182,7 @@ LRESULT __stdcall WndProcB(HWND hWnd, uint32_t uMsg, WPARAM wParam, LPARAM lPara
 
 // Windows message pump + optional per-tick callback. If no messages, call callback each tick; exit when callback returns nonzero or WM_QUIT.
 int32_t __fastcall MessageGameLoop(::fpGameLoopFunction nfpGameLoopFunction) {
+    HWND hWnd;
     uint32_t nCallbackResult;
     tagMSG msg;
     HACCEL hAccTable;
@@ -93,6 +195,7 @@ int32_t __fastcall MessageGameLoop(::fpGameLoopFunction nfpGameLoopFunction) {
       // silent exactly when there was something worth looking at - and a run that had
       // reached town was indistinguishable from one that had died.
       D2CONTROL_Pump(); D2LOUD_GuardPump();   // loud build: also walks the guard zones between globals
+      D2HANGWATCH_Heartbeat(); // [vanilla-plus hangwatch] every out-of-game loop, the SP connect wait, the loading wait and the in-game loop run under this pump - one beat covers them all
       BOOL bHasMessage;
       /* UINT wRemoveMsg for PeekMessageA */ /* UINT wMsgFilterMax for PeekMessageA */ /* UINT wMsgFilterMin for PeekMessageA */ /* HWND hWnd for PeekMessageA */ /* LPMSG lpMsg for PeekMessageA */ bHasMessage = PeekMessageA(&msg, (HWND)0x0, 0, 0, 0);
       if (bHasMessage) {
@@ -100,7 +203,8 @@ int32_t __fastcall MessageGameLoop(::fpGameLoopFunction nfpGameLoopFunction) {
         if (getMessageResult && GAME::Game::gbLanguageDllLoaded) {
           lpMsg = &msg;
           hAccTable = GAME::Game::gbLanguageDllLoaded;
-          /* HWND hWnd for TranslateAcceleratorA */ TranslateAcceleratorA(D2gfx::D2GFX::GetHwnd(), hAccTable, lpMsg);
+          /* LPMSG lpMsg for TranslateAcceleratorA */ /* HACCEL hAccTable for TranslateAcceleratorA */ hWnd = D2gfx::D2GFX::GetHwnd();
+          /* HWND hWnd for TranslateAcceleratorA */ TranslateAcceleratorA(hWnd, hAccTable, lpMsg);
         }
 
         /* MSG * lpMsg for TranslateMessage */ TranslateMessage(&msg);
@@ -119,7 +223,17 @@ int32_t __fastcall MessageGameLoop(::fpGameLoopFunction nfpGameLoopFunction) {
           }
         }
         if (!gnLastMouseButtonEventType && eD2GSGameType_007a0610 != GAMETYPE_OBNET_HOST && eD2GSGameType_007a0610 != GAMETYPE_LAN_HOST) {
-          /* DWORD dwMilliseconds for Sleep */ Sleep(10);
+          // VP-BEGIN [unlock-fps R142]: under [features] unlock_fps the idle
+          // sleep paces to the 60 Hz present deadline (sleep-until-deadline,
+          // min 1 ms) so the next callback iteration lands on the pacer grid;
+          // when the pacer is not live (gate off / menus / loading / the SP
+          // pause path - none of them poll the draw site) this returns <= 0
+          // and the retail Sleep(10) runs, byte-for-byte. The pacer only
+          // decides when to draw, never when to poll: input rides the pump
+          // exactly as retail.
+          int nVpIdleSleepMs = UNLOCKFPS_IdleSleepMs();
+          /* DWORD dwMilliseconds for Sleep */ Sleep(nVpIdleSleepMs > 0 ? nVpIdleSleepMs : 10);
+          // VP-END [unlock-fps R142]
         }
       }
     } while (getMessageResult);
@@ -138,17 +252,17 @@ void __fastcall MESSAGE_RegisterEventHandler(HWND hWnd, int32_t eEventType, int3
               exit(-1);
             }
 
-            Storm::WindowHandle::SMsgRegisterMessage(hWnd, nMessageOrKeyCode, pfHandler);
+            Storm::WindowHandle::SMsgRegisterMessage((uint32_t)hWnd, nMessageOrKeyCode, pfHandler);
             return;
           }
         case 1:
-          Storm::WindowHandle::SMsgRegisterCommand(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgRegisterCommand((uint32_t)hWnd, nMessageOrKeyCode, pfHandler);
         return;
         case 2:
-          Storm::WindowHandle::SMsgRegisterKeyUp(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgRegisterKeyUp((uint32_t)hWnd, nMessageOrKeyCode, pfHandler);
         return;
         case 3:
-          Storm::WindowHandle::SMsgRegisterKeyDown(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgRegisterKeyDown((uint32_t)hWnd, nMessageOrKeyCode, pfHandler);
         default:
           return;
       }
@@ -169,17 +283,17 @@ void __fastcall MESSAGE_UnregisterEventHandler(HWND hWnd, int32_t eEventType, in
               exit(-1);
             }
 
-            Storm::WindowHandle::SMsgUnregisterMessage(hWnd, nMessageOrKeyCode, pfHandler);
+            Storm::WindowHandle::SMsgUnregisterMessage((uint32_t)hWnd, (char*)nMessageOrKeyCode, pfHandler);
             return;
           }
         case 1:
-          Storm::WindowHandle::SMsgUnregisterCommand(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgUnregisterCommand(hWnd, (char*)nMessageOrKeyCode, pfHandler);
         return;
         case 2:
-          Storm::WindowHandle::SMsgUnregisterKeyUp(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgUnregisterKeyUp((uint32_t)hWnd, (char*)nMessageOrKeyCode, pfHandler);
         return;
         case 3:
-          Storm::WindowHandle::SMsgUnregisterKeyDown(hWnd, nMessageOrKeyCode, pfHandler);
+          Storm::WindowHandle::SMsgUnregisterKeyDown((uint32_t)hWnd, (char*)nMessageOrKeyCode, pfHandler);
         default:
           return;
       }
@@ -244,7 +358,7 @@ uint32_t __fastcall MESSAGE_RegisterWindowMessageHandlers(HWND hWnd) {
     }
 
     MESSAGE_RegisterEventHandlerBatch(hWnd, gaUIFlagInitMessageHandlers, 4);
-    Storm::WindowHandle::SMsgPushRegisterState(hWnd);
+    Storm::WindowHandle::SMsgPushRegisterState((uint32_t)hWnd);
     return 1;
 }
 
@@ -266,7 +380,7 @@ void __fastcall MESSAGE_UnregisterWindowMessageHandlers(char * szText) {
 // Gets the current HWND and snapshots all registered event handlers. Used for save/restore state during modal dialogs.
 void __stdcall MESSAGE_SnapshotEventHandlers() {
     HWND hWnd = D2gfx::D2GFX::GetHwnd();
-    Storm::WindowHandle::SMsgPushRegisterState(hWnd);
+    Storm::WindowHandle::SMsgPushRegisterState((uint32_t)hWnd);
 }
 
 // Gets the current HWND and undoes the last batch of event registrations. Restores previous snapshot state.
