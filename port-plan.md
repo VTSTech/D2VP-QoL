@@ -897,3 +897,35 @@ Final fixes after last session's 13:
   earlier graft went into Src/D2Sound.cpp which is not built).
 - Lesson: check the enclosing-namespace state before appending defs, and prefer the
   asm_matching/msvc8/translated tree as the source of truth for port bodies.
+
+## Session: CI duplicate-definition fix (overlay-aware)
+
+Root cause of CI multiple-definition failures: the user's repo is built by EXTRACTING
+each archive OVER the previous state - my zips can add/replace files but never delete
+them. D2ClientRoot.cpp had been deleted from my working tree at some point (its stale
+.obj kept resolving symbols locally, masking both missing defs and later duplicates),
+so every archive-7-era def I added to D2Client.cpp coexisted with Root.cpp's original
+defs in the user's repo -> 123 duplicate symbols on a clean CI build.
+
+Fixes:
+1. Restored Source/D2Client/D2ClientRoot.cpp (git checkout) - it was the ONLY
+   tracked-but-deleted file; tree is now a pure superset.
+2. Removed 107 duplicate namespace defs from D2Client.cpp (nm-intersect of the two
+   objs, names parsed from mangled strings; D2ClientRoot.cpp is the canonical def home).
+   Script: scripts/dedup_d2client.py.
+3. Fixed the dedup collateral: the script had deleted 4 global forwarders
+   (CLIENT_ToggleDefaultActiveFlag, ROSTER_SetArenaKillCountGlobal,
+   ExitGamePlayCutScene, INV_ResetItemDescFlags) instead of ns defs (last-match rule);
+   restored them and removed the 5 real ns dups (incl. WARDEN_DecryptBuffer).
+4. WARDEN_DecryptBuffer sig is `pfnWardenCreateInterface __thiscall (D2WardenModuleStrc*,
+   int32_t)` per D2ClientRoot.h:188 - NOT fastcall/int32_t as previously retyped.
+5. D2Client.cpp now #includes D2ClientRoot.h (callers of the 107 Root.cpp-hosted defs
+   need the decls after the dedup).
+6. Removed a duplicate global thunk_ExitGamePlayCutScene(int32_t) forwarder.
+
+Result: full clean rebuild (all objs fresh, CI-equivalent) - 0 errors, 0 duplicate
+definitions, 0 undefined references, d2.exe links. Note: CI's "compile errors: 1" was
+the collect2 line counted by their log grepper, not a real TU failure.
+LESSON: never trust a green local build whose objects may be stale; the overlay
+delivery model means deleted files persist in the user's repo - only ship complete
+supersets.
