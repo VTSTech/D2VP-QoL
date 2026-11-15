@@ -28,6 +28,7 @@
 #include "Source/D2Client/UI/SpellSel.h"
 #include "Source/D2Client/UI/Text.h"
 #include "Source/D2Client/UI/UseItem.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: alt-toggle latch helpers (ALTTOGGLE_*)
 #include "Source/D2Client/UI/npcmenu.h"
 #include "Source/D2Client/UI/npcmenu/Merc.h"
 #include "Source/D2Client/UI/ui.h"
@@ -887,6 +888,15 @@ void __stdcall thunk_NET_D2GS_CLIENT_Send_SHORT_LeftSkillOnLocEx() {
 }
 
 void __stdcall CMD_SetHoldAlt() {
+    // VP-BEGIN [alt-toggle]: toggle mode flips the latch; keyup
+    // re-asserts the flag from the latch (heals a stuck Alt after a lost
+    // keyup across alt-tab). Hold mode: vanilla byte path.
+    if (ALTTOGGLE_Active()) {
+        ALTTOGGLE_Flip();
+        UI::ui::SetUIFlag(UI_HOLDALT, ALTTOGGLE_Latched() ? UI_SET : UI_RESET, 0);
+        return;
+    }
+    // VP-END [alt-toggle]
     UI::ui::SetUIFlag(UI_HOLDALT, UI_SET, 0);
 }
 
@@ -913,6 +923,15 @@ void __stdcall CMD_ClearClickModifier() {
 }
 
 void __stdcall CMD_ReleaseHoldAltAndClearSelection() {
+    // VP-BEGIN [alt-toggle]: converge the flag to the latch
+    // (labels persist across the key-up; a lost keyup can never strand the
+    // flag). Hold mode: vanilla byte path.
+    if (ALTTOGGLE_Active()) {
+        UI::ui::SetUIFlag(UI_HOLDALT, ALTTOGGLE_Latched() ? UI_SET : UI_RESET, 0);
+        GAME::Select::ClearSelectedUnit();
+        return;
+    }
+    // VP-END [alt-toggle]
     UI::ui::SetUIFlag(UI_HOLDALT, UI_RESET, 0);
     GAME::Select::ClearSelectedUnit();
 }

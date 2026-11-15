@@ -148,3 +148,26 @@ rebuild (`Built target d2`). The .cmd/.ps1 script itself needed no change — it
 mirrors CI's configure and the failure was header-level. Note: GCC 16 vs 14
 header drift may surface MORE conflicts after this one — next errors go to the
 next round one at a time.
+
+## P12 — Field round 3 (zoom verified) + alt-toggle fix (archive #13, 2026-11-15)
+
+Field: **Z camera zoom VERIFIED FIXED** (view zooms with the world). Open:
+tooltip backgrounds still transparent (chain already statically verified; field
+diag still planned — renderer mode from d2boot.log, reach-probe on
+Draw_UnitNameUnderCursor); **Alt item toggle dead** — fixed this round.
+
+**Alt-toggle — FIXED (root cause)**: the classic overlay-era loss again. The
+feature's five block homes: `VanillaPlusCore.cpp` config + latch helpers
+(present), `ShowItems.cpp` stale-clear blocks incl. the R58 real-geometry
+HitTestScreen (present), `UI/Draw.cpp` latch reset on wholesale UI reset
+(present, placement fork-identical), and **`D2Client.cpp` CMD handlers (MISSING
+ENTIRELY)**. In the port the two functions live in `D2ClientRoot.cpp` (the P8
+canonical def home) with vanilla bodies only: `CMD_SetHoldAlt` never flipped the
+latch, `CMD_ReleaseHoldAltAndClearSelection` never converged the flag — toggle
+mode could never engage even with `alt_toggle=1`. Both VP blocks recovered
+verbatim from origin/main into D2ClientRoot.cpp + the VanillaPlusCore.h include.
+Hold mode (`alt_toggle=0`) byte-for-byte vanilla by construction. Build green.
+
+Field asks (SMOKE §C item 8 + R58 guard): `alt_toggle=1` → Alt down-up flips
+labels, brush a label and click empty ground = walk, label/sprite click =
+pickup, combat click = attack; `alt_toggle=0` = vanilla hold unchanged.
