@@ -171,3 +171,56 @@ Hold mode (`alt_toggle=0`) byte-for-byte vanilla by construction. Build green.
 Field asks (SMOKE §C item 8 + R58 guard): `alt_toggle=1` → Alt down-up flips
 labels, brush a label and click empty ground = walk, label/sprite click =
 pickup, combat click = attack; `alt_toggle=0` = vanilla hold unchanged.
+
+## P13 — Field round 4: alt-toggle still dead, chain verified, diag added (R157, 2026-11-15)
+
+Field: **alt_toggle still dead** after the P12 CMD-handler recovery. Every other
+open item behaves (boot/panel/res/stash/zoom), so key dispatch, rendering and
+the ini plumbing around the toggle all have working siblings. Static audit
+instead of another guess — every link re-verified against `origin/main`:
+
+- **CmdTbl.cpp**: `gaCmdBindings` all 55 entries identical (entry 72 =
+  `CMD_SetHoldAlt` / `CMD_ReleaseHoldAltAndClearSelection`), `gsUICmdTblFlagInit`
+  message codes identical (0x100/0x104 keydown → `WindowsKeyPressedEvent` →
+  `pfnHandler`, 0x101/0x105 keyup → `INPUT_DispatchKeyCommand` → `pfnAltHandler`),
+  default bind tables byte-equal, `CMD_InitKeyBindings` call site in Draw.cpp
+  fork-identical, `D2KeyBindStrc` packed layout identical (the fork's
+  copy-loop decompilation ≡ the port's `memcpy(0x474)`: 285 × 4 = 1140).
+- **Bodies**: D2ClientRoot.cpp CMD bodies ≡ fork D2Client.cpp; VanillaPlusCore.cpp
+  and ShowItems.cpp byte-identical; CUnit.cpp one cast apart; Game.cpp
+  click-converge block identical; ui.cpp Set/GetUIFlag identical.
+- **Data**: globals.h `D2UIFlagStrc` — `AltShowItems` at 0x34 = enum index 13
+  (`UI_HOLDALT`) in both; `GetUIFlag`'s `(&GFX_bShowUIFlag.Game)[13]` lands on it;
+  single `GFX_bShowUIFlag` definition (Source/globals/D2Client.cpp:263), guard
+  name matches. Message.cpp diffs are type cleanups only. DRAW_UI called from
+  Game.cpp:1121; the `AltShowItems` → `DRAW_AltItems` gate is fork-identical.
+
+**Conclusion: no static defect in the port tree** — the P12 fix is present and
+verbatim. The break must be runtime-side, two candidates fitting the field
+evidence: (1) a stale exe/objects (overlay rule §4 — archive not re-extracted,
+or the Win11 tree rebuilt green on stale `.obj`s, the archive-7 failure class),
+(2) the ini read (`alt_toggle=1` not in the d2vp.ini next to the *running*
+d2.exe; `GetModuleFileNameA` decides the dir, a launcher copy or another
+directory's ini silently reads 0 = hold mode).
+
+**R157 field diag added** (port-side, VP-marked, hold/toggle behavior untouched):
+- `VanillaPlusCore.cpp ALTTOGGLE_Active()`: one-way marks — first ini read
+  prints `read [features] alt_toggle=<n> from <resolved path>` (the wrong-dir
+  case names itself); first enabling read prints the engagement line; a
+  `BuildIniPath` failure prints `ini path resolve FAILED`.
+- `D2ClientRoot.cpp CMD_SetHoldAlt` / `CMD_ReleaseHoldAltAndClearSelection`:
+  one-way marks on first keydown/keyup fire with `toggle_mode` + `latch` —
+  a missing keydown mark with the R157 tag visible = stale exe or dispatch.
+- `Redivivus/d2_boot.h`: `D2VP_ROUND` 156 → 157 (title screen, automap line and
+  boot self-ID all show `D2VP-R157` / `Vanilla+0.0.8-157`, so exe freshness is
+  checkable at a glance).
+
+Field protocol (handoff §5 item 4): rebuild clean → confirm R157 on the title
+screen → Alt once in-game with `alt_toggle=1` → read the `alt-toggle:` lines;
+decision tree there maps each possible log shape to its broken link. Vanilla
+hold sanity: ini key deleted → hold-Alt labels must still work, same keydown
+mark at `toggle_mode=0`.
+
+Sandbox note: no i686 mingw toolchain and no package-manager access here, so
+this round ships source + docs only; the build gates stay the owner's Win11
+tree and CI.

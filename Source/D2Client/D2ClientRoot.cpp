@@ -29,6 +29,7 @@
 #include "Source/D2Client/UI/Text.h"
 #include "Source/D2Client/UI/UseItem.h"
 #include "Source/D2Client/UI/VanillaPlusCore.h" // VP: alt-toggle latch helpers (ALTTOGGLE_*)
+#include "Redivivus/d2_boot.h" // [R157 port field diag] alt-toggle handler-fire marks
 #include "Source/D2Client/UI/npcmenu.h"
 #include "Source/D2Client/UI/npcmenu/Merc.h"
 #include "Source/D2Client/UI/ui.h"
@@ -888,6 +889,16 @@ void __stdcall thunk_NET_D2GS_CLIENT_Send_SHORT_LeftSkillOnLocEx() {
 }
 
 void __stdcall CMD_SetHoldAlt() {
+    // [R157 port field diag] one-way mark: proves the keydown dispatch
+    // reaches this handler at all (missing mark = dispatch/exe stale) and
+    // which mode the config gate returned (toggle=0 with hold labels alive
+    // = the ini read is the broken link).
+    static int sbAltKeyDownMarkRaised = 0;
+    if (!sbAltKeyDownMarkRaised) {
+        sbAltKeyDownMarkRaised = 1;
+        D2BOOT_MarkFmt("alt-toggle: Alt keydown handler fired (toggle_mode=%d latch=%d)",
+                       (int)ALTTOGGLE_Active(), (int)ALTTOGGLE_Latched());
+    }
     // VP-BEGIN [alt-toggle]: toggle mode flips the latch; keyup
     // re-asserts the flag from the latch (heals a stuck Alt after a lost
     // keyup across alt-tab). Hold mode: vanilla byte path.
@@ -923,6 +934,15 @@ void __stdcall CMD_ClearClickModifier() {
 }
 
 void __stdcall CMD_ReleaseHoldAltAndClearSelection() {
+    // [R157 port field diag] one-way mark: proves the keyup dispatch reaches
+    // this handler (the toggle branch converges the flag here; a missing
+    // keyup mark with a present keydown mark = the 0x105 registration side).
+    static int sbAltKeyUpMarkRaised = 0;
+    if (!sbAltKeyUpMarkRaised) {
+        sbAltKeyUpMarkRaised = 1;
+        D2BOOT_MarkFmt("alt-toggle: Alt keyup handler fired (toggle_mode=%d latch=%d)",
+                       (int)ALTTOGGLE_Active(), (int)ALTTOGGLE_Latched());
+    }
     // VP-BEGIN [alt-toggle]: converge the flag to the latch
     // (labels persist across the key-up; a lost keyup can never strand the
     // flag). Hold mode: vanilla byte path.

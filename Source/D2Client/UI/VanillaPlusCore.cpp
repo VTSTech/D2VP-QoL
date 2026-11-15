@@ -354,6 +354,11 @@ void __stdcall ALTTOGGLE_EnsureIni() {
 }
 
 BOOL __stdcall ALTTOGGLE_Active() {
+    // [R157 port field diag] one-way d2boot.log marks: the first ini read
+    // names the resolved path + value (a stale/misplaced d2vp.ini is the
+    // #1 toggle-mode suspect), the first enabling read marks engagement.
+    static int sbAltToggleIniReadMarkRaised = 0;
+    static int sbAltToggleEngagedMarkRaised = 0;
     DWORD dwNow = GetTickCount();
     if (!dwAltToggleLastCheck || dwNow - dwAltToggleLastCheck >= 2000) {
         char szIniPath[260];
@@ -366,8 +371,20 @@ BOOL __stdcall ALTTOGGLE_Active() {
             // GetPrivateProfileIntA: missing file/section/key or a non-numeric
             // value all return the 0 default = vanilla hold mode.
             gbAltToggleMode = GetPrivateProfileIntA("features", "alt_toggle", 0, szIniPath) ? 1 : 0;
+            if (!sbAltToggleIniReadMarkRaised) {
+                sbAltToggleIniReadMarkRaised = 1;
+                D2BOOT_MarkFmt("alt-toggle: read [features] alt_toggle=%d from %s", gbAltToggleMode, szIniPath);
+            }
+            if (gbAltToggleMode && !sbAltToggleEngagedMarkRaised) {
+                sbAltToggleEngagedMarkRaised = 1;
+                D2BOOT_MarkFmt("alt-toggle: toggle mode engaged - Alt press flips ground labels");
+            }
         } else {
             gbAltToggleMode = 0;
+            if (!sbAltToggleIniReadMarkRaised) {
+                sbAltToggleIniReadMarkRaised = 1;
+                D2BOOT_MarkFmt("alt-toggle: ini path resolve FAILED - toggle mode unavailable");
+            }
         }
     }
     return gbAltToggleMode;
