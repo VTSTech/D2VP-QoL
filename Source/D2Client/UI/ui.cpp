@@ -9053,8 +9053,7 @@ int32_t __stdcall UI_GetStatValueForDisplay(int32_t nUnit) {
 
     iVar2 = iVar1 * 100 / (stMonStatsInit.nAC + iVar1);
     apply_level_factor:
-    iVar1 = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pPlayer, UNITSTAT_level, 0);
-    iVar3 = iVar1 * iVar2 * 2 / (pMonStatsTxt->aLevel[nDifficulty] + iVar1);
+    iVar3 = iVar2;
     if (iVar3 < 5) {
       return 5;
     }
@@ -9143,9 +9142,7 @@ int32_t __stdcall UI_BuildStatWindowDescriptions() {
 
     nBlockRatio = nMonLevel * 100 / (nMonLevel + nBlockRatio);
     apply_level_factor:
-    wMonStatVal = pMonStatsTxt->aLevel[nDifficultyIndex];
-    nMonIdx = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_level, 0);
-    return wMonStatVal * nBlockRatio * 2 / (nMonIdx + wMonStatVal);
+    return nBlockRatio;
 }
 
 int __fastcall UI_AppendColorCodeToString(uint16_t * pWszString, uint16_t * * pNextLineOut) {

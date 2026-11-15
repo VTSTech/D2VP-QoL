@@ -495,7 +495,13 @@ void UNICODE_FormatWideString(int32_t nMaxChars, uint16_t * wszDst, uint16_t * w
             bArgConsumed = 1;
             break;
             case L's':
-              if (!pArgSave || (pArgCur = pArgSave , nDstOffset = 0 , !*pArgSave)) {
+              // A sub-0x10000 slot is a misread integer from an under-supplied
+              // vararg list, not a string pointer; terminate instead of deref.
+              if (!pArgSave || (uintptr_t)pArgSave < 0x10000) {
+                *wszDst = L'\0';
+                return;
+              }
+              if ((pArgCur = pArgSave , nDstOffset = 0 , !*pArgSave)) {
                 UNICODE_AppendWideStringN((uint16_t*)wszDst, pArgSave, nMaxChars - nCharCount - 1);
                 return;
               }
@@ -519,6 +525,7 @@ void UNICODE_FormatWideString(int32_t nMaxChars, uint16_t * wszDst, uint16_t * w
 
             wszDst += nDstOffset;
             nCharCount += nDstOffset;
+            bArgConsumed = 1;
             break;
             case L'%':
               nCharCount++;

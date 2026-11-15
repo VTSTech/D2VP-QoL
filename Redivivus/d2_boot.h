@@ -10,7 +10,7 @@
 // version line (D2Client AUTOMAP_DrawVersion) print D2VP_BUILD_TAG instead of
 // the retail "v 1.14d", and the boot self-ID (Game/Main.cpp) composes its
 // R-number from D2VP_ROUND, so all three stay in lockstep per round.
-#define D2VP_ROUND "159" // [R155] camera_zoom: Z steps the world zoom 1.0/1.25/1.5 behind [features] camera_zoom (opt-in, 2 s hot-read, Options row 15); world-phase bracket + cursor inverse keep the UI 1:1 and clicks on the zoomed world; [R156] Glide renderer ported: D3D + Glide scaled, DDraw/Gdi clamp; [R157] port field diag: alt-toggle chain marks (ini read path+value, Alt keydown/keyup handler fire) in d2boot.log - title-screen tag D2VP-R157 proves the exe carries the P12 alt-toggle fix
+#define D2VP_ROUND "160" // [R155] camera_zoom: Z steps the world zoom 1.0/1.25/1.5 behind [features] camera_zoom (opt-in, 2 s hot-read, Options row 15); world-phase bracket + cursor inverse keep the UI 1:1 and clicks on the zoomed world; [R156] Glide renderer ported: D3D + Glide scaled, DDraw/Gdi clamp; [R157] port field diag: alt-toggle chain marks (ini read path+value, Alt keydown/keyup handler fire) in d2boot.log - title-screen tag D2VP-R157 proves the exe carries the P12 alt-toggle fix
 #define D2VP_BUILD_TAG "D2VP-R" D2VP_ROUND
 
 extern "C" {

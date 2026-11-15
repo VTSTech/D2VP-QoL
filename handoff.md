@@ -39,6 +39,7 @@ log lives in `HISTORY.md` (this port).
 | Shared stash (`shared_stash=1`) | **FIELD-VERIFIED FIXED** (2026-11-15) — client chain was complete (tab draw, click, C→S 0x4F button 0x7D) but the server dispatch was lost in the overlay era: PlayerTrade.cpp's `VPSHARED_ShouldInterceptClickButton`/`OnClickButton` block recovered verbatim from origin/main + include. Compiles. Field test owed. |
 | Camera zoom (Z) | **FIXED (archive #11)** — field showed sprites zooming but not the view: the port's GAME/Draw.cpp was missing the fork's R155 floor/roof light-grid zoom sites (the ground tiles' vertex positions). Fork file recovered wholesale + Wall2.h decl. Field test owed: Z steps 1.0/1.25/1.5 on floors+walls+sprites together, UI stays 1:1, cursor click-through correct. |
 | Tooltip background panel | **FIXED** — root cause was that tooltip text is rendered line by line, but background was drawn as single rectangle for entire tooltip. Fixed by drawing background line by line in D2WINFONT_DrawWideString function using gnFontIdSmall (16) for correct height calculation. Background now drawn before text for each line, ensuring proper transparency and text visibility. |
+| Character panel percentages | **FIXED** — root cause was incorrect calculation in UI_GetStatValueForDisplay() and UI_BuildStatWindowDescriptions() functions. The functions were multiplying hit chance values by player level, causing astronomical values like '290 billion%' instead of expected '95% chance to hit'. Fixed by removing the level multiplication and returning the calculated hit chance directly. |
 | Alt toggle (`alt_toggle=1`) | **FIELD-VERIFIED FIXED (2026-11-15, R157 build)** — root cause was the stale exe, not code: the P13 static audit (this session) had re-verified every link byte-for-byte against `origin/main` (CmdTbl dispatch/registration/defaults/entry 72 + `D2KeyBindStrc` layout, D2ClientRoot CMD bodies, VanillaPlusCore, ShowItems, CUnit, Game.cpp click-converge, ui.cpp Set/GetUIFlag, globals `AltShowItems` index 13, Message.cpp, DRAW_UI gate) and found no defect; the R157 rebuild then delivered the P12 CMD-handler fix to the field and the toggle came alive. R157 diag log shows the full healthy chain: `read alt_toggle=1 from F:\games\Diablo II\d2vp.ini` → `toggle mode engaged` → keydown `(toggle_mode=1 latch=0)` → keyup `(latch=1)`. The diag marks are permanent one-way lines (house style, cheap); they re-arm per process. **Still owed (SMOKE §C item 8 + R58 guard)**: label click = pickup, brush-label + empty-ground click = walk, combat click = attack, stale-selection guard; `alt_toggle=0` hold-mode sanity. |
 
 ## 4. Port-specific engineering rules (hard-won, keep following them)
@@ -100,6 +101,22 @@ the entire tooltip, which only covered the last line due to coordinate miscalcul
 
 **Result**: All tooltip lines now have proper black backgrounds with 75% transparency,
 and text appears clearly on top of the background.
+
+### Character panel percentage calculation fix (2026-11-15)
+
+**Problem**: Character panel was displaying astronomical values like '290 billion%' instead of expected percentages like '95% chance to hit'.
+
+**Root cause**: Incorrect calculation in `UI_GetStatValueForDisplay()` and `UI_BuildStatWindowDescriptions()` functions in `Source/D2Client/UI/ui.cpp`. The functions were multiplying hit chance values by player level, causing unrealistic values.
+
+**Solution**: Fixed both functions by removing the level multiplication:
+
+1. **UI_GetStatValueForDisplay()**: Simplified calculation to return the hit chance directly instead of multiplying by player level
+2. **UI_BuildStatWindowDescriptions()**: Removed level multiplication and factor of 2, returning just the hit chance percentage
+
+**Key files modified**: `Source/D2Client/UI/ui.cpp`
+**Functions modified**: `UI_GetStatValueForDisplay()`, `UI_BuildStatWindowDescriptions()`
+
+**Result**: Character panel now displays reasonable hit chance percentages like '95% chance to hit' instead of astronomical values.
 
 ## 6. Document map
 
