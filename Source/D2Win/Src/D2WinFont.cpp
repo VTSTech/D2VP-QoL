@@ -387,10 +387,16 @@ static void __stdcall D2WINFONT_DrawWideString(uint16_t * wszText, int32_t nX, i
       nLineWidth = D2WINFONT_GetFirstLinePixelWidth((uint16_t*)wszText);
       nPositionX = nX + (nWidth - nLineWidth >> 1);
     }
-
+    
     memset(&sGfxData, 0, 0x48);
     sGfxData.pDC6 = *gppDC6FontCache;
     sGfxData.nDirection = 0;
+    
+    // Draw background for the first line using gnFontIdSmall (16)
+    uint8_t nBlackColor = D2WinPalette::D2GFX_GetColorFromCurrentPallete(0, 0, 0);
+    int nFontHeight = (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / 10;
+    D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nX, nY - nFontHeight, nX + nWidth, nY, nBlackColor, DRAW_LESSTRANSPARENT);
+    
     int iVar1 = 0;
     if (nTotalStrLen <= 0) {
       return;
@@ -426,16 +432,23 @@ static void __stdcall D2WINFONT_DrawWideString(uint16_t * wszText, int32_t nX, i
           nPositionX += (uint32_t)nLinePixelWidth2->abUnverified[1];
         }
       } else if (wCharCode != L'\n') {
+        // Draw the character normally
         nLinePixelWidth2 = (*gpfnFontGetCharWidth)(wCharCode);
         sGfxData.nFrameNumber = (int)*(uint16_t*)(nLinePixelWidth2->abUnverified + 6);
         D2gfx::D2GFX::D2GFX_DrawShiftedImage(&sGfxData, nPositionX, nY, -1, DRAW_SOLID, eGlobalPalette);
         nPositionX += (uint32_t)nLinePixelWidth2->abUnverified[1];
       } else {
+        // Handle newline - move to next line
         nPositionX = nX;
         if (bCenterHorizontally) {
           nLineWidth = D2WINFONT_GetFirstLinePixelWidth((uint16_t*)pwszNext);
           nPositionX = (nWidth - nLineWidth >> 1) + nX;
         }
+
+        // Draw background for the new line
+        uint8_t nBlackColor = D2WinPalette::D2GFX_GetColorFromCurrentPallete(0, 0, 0);
+        int nFontHeight = (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / 10;
+        D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nX, nY - nFontHeight, nX + nWidth, nY, nBlackColor, DRAW_LESSTRANSPARENT);
 
         nY += (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / -10;
       }
@@ -994,7 +1007,7 @@ void __fastcall D2WINFONT_DrawTextWithProgressBar(uint16_t * wszText, uint32_t n
       nXEnd = nAlignMode;
     }
 
-    D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nXEnd, nYStart, nFilledWidth, nYEnd, 0, DRAW_LESSTRANSPARENT);
+    D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nXEnd, nYStart, nFilledWidth, nYEnd, 0, DRAW_TRANSPARENT);
     draw_label_text:
     D2WINFONT_DrawWideString(wszText, nAlignMode, nYEnd - (uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * 3 / 10, nWidth, eGlobalPalette, 1);
 }
@@ -1440,10 +1453,12 @@ void __stdcall Draw_UnitNameUnderCursor() {
         nXStart = nClampedX;
       }
     } else {
-      D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nXStart, nYEnd - nCalcTextHeight, nXStart + nWidth, nYEnd, 0, DRAW_LESSTRANSPARENT);
+      // Background is drawn line by line in D2WINFONT_DrawWideString
     }
 
-    D2WINFONT_DrawWideString(DisplayedTooltip.wszString, nXStart, nYEnd - (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdBody) / 10, nWidth, DisplayedTooltip.nColor, 1);
+    // Draw text with adjusted Y position to test
+    int nTextY = nYEnd - (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdBody) / 10;
+    D2WINFONT_DrawWideString(DisplayedTooltip.wszString, nXStart, nTextY, nWidth, DisplayedTooltip.nColor, 1);
     if (pPrevFont == pSavedFont) {
       return;
     }
@@ -1630,7 +1645,10 @@ void __stdcall DRAW_CompareTooltipUnderCursor() {
     if (nXStart < 0) {
         nXStart = 0;
     }
-    nYEnd = nPrimaryBottom;
+    nYEnd = nScreenHeight - 5;
+    if (nPrimaryBottom < nYEnd) {
+        nYEnd = nPrimaryBottom;
+    }
     if (nYEnd - nCmpHeight < 0) {
         // A compare taller than the primary's bottom: keep the box fully
         // on-screen instead of poking past the top edge.
@@ -1642,7 +1660,7 @@ void __stdcall DRAW_CompareTooltipUnderCursor() {
 
     // The primary draw's background + text, minus the progress-bar branch
     // (no nLoadProgress field in this channel - it is unreachable).
-    D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nXStart, nYEnd - nCmpHeight, nXStart + nCmpWidth, nYEnd, 0, DRAW_LESSTRANSPARENT);
+    // Background is drawn line by line in D2WINFONT_DrawWideString
     D2WINFONT_DrawWideString(gVpCompareTooltip.wszString, nXStart, nYEnd - (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdBody) / 10, nCmpWidth, gVpCompareTooltip.nColor, 1);
 
     // Self-clear: the channel is per-frame by contract (see the block
