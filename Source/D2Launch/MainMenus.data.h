@@ -15,7 +15,11 @@
 
 // Forward declarations
 struct DC6;
+struct D2WinTextBox;
 struct FORMS_AnimFrameStrc;
+
+extern ::D2WinTextBox * gpCtlBnetProgressBar;
+extern ::D2WinTextBox * gbBnetConnectionTimerActive;
 
 extern char gpCutscenesBlackBarTexture[8];
 extern int32_t gaMenuFormFontParamsFont1[2];

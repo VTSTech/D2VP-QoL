@@ -382,6 +382,8 @@ void __fastcall WriteCrashDump(uint32_t dwHeader0, uint32_t dwHeader1, uint32_t 
 void HandleExceptionWithStackDump(uint32_t dwUnused, struct _EXCEPTION_POINTERS * pExceptionPointers);
 BOOL __stdcall DEBUG_LoadStackCrawlDbgHelp();
 void __fastcall TriggerManualStackDump(char * szCategory);
+// Security cookie check (MSVC /GS __security_check_cookie). Compares ECX against the stored security cookie and halts on mismatch. Touches no register, so the caller's return value in EAX (and EDX) survives the call; modelled with the __stdcall_noclobber convention.
+void __stdcall GuardStack();
 // The /GS __EH handlers below share the SEH disposition signature. FogRoot.h
 // typedefs _EXCEPTION_DISPOSITION as int, but this header is included ahead of
 // it in Debug.cpp; self-typedef like D2CMP's CelCmp.h does (identical typedefs

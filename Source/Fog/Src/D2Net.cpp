@@ -164,8 +164,8 @@ int32_t __fastcall NET_D2GS_CLIENT_DecompressPacket(char * pBuffer, size_t nBuff
         uBitBuffer |= (uint32_t)byEntryLen << D2_SHIFT_COUNT(nBitsAvail);
       }
 
-      byEntryLen = *Source::SSComp::gaHuffmanFastDecodeTable[uBitBuffer >> 0x18];
-      byEntryLen = Source::SSComp::gaHuffmanFastDecodeTable[uBitBuffer >> 0x18][(uBitBuffer >> D2_SHIFT_COUNT(0x18 - byEntryLen) & gadwHuffmanBitMasks[byEntryLen]) + 1];
+      byEntryLen = *(uint8_t*)Source::SSComp::gaHuffmanFastDecodeTable[uBitBuffer >> 0x18];
+      byEntryLen = ((uint8_t*)Source::SSComp::gaHuffmanFastDecodeTable[uBitBuffer >> 0x18])[(uBitBuffer >> D2_SHIFT_COUNT(0x18 - byEntryLen) & gadwHuffmanBitMasks[byEntryLen]) + 1];
       byCodeLen = Source::SSComp::gabHuffmanCodeLengths[byEntryLen];
       nBitsAvail += (uint32_t)byCodeLen;
       if (nBitsAvail > 0x20) {

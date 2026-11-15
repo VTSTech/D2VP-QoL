@@ -215,6 +215,12 @@ if(REDIVIVUS_MODULE_LIBRARIES)
             foreach(s IN LISTS D2_MODULE_${m}_SEES)
                 list(APPEND defs D2_SEES_${s})
             endforeach()
+            # A documented exception grants full visibility of the excepted
+            # module: the fork's globals units include its internal headers
+            # (the original is one flat binary), so SEES alone is not enough.
+            foreach(s IN LISTS D2_MODULE_${m}_EXCEPTIONS)
+                list(APPEND defs D2_SEES_${s} D2_LOADS_${s})
+            endforeach()
             foreach(l IN LISTS D2_MODULE_${m}_LOADS)
                 list(APPEND defs D2_LOADS_${l})
             endforeach()

@@ -3,45 +3,59 @@
  * Binary: Game.exe
  */
 
+#include "Source/globals/globals.h"
+#include "Source/D2CMP/Draw.h"
+#include "Source/D2CMP/SRC/Codec.h"
+#include "Source/D2CMP/SRC/LRUCache.h"
+#include "Source/D2Common/COMPOSIT/Composit.h"
 #include "Source/D2Common/D2Common.globals.h"
-#include "Source/D2Common/D2Common.h"
+#include "Source/D2Common/D2SeedStrc.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/DUNGEON/Dungeon.h"
+#include "Source/D2Common/Drlg/D2DrlgLevelDataList.h"
+#include "Source/D2Common/Drlg/D2DrlgReplaceRoomStrc.h"
+#include "Source/D2Common/Drlg/Drlg.h"
+#include "Source/D2Common/Drlg/OutSiege.h"
+#include "Source/D2Common/INVENTORY/Inventory.h"
+#include "Source/D2Common/ITEMS/ItemMods.h"
+#include "Source/D2Common/ITEMS/Items.h"
+#include "Source/D2Common/Logging/ProfCore.h"
 #include "Source/D2Common/Merc.h"
+#include "Source/D2Common/Txt/Skills.h"
+#include "Source/D2Common/Unit.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Lang/D2Lang.h"
+#include "Source/D2Lang/StrTable/strtable.h"
+#include "Source/D2Multi/OOGUtilities.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Fog.globals.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UI/Automap.h"
+#include "Source/D2Common/Chat/Ignorelist.h"
+#include "Source/D2Common/Chat/Ignorelist/ChatIgnoreList.h"
 #include "Source/D2Common/Chat/Ignorelist/IgnoreList.h"
+#include "Source/D2Common/DATATBLS/ItemTbls.h"
+#include "Source/D2Common/DATATBLS/MonsterTbls.h"
+#include "Source/D2Common/Drlg/Drlg.h"
 #include "Source/D2Common/Drlg/DrlgGrid.h"
+#include "Source/D2Common/Logging/ProfCore.h"
+#include "Source/D2Common/Txt/Skills.h"
 
-namespace Storm::Source::SFile {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Storm::Source::SFile
-namespace Class::FILEREC {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::FILEREC
-namespace Class::EVENTREC {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::EVENTREC
-namespace Class::REQUEST {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::REQUEST
-namespace Class::AUDIOSTREAM {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::AUDIOSTREAM
-namespace Class::HANDLER {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::HANDLER
-
-// =============================================================================
-// Named only by initializers in this file
-// =============================================================================
-
-namespace D2Common::Merc {
-static uint8_t gaMonSeqMonsterTblData_Unknown; D2_STATIC_GUARD_BSS(gaMonSeqMonsterTblData_Unknown, "D2Common::Merc::gaMonSeqMonsterTblData_Unknown");
-} // namespace D2Common::Merc
-namespace D2Common::Merc {
-static uint8_t gaMonSeqAnimData; D2_STATIC_GUARD_BSS(gaMonSeqAnimData, "D2Common::Merc::gaMonSeqAnimData");
-} // namespace D2Common::Merc
-namespace D2Common::Merc {
-static uint32_t DWORD_007467b0 = 0x5070000; D2_STATIC_GUARD(DWORD_007467b0, "D2Common::Merc::DWORD_007467b0");
-} // namespace D2Common::Merc
 
 // =============================================================================
 // Initialized scalars
@@ -99,9 +113,49 @@ uint8_t gaMazeLevelTypeCaseTable[40] = {
 
 } // namespace D2Common::Drlg::Maze
 
+namespace Fog::Src::LogManager {
+
+} // namespace Fog::Src::LogManager
+
+namespace Fog::Src::ErrorManager {
+
+} // namespace Fog::Src::ErrorManager
+
+namespace Storm::Source::SSignature {
+
+} // namespace Storm::Source::SSignature
+
+namespace Fog::Engine::Application {
+
+} // namespace Fog::Engine::Application
+
+namespace Fog::Source::SFile {
+
+} // namespace Fog::Source::SFile
+
+namespace Fog::Src::DataArrays {
+
+} // namespace Fog::Src::DataArrays
+
+namespace Storm::Source::SSTR {
+
+} // namespace Storm::Source::SSTR
+
+namespace Fog::Debug {
+
+} // namespace Fog::Debug
+
+namespace Storm::Source::SFile {
+
+} // namespace Storm::Source::SFile
+
 namespace Fog::BitBuffer {
 
 } // namespace Fog::BitBuffer
+
+namespace Storm::Source::SErr {
+
+} // namespace Storm::Source::SErr
 
 namespace Storm::Source::SLog {
 
@@ -115,6 +169,14 @@ namespace D2Launch::CharSel {
 
 } // namespace D2Launch::CharSel
 
+namespace D2Lang::StrTable::strtable {
+
+} // namespace D2Lang::StrTable::strtable
+
+namespace D2Multi::ChatDlg {
+
+} // namespace D2Multi::ChatDlg
+
 namespace D2Common::DATATBLS::LvlTbls {
 
 // =============================================================================
@@ -122,21 +184,21 @@ namespace D2Common::DATATBLS::LvlTbls {
 // =============================================================================
 
 char * gaLanguageNames_00744508[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00744508, "D2Common::DATATBLS::LvlTbls::gaLanguageNames_00744508");
 
 // =============================================================================
@@ -159,6 +221,16 @@ namespace D2Client::UI::Inv {
 
 } // namespace D2Client::UI::Inv
 
+namespace D2Common::DATATBLS::DataTbls {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+char gaFreeUnitsOrderData[3] = { 'w', 'b', '\x00' }; D2_GLOBAL_GUARD(gaFreeUnitsOrderData, "D2Common::DATATBLS::DataTbls::gaFreeUnitsOrderData");
+
+} // namespace D2Common::DATATBLS::DataTbls
+
 namespace D2Client::Warden::NWardenClient {
 
 } // namespace D2Client::Warden::NWardenClient
@@ -166,6 +238,26 @@ namespace D2Client::Warden::NWardenClient {
 namespace D2Client::Warden {
 
 } // namespace D2Client::Warden
+
+namespace D2Client::Sound::SoundHdr {
+
+} // namespace D2Client::Sound::SoundHdr
+
+namespace D2Client::UI::ui {
+
+} // namespace D2Client::UI::ui
+
+namespace D2Client::UI::npcmenu {
+
+} // namespace D2Client::UI::npcmenu
+
+namespace D2Client::UI::QuestLog {
+
+} // namespace D2Client::UI::QuestLog
+
+namespace D2Sound::Src::D2SoundSmp {
+
+} // namespace D2Sound::Src::D2SoundSmp
 
 namespace D2Client::UI {
 
@@ -215,17 +307,21 @@ namespace Bnclient::BnSend {
 
 } // namespace Bnclient::BnSend
 
+namespace Bnclient::BnDownload {
+
+} // namespace Bnclient::BnDownload
+
 namespace Bnclient::_net_sid {
 
 } // namespace Bnclient::_net_sid
 
-namespace D2Lang::StrTable::strtable {
-
-} // namespace D2Lang::StrTable::strtable
-
 namespace D2Game::GAME::Event::Dispatch {
 
 } // namespace D2Game::GAME::Event::Dispatch
+
+namespace D2Game::UNIT::SUnitDmg {
+
+} // namespace D2Game::UNIT::SUnitDmg
 
 namespace D2Game::PLAYER::PlayerModes {
 
@@ -276,6 +372,12 @@ void * vftable[12] = {
     (void*)&D2Common::Chat::Ignorelist::ChatIgnoreList::ScalarDeletingDestructor
 }; D2_GLOBAL_GUARD(vftable, "D2Common::Chat::Ignorelist::ChatIgnoreList::vftable");
 
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+void* vftable_meta_ptr = (void*)0x0070056c; D2_GLOBAL_GUARD(vftable_meta_ptr, "D2Common::Chat::Ignorelist::ChatIgnoreList::vftable_meta_ptr");
+
 } // namespace D2Common::Chat::Ignorelist::ChatIgnoreList
 
 namespace D2Common::Chat::Ignorelist::IgnoreList {
@@ -299,759 +401,23 @@ void * vftable[12] = {
     (void*)&D2Common::Chat::Ignorelist::IgnoreList::ScalarDeletingDestructor
 }; D2_GLOBAL_GUARD(vftable, "D2Common::Chat::Ignorelist::IgnoreList::vftable");
 
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+void* vftable_meta_ptr = (void*)0x00700644; D2_GLOBAL_GUARD(vftable_meta_ptr, "D2Common::Chat::Ignorelist::IgnoreList::vftable_meta_ptr");
+
 } // namespace D2Common::Chat::Ignorelist::IgnoreList
-
-namespace D2Common::DATATBLS::ItemTbls {
-
-// =============================================================================
-// Initialized scalars
-// =============================================================================
-
-unsigned int gszTxtColName_op = 0x706f; D2_GLOBAL_GUARD(gszTxtColName_op, "D2Common::DATATBLS::ItemTbls::gszTxtColName_op");
-
-} // namespace D2Common::DATATBLS::ItemTbls
-
-namespace D2Common::Drlg::OutSiege {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-int gnAct5OuterWallGridOffsetByType[24] = {
-    -0x1,
-    0x0,
-    0x0,
-    -0x1,
-    0x1,
-    0x0,
-    0x0,
-    0x1,
-    0x0,
-    -0x1,
-    0x1,
-    0x0,
-    0x0,
-    0x1,
-    -0x1,
-    0x0,
-    -0x1,
-    0x0,
-    0x0,
-    -0x1,
-    0x1,
-    0x0,
-    0x0,
-    0x1
-}; D2_GLOBAL_GUARD(gnAct5OuterWallGridOffsetByType, "D2Common::Drlg::OutSiege::gnAct5OuterWallGridOffsetByType");
-
-int gaAct5SceneryPresetTable_0[15][7] = {
-    { 0x6f, 0x3bb, 0x3bc, 0x0, 0x19, 0x1, 0x1 },
-    { 0x70, 0x3bb, 0x3bc, 0x0, 0x19, 0x1, 0x1 },
-    { 0x75, 0x3bb, 0x3bc, 0x1, 0x19, 0x1, 0x1 },
-    { 0x70, 0x3b9, 0x3b9, -0x1, 0x19, 0x1, 0x1 },
-    { 0x75, 0x3ba, 0x3ba, -0x1, 0x19, 0x1, 0x1 },
-    { 0x6f, 0x3b0, 0x3b3, -0x1, 0xa, 0x1, 0x0 },
-    { 0x6f, 0x3ae, 0x3b1, -0x1, 0x14, 0x4, 0x0 },
-    { 0x6f, 0x3af, 0x3b2, -0x1, 0x14, 0x4, 0x0 },
-    { 0x70, 0x3ad, 0x3ad, -0x1, 0xa, 0x1, 0x0 },
-    { 0x70, 0x3ab, 0x3ab, -0x1, 0x8, 0x1, 0x0 },
-    { 0x70, 0x3ac, 0x3ac, -0x1, 0xf, 0x5, 0x0 },
-    { 0x75, 0x3b4, 0x3b4, -0x1, 0x9, 0x4, 0x0 },
-    { 0x75, 0x3b5, 0x3b5, -0x1, 0x9, 0x4, 0x0 },
-    { 0x75, 0x3b6, 0x3b6, -0x1, 0x9, 0x4, 0x0 },
-    { 0x75, 0x3b7, 0x3b7, -0x1, 0x5, 0x3, 0x0 }
-}; D2_GLOBAL_GUARD(gaAct5SceneryPresetTable_0, "D2Common::Drlg::OutSiege::gaAct5SceneryPresetTable_0");
-
-// =============================================================================
-// Initialized scalars
-// =============================================================================
-
-int gaAct5SceneryPresetTable_0_0__1_[15][7] = {}; D2_GLOBAL_GUARD(gaAct5SceneryPresetTable_0_0__1_, "D2Common::Drlg::OutSiege::gaAct5SceneryPresetTable_0_0__1_");
-
-} // namespace D2Common::Drlg::OutSiege
-
-namespace D2Common::Drlg::Outdoors {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-int aAct4OutdoorSceneryBaseByLevel[3] = { 0x33c, 0x340, 0x340 }; D2_GLOBAL_GUARD(aAct4OutdoorSceneryBaseByLevel, "D2Common::Drlg::Outdoors::aAct4OutdoorSceneryBaseByLevel");
-
-int aAct4OutdoorPresetBaseByLevel[3] = { 0x32c, 0x331, 0x337 }; D2_GLOBAL_GUARD(aAct4OutdoorPresetBaseByLevel, "D2Common::Drlg::Outdoors::aAct4OutdoorPresetBaseByLevel");
-
-} // namespace D2Common::Drlg::Outdoors
-
-namespace D2Common::Drlg::OutJung {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-int gaOutJungPresetOffsetByLevel[3] = { 0x0, 0xa, 0x14 }; D2_GLOBAL_GUARD(gaOutJungPresetOffsetByLevel, "D2Common::Drlg::OutJung::gaOutJungPresetOffsetByLevel");
-
-} // namespace D2Common::Drlg::OutJung
-
-namespace D2Common::Drlg {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-uint8_t gaWallNeighborOrientTable[256] = {
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xf,
-    0xf,
-    0x5,
-    0x5,
-    0xf,
-    0xf,
-    0x15,
-    0x15,
-    0x8,
-    0x8,
-    0xa,
-    0x26,
-    0x8,
-    0x8,
-    0x28,
-    0x14,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xf,
-    0xf,
-    0x5,
-    0x5,
-    0xf,
-    0xf,
-    0x15,
-    0x15,
-    0x8,
-    0x8,
-    0xa,
-    0x26,
-    0x8,
-    0x8,
-    0x28,
-    0x14,
-    0xd,
-    0xd,
-    0x7,
-    0x7,
-    0xd,
-    0xd,
-    0xd,
-    0x7,
-    0x4,
-    0x4,
-    0xb,
-    0x25,
-    0x4,
-    0x4,
-    0xb,
-    0x2b,
-    0x3,
-    0x3,
-    0xc,
-    0xc,
-    0x3,
-    0x3,
-    0x27,
-    0x27,
-    0x9,
-    0x9,
-    0x2,
-    0x2b,
-    0x9,
-    0x9,
-    0x2c,
-    0x1a,
-    0xd,
-    0xd,
-    0x7,
-    0x7,
-    0xd,
-    0xd,
-    0xd,
-    0x7,
-    0x17,
-    0x17,
-    0x29,
-    0x11,
-    0x17,
-    0x17,
-    0x29,
-    0x11,
-    0x3,
-    0x3,
-    0xc,
-    0xc,
-    0x3,
-    0x3,
-    0x27,
-    0x27,
-    0x2a,
-    0x2a,
-    0x2e,
-    0x2a,
-    0x2a,
-    0x2a,
-    0x21,
-    0x1f,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xf,
-    0xf,
-    0x5,
-    0x5,
-    0xf,
-    0xf,
-    0x15,
-    0x15,
-    0x8,
-    0x8,
-    0xa,
-    0x26,
-    0x8,
-    0x8,
-    0x23,
-    0x14,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0x0,
-    0x0,
-    0x10,
-    0x10,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xe,
-    0xe,
-    0x6,
-    0x13,
-    0xf,
-    0xf,
-    0x5,
-    0x5,
-    0xf,
-    0xf,
-    0x15,
-    0x15,
-    0x8,
-    0x8,
-    0xa,
-    0x26,
-    0x8,
-    0x8,
-    0x28,
-    0x14,
-    0xd,
-    0xd,
-    0x7,
-    0x7,
-    0xd,
-    0xd,
-    0xd,
-    0x7,
-    0x4,
-    0x4,
-    0xb,
-    0x25,
-    0x4,
-    0x4,
-    0xb,
-    0x25,
-    0x12,
-    0x12,
-    0x23,
-    0x23,
-    0x12,
-    0x12,
-    0x16,
-    0x16,
-    0x24,
-    0x24,
-    0x2d,
-    0x22,
-    0x24,
-    0x24,
-    0x1c,
-    0x1d,
-    0xd,
-    0xd,
-    0x7,
-    0x7,
-    0xd,
-    0xd,
-    0xd,
-    0x7,
-    0x17,
-    0x17,
-    0x29,
-    0x11,
-    0x17,
-    0x17,
-    0x29,
-    0x11,
-    0x12,
-    0x12,
-    0x23,
-    0x23,
-    0x12,
-    0x12,
-    0x16,
-    0x16,
-    0x18,
-    0x18,
-    0x19,
-    0x20,
-    0x18,
-    0x18,
-    0x1e,
-    0x1
-}; D2_GLOBAL_GUARD(gaWallNeighborOrientTable, "D2Common::Drlg::gaWallNeighborOrientTable");
-
-// =============================================================================
-// Initialized scalars
-// =============================================================================
-
-unsigned int gdwDrlgLevelPlacementFlags = {}; D2_GLOBAL_GUARD(gdwDrlgLevelPlacementFlags, "D2Common::Drlg::gdwDrlgLevelPlacementFlags");
-
-} // namespace D2Common::Drlg
-
-namespace Define_the_symbol__ATL_MIXED {
-
-} // namespace Define_the_symbol__ATL_MIXED
-
-namespace Storm::Source {
-
-} // namespace Storm::Source
-
-namespace Fog::_3rdparty::crashy {
-
-} // namespace Fog::_3rdparty::crashy
-
-namespace Fog::Source::SSComp {
-
-} // namespace Fog::Source::SSComp
-
-namespace Storm::Source::SFile {
-
-} // namespace Storm::Source::SFile
-
-namespace Class::FILEREC {
-
-} // namespace Class::FILEREC
-
-namespace Class::EVENTREC {
-
-} // namespace Class::EVENTREC
-
-namespace Class::REQUEST {
-
-} // namespace Class::REQUEST
-
-namespace Class::AUDIOSTREAM {
-
-} // namespace Class::AUDIOSTREAM
-
-namespace Storm::Source::SErr {
-
-} // namespace Storm::Source::SErr
-
-namespace Class::HANDLER {
-
-} // namespace Class::HANDLER
-
-namespace D2Launch::MainMenus {
-
-} // namespace D2Launch::MainMenus
-
-namespace D2Client::GAME::Game {
-
-} // namespace D2Client::GAME::Game
-
-namespace D2Client {
-
-} // namespace D2Client
-
-namespace D2Client::GAME::Record {
-
-} // namespace D2Client::GAME::Record
-
-namespace D2Client::_Message {
-
-} // namespace D2Client::_Message
-
-namespace D2Client::Engine {
-
-} // namespace D2Client::Engine
-
-namespace D2Client::UI::ui {
-
-} // namespace D2Client::UI::ui
-
-namespace D2Client::GAME::SCmd {
-
-} // namespace D2Client::GAME::SCmd
-
-namespace D2Client::Draw::LightMap {
-
-} // namespace D2Client::Draw::LightMap
-
-namespace D2Client::GAME::Rendering {
-
-} // namespace D2Client::GAME::Rendering
-
-namespace D2Client::UI::Panel {
-
-} // namespace D2Client::UI::Panel
-
-namespace D2Client::UI::Party {
-
-} // namespace D2Client::UI::Party
-
-namespace D2Client::UI::QuestLog {
-
-} // namespace D2Client::UI::QuestLog
-
-namespace D2Client::UI::npcmenu {
-
-} // namespace D2Client::UI::npcmenu
-
-namespace D2Client::Sound {
-
-} // namespace D2Client::Sound
-
-namespace D2Client::UI::UseItem {
-
-} // namespace D2Client::UI::UseItem
-
-namespace D2Client::UNIT::UnitSnd {
-
-} // namespace D2Client::UNIT::UnitSnd
-
-namespace D2Client::UI::SkillDesc {
-
-} // namespace D2Client::UI::SkillDesc
-
-namespace D2Glide::Renderer::Glide {
-
-} // namespace D2Glide::Renderer::Glide
-
-namespace D2DDraw::Renderer::DirectDraw {
-
-} // namespace D2DDraw::Renderer::DirectDraw
-
-namespace D2Lang::Unicode::UNISYS {
-
-} // namespace D2Lang::Unicode::UNISYS
-
-namespace D2Net::SRC::Client {
-
-} // namespace D2Net::SRC::Client
-
-namespace D2Game::PLAYER::PlayerSave {
-
-} // namespace D2Game::PLAYER::PlayerSave
-
-namespace D2Game::Quests::QUESTS::Quest40 {
-
-} // namespace D2Game::Quests::QUESTS::Quest40
-
-namespace D2Game::Quests::QUESTS::A5Q1 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q1
-
-namespace D2Game::Quests::QUESTS::A5Q2 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q2
-
-namespace D2Game::Quests::QUESTS::A5Q3 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q3
-
-namespace D2Game::Quests::QUESTS::A5Q4 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q4
-
-namespace D2Game::Quests::QUESTS::A5Q5 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q5
-
-namespace D2Game::Quests::QUESTS::A5Q6 {
-
-} // namespace D2Game::Quests::QUESTS::A5Q6
-
-namespace D2Game::Quests::QUESTS::Quest37 {
-
-} // namespace D2Game::Quests::QUESTS::Quest37
-
-namespace D2Game::Quests::QUESTS::A1Q0 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q0
-
-namespace D2Game::Quests::QUESTS::A1Q1 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q1
-
-namespace D2Game::Quests::QUESTS::A1Q2 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q2
-
-namespace D2Game::Quests::QUESTS::A1Q3 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q3
-
-namespace D2Game::Quests::QUESTS::A1Q4 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q4
-
-namespace D2Game::Quests::QUESTS::A1Q5 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q5
-
-namespace D2Game::Quests::QUESTS::A1Q6 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q6
-
-namespace D2Game::Quests::QUESTS::A1Q7 {
-
-} // namespace D2Game::Quests::QUESTS::A1Q7
-
-namespace D2Game::Quests::QUESTS::Quest38 {
-
-} // namespace D2Game::Quests::QUESTS::Quest38
-
-namespace D2Game::Quests::QUESTS::A2Q0 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q0
-
-namespace D2Game::Quests::QUESTS::A2Q1 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q1
-
-namespace D2Game::Quests::QUESTS::A2Q2 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q2
-
-namespace D2Game::Quests::QUESTS::A2Q3 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q3
-
-namespace D2Game::Quests::QUESTS::A2Q4 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q4
-
-namespace D2Game::Quests::QUESTS::A2Q5 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q5
-
-namespace D2Game::Quests::QUESTS::A2Q6 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q6
-
-namespace D2Game::Quests::QUESTS::A2Q7 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q7
-
-namespace D2Game::Quests::QUESTS::A2Q8 {
-
-} // namespace D2Game::Quests::QUESTS::A2Q8
-
-namespace D2Game::Monster::Create {
-
-} // namespace D2Game::Monster::Create
-
-namespace D2Game::Quests::QUESTS::A4Q0 {
-
-} // namespace D2Game::Quests::QUESTS::A4Q0
-
-namespace D2Game::Quests::QUESTS::A4Q1 {
-
-} // namespace D2Game::Quests::QUESTS::A4Q1
-
-namespace D2Game::Quests::QUESTS::A4Q2 {
-
-} // namespace D2Game::Quests::QUESTS::A4Q2
-
-namespace D2Game::Quests::QUESTS::A4Q3 {
-
-} // namespace D2Game::Quests::QUESTS::A4Q3
-
-namespace D2Game::Quests::QUESTS::A4Q4 {
-
-} // namespace D2Game::Quests::QUESTS::A4Q4
-
-namespace D2Game::Quests::QUESTS::Quest39 {
-
-} // namespace D2Game::Quests::QUESTS::Quest39
-
-namespace D2Game::Quests::QUESTS::A3Q0 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q0
-
-namespace D2Game::Quests::QUESTS::A3Q1 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q1
-
-namespace D2Game::Quests::QUESTS::A3Q2 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q2
-
-namespace D2Game::Quests::QUESTS::A3Q3 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q3
-
-namespace D2Game::Quests::QUESTS::A3Q4 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q4
-
-namespace D2Game::Quests::QUESTS::A3Q5 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q5
-
-namespace D2Game::Quests::QUESTS::A3Q6 {
-
-} // namespace D2Game::Quests::QUESTS::A3Q6
-
-namespace D2Game::SKILLS::SkillNec {
-
-} // namespace D2Game::SKILLS::SkillNec
-
-namespace D2CMP::SRC::CelCmp::CELLIST {
-
-} // namespace D2CMP::SRC::CelCmp::CELLIST
-
-namespace D2CMP {
-
-} // namespace D2CMP
-
-namespace D2CMP::Draw {
-
-} // namespace D2CMP::Draw
-
-namespace D2Common::Chat::Ignorelist::MappingEntryNode {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-char s___AUMappingEntryNode___0074362c[24] = {
-    '.',
-    '?',
-    'A',
-    'U',
-    'M',
-    'a',
-    'p',
-    'p',
-    'i',
-    'n',
-    'g',
-    'E',
-    'n',
-    't',
-    'r',
-    'y',
-    'N',
-    'o',
-    'd',
-    'e',
-    '@',
-    '@',
-    '\x00',
-    '\x00'
-}; D2_GLOBAL_GUARD(s___AUMappingEntryNode___0074362c, "D2Common::Chat::Ignorelist::MappingEntryNode::s___AUMappingEntryNode___0074362c");
-
-} // namespace D2Common::Chat::Ignorelist::MappingEntryNode
-
-namespace D2Common::Chat::Ignorelist::StringEntryNode {
-
-// =============================================================================
-// Initialized data (arrays, structs, tables)
-// =============================================================================
-
-char s___AUStringEntryNode___0074364c[24] = {
-    '.',
-    '?',
-    'A',
-    'U',
-    'S',
-    't',
-    'r',
-    'i',
-    'n',
-    'g',
-    'E',
-    'n',
-    't',
-    'r',
-    'y',
-    'N',
-    'o',
-    'd',
-    'e',
-    '@',
-    '@',
-    '\x00',
-    '\x00',
-    '\x00'
-}; D2_GLOBAL_GUARD(s___AUStringEntryNode___0074364c, "D2Common::Chat::Ignorelist::StringEntryNode::s___AUStringEntryNode___0074364c");
-
-} // namespace D2Common::Chat::Ignorelist::StringEntryNode
 
 namespace D2Common {
 
 // =============================================================================
 // Initialized data (arrays, structs, tables)
 // =============================================================================
+
+char gsGameMonsterSpawnContext[4] = { 'm', 'a', 'x', '\x00' }; D2_GLOBAL_GUARD(gsGameMonsterSpawnContext, "D2Common::gsGameMonsterSpawnContext");
+
+char gsGameMissileTblsContext[4] = { 'm', 'i', 'n', '\x00' }; D2_GLOBAL_GUARD(gsGameMissileTblsContext, "D2Common::gsGameMissileTblsContext");
 
 char s___AV__TSExplicitList_UStringEntr_0074366c[56] = {
     '.',
@@ -1867,6 +1233,768 @@ int gpsPresetObjectTable[750] = {
 
 } // namespace D2Common
 
+namespace D2Common::Txt::Cube {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+char gsGameDataTblsContext[4] = { 'm', 'o', 'd', '\x00' }; D2_GLOBAL_GUARD(gsGameDataTblsContext, "D2Common::Txt::Cube::gsGameDataTblsContext");
+
+} // namespace D2Common::Txt::Cube
+
+namespace D2Common::DATATBLS::ItemTbls {
+
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+unsigned int gszTxtColName_op = 0x706f; D2_GLOBAL_GUARD(gszTxtColName_op, "D2Common::DATATBLS::ItemTbls::gszTxtColName_op");
+
+} // namespace D2Common::DATATBLS::ItemTbls
+
+namespace D2Common::Drlg::Preset {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+char s_HDM_006ee7c0[4] = { 'H', 'D', 'M', '\x00' }; D2_GLOBAL_GUARD(s_HDM_006ee7c0, "D2Common::Drlg::Preset::s_HDM_006ee7c0");
+
+} // namespace D2Common::Drlg::Preset
+
+namespace D2Common::Drlg::OutSiege {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+int gnAct5OuterWallGridOffsetByType[24] = {
+    -0x1,
+    0x0,
+    0x0,
+    -0x1,
+    0x1,
+    0x0,
+    0x0,
+    0x1,
+    0x0,
+    -0x1,
+    0x1,
+    0x0,
+    0x0,
+    0x1,
+    -0x1,
+    0x0,
+    -0x1,
+    0x0,
+    0x0,
+    -0x1,
+    0x1,
+    0x0,
+    0x0,
+    0x1
+}; D2_GLOBAL_GUARD(gnAct5OuterWallGridOffsetByType, "D2Common::Drlg::OutSiege::gnAct5OuterWallGridOffsetByType");
+
+int gaAct5SceneryPresetTable_0[15][7] = {
+    { 0x6f, 0x3bb, 0x3bc, 0x0, 0x19, 0x1, 0x1 },
+    { 0x70, 0x3bb, 0x3bc, 0x0, 0x19, 0x1, 0x1 },
+    { 0x75, 0x3bb, 0x3bc, 0x1, 0x19, 0x1, 0x1 },
+    { 0x70, 0x3b9, 0x3b9, -0x1, 0x19, 0x1, 0x1 },
+    { 0x75, 0x3ba, 0x3ba, -0x1, 0x19, 0x1, 0x1 },
+    { 0x6f, 0x3b0, 0x3b3, -0x1, 0xa, 0x1, 0x0 },
+    { 0x6f, 0x3ae, 0x3b1, -0x1, 0x14, 0x4, 0x0 },
+    { 0x6f, 0x3af, 0x3b2, -0x1, 0x14, 0x4, 0x0 },
+    { 0x70, 0x3ad, 0x3ad, -0x1, 0xa, 0x1, 0x0 },
+    { 0x70, 0x3ab, 0x3ab, -0x1, 0x8, 0x1, 0x0 },
+    { 0x70, 0x3ac, 0x3ac, -0x1, 0xf, 0x5, 0x0 },
+    { 0x75, 0x3b4, 0x3b4, -0x1, 0x9, 0x4, 0x0 },
+    { 0x75, 0x3b5, 0x3b5, -0x1, 0x9, 0x4, 0x0 },
+    { 0x75, 0x3b6, 0x3b6, -0x1, 0x9, 0x4, 0x0 },
+    { 0x75, 0x3b7, 0x3b7, -0x1, 0x5, 0x3, 0x0 }
+}; D2_GLOBAL_GUARD(gaAct5SceneryPresetTable_0, "D2Common::Drlg::OutSiege::gaAct5SceneryPresetTable_0");
+
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+int gaAct5SceneryPresetTable_0_0__1_[15][7] = {}; D2_GLOBAL_GUARD(gaAct5SceneryPresetTable_0_0__1_, "D2Common::Drlg::OutSiege::gaAct5SceneryPresetTable_0_0__1_");
+
+} // namespace D2Common::Drlg::OutSiege
+
+namespace D2Common::Drlg::Outdoors {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+int aAct4OutdoorSceneryBaseByLevel[3] = { 0x33c, 0x340, 0x340 }; D2_GLOBAL_GUARD(aAct4OutdoorSceneryBaseByLevel, "D2Common::Drlg::Outdoors::aAct4OutdoorSceneryBaseByLevel");
+
+int aAct4OutdoorPresetBaseByLevel[3] = { 0x32c, 0x331, 0x337 }; D2_GLOBAL_GUARD(aAct4OutdoorPresetBaseByLevel, "D2Common::Drlg::Outdoors::aAct4OutdoorPresetBaseByLevel");
+
+} // namespace D2Common::Drlg::Outdoors
+
+namespace D2Common::Drlg::OutJung {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+int gaOutJungPresetOffsetByLevel[3] = { 0x0, 0xa, 0x14 }; D2_GLOBAL_GUARD(gaOutJungPresetOffsetByLevel, "D2Common::Drlg::OutJung::gaOutJungPresetOffsetByLevel");
+
+} // namespace D2Common::Drlg::OutJung
+
+namespace D2Common::Drlg {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+uint8_t gaWallNeighborOrientTable[256] = {
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xf,
+    0xf,
+    0x5,
+    0x5,
+    0xf,
+    0xf,
+    0x15,
+    0x15,
+    0x8,
+    0x8,
+    0xa,
+    0x26,
+    0x8,
+    0x8,
+    0x28,
+    0x14,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xf,
+    0xf,
+    0x5,
+    0x5,
+    0xf,
+    0xf,
+    0x15,
+    0x15,
+    0x8,
+    0x8,
+    0xa,
+    0x26,
+    0x8,
+    0x8,
+    0x28,
+    0x14,
+    0xd,
+    0xd,
+    0x7,
+    0x7,
+    0xd,
+    0xd,
+    0xd,
+    0x7,
+    0x4,
+    0x4,
+    0xb,
+    0x25,
+    0x4,
+    0x4,
+    0xb,
+    0x2b,
+    0x3,
+    0x3,
+    0xc,
+    0xc,
+    0x3,
+    0x3,
+    0x27,
+    0x27,
+    0x9,
+    0x9,
+    0x2,
+    0x2b,
+    0x9,
+    0x9,
+    0x2c,
+    0x1a,
+    0xd,
+    0xd,
+    0x7,
+    0x7,
+    0xd,
+    0xd,
+    0xd,
+    0x7,
+    0x17,
+    0x17,
+    0x29,
+    0x11,
+    0x17,
+    0x17,
+    0x29,
+    0x11,
+    0x3,
+    0x3,
+    0xc,
+    0xc,
+    0x3,
+    0x3,
+    0x27,
+    0x27,
+    0x2a,
+    0x2a,
+    0x2e,
+    0x2a,
+    0x2a,
+    0x2a,
+    0x21,
+    0x1f,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xf,
+    0xf,
+    0x5,
+    0x5,
+    0xf,
+    0xf,
+    0x15,
+    0x15,
+    0x8,
+    0x8,
+    0xa,
+    0x26,
+    0x8,
+    0x8,
+    0x23,
+    0x14,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0x0,
+    0x0,
+    0x10,
+    0x10,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xe,
+    0xe,
+    0x6,
+    0x13,
+    0xf,
+    0xf,
+    0x5,
+    0x5,
+    0xf,
+    0xf,
+    0x15,
+    0x15,
+    0x8,
+    0x8,
+    0xa,
+    0x26,
+    0x8,
+    0x8,
+    0x28,
+    0x14,
+    0xd,
+    0xd,
+    0x7,
+    0x7,
+    0xd,
+    0xd,
+    0xd,
+    0x7,
+    0x4,
+    0x4,
+    0xb,
+    0x25,
+    0x4,
+    0x4,
+    0xb,
+    0x25,
+    0x12,
+    0x12,
+    0x23,
+    0x23,
+    0x12,
+    0x12,
+    0x16,
+    0x16,
+    0x24,
+    0x24,
+    0x2d,
+    0x22,
+    0x24,
+    0x24,
+    0x1c,
+    0x1d,
+    0xd,
+    0xd,
+    0x7,
+    0x7,
+    0xd,
+    0xd,
+    0xd,
+    0x7,
+    0x17,
+    0x17,
+    0x29,
+    0x11,
+    0x17,
+    0x17,
+    0x29,
+    0x11,
+    0x12,
+    0x12,
+    0x23,
+    0x23,
+    0x12,
+    0x12,
+    0x16,
+    0x16,
+    0x18,
+    0x18,
+    0x19,
+    0x20,
+    0x18,
+    0x18,
+    0x1e,
+    0x1
+}; D2_GLOBAL_GUARD(gaWallNeighborOrientTable, "D2Common::Drlg::gaWallNeighborOrientTable");
+
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+unsigned int gdwDrlgLevelPlacementFlags = {}; D2_GLOBAL_GUARD(gdwDrlgLevelPlacementFlags, "D2Common::Drlg::gdwDrlgLevelPlacementFlags");
+
+} // namespace D2Common::Drlg
+
+namespace Define_the_symbol__ATL_MIXED {
+
+} // namespace Define_the_symbol__ATL_MIXED
+
+namespace Storm::Source {
+
+} // namespace Storm::Source
+
+namespace Fog::File {
+
+} // namespace Fog::File
+
+namespace Fog::_3rdparty::crashy {
+
+} // namespace Fog::_3rdparty::crashy
+
+namespace D2Hell {
+
+} // namespace D2Hell
+
+namespace Fog::Source::SSComp {
+
+} // namespace Fog::Source::SSComp
+
+namespace Class::FILEREC {
+
+} // namespace Class::FILEREC
+
+namespace Class::EVENTREC {
+
+} // namespace Class::EVENTREC
+
+namespace Class::REQUEST {
+
+} // namespace Class::REQUEST
+
+namespace Class::AUDIOSTREAM {
+
+} // namespace Class::AUDIOSTREAM
+
+namespace Class::HANDLER {
+
+} // namespace Class::HANDLER
+
+namespace D2Launch::MainMenus {
+
+} // namespace D2Launch::MainMenus
+
+namespace D2Multi::OOGUtilities {
+
+} // namespace D2Multi::OOGUtilities
+
+namespace D2Client::GAME::Game {
+
+} // namespace D2Client::GAME::Game
+
+namespace D2Client {
+
+} // namespace D2Client
+
+namespace D2Client::GAME::Record {
+
+} // namespace D2Client::GAME::Record
+
+namespace D2Client::_Message {
+
+} // namespace D2Client::_Message
+
+namespace D2Client::Engine {
+
+} // namespace D2Client::Engine
+
+namespace D2Client::GAME::SCmd {
+
+} // namespace D2Client::GAME::SCmd
+
+namespace D2Client::Draw::LightMap {
+
+} // namespace D2Client::Draw::LightMap
+
+namespace D2Client::GAME::Rendering {
+
+} // namespace D2Client::GAME::Rendering
+
+namespace D2Client::UI::Panel {
+
+} // namespace D2Client::UI::Panel
+
+namespace D2Client::UI::Party {
+
+} // namespace D2Client::UI::Party
+
+namespace D2Client::Sound {
+
+} // namespace D2Client::Sound
+
+namespace D2Client::UI::UseItem {
+
+} // namespace D2Client::UI::UseItem
+
+namespace D2Client::UNIT::UnitSnd {
+
+} // namespace D2Client::UNIT::UnitSnd
+
+namespace D2Client::UI::SkillDesc {
+
+} // namespace D2Client::UI::SkillDesc
+
+namespace D2Glide::Renderer::Glide {
+
+} // namespace D2Glide::Renderer::Glide
+
+namespace D2DDraw::Renderer::DirectDraw {
+
+} // namespace D2DDraw::Renderer::DirectDraw
+
+namespace D2Sound::Src::D2SoundFast {
+
+} // namespace D2Sound::Src::D2SoundFast
+
+namespace D2Lang::Unicode::UNISYS {
+
+} // namespace D2Lang::Unicode::UNISYS
+
+namespace D2Net::SRC::Client {
+
+} // namespace D2Net::SRC::Client
+
+namespace D2Game::PLAYER::PlayerSave {
+
+} // namespace D2Game::PLAYER::PlayerSave
+
+namespace D2Game::Quests::QUESTS::Quest40 {
+
+} // namespace D2Game::Quests::QUESTS::Quest40
+
+namespace D2Game::Quests::QUESTS::A5Q1 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q1
+
+namespace D2Game::Quests::QUESTS::A5Q2 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q2
+
+namespace D2Game::Quests::QUESTS::A5Q3 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q3
+
+namespace D2Game::Quests::QUESTS::A5Q4 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q4
+
+namespace D2Game::Quests::QUESTS::A5Q5 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q5
+
+namespace D2Game::Quests::QUESTS::A5Q6 {
+
+} // namespace D2Game::Quests::QUESTS::A5Q6
+
+namespace D2Game::Quests::QUESTS::Quest37 {
+
+} // namespace D2Game::Quests::QUESTS::Quest37
+
+namespace D2Game::Quests::QUESTS::A1Q0 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q0
+
+namespace D2Game::Quests::QUESTS::A1Q1 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q1
+
+namespace D2Game::Quests::QUESTS::A1Q2 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q2
+
+namespace D2Game::Quests::QUESTS::A1Q3 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q3
+
+namespace D2Game::Quests::QUESTS::A1Q4 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q4
+
+namespace D2Game::Quests::QUESTS::A1Q5 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q5
+
+namespace D2Game::Quests::QUESTS::A1Q6 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q6
+
+namespace D2Game::Quests::QUESTS::A1Q7 {
+
+} // namespace D2Game::Quests::QUESTS::A1Q7
+
+namespace D2Game::Quests::QUESTS::Quest38 {
+
+} // namespace D2Game::Quests::QUESTS::Quest38
+
+namespace D2Game::Quests::QUESTS::A2Q0 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q0
+
+namespace D2Game::Quests::QUESTS::A2Q1 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q1
+
+namespace D2Game::Quests::QUESTS::A2Q2 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q2
+
+namespace D2Game::Quests::QUESTS::A2Q3 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q3
+
+namespace D2Game::Quests::QUESTS::A2Q4 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q4
+
+namespace D2Game::Quests::QUESTS::A2Q5 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q5
+
+namespace D2Game::Quests::QUESTS::A2Q6 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q6
+
+namespace D2Game::Quests::QUESTS::A2Q7 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q7
+
+namespace D2Game::Quests::QUESTS::A2Q8 {
+
+} // namespace D2Game::Quests::QUESTS::A2Q8
+
+namespace D2Game::Monster::Create {
+
+} // namespace D2Game::Monster::Create
+
+namespace D2Game::Quests::QUESTS::A4Q0 {
+
+} // namespace D2Game::Quests::QUESTS::A4Q0
+
+namespace D2Game::Quests::QUESTS::A4Q1 {
+
+} // namespace D2Game::Quests::QUESTS::A4Q1
+
+namespace D2Game::Quests::QUESTS::A4Q2 {
+
+} // namespace D2Game::Quests::QUESTS::A4Q2
+
+namespace D2Game::Quests::QUESTS::A4Q3 {
+
+} // namespace D2Game::Quests::QUESTS::A4Q3
+
+namespace D2Game::Quests::QUESTS::A4Q4 {
+
+} // namespace D2Game::Quests::QUESTS::A4Q4
+
+namespace D2Game::Quests::QUESTS::Quest39 {
+
+} // namespace D2Game::Quests::QUESTS::Quest39
+
+namespace D2Game::Quests::QUESTS::A3Q0 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q0
+
+namespace D2Game::Quests::QUESTS::A3Q1 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q1
+
+namespace D2Game::Quests::QUESTS::A3Q2 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q2
+
+namespace D2Game::Quests::QUESTS::A3Q3 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q3
+
+namespace D2Game::Quests::QUESTS::A3Q4 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q4
+
+namespace D2Game::Quests::QUESTS::A3Q5 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q5
+
+namespace D2Game::Quests::QUESTS::A3Q6 {
+
+} // namespace D2Game::Quests::QUESTS::A3Q6
+
+namespace D2Game::SKILLS::SkillNec {
+
+} // namespace D2Game::SKILLS::SkillNec
+
+namespace D2CMP::SRC::CelCmp::CELLIST {
+
+} // namespace D2CMP::SRC::CelCmp::CELLIST
+
+namespace D2CMP {
+
+} // namespace D2CMP
+
+namespace D2CMP::Draw {
+
+} // namespace D2CMP::Draw
+
+namespace D2Common::Chat::Ignorelist::MappingEntryNode {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+char s___AUMappingEntryNode___0074362c[24] = {
+    '.',
+    '?',
+    'A',
+    'U',
+    'M',
+    'a',
+    'p',
+    'p',
+    'i',
+    'n',
+    'g',
+    'E',
+    'n',
+    't',
+    'r',
+    'y',
+    'N',
+    'o',
+    'd',
+    'e',
+    '@',
+    '@',
+    '\x00',
+    '\x00'
+}; D2_GLOBAL_GUARD(s___AUMappingEntryNode___0074362c, "D2Common::Chat::Ignorelist::MappingEntryNode::s___AUMappingEntryNode___0074362c");
+
+} // namespace D2Common::Chat::Ignorelist::MappingEntryNode
+
+namespace D2Common::Chat::Ignorelist::StringEntryNode {
+
+// =============================================================================
+// Initialized data (arrays, structs, tables)
+// =============================================================================
+
+char s___AUStringEntryNode___0074364c[24] = {
+    '.',
+    '?',
+    'A',
+    'U',
+    'S',
+    't',
+    'r',
+    'i',
+    'n',
+    'g',
+    'E',
+    'n',
+    't',
+    'r',
+    'y',
+    'N',
+    'o',
+    'd',
+    'e',
+    '@',
+    '@',
+    '\x00',
+    '\x00',
+    '\x00'
+}; D2_GLOBAL_GUARD(s___AUStringEntryNode___0074364c, "D2Common::Chat::Ignorelist::StringEntryNode::s___AUStringEntryNode___0074364c");
+
+} // namespace D2Common::Chat::Ignorelist::StringEntryNode
+
 namespace D2Common::Chat::Ignorelist {
 
 // =============================================================================
@@ -1934,6 +2062,16 @@ char s___AV__TSExplicitList_UMappingEnt_007436ac[56] = {
 
 } // namespace D2Common::Chat::Ignorelist
 
+namespace D2Common::Logging::ProfCore {
+
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+char * gaLanguageNames_0074430c_11[15] = {}; D2_GLOBAL_GUARD(gaLanguageNames_0074430c_11, "D2Common::Logging::ProfCore::gaLanguageNames_0074430c_11");
+
+} // namespace D2Common::Logging::ProfCore
+
 namespace D2Common::DUNGEON::Dungeon {
 
 // =============================================================================
@@ -1941,21 +2079,21 @@ namespace D2Common::DUNGEON::Dungeon {
 // =============================================================================
 
 char * gaLanguageNames_007443a8[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_007443a8, "D2Common::DUNGEON::Dungeon::gaLanguageNames_007443a8");
 
 } // namespace D2Common::DUNGEON::Dungeon
@@ -1969,21 +2107,21 @@ namespace D2Common::Environment {
 uint32_t gnTimeRates[3] = { 0x80, 0x4, 0x8 }; D2_GLOBAL_GUARD(gnTimeRates, "D2Common::Environment::gnTimeRates");
 
 char * gaLanguageNames_007444c8[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_007444c8, "D2Common::Environment::gaLanguageNames_007444c8");
 
 } // namespace D2Common::Environment
@@ -1995,57 +2133,57 @@ namespace D2Common::Units {
 // =============================================================================
 
 char * gaLanguageNames_00744588[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00744588, "D2Common::Units::gaLanguageNames_00744588");
 
 char * gaLanguageNames_007445c4[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_007445c4, "D2Common::Units::gaLanguageNames_007445c4");
 
 char * gaLanguageNames_00744600[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00744600, "D2Common::Units::gaLanguageNames_00744600");
 
 } // namespace D2Common::Units
@@ -2057,93 +2195,93 @@ namespace D2Common::Monsters::MONSTERS {
 // =============================================================================
 
 char * gaLanguageNames_00745648[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00745648, "D2Common::Monsters::MONSTERS::gaLanguageNames_00745648");
 
 char * gaLanguageNames_00745684[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00745684, "D2Common::Monsters::MONSTERS::gaLanguageNames_00745684");
 
 char * gaLanguageNames_007456c0[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_007456c0, "D2Common::Monsters::MONSTERS::gaLanguageNames_007456c0");
 
 char * gaLanguageNames_007456fc[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_007456fc, "D2Common::Monsters::MONSTERS::gaLanguageNames_007456fc");
 
 char * gaLanguageNames_00745738[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00745738, "D2Common::Monsters::MONSTERS::gaLanguageNames_00745738");
 
 } // namespace D2Common::Monsters::MONSTERS
@@ -3833,6 +3971,19 @@ D2MonSeqMonsterTbls D2MonSeqMonsterTbls_ARRAY_00748310[14] = {
     }
 }; D2_GLOBAL_GUARD(D2MonSeqMonsterTbls_ARRAY_00748310, "D2Common::Merc::D2MonSeqMonsterTbls_ARRAY_00748310");
 
+// =============================================================================
+// Initialized scalars
+// =============================================================================
+
+uint32_t DWORD_007467b0 = 0x5070000; D2_GLOBAL_GUARD(DWORD_007467b0, "D2Common::Merc::DWORD_007467b0");
+
+// =============================================================================
+// Uninitialized data (BSS)
+// =============================================================================
+
+uint8_t gaMonSeqMonsterTblData_Unknown; D2_GLOBAL_GUARD_BSS(gaMonSeqMonsterTblData_Unknown, "D2Common::Merc::gaMonSeqMonsterTblData_Unknown");
+uint8_t gaMonSeqAnimData; D2_GLOBAL_GUARD_BSS(gaMonSeqAnimData, "D2Common::Merc::gaMonSeqAnimData");
+
 } // namespace D2Common::Merc
 
 namespace D2Common::DATATBLS::OverlayTbls {
@@ -3888,40 +4039,40 @@ uint32_t gaOverlayVariantCodes[43] = {
 }; D2_GLOBAL_GUARD(gaOverlayVariantCodes, "D2Common::DATATBLS::OverlayTbls::gaOverlayVariantCodes");
 
 char * gaLanguageNames_00748a58[16] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14",
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c,
     nullptr
 }; D2_GLOBAL_GUARD(gaLanguageNames_00748a58, "D2Common::DATATBLS::OverlayTbls::gaLanguageNames_00748a58");
 
 char * gaLanguageNames_00748a98[15] = {
-    (char*)"English",
-    (char*)"Spanish",
-    (char*)"German",
-    (char*)"French",
-    (char*)"Portuguese",
-    (char*)"Italian",
-    (char*)"Japanese",
-    (char*)"Korean",
-    (char*)"Simplified Chinese",
-    (char*)"Traditional Chinese",
-    (char*)"Polish",
-    (char*)"Russian",
-    (char*)"English with Korean Chat",
-    (char*)"Unknown",
-    (char*)"14"
+    (char*)&Fog::Src::ErrorManager::s_English_006cc81c,
+    (char*)&Fog::Src::ErrorManager::s_Spanish_006cc814,
+    (char*)&Fog::Src::ErrorManager::s_German_006cc80c,
+    (char*)&Fog::Src::ErrorManager::s_French_006cc804,
+    (char*)&Fog::Src::ErrorManager::s_Portuguese_006cc7f8,
+    (char*)&Fog::Src::ErrorManager::s_Italian_006cc7f0,
+    (char*)&Fog::Src::ErrorManager::s_Japanese_006cc7e4,
+    (char*)&Fog::Src::ErrorManager::s_Korean_006cc7dc,
+    (char*)&Fog::Src::ErrorManager::s_Simplified_Chinese_006cc7c8,
+    (char*)&Fog::Src::ErrorManager::s_Traditional_Chinese_006cc7b4,
+    (char*)&Fog::Src::ErrorManager::s_Polish_006cc7ac,
+    (char*)&Fog::Src::ErrorManager::s_Russian_006cc7a4,
+    (char*)&Fog::Src::ErrorManager::s_English_with_Korean_Chat_006cc788,
+    (char*)&Fog::Src::LogManager::s_Unknown_006cc780,
+    s_14_006cc77c
 }; D2_GLOBAL_GUARD(gaLanguageNames_00748a98, "D2Common::DATATBLS::OverlayTbls::gaLanguageNames_00748a98");
 
 } // namespace D2Common::DATATBLS::OverlayTbls
@@ -3951,10 +4102,6 @@ namespace D2Gdi::Renderer::Windowed {
 namespace D2Launch::Launcher {
 
 } // namespace D2Launch::Launcher
-
-namespace D2Multi::OOGUtilities {
-
-} // namespace D2Multi::OOGUtilities
 
 namespace D2Client::Lng {
 
@@ -4024,17 +4171,9 @@ namespace D2Sound {
 
 } // namespace D2Sound
 
-namespace D2Sound::Src::D2SoundFast {
-
-} // namespace D2Sound::Src::D2SoundFast
-
 namespace Bnclient::Bnet {
 
 } // namespace Bnclient::Bnet
-
-namespace Bnclient::BnDownload {
-
-} // namespace Bnclient::BnDownload
 
 namespace Bnclient {
 
@@ -4102,7 +4241,3 @@ namespace D2Common::DATATBLS::TokTbls {
 unsigned int nTxtMonModeSize = {}; D2_GLOBAL_GUARD(nTxtMonModeSize, "D2Common::DATATBLS::TokTbls::nTxtMonModeSize");
 
 } // namespace D2Common::DATATBLS::TokTbls
-
-namespace Fog::Debug {
-
-} // namespace Fog::Debug

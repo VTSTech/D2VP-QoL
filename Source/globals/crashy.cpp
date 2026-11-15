@@ -3,36 +3,76 @@
  * Binary: Game.exe
  */
 
+#include "Source/globals/globals.h"
+#include "Source/D2Hell/D2Hell.h"
+#include "Source/D2Multi/OOGUtilities.h"
 #include "3rdparty/crashy/crashy.globals.h"
+#include "Source/Fog/D2MemoryManagerStrc.h"
+#include "Source/Fog/D2PoolManagerStrc.h"
+#include "Source/Fog/D2QServerStrc.h"
+#include "Source/Fog/Memory.h"
+#include "Source/Fog/Save.h"
+#include "Source/Fog/Source/SFile.h"
+#include "Source/Fog/Source/SSComp.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "3rdparty/Storm/3rdparty/zlib/deflate.h"
+#include "3rdparty/Storm/H/stpl.h"
+#include "3rdparty/Storm/Source/SCMD.h"
+#include "3rdparty/Storm/Source/SComp.h"
+#include "3rdparty/Storm/Source/SErr.h"
+#include "3rdparty/Storm/Source/SMem.h"
+#include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "3rdparty/crashy/Report.h"
 
-namespace Storm::Source::SFile {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Storm::Source::SFile
-namespace Class::FILEREC {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::FILEREC
-namespace Class::EVENTREC {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::EVENTREC
-namespace Class::REQUEST {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::REQUEST
-namespace Class::AUDIOSTREAM {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::AUDIOSTREAM
-namespace Class::HANDLER {
-extern uint8_t RTTI_Type_Descriptor;
-} // namespace Class::HANDLER
 
 namespace D2Common::Drlg::Maze {
 
 } // namespace D2Common::Drlg::Maze
 
+namespace Fog::Src::LogManager {
+
+} // namespace Fog::Src::LogManager
+
+namespace Fog::Src::ErrorManager {
+
+} // namespace Fog::Src::ErrorManager
+
+namespace Storm::Source::SSignature {
+
+} // namespace Storm::Source::SSignature
+
+namespace Fog::Engine::Application {
+
+} // namespace Fog::Engine::Application
+
+namespace Fog::Source::SFile {
+
+} // namespace Fog::Source::SFile
+
+namespace Fog::Src::DataArrays {
+
+} // namespace Fog::Src::DataArrays
+
+namespace Storm::Source::SSTR {
+
+} // namespace Storm::Source::SSTR
+
+namespace Fog::Debug {
+
+} // namespace Fog::Debug
+
+namespace Storm::Source::SFile {
+
+} // namespace Storm::Source::SFile
+
 namespace Fog::BitBuffer {
 
 } // namespace Fog::BitBuffer
+
+namespace Storm::Source::SErr {
+
+} // namespace Storm::Source::SErr
 
 namespace Storm::Source::SLog {
 
@@ -45,6 +85,14 @@ namespace Storm::_3rdparty::zlib::deflate {
 namespace D2Launch::CharSel {
 
 } // namespace D2Launch::CharSel
+
+namespace D2Lang::StrTable::strtable {
+
+} // namespace D2Lang::StrTable::strtable
+
+namespace D2Multi::ChatDlg {
+
+} // namespace D2Multi::ChatDlg
 
 namespace D2Common::DATATBLS::LvlTbls {
 
@@ -62,6 +110,10 @@ namespace D2Client::UI::Inv {
 
 } // namespace D2Client::UI::Inv
 
+namespace D2Common::DATATBLS::DataTbls {
+
+} // namespace D2Common::DATATBLS::DataTbls
+
 namespace D2Client::Warden::NWardenClient {
 
 } // namespace D2Client::Warden::NWardenClient
@@ -69,6 +121,26 @@ namespace D2Client::Warden::NWardenClient {
 namespace D2Client::Warden {
 
 } // namespace D2Client::Warden
+
+namespace D2Client::Sound::SoundHdr {
+
+} // namespace D2Client::Sound::SoundHdr
+
+namespace D2Client::UI::ui {
+
+} // namespace D2Client::UI::ui
+
+namespace D2Client::UI::npcmenu {
+
+} // namespace D2Client::UI::npcmenu
+
+namespace D2Client::UI::QuestLog {
+
+} // namespace D2Client::UI::QuestLog
+
+namespace D2Sound::Src::D2SoundSmp {
+
+} // namespace D2Sound::Src::D2SoundSmp
 
 namespace D2Client::UI {
 
@@ -118,17 +190,21 @@ namespace Bnclient::BnSend {
 
 } // namespace Bnclient::BnSend
 
+namespace Bnclient::BnDownload {
+
+} // namespace Bnclient::BnDownload
+
 namespace Bnclient::_net_sid {
 
 } // namespace Bnclient::_net_sid
 
-namespace D2Lang::StrTable::strtable {
-
-} // namespace D2Lang::StrTable::strtable
-
 namespace D2Game::GAME::Event::Dispatch {
 
 } // namespace D2Game::GAME::Event::Dispatch
+
+namespace D2Game::UNIT::SUnitDmg {
+
+} // namespace D2Game::UNIT::SUnitDmg
 
 namespace D2Game::PLAYER::PlayerModes {
 
@@ -166,9 +242,21 @@ namespace D2Common::Chat::Ignorelist::IgnoreList {
 
 } // namespace D2Common::Chat::Ignorelist::IgnoreList
 
+namespace D2Common {
+
+} // namespace D2Common
+
+namespace D2Common::Txt::Cube {
+
+} // namespace D2Common::Txt::Cube
+
 namespace D2Common::DATATBLS::ItemTbls {
 
 } // namespace D2Common::DATATBLS::ItemTbls
+
+namespace D2Common::Drlg::Preset {
+
+} // namespace D2Common::Drlg::Preset
 
 namespace D2Common::Drlg::OutSiege {
 
@@ -194,6 +282,10 @@ namespace Storm::Source {
 
 } // namespace Storm::Source
 
+namespace Fog::File {
+
+} // namespace Fog::File
+
 namespace Fog::_3rdparty::crashy {
 
 // =============================================================================
@@ -206,17 +298,18 @@ void * vftable[1] = { (void*)&Fog::_3rdparty::crashy::ScalarDeletingDestructor }
 // Initialized scalars
 // =============================================================================
 
+void* vftable_meta_ptr = (void*)0x00700a14; D2_GLOBAL_GUARD(vftable_meta_ptr, "Fog::_3rdparty::crashy::vftable_meta_ptr");
 uint32_t dwCurrentThreadId = 0; D2_GLOBAL_GUARD(dwCurrentThreadId, "Fog::_3rdparty::crashy::dwCurrentThreadId");
 
 } // namespace Fog::_3rdparty::crashy
 
+namespace D2Hell {
+
+} // namespace D2Hell
+
 namespace Fog::Source::SSComp {
 
 } // namespace Fog::Source::SSComp
-
-namespace Storm::Source::SFile {
-
-} // namespace Storm::Source::SFile
 
 namespace Class::FILEREC {
 
@@ -234,10 +327,6 @@ namespace Class::AUDIOSTREAM {
 
 } // namespace Class::AUDIOSTREAM
 
-namespace Storm::Source::SErr {
-
-} // namespace Storm::Source::SErr
-
 namespace Class::HANDLER {
 
 } // namespace Class::HANDLER
@@ -245,6 +334,10 @@ namespace Class::HANDLER {
 namespace D2Launch::MainMenus {
 
 } // namespace D2Launch::MainMenus
+
+namespace D2Multi::OOGUtilities {
+
+} // namespace D2Multi::OOGUtilities
 
 namespace D2Client::GAME::Game {
 
@@ -266,10 +359,6 @@ namespace D2Client::Engine {
 
 } // namespace D2Client::Engine
 
-namespace D2Client::UI::ui {
-
-} // namespace D2Client::UI::ui
-
 namespace D2Client::GAME::SCmd {
 
 } // namespace D2Client::GAME::SCmd
@@ -289,14 +378,6 @@ namespace D2Client::UI::Panel {
 namespace D2Client::UI::Party {
 
 } // namespace D2Client::UI::Party
-
-namespace D2Client::UI::QuestLog {
-
-} // namespace D2Client::UI::QuestLog
-
-namespace D2Client::UI::npcmenu {
-
-} // namespace D2Client::UI::npcmenu
 
 namespace D2Client::Sound {
 
@@ -321,6 +402,10 @@ namespace D2Glide::Renderer::Glide {
 namespace D2DDraw::Renderer::DirectDraw {
 
 } // namespace D2DDraw::Renderer::DirectDraw
+
+namespace D2Sound::Src::D2SoundFast {
+
+} // namespace D2Sound::Src::D2SoundFast
 
 namespace D2Lang::Unicode::UNISYS {
 
@@ -518,13 +603,13 @@ namespace D2Common::Chat::Ignorelist::StringEntryNode {
 
 } // namespace D2Common::Chat::Ignorelist::StringEntryNode
 
-namespace D2Common {
-
-} // namespace D2Common
-
 namespace D2Common::Chat::Ignorelist {
 
 } // namespace D2Common::Chat::Ignorelist
+
+namespace D2Common::Logging::ProfCore {
+
+} // namespace D2Common::Logging::ProfCore
 
 namespace D2Common::DUNGEON::Dungeon {
 
@@ -569,10 +654,6 @@ namespace D2Gdi::Renderer::Windowed {
 namespace D2Launch::Launcher {
 
 } // namespace D2Launch::Launcher
-
-namespace D2Multi::OOGUtilities {
-
-} // namespace D2Multi::OOGUtilities
 
 namespace D2Client::Lng {
 
@@ -642,17 +723,9 @@ namespace D2Sound {
 
 } // namespace D2Sound
 
-namespace D2Sound::Src::D2SoundFast {
-
-} // namespace D2Sound::Src::D2SoundFast
-
 namespace Bnclient::Bnet {
 
 } // namespace Bnclient::Bnet
-
-namespace Bnclient::BnDownload {
-
-} // namespace Bnclient::BnDownload
 
 namespace Bnclient {
 
@@ -689,7 +762,3 @@ namespace D2Common::Logging {
 namespace D2Common::DATATBLS::TokTbls {
 
 } // namespace D2Common::DATATBLS::TokTbls
-
-namespace Fog::Debug {
-
-} // namespace Fog::Debug

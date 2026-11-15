@@ -1756,6 +1756,7 @@ void __stdcall TEXT_InitializeTextSystem() {
     } while (nCount);
 }
 
+
 void __stdcall TEXT_SetUnknownFlag(D2UIMouseMsgStrc * pMsg) {
     D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(nullptr, -1, -1, 0, 0);
     UI::Panel::PANEL_CalculateBeltSlotIndex(pMsg);
@@ -1851,8 +1852,8 @@ int __fastcall CUNITEVENT_DispatchCallbacks(D2UnitStrc * pUnit, D2UnitStrc * pOw
         }
 
         pNextCallback = pDVar1->pPrev;
-        if (pDVar1->pUnit == pUnit) {
-          dwResult = pDVar1->pfnCallback(pUnit, pOwnerUnit, dwParam3, dwParam4, pDVar1->dwEventData1, pDVar1->dwEventData2);
+        if (pDVar1->nClientEvent == (int)pUnit) {
+          dwResult = pDVar1->pfnCallback((int)pUnit, pOwnerUnit, (D2UnitStrc*)dwParam3, dwParam4, pDVar1->dwEventData1, pDVar1->dwEventData2);
         }
       }
     }

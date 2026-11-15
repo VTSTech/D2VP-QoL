@@ -677,9 +677,119 @@ fork call sites to HEAD's typed headers:
   ShadowDiag.h in Round 2). `Source/D2MCPClient/McpConnect.h` was present
   already.
 
+### Fix 7: D2Client + D2Sound + D2Common (message/sound/UI rounds, ~120 errors cleared)
+
+Fork TUs are byte-identical to origin/main unless noted; all fixes are header
+or call-site adaptations to HEAD's typed spellings:
+
+- `D2Client/GAME/SCmd.cpp`: packet-handler args typed —
+  `(D2GSPacketSrv0x98/0x42/0x7C*)&sPayload` ×3; `SKILL_ExecuteItemCastOnUnit/AtCoords`
+  3rd arg `(int32_t)pBytes[n]` ×2 (fork cast byte values to `short int*`);
+  both `NET_D2GS_CLIENT_HandleAddSTatUnit` callers drop the
+  `(D2UnitDataUnion*)` cast (param is `eD2States`).
+- `D2Client/UNIT/Player.cpp` (6): dropped int-casts on
+  CLIENT_Register/UnregisterActiveUnitInSlot,
+  GetRunAndWalkVelocityForPlayer, SELECT_SetPetSeedTimestamp ×2,
+  PATH_CheckCollisionFlags (callees typed D2UnitStrc*).
+- `D2Client/UNIT/CUnit.cpp` + `D2Client/Engine/GfxUtil.h`:
+  `DC6_AssignParams` last param `int32_t nMode` → `struct D2UnitStrc *
+  pEquipContext` (the GfxUtil.cpp definition was already typed);
+  `Cursor.cpp` passes `nullptr` ×2; `MONSTER_InitMonsterUnit` caller casts
+  `(int32_t)pSkillIdPtr` (this tree's Monster.cpp body keeps the int spelling).
+- `D2Client/Engine/Gfx.{h,cpp}` + `D2Client.h`: `pCofDataArray` restored to
+  origin/main's `int *` (the port typed it `D2CofTextureCacheEntryStrc*`,
+  breaking the `[5]` indexing and handle casts); `GFX_FreeMonsterCofCache` /
+  `GFX_GetModeStatusEntry` return types restored to `int32_t`; global forward
+  decl `struct D2GamePalShiftGreenBloodStrc;` added to Gfx.h (the param
+  elaboration inside `namespace D2Client::Engine::Gfx` had created a shadowing
+  incomplete type — 10 errors); `DRAW_WORLD_Unit_1` param 5 typed
+  `D2GamePalShiftGreenBloodStrc *` (matches the Gfx.cpp definition);
+  `SkillsPal.cpp:355` passes `(D2GamePalShiftGreenBloodStrc*)1`.
+- `D2Client/Message.cpp` (13): Storm SMsg* takes HWND in this tree — removed
+  `(uint32_t)hWnd` casts ×6, `(char*)nMessageOrKeyCode` → `(uint32_t)` ×4,
+  `SMsgPushRegisterState(hWnd)` ×2.
+- `D2Client/Sound/Sound.{h,cpp}` + `D2Client.h`: channel field 0x28 renamed
+  `pUnitList` → origin/main's `pGlobal3Ref` with `int *` type;
+  `SOUND_sD2SoundSmp_Alloc` 2nd param `intptr_t` → `void *` (origin/main;
+  D2SoundUntil.cpp definition + one internal store cast, `D2SoundSmp.cpp:279`
+  caller de-cast, `UnitSnd.cpp:2795` casts `(void*)nChannelHandle`); 4
+  `SOUNDUTIL_FreeLinkedList/FindInLinkedList` call sites cast to
+  `D2SoundListNodeStrc**`/`*`; 3 `Unreferenced_*` decls restored to
+  origin/main `int` returns; `Sound.cpp:1275` drops `(int*)` on
+  `SOUND_UpdateChannelParams`.
+- `D2Client/UI/{EscMenu,Inv,QuestLog,ListBox/ListBoxImplementation}.cpp`:
+  added the missing `D2ClientRoot.h` include (declares TRADE_*,*
+  D2CLIENT_GetTrade* / INV_* / SehHandler_6ca238 in namespace D2Client).
+- `D2Client/UI/Inv.h`: 3 `Unreferenced_*` decls → `int`; `Inv.data.h`:
+  removed the `extern int gnInvMouseY;` that clashed with the fork's TU-static
+  definition; `D2Lang/D2Lang.h`: removed the stale `UNICODE_FindWideChar`
+  declaration (duplicate of UNISYS.h's — it created a conflicting overload).
+- `D2Lang/Unicode/UNISYS.{h,cpp}`: `UNICODE_FindWideChar` signature restored
+  to origin/main's `short * __thiscall (void * pThis, int16_t)`; the port's
+  rewritten body kept, adapted through a typed cursor.
+- `D2Client/UI/npcmenu.{h,cpp}`: `NPCMENU_ScrollCompleteShowNextMessage` 3rd
+  param `int bDismissed` → `void * pDismissCallback`; removed the port-added
+  `static` from SetInteractedUnitInfo / inline_NPC_IsInteractableSideNpc /
+  NPCMENU_HandleMenuSelection definitions (they are declared in npcmenu.h).
+- `D2Client/UI/QuestLog.cpp` + `D2Client/D2Client.globals.h`: restored the 27
+  dropped `s_aXqY_006daXXX[5]` externs into the `D2Client::UI::QuestLog`
+  namespace block (definitions live in Source/globals/D2Client.cpp);
+  `UNIT/Player.h`: added `UNITS_FindServerSideUnit` (fork calls it via
+  UNIT::Player; the tree only had it in CUnit.h).
+- `D2Client/UNIT/Object.cpp` + `globals.h`: `fnShrineServerActivate` and the
+  dispatch-table member `fpServerActivate` aligned to the typed
+  `struct D2ShrinesTxt *` spelling this tree's four shrine handlers use
+  (origin/main uses `uint32_t` with internal casts).
+- `D2Client/SKILLS/SkillsBar.cpp` (2): `MONSTER_SpawnBloodParticles(pTarget,
+  0x5, 0)` — dropped the `(D2MonStats2Txt*)` dress on a small int (this
+  tree's definition takes `int nDefaultCount`; three other callers pass ints).
+- `D2Client/GAME/Wall2.cpp` + `D2Common`: `DRLGROOM_GetMinimapRect` restored
+  origin/main's dropped first parameter `uint32_t nLine` (header + body);
+  tile-data field 0x10 renamed `pRoomCoordList` → origin/main's `nGridFlags`
+  (3 DrlgLogic.cpp stores updated).
+- `D2Client/UI/Automap.cpp` + `D2Client/D2AutomapLayerStrc.h` + `D2Client.h`:
+  layer field 0x04 `int fSaved` → `void *` (origin/main; the fork stores flag
+  values 1/2/3 via pointer casts and reads them back as `uint8_t*`).
+- `D2Client/UI/Draw.cpp`: `(uint32_t)SFILE_GetGlobalPointer()` handle cast,
+  `GFX_InitLRUCache` 2nd arg `(uint32_t)0x600000`,
+  `GFX_InitCelDataCache(pMemory, ...)` de-cast.
+
 ### Build status
 
 See the live status note appended below (build12.log) — D2Game is the last
 module with compile errors; D2Multi/D2Win/D2DDraw and 20 other targets already
 build clean in this round.
 
+### Build Round 4 addendum — restored dropped TUs and empty globals (link round)
+
+The link stage exposed the largest port defect: whole translation units were
+stubbed or emptied. All restored verbatim from origin/main:
+
+- `Source/D2Client/UI/ui.cpp` (282-line include-only stub → 10,691 lines) and
+  `Source/globals/D2Multi.cpp` (677 → 2,300).
+- Every `Source/globals/*.cpp` except D2Client/D2Multi had its untyped-data
+  namespace blocks emptied (~90-1,100 lines each): restored D2Launch, D2Lang,
+  D2Win, D2Common, Storm, D2Net, Bnclient, crashy, D2gfx, Fog, D2Game,
+  D2Sound, D2Direct3D, D2Gdi, D2CMP, D2MCPClient, D2Hell, Game, D2Glide,
+  D2DDraw, globals.cpp.
+- Seven dropped headers: `Storm/Source/SLog.data.h`, `Bnclient/SRP.data.h`,
+  `D2CMP/Draw.data.h`, `D2Hell/D2Hell.{data,globals}.h`, `Fog/Fog.data.h`,
+  `Fog/Src/LogManager.data.h`, plus `Fog/Source/SFile.data.h`,
+  `D2Multi/McpConnect.h` and `Redivivus/d2_boot.cpp` + `d2_hangwatch.cpp`
+  (D2BOOT_Mark/Fail, [d2boot] build-tag markers).
+- VP feature blocks restored: Fog portable-save (SFile.cpp + SFile.h),
+  D2WinFont shift-compare + labels blocks, Fog::Debug::GuardStack.
+- `D2ClientRoot.cpp` deleted (a 4,008-line near-duplicate of D2Client.cpp the
+  port created; caused 118 ODR multiple-definition collisions).
+- `Fog.globals.h` / `Storm.globals.h` restored with gate preserved;
+  Storm.cpp list-head definitions aligned to HEAD's `StormLinkedListStrc`
+  spelling (`D2StormListHead` fork type is layout-identical).
+- `SSComp.cpp` restored; `D2Net.cpp` Huffman-table reads cast per fork.
+- Module gates: strict modules crashy/Game/D2Lang/D2Net got documented
+  EXCEPTIONS (project.json + modules.cmake, `{to,symbol,reason}` schema), and
+  CMakeLists now grants `D2_SEES_+D2_LOADS_` for excepted modules (their
+  restored globals units include cross-module internal headers — the original
+  is one flat binary).
+
+Status at last build (build66): 0 compile errors, 0 undefined references,
+0 multiple definitions; link of d2.exe in progress.

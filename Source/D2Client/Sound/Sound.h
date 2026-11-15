@@ -297,4 +297,5 @@ void __fastcall SOUND_UpdateEnvironmentAmbience(int32_t nTick);
 #endif // D2_MODULE_D2Client
 // 7 internal functions (defined in .cpp)
 
+void SOUND_LocalizeSoundPath(char * szFormat, char * pszOutPath, char * pTmp);
 } // namespace D2Client::Sound

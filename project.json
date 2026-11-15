@@ -89,7 +89,38 @@
           "evidence": "LoadLibrary + QueryInterface from Game; the host sees the interface, not what it imports"
         }
       ],
-      "exceptions": [],
+      "exceptions": [
+        {
+          "to": "D2Multi",
+          "symbol": "OOGUtilities.h include",
+          "reason": "fork globals/Game.cpp hosts D2Multi::OOGUtilities globals; restored from the fork tree"
+        },
+        {
+          "to": "D2Game",
+          "symbol": "D2Game.h include",
+          "reason": "fork globals/Game.cpp hosts D2Game globals; restored from the fork tree"
+        },
+        {
+          "to": "Fog",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "Storm",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Client",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2CMP",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        }
+      ],
       "strict": true
     },
     "Storm": {
@@ -576,7 +607,38 @@
           "evidence": "1.13d D2Lang import table: 10 symbol(s) from Fog; also in 1.13c, 1.10f"
         }
       ],
-      "exceptions": [],
+      "exceptions": [
+        {
+          "to": "D2Multi",
+          "symbol": "OOGUtilities.h include",
+          "reason": "fork globals/D2Lang.cpp hosts D2Multi::OOGUtilities globals; restored from the fork tree"
+        },
+        {
+          "to": "Fog",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "Storm",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Game",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Client",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2CMP",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        }
+      ],
       "strict": true
     },
     "D2Net": {
@@ -599,7 +661,38 @@
           "evidence": "1.13d D2Net import table: 37 symbol(s) from Fog; also in 1.13c, 1.10f"
         }
       ],
-      "exceptions": [],
+      "exceptions": [
+        {
+          "to": "D2Multi",
+          "symbol": "OOGUtilities.h include",
+          "reason": "fork globals/D2Net.cpp hosts D2Multi::OOGUtilities globals; restored from the fork tree"
+        },
+        {
+          "to": "Fog",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "Storm",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Game",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Client",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2CMP",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        }
+      ],
       "strict": true
     },
     "D2Game": {
@@ -787,7 +880,38 @@
           "evidence": "1.14-only crash reporter; it frees through Storm's MISC_OperatorDeleteShim (00401090)"
         }
       ],
-      "exceptions": [],
+      "exceptions": [
+        {
+          "to": "D2Multi",
+          "symbol": "OOGUtilities.h include",
+          "reason": "fork globals/crashy.cpp hosts D2Multi::OOGUtilities globals; restored from the fork tree which predates the module gates"
+        },
+        {
+          "to": "Fog",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "Storm",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Game",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2Client",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        },
+        {
+          "to": "D2CMP",
+          "symbol": "internal headers",
+          "reason": "the fork's globals unit includes cross-module internal headers (the original is one flat binary; restored verbatim from the fork tree)"
+        }
+      ],
       "strict": true,
       "description": "The 1.14 crash-report library (Fog::_3rdparty::crashy)."
     },

@@ -122,4 +122,5 @@ void __stdcall LOGFILE_StoreGameStartupInfo();
 #endif // D2_MODULE_Fog
 // 1 internal function (defined in .cpp)
 
+void __stdcall PORTABLESAVE_FlushConfig();
 } // namespace Fog::Source::SFile
