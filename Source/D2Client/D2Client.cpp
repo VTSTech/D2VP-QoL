@@ -1735,6 +1735,8 @@ int __stdcall TEXT_EmptyCallback() {
     return 0;
 }
 
+// [d2vp] def moved into D2Client::UNIT::Player per Draw.cpp caller decl
+namespace UNIT::Player {
 void __stdcall TEXT_InitializeTextSystem() {
     UI::ui::gnPlayerCashDisplay = 0;
     UI::ui::gnNpcShopActiveTab = 0;
@@ -1755,6 +1757,7 @@ void __stdcall TEXT_InitializeTextSystem() {
       nCount--;
     } while (nCount);
 }
+} // namespace D2Client::UNIT::Player
 
 
 void __stdcall TEXT_SetUnknownFlag(D2UIMouseMsgStrc * pMsg) {
@@ -3650,8 +3653,8 @@ int32_t __fastcall UI_GetDialogLineCount(int16_t nDialogId) {
     return 0;
 }
 
-int32_t __thiscall WARDEN_DecryptBuffer(int * ppModule, int32_t nOrdinal) {
-    int pContext = *ppModule;
+int32_t __fastcall WARDEN_DecryptBuffer(D2WardenModuleStrc * ppModule, int32_t nOrdinal) { // [d2vp] fastcall+typed param per WardenClient.cpp decl
+    int pContext = *(int*)ppModule;
     if (!pContext) {
       return 0;
     }
@@ -4083,6 +4086,6 @@ void __fastcall thunk_ExitGamePlayCutScene(int32_t pPacket) {
 }
 
 // [d2vp] forwarder for INV_ResetItemDescFlags: callers use the global name.
-void __fastcall INV_ResetItemDescFlags() {
+void __stdcall INV_ResetItemDescFlags() {
     D2Client::INV_ResetItemDescFlags();
 }

@@ -874,3 +874,26 @@ finding D2Client::SKILLS::SkillsBar::UNIT members).
 After that compiles, expect only the ItemMessage/ITEM_HandleServerItemAction/
 ITEM_HandleCursorItemRemoval overloads (already added, namespace D2Client::UNIT in
 Item.cpp) to close the last undefined refs; then d2.exe should link.
+
+## Session: LINK SUCCESS (build133)
+
+d2.exe linked: 0 errors, 0 undefined references. Binary: build/d2.exe (~333 MB, debug).
+
+Final fixes after last session's 13:
+- SkillsBar trio: the recovered blocks were wrapped in a bare `namespace SkillsBar`
+  (no D2Client enclosing chain, so UNIT::/Skills:: didn't resolve) - renamed the two
+  wrappers to D2Client::SKILLS::SkillsBar.
+- INV_ResetItemDescFlags forwarder: __stdcall (not __fastcall) to match the def.
+- LeapAttack_ArcParticle / WndProcD / D3D_EnumTextureFormatsCallback: naive param
+  retypes broke the bodies - the TRUE port bodies were taken from
+  HEAD:asm_matching/msvc8/translated/... (Message.cpp:54, Direct3D.cpp:461,
+  SkillsBar.cpp:963) and swapped in whole.
+- WARDEN_DecryptBuffer: fastcall(D2WardenModuleStrc*) retype (an earlier edit had
+  been silently lost).
+- TEXT_InitializeTextSystem: def wrapped in a RELATIVE `namespace UNIT::Player`
+  (a D2Client::UNIT::Player wrapper nested into the still-open namespace D2Client
+  and produced D2Client::D2Client::...).
+- SOUND_GetEAXEnabledFlag: def added to compiled Source/D2Sound/Sound.cpp (an
+  earlier graft went into Src/D2Sound.cpp which is not built).
+- Lesson: check the enclosing-namespace state before appending defs, and prefer the
+  asm_matching/msvc8/translated tree as the source of truth for port bodies.

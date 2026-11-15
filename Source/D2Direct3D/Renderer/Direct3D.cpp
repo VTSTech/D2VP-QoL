@@ -527,12 +527,11 @@ static void RENDERER_D3D_VPZoomScalePoint(int * pX, int * pY, uint32_t nFactor);
 // PUSH at 006b4aff feeding IDirect3DDevice3::EnumTextureFormats in Direct3DCallBack, so it is the
 // D3DEnumPixelFormatsCallback. Parameter 1 is an LPDDPIXELFORMAT; parameter 2 is the device-caps flag word, and the 0x200 bit
 // it sets is the one Direct3DCallBack tests for "Supports 1555 textures".
-HRESULT __stdcall D3D_EnumTextureFormatsCallback(void * lpDDPixFmt, DWORD * pnDeviceFlags) {
-    if (pnDeviceFlags && *(uint32_t*)((int)lpDDPixFmt + 4) == gsD3DTextureDescTemplate[1] && *(uint32_t*)((int)lpDDPixFmt + 0xc) == gsD3DTextureDescTemplate[3] && *(uint32_t*)((int)lpDDPixFmt + 0x10) == gsD3DTextureDescTemplate[4] && *(uint32_t*)((int)lpDDPixFmt + 0x14) == gsD3DTextureDescTemplate[5] && *(uint32_t*)((int)lpDDPixFmt + 0x18) == gsD3DTextureDescTemplate[6] && *(uint32_t*)((int)lpDDPixFmt + 0x1c) == gsD3DTextureDescTemplate[7]) {
+HRESULT __stdcall D3D_EnumTextureFormatsCallback(DDPIXELFORMAT * lpDDPixFmt, DWORD * pnDeviceFlags) {
+    if (pnDeviceFlags && lpDDPixFmt->dwFlags == gsD3DTextureDescTemplate[1] && lpDDPixFmt->dwRGBBitCount == gsD3DTextureDescTemplate[3] && lpDDPixFmt->dwRBitMask == gsD3DTextureDescTemplate[4] && lpDDPixFmt->dwGBitMask == gsD3DTextureDescTemplate[5] && lpDDPixFmt->dwBBitMask == gsD3DTextureDescTemplate[6] && lpDDPixFmt->dwRGBAlphaBitMask == gsD3DTextureDescTemplate[7]) {
       *pnDeviceFlags |= Fog::BitBuffer::gadwBitMasks[9];
     }
 
-    *pnDeviceFlags |= 0x200;
     return 1;
 }
 

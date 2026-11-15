@@ -368,3 +368,10 @@ void __stdcall SOUND_StopSoundThread() {
 }
 
 } // namespace D2Sound::Sound
+
+// [d2vp] fork D2Sound.cpp:89 - EAX flag getter (flag defined above).
+namespace D2Sound::Sound {
+DWORD __stdcall SOUND_GetEAXEnabledFlag() {
+    return g_bEAXEnabled;
+}
+} // namespace D2Sound::Sound

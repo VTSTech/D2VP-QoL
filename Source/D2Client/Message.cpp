@@ -152,10 +152,10 @@ void __stdcall MESSAGE_OnActivate(D2UIMouseMsgStrc * pMsg) {
     pMsg->bHandled = 0;
 }
 
-void __stdcall WndProcD(HWND * phWnd) {
-    /* LPARAM lParam for DefWindowProcA */ /* WPARAM wParam for DefWindowProcA */ /* UINT Msg for DefWindowProcA */ /* HWND hWnd for DefWindowProcA */ phWnd[6] = (HWND)0x1;
-    HWND lResult = (HWND)DefWindowProcA(*phWnd, (UINT)phWnd[1], (uint32_t)phWnd[2], (int32_t)phWnd[3]);
-    phWnd[7] = lResult;
+void __stdcall WndProcD(D2UIMouseMsgStrc * phWnd) {
+    /* LPARAM lParam for DefWindowProcA */ /* WPARAM wParam for DefWindowProcA */ /* UINT Msg for DefWindowProcA */ /* HWND hWnd for DefWindowProcA */ phWnd->bHandled = 1;
+    uint32_t lResult = DefWindowProcA(phWnd->hWnd, phWnd->uMsg, phWnd->nWParam, phWnd->uLParam.nLParam);
+    phWnd->dwResult = lResult;
 }
 
 void __stdcall MESSAGE_OnClose(HWND * phWnd) {
