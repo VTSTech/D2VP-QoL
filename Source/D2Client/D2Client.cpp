@@ -1780,7 +1780,7 @@ void __stdcall SOUND_ClearGlobalState() {
     memset(UNIT::UnitSnd::gaLevelAmbientMusicPlayedFlags, 0, 0x1000);
 }
 
-void __fastcall MISSILES_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, int32_t nParam) {
+void __fastcall MISSILES_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * nParam) {
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
 }
 
@@ -4030,7 +4030,7 @@ void __thiscall WARDEN_RC4Init(D2RC4StateStrc * pRc4State, uint8_t * pKey, uint3
     } while (nNextIdx < 0x100);
 }
 
-void __fastcall SKILLSSOR_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, int32_t pStatListEx) {
+void __fastcall SKILLSSOR_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * pStatListEx) {
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
 }
 
@@ -4042,7 +4042,7 @@ int __fastcall SKILLSCLT_CheckSkillIsValid(D2UnitStrc * pUnit, ::SGAMEDATA * pGa
     return (uint32_t)(pUnit->nClassId == 0x1d4);
 }
 
-void __fastcall SKILLSASS_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, int32_t nParam) {
+void __fastcall SKILLSASS_StatExpireCallback_ClearState(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * nParam) {
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
 }
 
@@ -4057,3 +4057,32 @@ _EXCEPTION_DISPOSITION SehHandler_6ca238(EHExceptionRecord * pExceptionRecord, E
 }
 
 } // namespace D2Client
+
+// [d2vp] D2ClientRoot.h declares these at global scope; implementations live in
+// namespace D2Client - forward.
+void __fastcall thunk_ExitGamePlayCutScene(uint8_t * pPacket) {
+    D2Client::thunk_ExitGamePlayCutScene((int32_t)(uintptr_t)pPacket);
+}
+void __fastcall CLIENT_ToggleDefaultActiveFlag(int32_t bSet) {
+    D2Client::CLIENT_ToggleDefaultActiveFlag(bSet);
+}
+void __fastcall ROSTER_SetArenaKillCountGlobal(eD2PlayerClassIDDWORD dwValue) {
+    D2Client::ROSTER_SetArenaKillCountGlobal(dwValue);
+}
+
+// [d2vp] D2ClientRoot.h declares these at global scope; implementations live in
+// namespace D2Client - forward.
+void __fastcall ExitGamePlayCutScene(int32_t nCutsceneId) {
+    D2Client::ExitGamePlayCutScene(nCutsceneId);
+}
+
+// [d2vp] SCmd.cpp callers see the (int32_t) spelling; the implementation lives
+// in namespace D2Client - forward.
+void __fastcall thunk_ExitGamePlayCutScene(int32_t pPacket) {
+    D2Client::thunk_ExitGamePlayCutScene(pPacket);
+}
+
+// [d2vp] forwarder for INV_ResetItemDescFlags: callers use the global name.
+void __fastcall INV_ResetItemDescFlags() {
+    D2Client::INV_ResetItemDescFlags();
+}

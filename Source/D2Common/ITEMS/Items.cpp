@@ -7689,3 +7689,44 @@ BOOL __stdcall ReturnFalse_Unref_0066a240(D2UnitStrc * pUnit, D2UnitStrc * pItem
 }
 
 } // namespace D2Common::ITEMS::Items
+
+// [d2vp] port-signature overload: the port declared (pUnit, int dwContext, nOffset)
+// (Items.h:296) and Inv.cpp callers pass an integer context; fork declares the
+// unit-pointer form (D2Common.h:8661). Body = fork def with the context cast.
+namespace D2Common::ITEMS::Items {
+uint32_t __stdcall ITEMS_SearchItemCodeTable(D2UnitStrc * pUnit, int32_t dwContext, uint32_t nOffset) {
+    // Static local variables (originally global data)
+    static D2ItemsEventMethodStrc aItemsEventMethod[4] = {
+    {
+        /* .pfnMethod = */ (pfnSkillCalcOp)&D2Common::Stats::StatsEx::MATH_Min,
+        /* .nArgCount = */ 0x2
+    },
+    {
+        /* .pfnMethod = */ (pfnSkillCalcOp)&D2Common::Stats::StatsEx::MATH_Max,
+        /* .nArgCount = */ 0x2
+    },
+    {
+        /* .pfnMethod = */ (pfnSkillCalcOp)&D2Common::Stats::StatsEx::MATH_RandomRange,
+        /* .nArgCount = */ 0x2
+    },
+    {
+        /* .pfnMethod = */ (pfnSkillCalcOp)&D2Common::Stats::StatsEx::UNITS_GetStatValueByType,
+        /* .nArgCount = */ 0x2
+    }
+}; D2_STATIC_GUARD(aItemsEventMethod, "D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable_int::aItemsEventMethod");
+    static int nItemsEventMethodSize = 0x4; D2_STATIC_GUARD(nItemsEventMethodSize, "D2Common::ITEMS::Items::ITEMS_SearchItemCodeTable_int::nItemsEventMethodSize");
+
+    D2ItemCalcContextStrc sCalcContext;
+    if (!sgptDataTable->pItemsCode) {
+      return 0;
+    }
+    if (!(nOffset < (uint32_t)sgptDataTable->nItemsCodeSize)) {
+      return 0;
+    }
+
+    sCalcContext.pUnit = pUnit;
+    sCalcContext.nContext = (D2UnitStrc*)(uintptr_t)dwContext;
+    uint32_t nFormulaResult = Fog::Skills::SKILLS_CompileSkillFormula((uint32_t*)((uint8_t*)sgptDataTable->pItemsCode + nOffset), sgptDataTable->nItemsCodeSize - nOffset, Stats::StatsEx::nullsub, aItemsEventMethod, nItemsEventMethodSize, &sCalcContext);
+    return nFormulaResult;
+}
+} // namespace D2Common::ITEMS::Items

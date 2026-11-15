@@ -448,7 +448,7 @@ static void __stdcall DAMAGE_ApplyPoison(D2UnitStrc * pUnit, int32_t nPoisonRate
 }
 
 // @sourcefile .\UNIT\SUnitDmg.cpp
-void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, uint32_t eState, uint32_t dwParam) {
+void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * dwParam) {
     BOOL bIsDead = SUnit::CheckForModeZeroDeath(pUnit);
     if (bIsDead) {
       uint32_t bStateActive;
@@ -601,7 +601,7 @@ static void __stdcall DAMAGE_ApplyCold(D2UnitStrc * pUnit, int32_t nColdLength, 
     D2Common::DATATBLS::ItemStats::SetState(pUnit2, STATE_shatter, 0);
 }
 
-void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, uint32_t eState, int32_t pStatList) {
+void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * pStatList) {
     uint8_t byAIDelay;
     BOOL bIsModeZeroDeath = SUnit::CheckForModeZeroDeath(pUnit);
     if (bIsModeZeroDeath) {

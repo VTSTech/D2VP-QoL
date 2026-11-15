@@ -838,3 +838,39 @@ down to a handful of undefined refs (build112.log, ~15 refs total):
 - `ExitGamePlayCutScene` global refs: Game.cpp callers still bind to the global
   mangled name; bridge or retype like the others.
 Next session: fix those, rerun `make`, confirm `build/d2.exe` links, then commit.
+
+
+## Session: link-fix round 2 (undefineds 31 -> 13, d2.exe not yet linked)
+
+Fixed this round (all verified in build126/128 logs):
+- Month strings + s_unknown: grafted fork SFile.cpp:41-53 block + stub into our
+  SFile.cpp (globals.cpp gaMonthAbbreviations now resolves).
+- ITEMS_SearchItemCodeTable: Items.h:296 kept port (int) decl; D2Common.h:8661 has
+  fork decl; fork def in Items.cpp:55 serves fork callers; Inv.cpp int-callers OK.
+- GFX_FindTextureInCache: Gfx.h decl restored to fork void* spelling.
+- ExitGamePlayCutScene/thunk/Toggle/ROSTER: namespace defs bridged with global
+  forwarders in D2Client.cpp (D2ClientRoot.h declares them globally; Game.cpp/SCmd.cpp
+  callers bind to the global names).
+- Bnet globals: BOTH defs needed - namespace D2Launch::MainMenus defs (MainMenus.cpp
+  internal uses) AND global defs (ui.cpp bare refs); both now at end of MainMenus.cpp.
+- StatExpire callback family (8 defs): param3 retyped int32_t/uint32_t ->
+  D2StatListExStrc* to match fork caller decls.
+- CloseScrollOfWhatever (u16* param), MAINMENU_DisableControlIfDataNonZero(2)
+  (D2ControlMsg* param), GFXUTIL_GetUnitToken (eD2UnitType,int params): def params
+  aligned to port caller decls.
+- WARDEN_DecryptBuffer: def retyped __thiscall(int*) -> __fastcall(D2WardenModuleStrc*).
+- TEXT_InitializeTextSystem: def wrapped in D2Client::UNIT::Player.
+- INV_ResetItemDescFlags: global forwarder added.
+- SOUND_GetEAXEnabledFlag + g_bEAXEnabled: fork def grafted into Src/D2Sound.cpp.
+- SkillsBar trio (GrimWard/LeapAttack_ArcParticle/CalcWhirlwindDestViaPathfind): port
+  defs recovered from HEAD:asm_matching/msvc8/translated/.../SkillsBar.cpp and
+  appended (namespace-wrapped).
+
+REMAINING (build128, 9 compile errors, all in the recovered SkillsBar trio bodies):
+the bodies use `UNIT::` and `Skills::` unqualified - qualify them (D2Client::UNIT:: /
+D2Client::SKILLS::Skills:: or add namespace aliases INSIDE the wrapper - a first
+attempt with aliases was reverted, check for conflicts first, e.g. name lookup
+finding D2Client::SKILLS::SkillsBar::UNIT members).
+After that compiles, expect only the ItemMessage/ITEM_HandleServerItemAction/
+ITEM_HandleCursorItemRemoval overloads (already added, namespace D2Client::UNIT in
+Item.cpp) to close the last undefined refs; then d2.exe should link.

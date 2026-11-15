@@ -346,7 +346,7 @@ void __fastcall GFXUTIL_FreeGfxNodeList(void * * ppListHead, int * pnBytesAlloca
 }
 
 // NOTE: Register param types inferred (medium confidence): pUnitStrc (ECX): D2UnitStrc *, eUnitType (EDX): eD2UnitType
-int32_t __fastcall GFXUTIL_GetUnitToken(D2UnitStrc * pUnitStrc, eD2UnitType eUnitType, uint32_t nId) {
+int32_t __fastcall GFXUTIL_GetUnitToken(D2UnitStrc * pUnitStrc, eD2UnitType eUnitType, int32_t nId) { // [d2vp] params typed to match the port decl
     D2ObjTypeTxt* pTokenLine;
     switch (eUnitType) {
       case UNIT_PLAYER:

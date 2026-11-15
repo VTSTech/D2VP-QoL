@@ -7072,7 +7072,7 @@ void __stdcall INV_HandleMercInvMouseMove(D2UIMouseMsgStrc * pMsg) {
     ui::SetUIFlag(UI_MERCINV, UI_TOGGLE, 0);
 }
 
-void __thiscall CloseScrollOfWhatever(void * pThis, int32_t nColor) {
+void __thiscall CloseScrollOfWhatever(uint16_t * pThis, int32_t nColor) { // [d2vp] param typed to match the port decl (Inv.h:279)
     D2Lang::Unicode::UNISYS::STRING_CopyWideString((uint16_t*)gpInvRecipeScrollImage, (uint16_t*)pThis);
     gbInvRecipeScrollOpen = nColor;
     ui::SetUIFlag(UI_RECIPESCROLL, UI_SET, 0);

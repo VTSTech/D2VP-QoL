@@ -4287,9 +4287,6 @@ static int gnRealmListCount = 0; D2_STATIC_GUARD(gnRealmListCount, "gnRealmListC
 static uint32_t gnBnetConnectionSuccessFlag = 0; D2_STATIC_GUARD(gnBnetConnectionSuccessFlag, "gnBnetConnectionSuccessFlag");
 static uint32_t gnMCPConnectThreadHandle = 0; D2_STATIC_GUARD(gnMCPConnectThreadHandle, "gnMCPConnectThreadHandle");
 namespace D2Launch::MainMenus {
-::D2ControlStrc * gpCtlBnetProgressBar2 = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar2, "D2Launch::MainMenus::gpCtlBnetProgressBar2");
-::D2WinTextBox * gpCtlBnetProgressBar = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar, "D2Launch::MainMenus::gpCtlBnetProgressBar");
-::D2WinTextBox * gbBnetConnectionTimerActive = 0; D2_GLOBAL_GUARD(gbBnetConnectionTimerActive, "D2Launch::MainMenus::gbBnetConnectionTimerActive");
 } // namespace D2Launch::MainMenus
 static int gbBnetProgressActive = 0; D2_STATIC_GUARD(gbBnetProgressActive, "gbBnetProgressActive");
 static HANDLE ghBnetConnectHandle = 0; D2_STATIC_GUARD(ghBnetConnectHandle, "ghBnetConnectHandle");
@@ -5266,7 +5263,7 @@ void __stdcall UIMENU_TCPIPOptions() {
     MAINMENU_UpdateIPAddressDisplay();
 }
 
-BOOL __stdcall MAINMENU_DisableControlIfDataNonZero(int32_t pControlData) {
+BOOL __stdcall MAINMENU_DisableControlIfDataNonZero(struct D2ControlMsg * pControlData) { // [d2vp] param typed to match MainMenus.h port decl
     if (*(int*)(pControlData + 0xc)) {
       D2Win::Src::D2WinMain::D2WINMAIN_SetControlActive(&gpCtlTcpIpAddress->sControl, 1);
     } else {
@@ -5276,7 +5273,7 @@ BOOL __stdcall MAINMENU_DisableControlIfDataNonZero(int32_t pControlData) {
     return 1;
 }
 
-BOOL __stdcall MAINMENU_DisableControlIfDataNonZero2(int32_t pControlData) {
+BOOL __stdcall MAINMENU_DisableControlIfDataNonZero2(struct D2ControlMsg * pControlData) { // [d2vp] param typed to match MainMenus.h port decl
     if (*(int*)(pControlData + 0xc)) {
       D2Win::Src::D2WinMain::D2WINMAIN_SetControlActive(&gpCtlTcpIpPort->sControl, 1);
     } else {
@@ -9795,5 +9792,16 @@ int __stdcall LAUNCHER_PollBNConnectionPump(int nFrameIndex) {
     D2Win::Src::D2WinMain::D2WINMAIN_ClearMessageLoopFlag();
     return 1;
 }
+} // namespace D2Launch::MainMenus
 
+// [d2vp] fork MainMenus.cpp:4288 - Bnet progress/timer controls are GLOBAL in
+// fork (namespace closed before the defs); ui.cpp references them unqualified.
+::D2ControlStrc * gpCtlBnetProgressBar2 = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar2, "gpCtlBnetProgressBar2");
+::D2WinTextBox * gpCtlBnetProgressBar = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar, "gpCtlBnetProgressBar");
+::D2WinTextBox * gbBnetConnectionTimerActive = 0; D2_GLOBAL_GUARD(gbBnetConnectionTimerActive, "gbBnetConnectionTimerActive");
+
+namespace D2Launch::MainMenus {
+::D2ControlStrc * gpCtlBnetProgressBar2 = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar2, "D2Launch::MainMenus::gpCtlBnetProgressBar2");
+::D2WinTextBox * gpCtlBnetProgressBar = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar, "D2Launch::MainMenus::gpCtlBnetProgressBar");
+::D2WinTextBox * gbBnetConnectionTimerActive = 0; D2_GLOBAL_GUARD(gbBnetConnectionTimerActive, "D2Launch::MainMenus::gbBnetConnectionTimerActive");
 } // namespace D2Launch::MainMenus

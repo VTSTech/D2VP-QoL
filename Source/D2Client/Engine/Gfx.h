@@ -7291,7 +7291,7 @@ namespace D2Client::Engine::Gfx {
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Client)
 struct D2InventoryStrc * __fastcall CLIENT_GetEffectiveInventory(struct D2UnitStrc * pUnit, int * pUnit2);
-void * __stdcall GFX_FindTextureInCache(struct D2CofCacheStrc * pTextureCache, char * szPath);
+void * __stdcall GFX_FindTextureInCache(void * pTextureCache, char * szPath); // [d2vp] fork spelling; D2CofCacheStrc* converts implicitly
 // @sourcefile .\ENGINE\Gfx.cpp
 void __stdcall GFX_RemoveOverlayFromUnit(struct D2UnitStrc * pUnit, struct D2GfxUnknown_0xa8 * pOverlay);
 BOOL __fastcall GFX_HasOverlayOfType(struct D2UnitStrc * pUnit, int32_t nOverlayType);

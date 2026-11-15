@@ -293,7 +293,7 @@ struct __attribute__((packed)) D2RuneTableStrc {
 namespace D2Common::ITEMS::Items {
 
 // Function declarations
-uint32_t __stdcall ITEMS_SearchItemCodeTable(struct D2UnitStrc * pUnit, int32_t dwContext, uint32_t nOffset);
+uint32_t __stdcall ITEMS_SearchItemCodeTable(struct D2UnitStrc * pUnit, int32_t dwContext, uint32_t nOffset); // [d2vp] port signature (int context); fork signature declared in D2Common.h:8661
 // @sourcefile .\ITEMS\Items.cpp
 void __stdcall STRUCT_CreateDataItem(struct D2PoolManagerStrc * pMemory, struct D2UnitStrc * pUnit);
 // @sourcefile .\ITEMS\Items.cpp

@@ -1367,3 +1367,183 @@ void __fastcall SKILL_StopAndClearSound(D2UnitStrc * pUnit, eD2Skills eSkill) {
 }
 
 } // namespace D2Client::SKILLS::SkillsBar
+
+// [d2vp] port def recovered from asm_matching/msvc8/translated SkillsBar.cpp
+namespace SkillsBar {
+BOOL __fastcall Skills_CltDoFunc_Bar_GrimWard(D2UnitStrc * pUnit, eD2Skills eSkill, int32_t nSkillLvl) {
+    POINT nFreeCoordTmp;
+    D2SkillsTxt* pSkillTxt = (int)eSkill >= 0 && (int)eSkill < D2Common::ITEMS::Items::sgptDataTable->nTxtSkillsCount ? D2Common::ITEMS::Items::sgptDataTable->pTxtSkills + eSkill : nullptr;
+    if (!pSkillTxt) {
+      return 0;
+    }
+
+    eD2Skills eSkillArg = eSkill;
+    D2UnitStrc* pUnitArg = pUnit;
+    D2UnitStrc* pTarget = UNIT::CUnit::GetConfirmedTargetUnit(pUnit);
+    if (!pTarget) {
+      return 0;
+    }
+
+    BOOL bIsSoftMonster = D2Common::Units::IsSoftMonster(pTarget);
+    if (!bIsSoftMonster) {
+      return 0;
+    }
+    if (pUnit) {
+      pUnit->eUnitFlags |= UNITFLAG_SKSRVDOFUNC;
+    }
+
+    nFreeCoordTmp.x = D2Common::Units::GetXPosFromDynamicPathUnit(pTarget);
+    nFreeCoordTmp.y = D2Common::Units::GetYPosFromDynamicPathUnit(pTarget);
+    D2RoomStrc* pRoom = D2Common::Units::UNITS_GetRoom(pTarget);
+    if (!pRoom) {
+      return 0;
+    }
+
+    pRoom = D2Common::Collision::DRLGROOM_FindBetterNearbyRoom(pRoom, nFreeCoordTmp.x, nFreeCoordTmp.y);
+    if (!pRoom) {
+      return 0;
+    }
+
+    pRoom = D2Common::Collision::GetFreeCoordinates_WithNeighboorRooms(pRoom, &nFreeCoordTmp, 2, 0x1000, 1);
+    if (!(pRoom && pTarget->eUnitType == UNIT_MONSTER)) {
+      return 0;
+    }
+
+    eMissilesId eCorpseMissile = (eMissilesId)pSkillTxt->cltmissile[1];
+    D2MonStats2Txt* pMonStats2 = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetMonStats2(pTarget->nClassId);
+    if (!pMonStats2) {
+      return 0;
+    }
+    if (Fog::BitBuffer::gadwBitMasks[3] & (uint8_t)*((uint8_t*)pMonStats2 + 0x5)) {
+      eCorpseMissile = (eMissilesId)pSkillTxt->cltmissile[3];
+    } else {
+      if (Fog::BitBuffer::gadwBitMasks[2] & (uint8_t)*((uint8_t*)pMonStats2 + 0x5)) {
+        eCorpseMissile = (eMissilesId)pSkillTxt->cltmissile[2];
+      }
+    }
+    if ((int)eCorpseMissile >= 0 && (int)eCorpseMissile < D2Common::ITEMS::Items::sgptDataTable->nTxtMissilesSize) {
+      D2SkillArgStrc sSkillArg;
+      memset(&sSkillArg, 0, 0x5c);
+      sSkillArg.pOwner = pUnitArg;
+      sSkillArg.eSkillNo = eSkillArg;
+      sSkillArg.nSkillLevel = nSkillLvl;
+      sSkillArg.nFlags = 0x2001;
+      sSkillArg.nMissileTxtNo = eCorpseMissile;
+      sSkillArg.nX = nFreeCoordTmp.x;
+      sSkillArg.nY = nFreeCoordTmp.y;
+      UNIT::Missile::MakeMissile(&sSkillArg);
+      sSkillArg.nMissileTxtNo = MISSILE_Corpseexplosion;
+      UNIT::Missile::MakeMissile(&sSkillArg);
+      return 1;
+    }
+
+    return 0;
+}
+} // namespace SkillsBar
+
+// [d2vp] port def recovered from asm_matching/msvc8/translated SkillsBar.cpp
+namespace SkillsBar {
+BOOL __fastcall Skills_CltStFunc_CalcWhirlwindDestViaPathfind(D2UnitStrc * pUnit, eD2Skills eSkill, int32_t nSkillLvl) {
+    uint32_t _bPathFound;
+    bool bPathFound;
+    uint32_t nSkillFlags;
+    BOOL bInMeleeRange;
+    D2CharStatsTxt* pCharStatsTxt;
+    D2MonStatsTxt* pMonStatsTxt;
+    eD2CollisionShapeType nType;
+    
+    D2PathPointStrc* pPathPoints;
+    uint32_t nSrcY;
+    uint32_t nSrcX;
+    char* szSkillsBarCpp;
+    
+    int32_t nLine;
+    if (!pUnit || pUnit->eUnitType != UNIT_PLAYER && pUnit->eUnitType != UNIT_MONSTER) {
+      return 0;
+    }
+
+    D2SkillStrc* pSkill = D2Common::Skills::SKILLS_GetSkillByEnum(pUnit, eSkill);
+    D2DynamicPathStrc* pServerPath = (D2DynamicPathStrc*)pUnit->pPath.pStaticPath;
+    if (!pSkill) {
+      return 0;
+    }
+    if (!pServerPath) {
+      return 0;
+    }
+
+    D2UnitStrc* pPlayerUnit_lcl = UNIT::Player::GetPlayerUnit_UI();
+    if (pUnit == pPlayerUnit_lcl) {
+      eD2Skills eCurrentSkillId;
+      eCurrentSkillId = D2Common::Skills::GetSkillId(pSkill, ".\\SKILLS\\SkillsBar.cpp", 0x469);
+      if (eCurrentSkillId == eSkill) {
+        nSkillFlags = D2Common::Skills::SKILL_GetFlags(pSkill);
+        if (nSkillFlags & 1) {
+          return 0;
+        }
+      }
+
+      bInMeleeRange = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
+      if (bInMeleeRange) {
+        return 0;
+      }
+    }
+
+    bInMeleeRange = Skills::GetCooordinates(pUnit, (int32_t*)&nSrcX, (int32_t*)&nSrcY);
+    if (!bInMeleeRange) {
+      return 0;
+    }
+
+    pPlayerUnit_lcl = UNIT::CUnit::GetConfirmedTargetUnit(pUnit);
+    if (pPlayerUnit_lcl) {
+      bInMeleeRange = D2Common::Units::IsInMeleeRange(pUnit, pPlayerUnit_lcl, 0);
+      if (bInMeleeRange) {
+        bInMeleeRange = Skills::CLIENT_HandleUnitMessage0x16(pUnit, pPlayerUnit_lcl);
+        return bInMeleeRange;
+      }
+    }
+
+    BOOL bIsPlayer = (BOOL)(pUnit->eUnitType == UNIT_PLAYER);
+    bool bIsPlayerBool = bIsPlayer != 0;
+    int eCollisionFlag = bIsPlayer ? 0x80 : 0x100;
+    D2Common::PATH::DynamicPath::PATH_SetCollisionPattern(pServerPath, 0xc01);
+    D2Common::PATH::DynamicPath::PATH_SetPathType(pServerPath, 7);
+    _bPathFound = D2Common::PATH::DynamicPath::PATH_CalculatePath(pServerPath, pUnit, 0);
+    if (_bPathFound) {
+      if (bIsPlayer) {
+        pCharStatsTxt = D2Common::DATATBLS::DataTbls::INV_GetCharStatsTxtLine(pUnit->nClassId);
+        if (pCharStatsTxt) {
+          nSkillFlags = (uint32_t)pCharStatsTxt->WalkVelocity;
+          nLine = 0x499;
+          szSkillsBarCpp = ".\\SKILLS\\SkillsBar.cpp";
+          D2Common::PATH::DynamicPath::SetVelocities(pServerPath, nSkillFlags << 8, szSkillsBarCpp, nLine);
+        }
+      } else {
+        nLine = 0x49f;
+        szSkillsBarCpp = ".\\SKILLS\\SkillsBar.cpp";
+        pMonStatsTxt = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetLine(pUnit->nClassId);
+        nSkillFlags = (uint32_t)pMonStatsTxt->Velocity;
+        D2Common::PATH::DynamicPath::SetVelocities(pServerPath, nSkillFlags << 8, szSkillsBarCpp, nLine);
+      }
+
+      D2Common::PATH::DynamicPath::PATH_SetCollisionPattern(pServerPath, 0x401);
+      nLine = D2Common::PATH::DynamicPath::GetPathPoint(pServerPath, &pPathPoints);
+      if (nLine) {
+        nSrcX = (uint32_t)pPathPoints[nLine - 1].nX;
+        nSrcY = (uint32_t)pPathPoints[nLine - 1].nY;
+        nType = D2Common::PATH::DynamicPath::GetUnitWidth(pUnit);
+        nSkillFlags = nSrcX;
+        
+        
+        D2Common::Collision::AddCollision_Type((D2RoomStrc*)(D2Common::Units::UNITS_GetRoom(pUnit)), nSkillFlags, (uint32_t)(nSrcY), nType, eCollisionFlag);
+        D2Common::Skills::SKILL_SetFlags(pSkill, 1);
+        D2Common::Skills::SKILL_SetParam1(pSkill, nSrcX);
+        D2Common::Skills::SKILL_SetParam2(pSkill, nSrcY);
+        Skills::SKILL_CreateActiveSkillStatList(pUnit);
+        return 1;
+      }
+    }
+
+    D2Common::PATH::DynamicPath::PATH_SetCollisionPattern(pServerPath, bIsPlayerBool ? 0x1c09 : 0x3c01);
+    return 0;
+}
+} // namespace SkillsBar

@@ -1284,7 +1284,7 @@ void __fastcall ITEM_RemoveUninterruptableState(D2UnitStrc * pUnit) {
     D2Common::Units::UpdateAnimSpeed(pUnit, ".\\UNIT\\Item.cpp", 0xcca);
 }
 
-void __fastcall ITEM_ClearUnitState(D2UnitStrc * pUnit, uint32_t eState, uint32_t dwParam) {
+void __fastcall ITEM_ClearUnitState(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * dwParam) {
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
 }
 
@@ -3733,4 +3733,18 @@ void __fastcall ITEM_HandleServerItemAction(int32_t pPacket) {
     ITEM_RemoveUninterruptableState(pUnit);
 }
 
+} // namespace D2Client::UNIT
+
+// [d2vp] port-signature overloads: port callers (Item.h:184 etc.) pass ints /
+// packet pointers where fork's defs take handles / int packets - forward.
+namespace D2Client::UNIT {
+void __fastcall ItemMessage(int32_t eMessageType, D2UnitStrc * pUnit, int32_t pMessage, int32_t nUpdateFlag) {
+    ItemMessage(eMessageType, pUnit, (D2ServerMessageHandleStrc*)(uintptr_t)pMessage, nUpdateFlag);
+}
+void __fastcall ITEM_HandleServerItemAction(struct D2GSPacketSrv0x7C * pPacket) {
+    ITEM_HandleServerItemAction((int32_t)(uintptr_t)pPacket);
+}
+void __fastcall ITEM_HandleCursorItemRemoval(struct D2GSPacketSrv0x42 * pPacket) {
+    ITEM_HandleCursorItemRemoval((int32_t)(uintptr_t)pPacket);
+}
 } // namespace D2Client::UNIT

@@ -742,7 +742,7 @@ void __fastcall SKILLNEC_ApplyDimVision(::SGAMEDATA * pGame, D2UnitStrc * pUnit,
 }
 
 // Three arguments, not two: the epilogue at 005c3b2a is RET 0x4, so there is one stack argument the body never reads. It is stored in the same D2StateExArgStrc.pFunction slot as SKILLNEC_OnCurseExpire (005c3370) and SKILLNEC_OnConvertExpire (005c3db0), both of which are already declared with the third parameter, and the slot's type is void(*)(D2UnitStrc*, eD2States, int32_t). Declaring only two made the assignment in Skills_SrvDoFunc_059_CastCorpseSkill a type error - which only became visible once the CALL_RETURN override that had split that function was cleared, so the body compiles for the first time.
-void __fastcall SKILLS_NecroShredAlignmentCallback(D2UnitStrc * pUnit, uint32_t eAlignmentState, int32_t pStatListEx) {
+void __fastcall SKILLS_NecroShredAlignmentCallback(D2UnitStrc * pUnit, uint32_t eAlignmentState, D2StatListExStrc * pStatListEx) {
     UNIT::SUnit::SetAlignment(pUnit, '\0', 1);
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eAlignmentState, 0);
     ::SGAMEDATA* pGame = UNIT::SUnit::GetGamePointer(pUnit);
@@ -862,7 +862,7 @@ uint32_t __fastcall SKILLNEC_ValidateReviveTarget(::SGAMEDATA * pGame, D2UnitStr
     return (uint32_t)(bCheckResult != 0);
 }
 
-void __fastcall SKILLNEC_OnConvertExpire(D2UnitStrc * pUnit, uint32_t eState, int32_t dwArg1) {
+void __fastcall SKILLNEC_OnConvertExpire(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * dwArg1) {
     UNIT::SUnit::SetAlignment(pUnit, '\0', 1);
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
     ::SGAMEDATA* pGame = UNIT::SUnit::GetGamePointer(pUnit);
