@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include "Source/D2Headers/d2_platform.h"
+#include "Source/D2Client/UNIT/Player.h"
 
 // Forward declarations
 struct D2CreateMonsterUnitStrc;
@@ -36,9 +37,9 @@ namespace D2Client::UNIT::CUnit {
 void __fastcall IsAttackable(struct D2UnitStrc * pUnit);
 // Module-private: no other module references these
 #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Client)
-struct D2UnitStrc * __fastcall UNITS_FindClientSideUnit(int32_t nUnitGUID, eD2UnitType eUnitType);
-struct D2UnitStrc * __fastcall UNITS_FindServerSideUnit(int32_t nUnitGUID, eD2UnitType eUnitType);
-struct D2UnitStrc * __fastcall MISSILE_GetOwnerUnit(struct D2UnitStrc * pUnit);
+using D2Client::UNIT::Player::UNITS_FindClientSideUnit;
+using D2Client::UNIT::Player::UNITS_FindServerSideUnit;
+using D2Client::UNIT::Player::MISSILE_GetOwnerUnit;
 // Thunk callback for CUNIT_IterateHashTableWithCallback. Receives unit pointer in ECX and forwards to STATLIST_ClearChangedStatFlags. Called at end of CLIENT_UpdateUnitGfxState to clear changed-stat dirty flags on all client-side units (players, missiles, server units).
 void __fastcall CLIENT_ClearChangedStatFlags_Thunk(struct D2UnitStrc * pUnit);
 struct D2GfxInfoStrc * __fastcall GetGfxInfo(struct D2UnitStrc * pUnit);

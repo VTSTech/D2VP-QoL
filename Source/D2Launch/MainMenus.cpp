@@ -4286,9 +4286,11 @@ static D2BNetRealmEntryStrc * * g_pBNetRealmList = 0; D2_STATIC_GUARD(g_pBNetRea
 static int gnRealmListCount = 0; D2_STATIC_GUARD(gnRealmListCount, "gnRealmListCount");
 static uint32_t gnBnetConnectionSuccessFlag = 0; D2_STATIC_GUARD(gnBnetConnectionSuccessFlag, "gnBnetConnectionSuccessFlag");
 static uint32_t gnMCPConnectThreadHandle = 0; D2_STATIC_GUARD(gnMCPConnectThreadHandle, "gnMCPConnectThreadHandle");
-static D2ControlStrc * gpCtlBnetProgressBar2 = 0; D2_STATIC_GUARD(gpCtlBnetProgressBar2, "gpCtlBnetProgressBar2");
-::D2WinTextBox * gpCtlBnetProgressBar = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar, "gpCtlBnetProgressBar");
-::D2WinTextBox * gbBnetConnectionTimerActive = 0; D2_GLOBAL_GUARD(gbBnetConnectionTimerActive, "gbBnetConnectionTimerActive");
+namespace D2Launch::MainMenus {
+::D2ControlStrc * gpCtlBnetProgressBar2 = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar2, "D2Launch::MainMenus::gpCtlBnetProgressBar2");
+::D2WinTextBox * gpCtlBnetProgressBar = 0; D2_GLOBAL_GUARD(gpCtlBnetProgressBar, "D2Launch::MainMenus::gpCtlBnetProgressBar");
+::D2WinTextBox * gbBnetConnectionTimerActive = 0; D2_GLOBAL_GUARD(gbBnetConnectionTimerActive, "D2Launch::MainMenus::gbBnetConnectionTimerActive");
+} // namespace D2Launch::MainMenus
 static int gbBnetProgressActive = 0; D2_STATIC_GUARD(gbBnetProgressActive, "gbBnetProgressActive");
 static HANDLE ghBnetConnectHandle = 0; D2_STATIC_GUARD(ghBnetConnectHandle, "ghBnetConnectHandle");
 static unsigned int gbBNetConnectionProgressFlag = {}; D2_STATIC_GUARD(gbBNetConnectionProgressFlag, "gbBNetConnectionProgressFlag");

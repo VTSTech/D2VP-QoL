@@ -1067,3 +1067,78 @@ namespace D2Common::Logging {
 namespace D2Common::DATATBLS::TokTbls {
 
 } // namespace D2Common::DATATBLS::TokTbls
+
+char s___AUCMDDEF___0074c47c[16] = {
+    '.',
+    '?',
+    'A',
+    'U',
+    'C',
+    'M',
+    'D',
+    'D',
+    'E',
+    'F',
+    '@',
+    '@',
+    '\x00',
+    '\x00',
+    '\x00',
+    '\x00'
+}; D2_STATIC_GUARD(s___AUCMDDEF___0074c47c, "s___AUCMDDEF___0074c47c");
+StormLinkedListStrc gStormCmdListHeadBackslash = {
+    /* .nLinkOffset = */ 0x0,
+    /* .terminator = */ {
+        /* .pPrevLink = */ (StormLinkStrc*)&gStormCmdListHeadBackslash.head.pPrevLink,
+        /* .pNext = */ 0x0
+    }
+}; D2_GLOBAL_GUARD(gStormCmdListHeadBackslash, "gStormCmdListHeadBackslash");
+StormLinkedListStrc gStormCmdListHeadSlash = {
+    /* .nLinkOffset = */ 0x0,
+    /* .terminator = */ {
+        /* .pPrevLink = */ (StormLinkStrc*)&gStormCmdListHeadSlash.head.pPrevLink,
+        /* .pNext = */ 0x0
+    }
+}; D2_GLOBAL_GUARD(gStormCmdListHeadSlash, "gStormCmdListHeadSlash");
+static uint32_t gbScmdHasPriorityCommand = 0; D2_STATIC_GUARD(gbScmdHasPriorityCommand, "gbScmdHasPriorityCommand");
+
+namespace Storm::Source {
+
+// Parses command-line boolean argument with optional +/- prefix. Updates bitmask in cmdDef based on flags (sets bits on +/true, clears bits on -/false). Also updates external bitmask pointer if provided.
+// @blizzard ConvertBool (SCMD.CPP)
+static void __fastcall SCMD_ConvertBool(D2GameNpcStrc * cmdDef, char * str, uint32_t * outConsumed) {
+    bool bSetFlags;
+    uint32_t* pTradeBitmask;
+    if (*str == '-') {
+      bSetFlags = false;
+      *outConsumed = 1;
+    } else if (*str == '+') {
+      bSetFlags = true;
+      *outConsumed = 1;
+    } else {
+      bSetFlags = ((uint32_t)cmdDef->pProxyInventories & 1) != 1;
+    }
+
+    uint32_t dwTradeFlagBits = ~cmdDef->sTrade.dwLastTradeTick;
+    cmdDef->unk0x3C &= dwTradeFlagBits;
+    if (bSetFlags) {
+      uint32_t dwFlagBits;
+      dwFlagBits = (uint32_t)((uint32_t)(uint8_t)cmdDef->sTrade.unk0x04 | (uint32_t)(uint8_t)cmdDef->sTrade.unk0x05 << 8 | (uint32_t)(uint8_t)cmdDef->sTrade.unk0x06 << 16 | (uint32_t)(uint8_t)cmdDef->sTrade.bRefillStorePending << 24);
+      cmdDef->unk0x3C = dwFlagBits | cmdDef->unk0x3C;
+    }
+
+    pTradeBitmask = (uint32_t*)cmdDef->sTrade.pTradeList1;
+    if (!pTradeBitmask) {
+      return;
+    }
+
+    *pTradeBitmask &= dwTradeFlagBits;
+    if (!bSetFlags) {
+      return;
+    }
+
+    pTradeBitmask = (uint32_t*)cmdDef->sTrade.pTradeList1;
+    dwTradeFlagBits = (uint32_t)((uint32_t)(uint8_t)cmdDef->sTrade.unk0x04 | (uint32_t)(uint8_t)cmdDef->sTrade.unk0x05 << 8 | (uint32_t)(uint8_t)cmdDef->sTrade.unk0x06 << 16 | (uint32_t)(uint8_t)cmdDef->sTrade.bRefillStorePending << 24);
+    *pTradeBitmask |= dwTradeFlagBits;
+}
+} // namespace Storm::Source

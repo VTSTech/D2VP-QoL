@@ -3609,8 +3609,7 @@ namespace D2Client::_Interaction {
 eD2NpcUiState geNpcUiState = 0; D2_GLOBAL_GUARD(geNpcUiState, "D2Client::_Interaction::geNpcUiState");
 } // namespace D2Client::_Interaction
 static int PLAYER_CurrentGold = 0; D2_STATIC_GUARD(PLAYER_CurrentGold, "PLAYER_CurrentGold");
-uint16_t gnNpcMenuRepairCostGold = 0; D2_STATIC_GUARD(gnNpcMenuRepairCostGold, "gnNpcMenuRepairCostGold");
-int16_t gnNpcMenuTradeActionGold = 0; D2_STATIC_GUARD(gnNpcMenuTradeActionGold, "gnNpcMenuTradeActionGold");
+
 // also labelled: g_nNpcTradeMenuState
 static D2NPCSpeechStrc * gpNpcCurrentSpeech = 0; D2_STATIC_GUARD(gpNpcCurrentSpeech, "gpNpcCurrentSpeech");
 static uint32_t gnNpcMenuCainIdentifyGUID = 0; D2_STATIC_GUARD(gnNpcMenuCainIdentifyGUID, "gnNpcMenuCainIdentifyGUID");
@@ -3654,8 +3653,8 @@ static uint32_t nTransactionCost = 0; D2_STATIC_GUARD(nTransactionCost, "nTransa
 static D2GSPacketSrv0x2A D2GSPacketSrv0x2A_007c0d87 = {}; D2_STATIC_GUARD(D2GSPacketSrv0x2A_007c0d87, "D2GSPacketSrv0x2A_007c0d87");
 static uint32_t gnNpcMenuActiveContainer = 0; D2_STATIC_GUARD(gnNpcMenuActiveContainer, "gnNpcMenuActiveContainer");
 static short gaNpcMenuHandledMessageIds[9] = {}; D2_STATIC_GUARD(gaNpcMenuHandledMessageIds, "gaNpcMenuHandledMessageIds");
-static uint16_t gnNpcMenuScrollMessageHead = 0; D2_STATIC_GUARD(gnNpcMenuScrollMessageHead, "gnNpcMenuScrollMessageHead");
-uint32_t gnNpcMenuShopMode = 0; D2_STATIC_GUARD(gnNpcMenuShopMode, "gnNpcMenuShopMode");
+static uint16_t gnNpcMenuScrollCompleteMode = 0; D2_STATIC_GUARD(gnNpcMenuScrollCompleteMode, "gnNpcMenuScrollCompleteMode");
+
 static uint32_t gnNpcMenuNpcSoundIndex = 0; D2_STATIC_GUARD(gnNpcMenuNpcSoundIndex, "gnNpcMenuNpcSoundIndex");
 static uint32_t gnNpcMenuNpcClassId = 0; D2_STATIC_GUARD(gnNpcMenuNpcClassId, "gnNpcMenuNpcClassId");
 static uint32_t gnNpcMenuDialogX = 0; D2_STATIC_GUARD(gnNpcMenuDialogX, "gnNpcMenuDialogX");
@@ -7824,4 +7823,11 @@ static void * keep_004b21e0 = (0 ? (NPCMENU_RemoveRowOptionSlot3(*(int *)0), (vo
 static void * keep_004b2200 = (0 ? (NPCMENU_RemoveRowOptionSlot4(*(int *)0), (void *)0) : (void *)0);
 static void * keep_004b2220 = (0 ? (NPCMENU_EnableCainIdentifyOption(*(int *)0), (void *)0) : (void *)0);
 
+} // namespace D2Client::UI::npcmenu
+
+namespace D2Client::UI::npcmenu {
+uint16_t gnNpcMenuRepairCostGold = 0; D2_GLOBAL_GUARD(gnNpcMenuRepairCostGold, "D2Client::UI::npcmenu::gnNpcMenuRepairCostGold");
+int16_t gnNpcMenuTradeActionGold = 0; D2_GLOBAL_GUARD(gnNpcMenuTradeActionGold, "D2Client::UI::npcmenu::gnNpcMenuTradeActionGold");
+uint32_t gnNpcMenuScrollMessageHead = 0; D2_GLOBAL_GUARD(gnNpcMenuScrollMessageHead, "D2Client::UI::npcmenu::gnNpcMenuScrollMessageHead");
+uint32_t gnNpcMenuShopMode = 0; D2_GLOBAL_GUARD(gnNpcMenuShopMode, "D2Client::UI::npcmenu::gnNpcMenuShopMode");
 } // namespace D2Client::UI::npcmenu

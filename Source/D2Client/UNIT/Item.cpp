@@ -1284,7 +1284,7 @@ void __fastcall ITEM_RemoveUninterruptableState(D2UnitStrc * pUnit) {
     D2Common::Units::UpdateAnimSpeed(pUnit, ".\\UNIT\\Item.cpp", 0xcca);
 }
 
-void __fastcall ITEM_ClearUnitState(D2UnitStrc * pUnit, eD2States eState, uint32_t dwParam) {
+void __fastcall ITEM_ClearUnitState(D2UnitStrc * pUnit, uint32_t eState, uint32_t dwParam) {
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
 }
 

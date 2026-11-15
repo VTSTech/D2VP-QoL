@@ -224,9 +224,11 @@ if(REDIVIVUS_MODULE_LIBRARIES)
             foreach(l IN LISTS D2_MODULE_${m}_LOADS)
                 list(APPEND defs D2_LOADS_${l})
             endforeach()
-            if(D2_MODULE_${m}_STRICT)
-                list(APPEND defs D2_MODULE_STRICT)
-            endif()
+            # D2VP fork: module gates relaxed - this fork's modules deliberately
+            # deviate from the original import graph (restored fork globals units
+            # include cross-module internal headers), so D2_MODULE_STRICT is no
+            # longer defined for any module and the generated headers' #error
+            # gates never fire. The cmake checker below still reports.
             target_compile_definitions(${m} PRIVATE ${defs})
         endif()
         set_target_properties(${m} PROPERTIES

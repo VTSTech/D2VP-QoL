@@ -182,7 +182,7 @@ void __stdcall DRAW_WORLD_SetWarpFadeTimer();
 // Draws the post-warp black fade-out over the play area, ramping alpha down over 500 ms.
 void __stdcall dSceneTransitionDraw();
 void __stdcall DRAW_WORLD_ClearWarpFadeTimer();
-int __fastcall CUNITEVENT_DispatchCallbacks(int nClientEvent, struct D2UnitStrc * pOwnerUnit, struct D2UnitStrc * pMissile, uint32_t dwParam4);
+int __fastcall CUNITEVENT_DispatchCallbacks(struct D2UnitStrc * pUnit, struct D2UnitStrc * pOwnerUnit, uint32_t dwParam3, uint32_t dwParam4);
 uint32_t __stdcall DRAW_ShouldDrawEdges(int32_t nParam);
 int32_t __fastcall UI_GetDialogLineCount(int16_t nDialogId);
 pfnWardenCreateInterface __thiscall WARDEN_DecryptBuffer(struct D2WardenModuleStrc * ppModule, int32_t nOrdinal);

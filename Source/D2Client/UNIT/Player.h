@@ -158,3 +158,4 @@ uint32_t __stdcall PLAYER_ValidateSkillMessage_Extern(int * pnUsabilityCode, str
 BOOL __stdcall CLIENT_MovePlayerToPosition_Extern(struct D2UnitStrc * pUnit, int16_t nX, int16_t nY, int32_t nSkillActionMode);
 
 } // namespace D2Client::UNIT::Player
+

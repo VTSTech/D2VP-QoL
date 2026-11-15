@@ -3417,7 +3417,7 @@ void __fastcall ITEMS_ReduceDurability(::SGAMEDATA * pGame, D2UnitStrc * pUnit, 
 }
 
 // Splits nGoldAmount across up to nMaxPiles gold-item units dropped near pUnit's position. Each iteration creates a gold item via ITEM_CreateFromTemplate, caps the pile amount to the inventory gold limit if the recipient is a player, sets UNITSTAT_gold, and calls DropItem to place it at a collision-free nearby tile. Fills pUnitTable with created item pointers and updates *pnUnitCount. Uses the room collision system to find free coordinates; exits early if no free tile is found or the pile cap is reached.
-void __fastcall DROP_SpawnGoldPiles(::SGAMEDATA * pGame, D2UnitStrc * pUnit, int32_t nGoldAmount, D2UnitStrc * * pUnitTable, int * pnUnitCount, int32_t nMaxPiles) {
+void __fastcall DROP_SpawnGoldPiles(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint32_t nGoldAmount, D2UnitStrc * * pUnitTable, int * pnUnitCount, int32_t nMaxPiles) {
     D2UnitStrc* pGoldItem;
     int32_t nGoldCapacity;
     int nY;

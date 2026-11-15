@@ -110,6 +110,8 @@ struct __attribute__((packed)) D2ControlMsg {
 };
 
 #endif // D2_DEFINED_D2ControlMsg
+struct D2ControlStrc;
+
 namespace D2Launch::MainMenus {
 
 // Function declarations
@@ -409,4 +411,9 @@ extern D2WinTextBox * gbBnetConnectionTimerActive;
 extern D2ControlStrc * gpCtlBnetProgressBar2;
 // 9 internal functions (defined in .cpp)
 
+// VP: ui.cpp references these by qualified name; the definitions live in
+// namespace scope in MainMenus.cpp.
+extern ::D2WinTextBox * gpCtlBnetProgressBar;
+extern ::D2WinTextBox * gbBnetConnectionTimerActive;
+extern ::D2ControlStrc * gpCtlBnetProgressBar2;
 } // namespace D2Launch::MainMenus

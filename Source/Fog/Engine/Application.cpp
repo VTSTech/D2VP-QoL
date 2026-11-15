@@ -736,3 +736,5 @@ static void * keep_00404f40 = (0 ? (DEBUG_ExtractDebugDirectory64(*(uint32_t *)0
 static void * keep_00404f60 = (0 ? (DEBUG_ExtractDebugDirectory32(*(uint32_t *)0, *(uint32_t * *)0, *(uint32_t * *)0, *(IMAGE_OPTIONAL_HEADER32 * *)0), (void *)0) : (void *)0);
 
 } // namespace Fog::Engine::Application
+
+void * ExceptionList = (void *)0x00000000; D2_GLOBAL_GUARD(ExceptionList, "ExceptionList");

@@ -176,12 +176,6 @@ typedef void (__fastcall *pfnPartyMemberFilter)(::SGAMEDATA * pGame, D2UnitStrc 
 
 namespace D2Game::UNIT::SUnitDmg {
 // VP: string literals for damage event IDs (referenced by DAMAGE_ApplyDefensiveReduction)
-static const char s_Dam_006e1664[] = "Damage";
-static const char s_Ligt_006e1654[] = "Lightning";
-static const char s_Magc_006e1644[] = "Magic";
-static const char s_Pois_006e1624[] = "Poison";
-static const char s_Life_006e161c[] = "Life";
-static const char s_Stam_006e160c[] = "Stamina";
 
 uint32_t __fastcall DAMAGE_CheckMonsterTypeVsMonsterType(uint32_t nMonTypeA, int32_t nMonTypeB) {
     if ((int)nMonTypeA > 0 && (int)nMonTypeA < D2Common::ITEMS::Items::sgptDataTable->nTxtMonTypeSize && nMonTypeB > 0 && nMonTypeB < D2Common::ITEMS::Items::sgptDataTable->nTxtMonTypeSize) {
@@ -454,7 +448,7 @@ static void __stdcall DAMAGE_ApplyPoison(D2UnitStrc * pUnit, int32_t nPoisonRate
 }
 
 // @sourcefile .\UNIT\SUnitDmg.cpp
-void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, eD2States eState, uint32_t dwParam) {
+void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, uint32_t eState, uint32_t dwParam) {
     BOOL bIsDead = SUnit::CheckForModeZeroDeath(pUnit);
     if (bIsDead) {
       uint32_t bStateActive;
@@ -607,7 +601,7 @@ static void __stdcall DAMAGE_ApplyCold(D2UnitStrc * pUnit, int32_t nColdLength, 
     D2Common::DATATBLS::ItemStats::SetState(pUnit2, STATE_shatter, 0);
 }
 
-void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, eD2States eState, int32_t pStatList) {
+void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, uint32_t eState, int32_t pStatList) {
     uint8_t byAIDelay;
     BOOL bIsModeZeroDeath = SUnit::CheckForModeZeroDeath(pUnit);
     if (bIsModeZeroDeath) {

@@ -120,7 +120,7 @@ namespace D2Game::UNIT::SUnitDmg {
 uint32_t __fastcall DAMAGE_CheckMonsterTypeVsMonsterType(uint32_t nMonTypeA, int32_t nMonTypeB);
 // @sourcefile .\UNIT\SUnitDmg.cpp
 void __fastcall DAMAGE_OnColdExpire(struct D2UnitStrc * pUnit, eD2States eState, struct D2StatListExStrc * dwParam);
-int32_t __fastcall DAMAGE_GetMonsterDelayByDifficulty(::SGAMEDATA * pGame, struct D2UnitStrc * pMonster);
+int32_t __fastcall DAMAGE_GetMonsterDelayByDifficulty(struct D2UnitStrc * pGame, struct D2UnitStrc * pMonster);
 void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(struct D2UnitStrc * pUnit, eD2States eState, struct D2StatListExStrc * pStatList);
 // Computes the physical damage total in nParam throughout the body; the only caller (DAMAGE_CalculateOffensiveDamage) assigns the never-set local nPhysDmgResult straight from this call's result into pDmgStrc->dwPhysDamage, proving the value is meant to flow back. The final D2ApplyPercent(nParam,...) call (when bParam!=0x80) also drops its own int32_t return, which is this function's true final value.
 uint32_t __fastcall DAMAGE_CalculatePhysicalDamage(struct D2UnitStrc * pUnit, int32_t bUseWeaponStats, struct D2UnitStrc * pWeapon, int32_t nMinDmg, int32_t nMaxDmg, int32_t nBonusPercent, uint32_t nFlatDamage, uint8_t byScale);
