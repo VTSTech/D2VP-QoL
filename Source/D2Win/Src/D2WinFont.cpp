@@ -445,12 +445,13 @@ static void __stdcall D2WINFONT_DrawWideString(uint16_t * wszText, int32_t nX, i
           nPositionX = (nWidth - nLineWidth >> 1) + nX;
         }
 
+        // Move to next line first, then draw background for the new line
+        nY += (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / -10;
+        
         // Draw background for the new line
         uint8_t nBlackColor = D2WinPalette::D2GFX_GetColorFromCurrentPallete(0, 0, 0);
         int nFontHeight = (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / 10;
         D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nX, nY - nFontHeight, nX + nWidth, nY, nBlackColor, DRAW_LESSTRANSPARENT);
-
-        nY += (int)((uint32_t)gaFontCache[gnLastUsedFontId].pFontTableHeader->nLineHeight * gnFontIdSmall) / -10;
       }
 
       iVar1 = nStrLen;
