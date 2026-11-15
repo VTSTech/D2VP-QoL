@@ -1086,20 +1086,6 @@ char s___AUCMDDEF___0074c47c[16] = {
     '\x00',
     '\x00'
 }; D2_STATIC_GUARD(s___AUCMDDEF___0074c47c, "s___AUCMDDEF___0074c47c");
-StormLinkedListStrc gStormCmdListHeadBackslash = {
-    /* .nLinkOffset = */ 0x0,
-    /* .terminator = */ {
-        /* .pPrevLink = */ (StormLinkStrc*)&gStormCmdListHeadBackslash.head.pPrevLink,
-        /* .pNext = */ 0x0
-    }
-}; D2_GLOBAL_GUARD(gStormCmdListHeadBackslash, "gStormCmdListHeadBackslash");
-StormLinkedListStrc gStormCmdListHeadSlash = {
-    /* .nLinkOffset = */ 0x0,
-    /* .terminator = */ {
-        /* .pPrevLink = */ (StormLinkStrc*)&gStormCmdListHeadSlash.head.pPrevLink,
-        /* .pNext = */ 0x0
-    }
-}; D2_GLOBAL_GUARD(gStormCmdListHeadSlash, "gStormCmdListHeadSlash");
 static uint32_t gbScmdHasPriorityCommand = 0; D2_STATIC_GUARD(gbScmdHasPriorityCommand, "gbScmdHasPriorityCommand");
 
 namespace Storm::Source {

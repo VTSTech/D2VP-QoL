@@ -61,7 +61,7 @@ namespace D2MCPClient::McpConnect {
 uint32_t D2GSJoinResult = 0; D2_GLOBAL_GUARD(D2GSJoinResult, "D2MCPClient::McpConnect::D2GSJoinResult");
 } // namespace D2MCPClient::McpConnect
 static uint32_t g_bMCPCharDeleteSuccess = 0; D2_STATIC_GUARD(g_bMCPCharDeleteSuccess, "g_bMCPCharDeleteSuccess");
-static HANDLE MCPThread = 0; D2_STATIC_GUARD(MCPThread, "MCPThread");
+HANDLE MCPThread = 0; D2_GLOBAL_GUARD(MCPThread, "MCPThread");
 static uint32_t g_bMCPCharUpgradeSuccess = 0; D2_STATIC_GUARD(g_bMCPCharUpgradeSuccess, "g_bMCPCharUpgradeSuccess");
 namespace D2MCPClient::McpConnect {
 char D2GSConnectIp[18] = {}; D2_GLOBAL_GUARD(D2GSConnectIp, "D2MCPClient::McpConnect::D2GSConnectIp");

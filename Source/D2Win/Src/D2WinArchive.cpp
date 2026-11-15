@@ -300,10 +300,3 @@ BOOL __fastcall MPQ_LoadAllMediaMpqFiles(::fpRequiredUserAction fpInsertPlayCd, 
 
 } // namespace D2Win::Src::D2WinArchive
 
-namespace D2Win::Src::D2WinArchive {
-// [d2vp] archive handles used by the D2Win archive bootstrap (fork: globals of
-// D2WinArchive; restored from the fork tree).
-D2FogArchiveStrc * MPQ_d2data = 0; D2_GLOBAL_GUARD(MPQ_d2data, "D2Win::Src::D2WinArchive::MPQ_d2data");
-D2FogArchiveStrc * MPQ_patch_d2 = 0; D2_GLOBAL_GUARD(MPQ_patch_d2, "D2Win::Src::D2WinArchive::MPQ_patch_d2");
-D2FogArchiveStrc * MPQ_d2exp = 0; D2_GLOBAL_GUARD(MPQ_d2exp, "D2Win::Src::D2WinArchive::MPQ_d2exp");
-} // namespace D2Win::Src::D2WinArchive

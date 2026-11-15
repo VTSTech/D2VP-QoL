@@ -4028,3 +4028,4 @@ __attribute__((noinline)) inline void __fastcall ARCHIVE_ClearList(StormLinkedLi
 }
 #endif // D2_DEFINED_INLINE_0045bd00
 } // namespace D2Client::Archive
+

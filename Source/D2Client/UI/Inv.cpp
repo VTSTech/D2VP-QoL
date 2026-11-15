@@ -319,8 +319,8 @@ D2GridScreenCoordinates pNpcInventoryGridScreenCoordinates = {}; D2_GLOBAL_GUARD
 D2GridScreenCoordinates pTransmogrifyBoxGridScreenCoordinates = {}; D2_GLOBAL_GUARD(pTransmogrifyBoxGridScreenCoordinates, "D2Client::UI::Inv::pTransmogrifyBoxGridScreenCoordinates");
 D2GridScreenCoordinates pInventoryGridScreenCoordinated = {}; D2_GLOBAL_GUARD(pInventoryGridScreenCoordinated, "D2Client::UI::Inv::pInventoryGridScreenCoordinated");
 D2GridScreenCoordinates pHirelingGridScreenCoordinates = {}; D2_GLOBAL_GUARD(pHirelingGridScreenCoordinates, "D2Client::UI::Inv::pHirelingGridScreenCoordinates");
+int gpInvCursorItem = 0; D2_GLOBAL_GUARD(gpInvCursorItem, "D2Client::UI::Inv::gpInvCursorItem");
 } // namespace D2Client::UI::Inv
-int gpInvCursorItem = 0; D2_GLOBAL_GUARD(gpInvCursorItem, "gpInvCursorItem");
 static int gbInvNpcScreenCoordsInitialized = 0; D2_STATIC_GUARD(gbInvNpcScreenCoordsInitialized, "gbInvNpcScreenCoordsInitialized");
 static uint32_t gpInvItemUnderCursor = 0; D2_STATIC_GUARD(gpInvItemUnderCursor, "gpInvItemUnderCursor");
 namespace D2Client::UI::Inv {
@@ -7267,7 +7267,7 @@ void wsprintf(uint16_t * wszDest, uint16_t * wszFormat, ...) {
     } while (nArgIdxA < nTotalArgs);
 }
 
-void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, size_t nSize) {
+void __fastcall GetItemName(D2UnitStrc * pUnit, uint16_t * wBuffer, int nSize) {
     // Frame slots -988..-56 are ONE object: &wszRareName is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {

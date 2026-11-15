@@ -1960,3 +1960,11 @@ void __fastcall SOUND_UpdateEnvironmentAmbience(int32_t nTick) {
 }
 
 } // namespace D2Client::Sound
+
+namespace D2Client::Sound {
+// [d2vp] port-era name for SOUND_GetSoundId (fork has no such symbol; the port
+// callers in UnitSnd.cpp reference this spelling).
+int32_t __fastcall SOUND_GetSoundIdByChannelHandle(int32_t nChannelHandle) {
+    return SOUND_GetSoundId(nChannelHandle);
+}
+} // namespace D2Client::Sound

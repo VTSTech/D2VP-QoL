@@ -2091,7 +2091,7 @@ static BOOL INPUT_HandleLeftClickWithPet(D2UnderMouseStrc * pUnderMouse) {
       if (pPetUnit) {
         pSeed = GAME::RosterPets::GetSeed(nUnitGUID);
         if (pSeed->nState == 2) {
-          GAME::Select::SELECT_SetPetSeedTimestamp(pUnderMouse->pPlayer, pPetUnit, 0);
+          GAME::Select::SELECT_SetPetSeedTimestamp((int32_t)pUnderMouse->pPlayer, pPetUnit, 0);
         }
       }
     }
@@ -2169,7 +2169,7 @@ static BOOL INPUT_HandleRightClickWithPet(D2UnderMouseStrc * pUnderMouse) {
 
       pSeed = GAME::RosterPets::GetSeed(nUnitGUID);
       if (pSeed->nState == 2) {
-        GAME::Select::SELECT_SetPetSeedTimestamp(pUnderMouse->pPlayer, pPetUnit, 0);
+        GAME::Select::SELECT_SetPetSeedTimestamp((int32_t)pUnderMouse->pPlayer, pPetUnit, 0);
       }
 
       return 0;

@@ -6506,12 +6506,3 @@ _EXCEPTION_DISPOSITION SehHandler_6ca530(EHExceptionRecord * pExceptionRecord, E
 }
 
 } // namespace D2Direct3D::Renderer
-
-void __fastcall RENDERER_D3D_SetTextureStageColor(void * pVertex, uint32_t dwGamma, uint8_t byAlpha) {
-    uint32_t nLightRow = (uint8_t)dwGamma;
-    *(uint32_t*)((int)pVertex + 0x10) = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)byAlpha << 8 | (uint16_t)(uint8_t)g_aLightingTable[(dwGamma >> 8 & 0xff) + nLightRow * 0x100]) << 8 | (uint32_t)(uint8_t)g_aLightingTable[(uint8_t)(dwGamma >> 0x10) + nLightRow * 0x100]) & 0xffffffu) << 8 | (uint32_t)(uint8_t)g_aLightingTable[(dwGamma >> 0x18) + nLightRow * 0x100]);
-}
-
-void __fastcall RENDERER_D3D_ApplyShadowTextureCoords(void * pVertex, uint8_t nLightIndex, uint8_t byAlpha) {
-    *(uint32_t*)((int)pVertex + 0x10) = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)byAlpha << 8 | (uint16_t)(uint8_t)g_aLightingTable[(uint32_t)GlobalRed + (uint32_t)nLightIndex * 0x100]) << 8 | (uint32_t)(uint8_t)g_aLightingTable[(uint32_t)GlobalGreen + (uint32_t)nLightIndex * 0x100]) & 0xffffffu) << 8 | (uint32_t)(uint8_t)g_aLightingTable[(uint32_t)GlobalBlue + (uint32_t)nLightIndex * 0x100]);
-}

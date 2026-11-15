@@ -1470,6 +1470,8 @@ D2StringTableTblFileStrc * gpStringTableExpansion = 0; D2_GLOBAL_GUARD(gpStringT
 
 } // namespace D2Lang::StrTable::strtable
 
+// [d2vp] restored fork strtable globals (see fork strtable.cpp:431 block).
+namespace D2Lang::StrTable::strtable {
 uint16_t * * gpStringIndexBase = 0; D2_GLOBAL_GUARD(gpStringIndexBase, "D2Lang::StrTable::strtable::gpStringIndexBase");
 uint16_t * * gpStringIndexPatchD2 = 0; D2_GLOBAL_GUARD(gpStringIndexPatchD2, "D2Lang::StrTable::strtable::gpStringIndexPatchD2");
 uint16_t * * gpStringIndexExpansion = 0; D2_GLOBAL_GUARD(gpStringIndexExpansion, "D2Lang::StrTable::strtable::gpStringIndexExpansion");
@@ -1477,3 +1479,10 @@ uint16_t * gpStringBufferBase = 0; D2_GLOBAL_GUARD(gpStringBufferBase, "D2Lang::
 uint16_t * gpStringBufferPatchD2 = 0; D2_GLOBAL_GUARD(gpStringBufferPatchD2, "D2Lang::StrTable::strtable::gpStringBufferPatchD2");
 uint16_t * gpStringBufferExpansion = 0; D2_GLOBAL_GUARD(gpStringBufferExpansion, "D2Lang::StrTable::strtable::gpStringBufferExpansion");
 int gnStringTableRefCount = 0; D2_GLOBAL_GUARD(gnStringTableRefCount, "D2Lang::StrTable::strtable::gnStringTableRefCount");
+} // namespace D2Lang::StrTable::strtable
+
+// [d2vp] fork strtable.cpp:439 - TU-local MPQ handles (global-scope refs at
+// strtable.cpp:414 resolve to these).
+D2FogArchiveStrc * MPQ_d2data = 0; D2_STATIC_GUARD(MPQ_d2data, "MPQ_d2data");
+D2FogArchiveStrc * MPQ_patch_d2 = 0; D2_STATIC_GUARD(MPQ_patch_d2, "MPQ_patch_d2");
+D2FogArchiveStrc * MPQ_d2exp = 0; D2_STATIC_GUARD(MPQ_d2exp, "MPQ_d2exp");

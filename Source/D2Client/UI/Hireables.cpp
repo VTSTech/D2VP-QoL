@@ -362,7 +362,7 @@ void __stdcall INPUT_HireableInteract(D2UIMouseMsgStrc * pMsg) {
       D2UnitStrc* pPetUnit;
       pPetUnit = UNIT::CUnit::UNITS_FindClientSideUnit(-1, UNIT_MONSTER);
       if (pPetUnit) {
-        GAME::Select::SELECT_SetPetSeedTimestamp(pPlayer, pPetUnit, 1);
+        GAME::Select::SELECT_SetPetSeedTimestamp((int32_t)pPlayer, pPetUnit, 1);
         pMsg->bHandled = 1;
         pMsg->dwResult = 0;
         Storm::SMsgBreakHandlerChain(pMsg);

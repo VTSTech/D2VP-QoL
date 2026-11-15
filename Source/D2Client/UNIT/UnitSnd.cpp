@@ -3703,7 +3703,7 @@ void __fastcall UNITSND_PlayAttackSound(D2UnitStrc * pUnit, int32_t nAttackMode,
     if (bPlayDelayed < 100) {
       nErrorLine = GAME::Game::gnRecordingIndex();
       bSoundValid = nErrorLine - gdwSoundChannelIndex >= 0xf && bSoundValid;
-      nHitClass = Sound::SOUND_FindChannelForSound(pUnit);
+      nHitClass = Sound::SOUND_FindChannelForSound((int32_t)pUnit);
       if (nHitClass) {
         goto play_weapon_sound;
       }
@@ -3867,7 +3867,7 @@ void __fastcall UNITSND_PlayPlayerSound(D2UnitStrc * pUnit, uint16_t nAnimModePa
       }
     }
     if (nMode >= 0x19 && nMode <= 0x20) {
-      nResult = Sound::SOUND_FindChannelForSound(pUnit);
+      nResult = Sound::SOUND_FindChannelForSound((int32_t)pUnit);
       if (!nResult) {
         eSoundId = pSoundTable[8] - 0x32 + nMode * 2;
       }
@@ -3979,7 +3979,7 @@ void __fastcall UNITSND_PlayPlayerSound(D2UnitStrc * pUnit, uint16_t nAnimModePa
         eSoundId = pSoundTable[7];
       skip_if_unit_playing:
       bCheckDuplicate = true;
-      nResult = Sound::SOUND_FindChannelForSound(pUnit);
+      nResult = Sound::SOUND_FindChannelForSound((int32_t)pUnit);
       if (nResult) {
         return;
       }
@@ -4448,7 +4448,7 @@ static void __stdcall UNITSND_PlayModeChangeSound(int32_t nMode, D2UnitStrc * pU
         goto record_sfx_time;
       }
       if (nMode == 3 || nMode == 0xd) {
-        nSfxTick = Sound::SOUND_FindChannelForSound(pUnit);
+        nSfxTick = Sound::SOUND_FindChannelForSound((int32_t)pUnit);
         if (nSfxTick) {
           goto record_sfx_time;
         }
@@ -4480,7 +4480,7 @@ static void __stdcall UNITSND_PlayModeChangeSound(int32_t nMode, D2UnitStrc * pU
         goto record_sfx_time;
       }
       if (nMode == 4 || nMode == 0x13) {
-        nSfxTick = Sound::SOUND_FindChannelForSound(pUnit);
+        nSfxTick = Sound::SOUND_FindChannelForSound((int32_t)pUnit);
         if (nSfxTick) {
           goto record_sfx_time;
         }

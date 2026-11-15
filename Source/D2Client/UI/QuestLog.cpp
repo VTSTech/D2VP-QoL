@@ -2357,7 +2357,7 @@ int __fastcall Unreferenced_004a3200(int param_1) {
 }
 
 // Loads quest icons for an act from gQuestIconsPerActTable. Reads act index, iterates quest icon range per act, loads DC6 files to global quest icon array. Handles expansion/classic quest sets.
-void __stdcall QUESTLOG_LoadQuestIconsForAct(uint32_t nActIndex, int32_t bResetSelection) {
+void __fastcall QUESTLOG_LoadQuestIconsForAct(int32_t nActIndex, int32_t bResetSelection) {
     // Static local variables (originally global data)
     static char * gaszQuestIconNames[27] = {
     (char*)&D2Client::UI::QuestLog::s_a1q1_006da2bc,

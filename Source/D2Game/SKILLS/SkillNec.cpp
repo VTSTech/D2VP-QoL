@@ -344,7 +344,7 @@ BOOL __fastcall Skills_SrvStFunc_21_IsRevivableCorpse(::SGAMEDATA * pGame, D2Uni
     CorpseConsumedCheck(pTarget);
 }
 
-void __fastcall SKILLNEC_OnCurseExpire(D2UnitStrc * pUnit, uint32_t eState, int32_t dwParam) {
+void __fastcall SKILLNEC_OnCurseExpire(D2UnitStrc * pUnit, uint32_t eState, D2StatListExStrc * dwParam) {
     if (!pUnit) {
       return;
     }
@@ -357,7 +357,7 @@ void __fastcall SKILLNEC_OnCurseExpire(D2UnitStrc * pUnit, uint32_t eState, int3
       Monster::AI::AttachCorrectAiFunctionToMonster(UNIT::SUnit::GetGamePointer(pUnit), pUnit, pMonsterAiGeneral, 0);
     }
 
-    SkillsServer::DefaultExpireFunction(pUnit, eState, (D2StatListExStrc*)dwParam);
+    SkillsServer::DefaultExpireFunction(pUnit, eState, dwParam);
 }
 
 int __fastcall Unreferenced_005c33d0(int param_1) {

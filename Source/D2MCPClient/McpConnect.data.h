@@ -19,6 +19,7 @@ struct D2QSSocketStrc;
 typedef void (__fastcall *pfnMCPPacketCallback)(uint16_t wPacketField, char * pPayload);
 
 extern D2McpGameInfoStrc g_CharSelectBuffer;
+extern HANDLE MCPThread;
 extern pfnMCPPacketCallback g_pfnMCPCallback1;
 extern pfnMCPPacketCallback g_pfnMCPCallback2;
 // Former interior labels: gInterfaceConfig6=+0x4 gInterfaceConfig5=+0x8 gInterfaceConfig4=+0xc gInterfaceConfig3=+0x10 gInterfaceConfig2=+0x14

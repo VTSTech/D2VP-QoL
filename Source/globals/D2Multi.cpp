@@ -59,6 +59,7 @@
 #include "Source/D2Win/D2WinAnimImage.h"
 
 
+
 // =============================================================================
 // Initialized scalars
 // =============================================================================
@@ -166,32 +167,32 @@ int32_t gaMultiTextBoxScrollbarGeom5[3] = { 0x2f4, 0x187, 0x10a }; D2_GLOBAL_GUA
 
 FORMS_AnimFrameStrc gaMultiLogoAnimFrames[5] = {
     {
-        /* .ppBaseImage = */ (DC6**)&gpDC6D2LogoBlackBnet,
-        /* .ppOverlayImage = */ (DC6**)&gpDC6D2LogoBnet,
+        /* .ppBaseImage = */ (void*)&gpDC6D2LogoBlackBnet,
+        /* .ppOverlayImage = */ (void*)&gpDC6D2LogoBnet,
         /* .nDrawMode = */ 0x3,
         /* .nFrameDelay = */ 0x1
     },
     {
-        /* .ppBaseImage = */ (DC6**)&gpDC6D2LogoBlackBnet,
-        /* .ppOverlayImage = */ (DC6**)&gpDC6D2LogoBnet,
+        /* .ppBaseImage = */ (void*)&gpDC6D2LogoBlackBnet,
+        /* .ppOverlayImage = */ (void*)&gpDC6D2LogoBnet,
         /* .nDrawMode = */ 0x3,
         /* .nFrameDelay = */ 0x1
     },
     {
-        /* .ppBaseImage = */ (DC6**)&gpDC6D2LogoBlackBnet,
-        /* .ppOverlayImage = */ (DC6**)&gpDC6D2LogoBnet,
+        /* .ppBaseImage = */ (void*)&gpDC6D2LogoBlackBnet,
+        /* .ppOverlayImage = */ (void*)&gpDC6D2LogoBnet,
         /* .nDrawMode = */ 0x3,
         /* .nFrameDelay = */ 0x1
     },
     {
-        /* .ppBaseImage = */ (DC6**)&gpDC6D2LogoBlackBnet,
-        /* .ppOverlayImage = */ (DC6**)&gpDC6D2LogoBnet,
+        /* .ppBaseImage = */ (void*)&gpDC6D2LogoBlackBnet,
+        /* .ppOverlayImage = */ (void*)&gpDC6D2LogoBnet,
         /* .nDrawMode = */ 0x3,
         /* .nFrameDelay = */ 0x1
     },
     {
-        /* .ppBaseImage = */ (DC6**)&gpDC6D2LogoBlackBnet,
-        /* .ppOverlayImage = */ (DC6**)&gpDC6D2LogoBnet,
+        /* .ppBaseImage = */ (void*)&gpDC6D2LogoBlackBnet,
+        /* .ppOverlayImage = */ (void*)&gpDC6D2LogoBnet,
         /* .nDrawMode = */ 0x3,
         /* .nFrameDelay = */ 0x1
     }

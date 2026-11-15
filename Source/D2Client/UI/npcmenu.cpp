@@ -3600,8 +3600,8 @@ static short gnNpcMenuQuestIdTable[256] = {
     0x9f
 }; D2_STATIC_GUARD(gnNpcMenuQuestIdTable, "gnNpcMenuQuestIdTable");
 namespace D2Client::UI::npcmenu {
-uint8_t gbNpcMenuInitialized = 0; D2_GLOBAL_GUARD(gbNpcMenuInitialized, "D2Client::UI::npcmenu::gbNpcMenuInitialized");
-uint8_t gnNpcMenuActiveMode = 0; D2_GLOBAL_GUARD(gnNpcMenuActiveMode, "D2Client::UI::npcmenu::gnNpcMenuActiveMode");
+// [d2vp] removed: duplicate definition of gbNpcMenuInitialized (kept in D2Client.cpp)
+// [d2vp] removed: duplicate definition of gnNpcMenuActiveMode (kept in D2Client.cpp)
 } // namespace D2Client::UI::npcmenu
 static uint8_t gbNpcMenuRandomDialogSeed = 0; D2_STATIC_GUARD(gbNpcMenuRandomDialogSeed, "gbNpcMenuRandomDialogSeed");
 namespace D2Client::_Interaction {
