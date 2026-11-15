@@ -20,7 +20,14 @@ struct BigStack;
 struct EHExceptionRecord;
 struct EHRegistrationNode;
 struct TSGrowableArray_Uc;
+// VP-PORT [mingw-16 excpt compat]: new mingw-w64 excpt.h (MSYS2 GCC 16 windows.h
+// pulls it in) typedefs _EXCEPTION_DISPOSITION as the SEH enum; older snapshots
+// (Debian cross GCC 14) define the enumerators as macros and no such type at all.
+// defined(ExceptionContinueSearch) is TRUE only where the macro flavor is in use,
+// which is exactly where the fallback int typedef is still needed.
+#if defined(ExceptionContinueSearch)
 typedef int _EXCEPTION_DISPOSITION;
+#endif
 #ifndef _WIN32  // provided by the Win32 SDK / CRT on Windows
 struct _CONTEXT;
 #endif // _WIN32

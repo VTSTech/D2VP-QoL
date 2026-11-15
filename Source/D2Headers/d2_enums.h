@@ -7,7 +7,14 @@
 
 #ifndef _WIN32
 // On Windows, _EXCEPTION_DISPOSITION is defined in <excpt.h> via windows.h
+// VP-PORT [mingw-16 excpt compat]: new mingw-w64 excpt.h (MSYS2 GCC 16 windows.h
+// pulls it in) typedefs _EXCEPTION_DISPOSITION as the SEH enum; older snapshots
+// (Debian cross GCC 14) define the enumerators as macros and no such type at all.
+// defined(ExceptionContinueSearch) is TRUE only where the macro flavor is in use,
+// which is exactly where the fallback int typedef is still needed.
+#if defined(ExceptionContinueSearch)
 typedef int _EXCEPTION_DISPOSITION;
+#endif
 #endif
 namespace _EXCEPTION_DISPOSITION_ns {
 #ifndef _WIN32  // provided by <windows.h>/<winnt.h> on Windows

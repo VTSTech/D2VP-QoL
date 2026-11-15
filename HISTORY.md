@@ -127,3 +127,24 @@ color, all renderer vtables wired). Next-round plan: field test with
 d2boot.log renderer mode + a screenshot, and check whether Draw_UnitNameUnderCursor
 is reached at all in-game (the VP diag era is retired; add a temporary
 D2BOOT_Mark probe if needed).
+
+## P11 — Win11 local build script fix (archive #12, 2026-11-15)
+
+The owner's `tools/build-local-win11.cmd` run (MSYS2 mingw32, **GCC 16.2** — newer
+than the sandbox's Debian cross GCC 14) failed at the first TU:
+`3rdparty/Storm/Source/SFile.h:26 conflicting declaration 'typedef int
+_EXCEPTION_DISPOSITION'` — the newer mingw-w64 excpt.h (pulled in by windows.h)
+typedefs `_EXCEPTION_DISPOSITION` as the SEH **enum**, while the port's 20
+per-file `typedef int _EXCEPTION_DISPOSITION;` fallbacks assume the OLD
+mingw-w64 headers (Debian snapshot: excpt.h defines the enumerators as MACROS —
+`#define ExceptionContinueSearch 1` — and no such type at all).
+
+Discriminator chosen without depending on header guard names:
+`defined(ExceptionContinueSearch)` is TRUE exactly where the macro flavor is in
+use (old headers) and FALSE where the real enum exists (new headers), so each
+per-file fallback is now wrapped in `#if defined(ExceptionContinueSearch)`.
+Verified by preprocessor probe on the sandbox toolchain and a full clean-ish
+rebuild (`Built target d2`). The .cmd/.ps1 script itself needed no change — it
+mirrors CI's configure and the failure was header-level. Note: GCC 16 vs 14
+header drift may surface MORE conflicts after this one — next errors go to the
+next round one at a time.

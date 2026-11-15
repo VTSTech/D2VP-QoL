@@ -390,7 +390,14 @@ void __stdcall GuardStack();
 // are legal in C++).
 #ifndef D2_DEFINED_EXCEPTION_DISPOSITION
 #define D2_DEFINED_EXCEPTION_DISPOSITION
+// VP-PORT [mingw-16 excpt compat]: new mingw-w64 excpt.h (MSYS2 GCC 16 windows.h
+// pulls it in) typedefs _EXCEPTION_DISPOSITION as the SEH enum; older snapshots
+// (Debian cross GCC 14) define the enumerators as macros and no such type at all.
+// defined(ExceptionContinueSearch) is TRUE only where the macro flavor is in use,
+// which is exactly where the fallback int typedef is still needed.
+#if defined(ExceptionContinueSearch)
 typedef int _EXCEPTION_DISPOSITION;
+#endif
 #endif
 _EXCEPTION_DISPOSITION __GSHandlerCheck_EH_6ca575(struct EHExceptionRecord * pExceptionRecord, struct EHRegistrationNode * pRegistrationNode, struct _CONTEXT * pContext, void * pDispatcherContext);
 _EXCEPTION_DISPOSITION __GSHandlerCheck_EH_6ca595(struct EHExceptionRecord * pExceptionRecord, struct EHRegistrationNode * pRegistrationNode, struct _CONTEXT * pContext, void * pDispatcherContext);
