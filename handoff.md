@@ -39,7 +39,7 @@ log lives in `HISTORY.md` (this port).
 | Shared stash (`shared_stash=1`) | **FIELD-VERIFIED FIXED** (2026-11-15) — client chain was complete (tab draw, click, C→S 0x4F button 0x7D) but the server dispatch was lost in the overlay era: PlayerTrade.cpp's `VPSHARED_ShouldInterceptClickButton`/`OnClickButton` block recovered verbatim from origin/main + include. Compiles. Field test owed. |
 | Camera zoom (Z) | **FIXED (archive #11)** — field showed sprites zooming but not the view: the port's GAME/Draw.cpp was missing the fork's R155 floor/roof light-grid zoom sites (the ground tiles' vertex positions). Fork file recovered wholesale + Wall2.h decl. Field test owed: Z steps 1.0/1.25/1.5 on floors+walls+sprites together, UI stays 1:1, cursor click-through correct. |
 | Tooltip background panel | **OPEN** — no static defect: publish → Draw_UnitNameUnderCursor → DrawSolidRectEx(0, DRAW_LESSTRANSPARENT=75% alpha) → renderer vtable (all four wired) → D3D palette color all verified correct. Needs field repro: (a) after the wide-res fix, (b) at 800x600 vs wide, (c) item vs monster-name tooltips. |
-| Alt toggle (`alt_toggle=1`) | **FIELD DEAD AGAIN after the P12 fix — no static defect found (P13, this session)**: every link re-verified byte-for-byte (or semantically-equivalent) against `origin/main` — CmdTbl.cpp dispatch/registration/defaults/entry 72 + `D2KeyBindStrc` layout, D2ClientRoot CMD bodies (vs fork D2Client.cpp), VanillaPlusCore.cpp (byte-identical), ShowItems.cpp (byte-identical), CUnit.cpp label-read, Game.cpp click-converge block, ui.cpp Set/GetUIFlag, globals.h `AltShowItems` at index 13, Message.cpp registrations, DRAW_UI gate + `DRAW_AltItems` call. The break is therefore runtime-side: stale exe (overlay rule §4), or the ini read. **R157 field diag added** — one-way d2boot.log marks: first `alt_toggle` ini read names the resolved path + value; first Alt keydown/keyup handler fire names toggle_mode + latch; title/automap tag is now `D2VP-R157` (proves the exe carries the P12 fix). Decision tree in HISTORY P13. |
+| Alt toggle (`alt_toggle=1`) | **FIELD-VERIFIED FIXED (2026-11-15, R157 build)** — root cause was the stale exe, not code: the P13 static audit (this session) had re-verified every link byte-for-byte against `origin/main` (CmdTbl dispatch/registration/defaults/entry 72 + `D2KeyBindStrc` layout, D2ClientRoot CMD bodies, VanillaPlusCore, ShowItems, CUnit, Game.cpp click-converge, ui.cpp Set/GetUIFlag, globals `AltShowItems` index 13, Message.cpp, DRAW_UI gate) and found no defect; the R157 rebuild then delivered the P12 CMD-handler fix to the field and the toggle came alive. R157 diag log shows the full healthy chain: `read alt_toggle=1 from F:\games\Diablo II\d2vp.ini` → `toggle mode engaged` → keydown `(toggle_mode=1 latch=0)` → keyup `(latch=1)`. The diag marks are permanent one-way lines (house style, cheap); they re-arm per process. **Still owed (SMOKE §C item 8 + R58 guard)**: label click = pickup, brush-label + empty-ground click = walk, combat click = attack, stale-selection guard; `alt_toggle=0` hold-mode sanity. |
 
 ## 4. Port-specific engineering rules (hard-won, keep following them)
 
@@ -66,22 +66,15 @@ log lives in `HISTORY.md` (this port).
    1; `<<`/`>>` pager walks 1..100 and back to personal; item deposit/withdraw
    round-trips; the vacated-slot bug (#35 class) stays fixed.
 3. **Tooltips**: answer (a)/(b)/(c) above before any code change.
-4. **Alt toggle (R157 diag)**: rebuild clean, confirm the title screen says
-   `D2VP-R157` (anything older = the exe predates the P12 fix — rebuild before
-   testing). Then, with `alt_toggle=1` in the d2vp.ini next to the running
-   d2.exe, press Alt once in-game and read the `alt-toggle:` lines in
-   d2boot.log — they answer the whole chain in one run:
-   - no `Alt keydown handler fired` mark at all → the running exe is stale or
-     key dispatch never registered (rebuild clean; check for stale .obj per §4);
-   - `keydown … (toggle_mode=0)` → the ini read is the broken link: the mark's
-     `read [features] alt_toggle=<n> from <path>` line names the file actually
-     being read — set `alt_toggle=1` in THAT file (a d2vp.ini in another
-     directory, or a launcher copy, does nothing);
-   - `keydown … (toggle_mode=1)` but labels don't flip → only then is the
-     SetUIFlag/draw gate the suspect (hold-Alt labels test decides: hold works
-     + toggle dead in the same build would be a new contradiction to chase);
-   - vanilla hold sanity: `alt_toggle` deleted (or =0) → hold-Alt labels must
-     still appear (vanilla path), with the same keydown mark at `toggle_mode=0`.
+4. **Alt toggle (R157 diag) — ANSWERED 2026-11-15**: the R157 rebuild delivered
+   the P12 fix and the toggle works; the log showed the full healthy chain
+   (ini read=1 at the exe's own path → engaged → keydown latch=0 → keyup
+   latch=1). Root cause confirmed as the stale exe (overlay rule §4). The
+   diag marks stay in as permanent one-way lines. **Still owed from SMOKE §C
+   item 8**: with labels latched — label click = pickup; brush a label then
+   click empty ground far from any item = walk (no pickup, no walk-to-loot);
+   sprite click = pickup; combat click = attack; and `alt_toggle=0` hold-mode
+   unchanged.
 
 ## 6. Document map
 

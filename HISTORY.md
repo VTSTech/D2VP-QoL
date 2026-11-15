@@ -224,3 +224,21 @@ mark at `toggle_mode=0`.
 Sandbox note: no i686 mingw toolchain and no package-manager access here, so
 this round ships source + docs only; the build gates stay the owner's Win11
 tree and CI.
+
+**Field result (same day, R157 build)**: alt_toggle WORKS. The log carries the
+full healthy chain in order — `read [features] alt_toggle=1 from
+F:\games\Diablo II\d2vp.ini` (the exe's own directory, as designed) →
+`toggle mode engaged` → `Alt keydown handler fired (toggle_mode=1 latch=0)` →
+`Alt keyup handler fired (toggle_mode=1 latch=1)`. That confirms the diagnosis:
+nothing in the tree changed behavior — the R157 rebuild simply delivered the
+P12 CMD-handler fix that the stale field exe had never contained (overlay rule
+§4 again: a green build is only as fresh as its oldest stale object/archive
+extraction). The R157 tag did its job: `Vanilla+0.0.8-157` in the boot log
+proved the new exe before the marks proved the chain.
+
+The R157 diag marks stay in as permanent one-way lines (house style, matching
+the camera-zoom/unlock-fps/hud-transparent marks; they cost one line per
+process and make any future stale-exe or wrong-ini field report self-answering).
+Still owed from SMOKE §C item 8 + R58 guard: with labels latched — label click
+= pickup; brush a label then click empty ground = walk (no walk-to-loot);
+sprite click = pickup; combat click = attack; `alt_toggle=0` hold-mode sanity.
