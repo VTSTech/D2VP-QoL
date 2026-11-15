@@ -101,3 +101,29 @@ Three issues triaged:
    questions recorded in handoff.md §3.
 Docs repurposed this session: handoff.md (port handoff) and this file
 (port history); fork originals preserved on origin/main.
+
+## P10 — Field round 2 (archive #9 results) + camera-zoom fix (archive #11, 2026-11-15)
+
+Field: **wide resolutions FIXED** (all stops render, centered, no black corners),
+**shared stash FIXED**, shift compare + Unlock FPS/interp survived. Two open:
+tooltip backgrounds still missing; Z camera zoom scales characters/NPCs but not
+the camera view.
+
+**Camera zoom — FIXED (root cause)**: the fork's `Source/D2Client/GAME/Draw.cpp`
+carries the R155 zoom sites — the top-down floor/roof light-grid scaling
+( :500/:558, "the grid cells ARE the ground-tile vertices") — plus the R118
+wide-view floor walk and R121 bounds, ALL missing from the port's trimmed copy
+(1389 vs 1724 lines, zero `GetCameraZoomFactor` consumers in D2Client). That is
+exactly the symptom: sprites scale via the renderer-side quads, ground tiles
+stay 1:1. Recovered the fork file wholesale (our copy had no unique port fixes;
+only the umbrella-include adaptation), added the missing
+`WALL2_CollectRoomsBeyondAdjacency` declaration to Wall2.h (fork :79), fixed the
+one compile error, full build green. Side benefit: the wide-view FLOOR walk is
+restored too (the fixed wide-res so far ran on the Wall2-side collector only).
+
+**Tooltip background — still open**: the entire chain is verified correct
+statically (75% black rect via DrawSolidRectEx(0, DRAW_LESSTRANSPARENT=2), palette
+color, all renderer vtables wired). Next-round plan: field test with
+d2boot.log renderer mode + a screenshot, and check whether Draw_UnitNameUnderCursor
+is reached at all in-game (the VP diag era is retired; add a temporary
+D2BOOT_Mark probe if needed).

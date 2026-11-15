@@ -65,6 +65,14 @@ void __fastcall FreeWall2(struct D2GameViewStrc * pGameView);
 // Client-side draw-list builder for a single dungeon room within the wall2 (low-perspective wall/roof culling) view. Given pRoom and pnParam (game-view ptr + screen cull rectangle), early-rejects rooms outside the minimap rect, then walks the room's wall tiles and roof tiles: for each on-screen tile it computes iso grid coords (DRLG_OrthToIsoCoordsDiv160), clears the grid cell's dwFlags, and dispatches to WALL2_AddShadowPassTile/AddRoofTile/AddLowerWallTile/AddWallTile by tile type/flags. Then (when pnParam[6]==0) inserts each unit in the room into its grid cell (draw/draw-below/shadow) based on alive state and unit flags. Halts via Fog error if a unit's grid index is out of range. Always returns 1.
 BOOL __stdcall WALL2_CollectRoomTilesAndUnits(struct D2RoomStrc * pRoom, struct D2Wall2DrawContextStrc * pDrawContext);
 // Client render-prep: rebuilds the per-frame "wall2" tile/unit draw list for the given game view. Allocates the draw list, computes the visible screen rect (expanding by 0x30 in perspective mode) and caches it in the RECT_* globals, then resets the wall2 entry/alloc counters and zero-fills the grid cell array. Maps the view center to iso grid coords (DRLG_OrthToIsoCoordsDiv160), seeds each grid cell's iso row/col, caches the local player's tile coords (UNIT_CenterX/YCoordsDiv5, gnPlayerTileGridIndex), then walks the current room tree via CallRoomCallback(WALL2_CollectRoomTilesAndUnits) to gather drawable tiles/units. Halts via Fog error if the wall2 buffer or the player unit is missing. Side effects: mutates view draw-list fields and several render globals.
+// VP: [R118] shared room collector - rooms up to nDepth hops out of the
+// center that fit the nReach screen-reach budget. byte-identical retail.
+// Shared by the floor pass (Draw.cpp) and the wall2
+// scene pass (Wall2.cpp) so floors, walls, roofs, units and shadows extend
+// together.
+int __stdcall WALL2_CollectRoomsBeyondAdjacency(struct D2RoomStrc * pCenterRoom, int nDepth,
+    int nCenterX, int nCenterY, int nReach,
+    struct D2RoomStrc ** apOut, int nMaxOut);
 void __fastcall WALL2_BuildSceneDrawList(struct D2GameViewStrc * pGameView, uint32_t nTickCount);
 int __fastcall Unreferenced_004dddd0(int param_1);
 void __stdcall WALL2_OnAllocGameView_NoOp_Unref_004ddde0();
