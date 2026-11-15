@@ -476,6 +476,44 @@ void __fastcall CLIENT_SetScreenResolution(DWORD RequestedScreenModeMaybe) {
           UI::Inv::nScreenMode = 1;
           break;
         }
+      // VP-BEGIN [resolution]: wide stops. The slider (UI_SLIDER_ApplyResolution,
+      // EscMenu.cpp) maps its positions to screen modes 3/4/5/6 but retail's
+      // switch only knew 0 and 2 - the wide arms fell through and left
+      // ScreenSizeX/Y at the previous mode's 800x600 while the backbuffer
+      // switched, so every VPRES wide offset/cull computed against 800x600:
+      // UI pinned top-left, world cull rects and the wide room walk trimmed
+      // to an 800x600 budget (black corners at the borders). Sizes mirror the
+      // VPRES_IsWideLayoutMode mode table (VanillaPlusCore.cpp). All wide
+      // stops keep the 800-class UI (nScreenMode = 1).
+      case 3:
+        {
+          UI::ui::ScreenSizeX = 1344;
+          UI::Inv::ScreenSizeY = 700;
+          UI::Inv::nScreenMode = 1;
+          break;
+        }
+      case 4:
+        {
+          UI::ui::ScreenSizeX = 1280;
+          UI::Inv::ScreenSizeY = 720;
+          UI::Inv::nScreenMode = 1;
+          break;
+        }
+      case 5:
+        {
+          UI::ui::ScreenSizeX = 1366;
+          UI::Inv::ScreenSizeY = 768;
+          UI::Inv::nScreenMode = 1;
+          break;
+        }
+      case 6:
+        {
+          UI::ui::ScreenSizeX = 1920;
+          UI::Inv::ScreenSizeY = 1080;
+          UI::Inv::nScreenMode = 1;
+          break;
+        }
+      // VP-END [resolution]
     }
 
     UI::SpellSel::WindowSizeX = UI::ui::ScreenSizeX;

@@ -1,5 +1,9 @@
 # Port Plan: D2VP-QoL → redivivus (upstream)
 
+> Living status now lives in `handoff.md` (port handoff) and the session log in
+> `HISTORY.md` (P1–P9, repurposed 2026-11-15). This file remains the plan, the
+> 53-file inventory and the per-round fix details.
+
 ## Overview
 
 Port the Vanilla+ quality-of-life features from D2VP-QoL fork into redivivus (upstream) to create a fresh upstream that includes these enhancements.
@@ -929,3 +933,36 @@ the collect2 line counted by their log grepper, not a real TU failure.
 LESSON: never trust a green local build whose objects may be stale; the overlay
 delivery model means deleted files persist in the user's repo - only ship complete
 supersets.
+
+## Session: first runtime field report (build runs!) - three issues triaged
+
+Field status: title screen OK, char select OK, world renders at 800x600; wide modes
+show black triangles + off-center; tooltips missing background panel; shared stash
+tab present but inert; VP options panel + toggles work.
+
+### 1. Wide-res broken above 800x600 - FIXED (root cause)
+CLIENT_SetScreenResolution (ClientModeInGame.cpp) had only retail cases 0/2 in its
+switch. The VP slider (UI_SLIDER_ApplyResolution, EscMenu.cpp) and the boot-time
+re-apply (SetupMiniPanel) correctly map to screen modes 3/4/5/6, but the switch fell
+through: the backbuffer switched while ScreenSizeX/Y stayed 800x600. Every VPRES
+wide offset/cull then computed against 800x600 - UI pinned top-left (offset 0),
+cull rects and the wide room walk trimmed to an 800x600 budget (black corners).
+Fix: added cases 3=1344x700, 4=1280x720, 5=1366x768, 6=1920x1080 (all
+nScreenMode=1). ClientModeInGame.cpp compiles.
+
+### 2. Shared stash tab present but inert - FIXED (lost server dispatch)
+Client side was complete (tab draw + click handler + C->S 0x4F button 0x7D packet).
+The SERVER-side dispatch was missing: origin/main's PlayerTrade.cpp routes button
+0x7D into VPSHARED_ShouldInterceptClickButton/OnClickButton
+(VanillaPlusStash.cpp) before the retail trade-path handling - our overlay-era copy
+dropped that block, so the server treated the toggle as a retail trade-path error.
+Recovered the block + the VanillaPlusStash.h include. PlayerTrade.cpp compiles.
+VanillaPlusCore.cpp / VanillaPlusStash.cpp / Inv.cpp all match origin/main.
+
+### 3. Tooltip background panel missing - no static defect found
+Full chain verified intact: TEXT_TooltipSetAttributes publish -> Draw_UnitNameUnderCursor
+per-frame draw -> D2GFX_DrawSolidRectEx(..., 0, DRAW_LESSTRANSPARENT=2 -> 75% alpha)
+-> renderer vtable (all four renderers wired) -> D3D DrawSolidRectEx uses
+PALETTE_GetColorByIndex correctly. Needs field repro: (a) does it persist after the
+wide-res fix (tooltip rect coordinates ride the broken ScreenSizeY at wide modes)?
+(b) at 800x600 too? (c) any tooltip type in particular (item vs monster-name)?
