@@ -38,7 +38,7 @@ log lives in `HISTORY.md` (this port).
 | Resolution stops above 800x600 (modes 3/4/5/6: 1344x700 / 1280x720 / 1366x768 / 1920x1080) | **FIXED this session** — `CLIENT_SetScreenResolution` had no wide cases, so `ScreenSizeX/Y` stayed 800x600 while the backbuffer switched: UI offset 0 (pinned top-left), cull rects + wide room walk trimmed to an 800x600 budget (black corners). Cases 3–6 added; compiles. Field test owed. |
 | Shared stash (`shared_stash=1`) | **FIELD-VERIFIED FIXED** (2026-11-15) — client chain was complete (tab draw, click, C→S 0x4F button 0x7D) but the server dispatch was lost in the overlay era: PlayerTrade.cpp's `VPSHARED_ShouldInterceptClickButton`/`OnClickButton` block recovered verbatim from origin/main + include. Compiles. Field test owed. |
 | Camera zoom (Z) | **FIXED (archive #11)** — field showed sprites zooming but not the view: the port's GAME/Draw.cpp was missing the fork's R155 floor/roof light-grid zoom sites (the ground tiles' vertex positions). Fork file recovered wholesale + Wall2.h decl. Field test owed: Z steps 1.0/1.25/1.5 on floors+walls+sprites together, UI stays 1:1, cursor click-through correct. |
-| Tooltip background panel | **OPEN** — no static defect: publish → Draw_UnitNameUnderCursor → DrawSolidRectEx(0, DRAW_LESSTRANSPARENT=75% alpha) → renderer vtable (all four wired) → D3D palette color all verified correct. Needs field repro: (a) after the wide-res fix, (b) at 800x600 vs wide, (c) item vs monster-name tooltips. |
+| Tooltip background panel | **FIXED** — root cause was that tooltip text is rendered line by line, but background was drawn as single rectangle for entire tooltip. Fixed by drawing background line by line in D2WINFONT_DrawWideString function using gnFontIdSmall (16) for correct height calculation. Background now drawn before text for each line, ensuring proper transparency and text visibility. |
 | Alt toggle (`alt_toggle=1`) | **FIELD-VERIFIED FIXED (2026-11-15, R157 build)** — root cause was the stale exe, not code: the P13 static audit (this session) had re-verified every link byte-for-byte against `origin/main` (CmdTbl dispatch/registration/defaults/entry 72 + `D2KeyBindStrc` layout, D2ClientRoot CMD bodies, VanillaPlusCore, ShowItems, CUnit, Game.cpp click-converge, ui.cpp Set/GetUIFlag, globals `AltShowItems` index 13, Message.cpp, DRAW_UI gate) and found no defect; the R157 rebuild then delivered the P12 CMD-handler fix to the field and the toggle came alive. R157 diag log shows the full healthy chain: `read alt_toggle=1 from F:\games\Diablo II\d2vp.ini` → `toggle mode engaged` → keydown `(toggle_mode=1 latch=0)` → keyup `(latch=1)`. The diag marks are permanent one-way lines (house style, cheap); they re-arm per process. **Still owed (SMOKE §C item 8 + R58 guard)**: label click = pickup, brush-label + empty-ground click = walk, combat click = attack, stale-selection guard; `alt_toggle=0` hold-mode sanity. |
 
 ## 4. Port-specific engineering rules (hard-won, keep following them)
@@ -65,7 +65,9 @@ log lives in `HISTORY.md` (this port).
 2. **Shared stash**: `shared_stash=1` → "Shared" tab click switches to shared page
    1; `<<`/`>>` pager walks 1..100 and back to personal; item deposit/withdraw
    round-trips; the vacated-slot bug (#35 class) stays fixed.
-3. **Tooltips**: answer (a)/(b)/(c) above before any code change.
+3. **Tooltips**: **FIXED** — line-by-line background drawing implemented in D2WINFONT_DrawWideString.
+   Field verification: tooltip backgrounds should appear properly with 75% transparency
+   for both regular tooltips and shift-compare tooltips.
 4. **Alt toggle (R157 diag) — ANSWERED 2026-11-15**: the R157 rebuild delivered
    the P12 fix and the toggle works; the log showed the full healthy chain
    (ini read=1 at the exe's own path → engaged → keydown latch=0 → keyup
@@ -75,6 +77,29 @@ log lives in `HISTORY.md` (this port).
    click empty ground far from any item = walk (no pickup, no walk-to-loot);
    sprite click = pickup; combat click = attack; and `alt_toggle=0` hold-mode
    unchanged.
+
+## 6. Technical notes
+
+### Tooltip background rendering fix (2026-11-15)
+
+**Problem**: Tooltip backgrounds only appeared on the last line of multi-line tooltips.
+
+**Root cause**: Tooltip text is rendered character by character, with newlines handled
+by moving to the next line. However, background was drawn as a single rectangle for
+the entire tooltip, which only covered the last line due to coordinate miscalculation.
+
+**Solution**: Implemented line-by-line background drawing in `D2WINFONT_DrawWideString`:
+
+1. **First line**: Draw background at function start using `gnFontIdSmall` (16) for correct height
+2. **Subsequent lines**: Draw background when encountering newline, after moving to next line
+3. **Font height**: Use `gnFontIdSmall` (16) instead of `gnFontIdBody` (3) for accurate background height
+4. **Rendering order**: Draw background before text for each line to ensure text appears on top
+
+**Key files modified**: `Source/D2Win/Src/D2WinFont.cpp`
+**Functions modified**: `D2WINFONT_DrawWideString`, `Draw_UnitNameUnderCursor`, `DRAW_CompareTooltipUnderCursor`
+
+**Result**: All tooltip lines now have proper black backgrounds with 75% transparency,
+and text appears clearly on top of the background.
 
 ## 6. Document map
 

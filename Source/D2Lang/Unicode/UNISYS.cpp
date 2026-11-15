@@ -455,6 +455,7 @@ void UNICODE_FormatWideString(int32_t nMaxChars, uint16_t * wszDst, uint16_t * w
             exit(-1);
           }
 
+          int bArgConsumed = 0;
           switch (wszFmtBuf[2]) {
             case L'd':
 
@@ -491,6 +492,7 @@ void UNICODE_FormatWideString(int32_t nMaxChars, uint16_t * wszDst, uint16_t * w
 
             nCharCount += nDstOffset;
             wszDst += nDstOffset;
+            bArgConsumed = 1;
             break;
             case L's':
               if (!pArgSave || (pArgCur = pArgSave , nDstOffset = 0 , !*pArgSave)) {
@@ -545,8 +547,10 @@ void UNICODE_FormatWideString(int32_t nMaxChars, uint16_t * wszDst, uint16_t * w
           }
 
           wszFmt += 2;
-          ppArgCur++;
-          pArgSave = *ppArgCur;
+          if (bArgConsumed) {
+            ppArgCur++;
+            pArgSave = *ppArgCur;
+          }
         } while (*wszFmt != L'\0');
       }
     }
