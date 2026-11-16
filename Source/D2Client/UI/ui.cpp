@@ -9199,6 +9199,19 @@ void __stdcall INPUT_StatScreenMouseDown(D2UIMouseMsgStrc * pMsg) {
     D2UIMouseMsgStrc* pBtnIdx = pMsg;
     int32_t nMouseX = (int32_t)pMsg->uLParam.sMousePos.nMouseX;
     int32_t nMouseY = (int32_t)pMsg->uLParam.sMousePos.nMouseY;
+    // VP-BEGIN [extended-stats R158]: the tab flip + the body hold come
+    // FIRST - gate off returns 0 and this block is dead (retail flow,
+    // byte-identical); with the extended page up the whole body rect is
+    // consumed so the covered +stat buttons never arm (an invisible button
+    // can never spend a stat point); the Done button band below is outside
+    // that rect and keeps closing the screen.
+    if (VPEXTSTATS_HandleMouseDown(nMouseX, nMouseY)) {
+      pMsg->bHandled = 1;
+      pMsg->dwResult = 0;
+      Storm::SMsgBreakHandlerChain(pMsg);
+      return;
+    }
+    // VP-END [extended-stats R158]
     if (nMouseX >= Inv::gnPanelOffsetX + 0x80 && nMouseX <= Inv::gnPanelOffsetX + 0xa0 && nMouseY >= Inv::gnPanelOffsetY - 0x5c + Inv::ScreenSizeY && nMouseY <= Inv::gnPanelOffsetY - 0x3c + Inv::ScreenSizeY) {
       gbUIStatScreenMouseDown = 1;
       pMsg->bHandled = 1;
@@ -10041,6 +10054,7 @@ void __stdcall DRAW_UI_StatWindow_I() {
         D2Win::Src::D2WinFont::SetAndReturnLastFont((int32_t)pCharStatsTxtOrFont);
       }
     }
+    VPEXTSTATS_DrawOverlay(); // VP: [extended-stats R158] the tab + the extended page; gate off = no-op (no pixel, no rect)
 }
 
 void __stdcall CHAR_FreePanelAssets_NoOp_Unref_004b3330() {

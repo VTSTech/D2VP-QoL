@@ -1,93 +1,107 @@
-# Round summary — R157 (rev 173, 2026-11-16): ctrl_click_xfer covers the Horadric Cube
-
-> Previous round (R156, camera_zoom Glide port, rev 172) — its summary was superseded
-> by the field handoff; the round record lives in handoff.md's R156 line and HISTORY.md **H76**.
-
+# Round summary — R158 (rev 174, 2026-11-16): extended_stats — the character screen's second view
 
 ## The ask
 
-Owner, 2026-11-16: "Let's add Ctrl+Click transfer for Horadric Cube." The R140
-Ctrl+Click transfer only knew the stash views (0xc/0xd); this round = the cube legs
-@ R157.
+Owner, 2026-11-16, after field-verifying the R157 cube legs ("Ctrl+Click working fine for Cube in R157"):
+"Implement extended stats plan" — the same-day plan at plans/EXTENDED-STATS-PLAN.md (§9 open calls settled
+to the plan's defaults: tab-flip inside the character screen, all twelve rows, zero rows shown as 0%).
 
-## The design (what the port actually needed)
+## The design
 
-- **The funnels already existed.** Glide's `AdjustPerspectivePosition` /
-  `PerspectiveScalePosition` (Glide.cpp, `namespace D2Glide::Renderer::Glide`) are the
-  byte-analogs of the D3D pair — same constants, same anchors (W/2, H/2−0x20 and W/2,
-  H/2−0x10). Every perspective layer (floor/roof light grids, wall/shadow fans, unit
-  sprites, shadows, weather) projects through them, so the perspective half of the port
-  is two post-scale blocks, identical in shape to R155's.
-- **Top-down mode scales at the same emitters**: `DrawPalettedQuad` + `DrawShadowQuad`
-  (the four local geometry quantities ride the factor, the anchor position scales about
-  the window anchor; the perspective branch is skipped — retail's depth-size factor
-  `gnGlidePerspectiveScale` stays untouched, the same leak argument as D3D's
-  `g_aSmackerSurfaceArray`), and the two flat subtile builders (`DrawWallTileSimple` /
-  `DrawShadowTileSimple` — position + the 32 px span, cull on the scaled coords; the wall
-  color-table index stays on the raw local offset).
-- **Ground tiles needed nothing**: `DrawGroundTile` reads the shared client light grid the
-  R155 round already scales in `Draw.cpp` — renderer-agnostic, rides for free.
-- **The helpers live at the top of the namespace.** The R155 D3D round shipped
-  use-before-declare, then learned the namespace-mangling link lesson (global-scope decls
-  + a namespace-wrapped body = two mangled names = undefined references). The port
-  defines `RENDERER_GLIDE_VPZoomFactor` / `RENDERER_GLIDE_VPZoomScalePoint` right after
-  `namespace D2Glide::Renderer::Glide {` opens — no forward decls to misplace.
-- **Clamp lift**: `VANILLAPLUS_CameraZoomFrame` accepts renderer mode 4 (Glide) alongside
-  6 (D3D); DDraw/Gdi still clamp with the updated mark; the ini template note says D3D and
-  Glide.
-
-## What changed
-
-1. `Source/D2Glide/Renderer/Glide.cpp` — the two zoom helpers (namespace-top) + six scaled
-   sites: the two perspective funnels, the two top-down quad emitters, the two flat
-   subtile builders. Also landed the missing `// VP-END [issue #26 / R92]` pair on the
-   `RENDERER_GLIDE_CalculateScreenBounds` wide-UI block (pre-existing since R92; the gate
-   only audits changed files, so it surfaced now — the same class of find as R155's
-   Direct3D.cpp fix).
-2. `Source/D2Client/UI/VanillaPlusCore.cpp` — the clamp accepts mode 4; the clamp mark and
-   the ini template note updated.
-3. `Source/D2Direct3D/Renderer/Direct3D.cpp` — build fix on the owner's tree: the R155
-   helper forward-decls moved from global scope INSIDE `namespace D2Direct3D::Renderer`
-   (the file's body is namespace-wrapped; global decls made the calls mangle to
-   unreferenced symbols).
-
-`Redivivus/d2_boot.h`: `D2VP_ROUND "155"→"156"`.
-
-## Invariants held by construction
-
-- Gate off / missing ini = factor 1.0 re-published every frame; every scaled site no-ops
-  at 0x100 (byte-for-byte retail) — Glide and D3D alike.
-- UI 1:1: the world-phase bracket is the only gate the renderer reads — Glide UI-phase
-  draws never scale, exactly as on D3D.
-- Input truth: the cursor inverse is renderer-agnostic (it maps the raw pixel into the
-  retail world-screen space; the retail projection that follows is untouched).
-- DDraw/Gdi: still clamped to 1.0 with the one-way d2boot.log mark.
-
-## Known v1 limits (plan §8, accepted with the owner)
-
-- The Glide lightmap halftone lattice (`RENDERER_GLIDE_DrawLightMap`) is baked once at
-  init — its dots keep their retail screen spots at 1.25/1.5 while the world scales (a
-  soft additive-glow offset; SMOKE §V item 87 decides if a per-factor lattice rebuild
-  rides a later round).
-- Glide blob shadows keep retail size in perspective mode (`gnGlidePerspectiveScale`
-  untouched — mirrors the D3D rule).
-- Carried from R155 (unchanged): overhead name/HP plates keep their unzoomed anchor
-  offset at 1.25/1.5; the H/2−0x20 vs H/2−0x10 anchor disagreement (≤ 8 px click bias at
-  1.5).
+- **The sites moved vs. the plan's guess**: the character screen is `DRAW_UI_StatWindow_I` in
+  `ui.cpp:9422` (gated on `GFX_bShowUIFlag.CharStat`), not Panel.cpp — the recon re-anchored both
+  the draw (the function's tail at ui.cpp:10044, after the hover-tooltip windows II/III) and the click
+  (`INPUT_StatScreenMouseDown`'s head, ui.cpp:9195).
+- **Display-only pillars kept**: `SERVER_GetUnitStat` reads only; zero packets; gate off = the draw
+  hook returns before any pixel and the click hook before any consumption.
+- **The safety edge the plan's §6 called out**: with the page up, the click head consumes the whole
+  body rect BEFORE the retail hit-tests — the covered +stat buttons never arm, so an invisible button
+  can never spend a stat point; the Done button band stays outside the consume rect.
+- **The twelve rows** ride one static table (`gaVpExtStatsRows`) with the verified stat ids
+  (80/79/85/87/67/93/105/99/102/89/110/118 — d2_enums.h), kind-tagged (%i%% / %i / Yes--).
+- **The tab** reuses the shared-stash tab's outlined-text idiom (`VPSHAREDUI_DrawOutlinedText`,
+  same TU) with ONE shared measure for draw + click band; the flip plays the retail button-click
+  sound (the Done-button idiom); fully-qualified `D2Client::Sound::SOUND_PlaySound` — core sits
+  outside `namespace D2Client`.
+- **The view reset**: a 2 s draw-gap check (no close hook — the automap clock's per-frame shape).
+- **The Options row** filled column 1's band 7 — the band R155's geometry already reserved — so
+  the back row and box height are UNCHANGED: two full columns of eight, zero layout move.
 
 ## Verification
 
-Static — docs_gate (round identity boot/handoff/CHANGELOG/ROUND-SUMMARY; VP-marker
-pairing + brace/paren balance on the changed TUs; options-page counts) + smoke_sync 0
-warnings (§V items 85–87 + item 0 synced to R156). Compile gate of record: the owner's
-Win11 MSYS2 build.
+Static only: symbol audit (StatsEx.h + D2gfx D2GFX.h already in the TU's include set; the Sound
+namespace qualification fix), brace/flow re-read of both VP blocks, the layout arithmetic re-derived
+and printed in the layout comment. Compile gate of record: the owner's Win11 MSYS2 build.
 
-## Field ask (the plan's Round 3, pending)
+## R158.1 — in-round compile fix (owner build log 2026-11-16)
 
-SMOKE-CHECKLIST §V: D3D items 81–84 (81 field-verified by the owner 2026-11-11) + Glide
-items 85–87: zoom steps + UI 1:1 in both camera modes (85), click truth (86), the
-lightmap note (87) — the Wall2 click-debug overlay is the instrument if 82/86 report
-drift.
+The owner's first R158 build caught ONE error: `STRING_CopyCharToWCharWithSetMaxSize` takes `char*`
+(`Source/D2Lang/Unicode/UNISYS.h:35`) and the row table ships `const char*` labels — fixed with a
+`const_cast` at the copy site (the function never writes the source; the table stays const).
+Post-fix audit against real declarations: all 12 `UNITSTAT_*` ids confirmed in `d2_enums.h`, and
+`wsprintfA`/`GetTickCount` confirmed declared in the force-included `d2_platform.h` (lines 364/359).
+Everything else in the section compiles against signatures already used by the TU.
 
-Round identity: self-ID `Vanilla+0.0.8-R156`, automap tag `D2VP-R156`
-(`D2VP_ROUND "155"→"156"`).
+## R158.2 — field fix (owner field report 2026-11-16, first R158 build)
+
+Two bugs, both in the new section's read/layout assumptions:
+
+1. **Every value read 0%, Faster Run/Walk read a spurious 100%.** Root cause:
+   `SERVER_GetUnitStat` reads ONLY the root statlist's base array
+   (`STATLIST_LookupBaseStatWithMinAccr`, StatsEx.cpp:591) — item mods live in
+   child statlists it never walks, so all gear stats read 0. The 100 is the
+   ItemStatCost **minaccr clamp**: velocitypercent IS in the player's base
+   array (at 0) with the FMIN flag, and the clamp lifts any sub-minaccr value
+   to `minaccr << valshift` (= 100). Fix: the row loop now calls
+   **`UNITS_CalcCombinedStatValue`** (StatsEx.h:159, impl StatsEx.cpp) — the
+   game's own effective-value computation: base + every child statlist via
+   `STATLIST_CalcFullStatFromChildren`, NO display clamp. Retail corroborates
+   the semantics: `STATLIST_GetStatBonusFromLists` (Inv.cpp:2858, the IAS
+   tooltip) is exactly `clamp(full) − clamp(base)`, i.e. the same
+   children-walk with both terms clamped — useless for our rows because both
+   terms clamp at once and cancel real gear below minaccr.
+
+2. **The tab word rode the panel's top edge** ("drawing below the art, I can
+   see just a tiny portion of it"). Root cause: the draft baseline −0x1db put
+   the glyph halo (baseline−13..baseline) 8 px ABOVE the panel top edge
+   (−0x1e0) — the documented R69 float-word class — while the click band
+   (nY−4..nY+14) still caught the word's bottom, which is why clicking worked.
+   Fix: baseline **−0x1cc** = panel top + the R77-proven 0x14 stash inset
+   (halo top −0x1d9, 7 px inside the edge; the char panel art spans
+   −0x1e0..−0x30 in both modes, so one constant serves classic and
+   expansion), and the click band now hugs the glyph span exactly like the
+   stash tab (nY−16..nY+6; the old shape only caught the bottom sliver once
+   the baseline moved).
+
+Re-verified after the patch: `UNITS_CalcCombinedStatValue` is declared inside
+`D2Common::Stats::StatsEx` (StatsEx.h:41..184), players' root statlists carry
+the 0x80000000 full-list flag the wrapper requires (same precondition
+`STATSEX_GetCurrentStat` relies on in CmdTbl), and no stale `SERVER_GetUnitStat`
+call remains in the section. SMOKE §W 92/93 carry the regression asks (FRW gear
+value, never 100 ungated; word fully inside the panel).
+
+## R158.3 — compile fix of the field fix (owner build log 2026-11-16)
+
+The R158.2 getter (`UNITS_CalcCombinedStatValue`) is declared in StatsEx.h :159
+but inside the module-private guard
+`#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Common)`
+(StatsEx.h :121..181) — the D2Client TU defines `D2_MODULE_LIBRARIES`, so the
+generated header compiled the declaration out: "error: 'UNITS_CalcCombinedStatValue'
+is not a member of 'D2Common::Stats::StatsEx'". The sanctioned surface for this
+is the R152 precedent, verbatim: hand re-exposure in `Redivivus/d2_hand.h`
+(force-included into every TU, never generator-emitted, regen-safe) with the
+exact generated signature; the call links the existing D2Common definition —
+no wrapper, no new code, the generated header untouched (it is "DO NOT EDIT").
+Two static checks before shipping: (1) `eD2UnitStat` is a plain global typedef
+of `uint32_t` (d2_enums.h :14592), so spelling the typedef early in d2_hand.h
+is the same type with the same mangled signature and a legal redeclaration
+later; (2) a two-side mock TU pair compiles and links with BOTH sides mangling
+identically (`...EP10D2UnitStrcj`) — typedef-transparency and duplicate-decl
+legality proven, scripts/mock_link_check.cpp keeps the harness.
+
+## Field ask
+
+SMOKE **§W 92–96**: tab + flip; live values (base+47 MF gear test, plus the
+R158.2 FRW regression ask); the covered +stat buttons stay dead with the Done
+button alive; the 2 s reset + the gate flip both directions; the sixteenth row
+at 640x480.

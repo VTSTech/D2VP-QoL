@@ -156,7 +156,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[15] = {
+static const VPPFeatureRow gaVanillaPlusRows[16] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -251,10 +251,21 @@ static const VPPFeatureRow gaVanillaPlusRows[15] = {
     // world zoom 1.0/1.25/1.5 (D3D renderer only; other renderers clamp to
     // 1.0 with a d2boot.log mark) and the level resets to 1.0 each join.
     { "camera_zoom", L"Camera Zoom", 0 },
+    // VP: [extended-stats R158] extended_stats - the sixteenth row
+    // (FEATURES.md row 20, plans/EXTENDED-STATS-PLAN.md). Label = the plan's
+    // name ("Extended Stats"). The gate VPEXTSTATS_Active
+    // (VanillaPlusCore.cpp) is 2 s hot-read and the write bridge busts
+    // dwVpExtStatsLastCheck (D2VP_ConfigReloaded), so a flip here lands on
+    // the next stat-window draw - no restart, no panel reopen.
+    // Display-only: the character screen gains an "Extended" tab that flips
+    // to a second view (Magic Find, Gold Find and ten more stats retail
+    // hides, live off the player's statlist); zero packets, zero server
+    // code, nothing writes.
+    { "extended_stats", L"Extended Stats", 0 },
 };
-static const int VPP_ROW_COUNT = 15;
-static const int VPP_ROW_BACK = 15; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 8; // R155: was 7 - two columns of eight (fifteen rows: col 0 bands 0-7, col 1 bands 0-6; band 7 of col 1 stays empty)
+static const int VPP_ROW_COUNT = 16;
+static const int VPP_ROW_BACK = 16; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 8; // R155: was 7; R158: sixteen rows = two FULL columns of eight (col 0 bands 0-7 = rows 0-7, col 1 bands 0-7 = rows 8-15; no empty band left)
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
@@ -295,6 +306,11 @@ static const int VPP_ROWS_PER_COL = 8; // R155: was 7 - two columns of eight (fi
 // whole, 640x480 included ((480-369)/2 = 55 top margin). Column 1 carries
 // six rows (bands 0-5, boxTop+0x50..0x10a); the empty band 6 of column 1
 // stays empty - the hit-test only accepts bands rows actually occupy.
+// R158: the sixteenth row (extended_stats) fills column 1's band 7
+// (boxTop+0x130..0x14a) - the band R155's geometry already reserved, so the
+// back row STAYS at boxTop+0x164 and the box STAYS 0x191; the page is now
+// two full columns of eight with no layout move at all. 640x480 unchanged
+// ((480-0x191)/2 = (480-401)/2 = 39 top margin, the R155 stop).
 
 // Input handlers (definitions below; the batch array references them).
 // Deliberately NO WM_MOUSEMOVE (0x200) entry - see the header comment block:

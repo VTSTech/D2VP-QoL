@@ -276,6 +276,21 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       Ctrl+Click in an open shop still sells.\r\n"
         "ctrl_click_xfer=0\r\n"
         "\r\n"
+        "; Extended Stats (the Vanilla+ Options row is called\r\n"
+        "; \"Extended Stats\"):\r\n"
+        ";   0 = off: the character screen is exactly retail (vanilla behavior)\r\n"
+        ";   1 = the character screen gains a small \"Extended\" tab (top-right\r\n"
+        ";       corner). Click it to flip to a second view listing the stats\r\n"
+        ";       retail hides: Magic Find, Gold Find, +% Experience Gained,\r\n"
+        ";       Vendor Price Reduction, Faster Run/Walk, Increased Attack\r\n"
+        ";       Speed, Faster Cast Rate, Faster Hit Recovery, Faster Block\r\n"
+        ";       Rate, Light Radius, Poison Length Reduction, Half Freeze\r\n"
+        ";       Duration - read live from your character's statlist (base +\r\n"
+        ";       gear + buffs), the same numbers the drop and gold code roll.\r\n"
+        ";       Click \"Back\" (or flip this key off) to return to the retail\r\n"
+        ";       view; the Done button stays clickable in both views.\r\n"
+        "extended_stats=0\r\n"
+        "\r\n"
         "; Presentation FPS unlock (the Vanilla+ Options row is called\r\n"
         "; \"Unlock FPS\"):\r\n"
         ";   0 = the game presents at the classic 25 FPS    (vanilla behavior)\r\n"
@@ -1515,6 +1530,7 @@ static DWORD dwHudBarTranslucentLastCheck = 0; // 2 s ini re-read gate (row-28 p
 // sees it; the accessors are in the feature block at the end of the TU.
 static int gbCameraZoomMode = 0;
 static DWORD dwCameraZoomLastCheck = 0; // 2 s ini re-read gate (row-28 pattern)
+static DWORD dwVpExtStatsLastCheck = 0; // 2 s ini re-read gate (row-28 pattern; R158 - the definition lives here, ahead of D2VP_ConfigReloaded, not in the extended-stats section below)
 void __stdcall D2VP_ConfigReloaded() {
     dwAltToggleLastCheck = 0;     // next ALTTOGGLE_Active() re-reads alt_toggle
     dwAutoGoldLastCheck = 0;      // next AUTO_GOLD_Active() re-reads auto_gold
@@ -1527,6 +1543,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwAutomapClockLastCheck = 0;  // next VPCLOCK_Draw() re-reads automap_clock (R147)
     dwHudBarTranslucentLastCheck = 0; // next VANILLAPLUS_HudBarTransparent() re-reads transparent_hud (R154)
     dwCameraZoomLastCheck = 0;    // next VANILLAPLUS_CameraZoomActive() re-reads camera_zoom (R155)
+    dwVpExtStatsLastCheck = 0;    // next VPEXTSTATS_Active() re-reads extended_stats (R158)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -2195,6 +2212,212 @@ void __stdcall VPSHAREDUI_DrawTab() {
     VPSHAREDUI_DrawOutlinedText(VPSHAREDUI_PageWord(), nWordX, nY, gnVpSharedPage ? 2 : 0);
     if (bHasRight) {
         VPSHAREDUI_DrawOutlinedText((const uint16_t *)L">>", nRightX, nY, 0); // R145: was '>' - same measured width the click band uses
+    }
+    D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
+}
+
+// ---- [vanilla-plus extended-stats] R158 ------------------------------------
+// The character screen's second view (plans/EXTENDED-STATS-PLAN.md, owner
+// ask: "an 'Extended Stats' page showing stats we cannot see like Magic
+// Find, Gold Find"). Display-only: 12 statlist READS per drawn frame.
+// R158.2 field fix - the getter: the draft used SERVER_GetUnitStat, which
+// reads ONLY the root base array. Item mods live in child statlists it
+// never walks, so every gear stat read 0; and velocitypercent sits in the
+// base array at 0 with the ItemStatCost FMIN flag, so the minaccr clamp
+// displayed it as 100%. UNITS_CalcCombinedStatValue walks base + children
+// raw (no display clamp) - the game's own effective value. Still zero
+// packets, zero server code, nothing writes. The stat window's draw tail
+// (ui.cpp DRAW_UI_StatWindow_I) calls VPEXTSTATS_DrawOverlay - gate off
+// returns before any pixel - and the window's click head
+// (INPUT_StatScreenMouseDown) asks VPEXTSTATS_HandleMouseDown first.
+//
+// Shape: a small outlined tab in the panel's top-right corner reads
+// "Extended" in the retail view and "Back" (green) in the extended view;
+// clicking it flips a static view flag. With the view up, one opaque
+// DRAW_SOLID block covers the panel body (top edge to just above the Done
+// button band, so the retail Done button stays visible AND clickable - the
+// close rect survives), then the title and 12 single-column rows
+// (label left, value right-aligned) drawn on top. While the view is up the
+// click handler consumes the whole body rect - the covered retail +stat
+// buttons never arm, so an invisible button can never spend a stat point.
+// The view resets to retail if the draw goes quiet for 2 s (the panel was
+// closed) - the automap clock's per-frame shape, no close hook needed.
+//
+// Layout constants (the stat screen's own geometry, ui.cpp):
+//   body X   gnPanelOffsetX+1 .. +0x13f     (the panel is ~0x140 wide)
+//   body Y   gnPanelOffsetY-0x1df+SSY .. gnPanelOffsetY-0x5d+SSY
+//            (panel top edge .. just above the Done button at -0x5c..-0x3c)
+//   tab      right-aligned to +0x13c, baseline gnPanelOffsetY-0x1cc+SSY
+//            (R158.2 field fix: the draft's -0x1db baseline put the glyph
+//            halo 8 px ABOVE the panel top edge - the R69 float-word class;
+//            -0x1cc is the R77-proven stash inset, halo top -0x1d9 stays
+//            7 px inside the edge, the click band never probes the world)
+//   rows     12 * 0x18 px from body top +0x3a; label +0x10, value -> +0x130
+
+// The 12 rows the retail screen cannot show (plans/EXTENDED-STATS-PLAN.md
+// §5; every stat id verified against D2Headers/d2_enums.h). nKind:
+// 0 = "%i%%" (a percent), 1 = "%i" (a plain count), 2 = "Yes"/"--" (a
+// boolean-ish stat; retail rolls it as a magnitude, we show presence).
+static const struct {
+    const char*   szLabel;
+    eD2UnitStat   eStat;
+    int           nKind;
+} gaVpExtStatsRows[12] = {
+    { "Magic Find",               UNITSTAT_item_magicbonus,           0 },
+    { "Gold Find",                UNITSTAT_item_goldbonus,            0 },
+    { "+% Experience Gained",     UNITSTAT_item_addexperience,        0 },
+    { "Vendor Price Reduction",   UNITSTAT_item_reducedprices,        0 },
+    { "Faster Run/Walk",          UNITSTAT_velocitypercent,           0 },
+    { "Increased Attack Speed",   UNITSTAT_item_fasterattackrate,     0 },
+    { "Faster Cast Rate",         UNITSTAT_item_fastercastrate,       0 },
+    { "Faster Hit Recovery",      UNITSTAT_item_fastergethitrate,     0 },
+    { "Faster Block Rate",        UNITSTAT_item_fasterblockrate,      0 },
+    { "Light Radius",             UNITSTAT_item_lightradius,          1 },
+    { "Poison Length Reduction",  UNITSTAT_item_poisonlengthresist,   0 },
+    { "Half Freeze Duration",     UNITSTAT_item_halffreezeduration,   2 },
+};
+
+// [extended-stats R158] gate - the standard 2 s hot-read (row-28 pattern),
+// bust by the Options write bridge (D2VP_ConfigReloaded), same as
+// VPCTRLXFER_Active above. dwVpExtStatsLastCheck is declared up with the
+// other gate ticks (ahead of D2VP_ConfigReloaded, which busts it).
+static int gbVpExtStatsMode = 0;
+
+BOOL __stdcall VPEXTSTATS_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwVpExtStatsLastCheck || dwNow - dwVpExtStatsLastCheck >= 2000) {
+        dwVpExtStatsLastCheck = dwNow;
+        gbVpExtStatsMode = D2VP_GetFeatureToggle("extended_stats");
+    }
+    return gbVpExtStatsMode;
+}
+
+// View state + the 2 s draw-gap reset (the panel closed -> back to retail
+// view on the next open).
+static int gnVpExtStatsView = 0;      // 0 = retail view, 1 = extended page
+static DWORD dwVpExtStatsLastDraw = 0;
+
+// The tab word + its layout, ONE measure shared by the draw and the click
+// band (the VPSHAREDUI_TabLayout idiom): right-aligned to +0x13c.
+static const uint16_t* VPEXTSTATS_TabWord() {
+    return gnVpExtStatsView ? (const uint16_t*)L"Back" : (const uint16_t*)L"Extended";
+}
+static void VPEXTSTATS_TabLayout(int* pnWordX, int* pnWordW, int* pnY) {
+    int nWordW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t*)VPEXTSTATS_TabWord());
+    *pnWordX = D2Client::UI::Inv::gnPanelOffsetX + 0x13c - nWordW;
+    *pnWordW = nWordW;
+    // R158.2: baseline = panel top (-0x1e0) + the R77-proven 0x14 inset - the
+    // same edge geometry as the stash panel, so the stash tab's field-bounded
+    // headroom transfers verbatim (halo top -0x1d9 = 7 px inside the edge;
+    // DRAW_text Y is the glyph BASELINE, halo spans baseline-13..baseline).
+    // The draft's -0x1db rode the world strip (owner: "drawing below the art,
+    // I can see just a tiny portion of it") - the exact R69 float-word class.
+    // The char panel art spans -0x1e0..-0x30 in BOTH modes (the draw has no
+    // expansion branch), so one constant serves classic and expansion.
+    *pnY = D2Client::UI::Inv::gnPanelOffsetY - 0x1cc + D2Client::UI::Inv::ScreenSizeY;
+}
+
+// MouseDown hook, called FIRST from INPUT_StatScreenMouseDown. Returns 1 =
+// the click is ours (flip the view, or hold the body dead while the
+// extended page is up); 0 = retail flow, byte-identical.
+BOOL __stdcall VPEXTSTATS_HandleMouseDown(int nMouseX, int nMouseY) {
+    if (!VPEXTSTATS_Active()) {
+        return FALSE;
+    }
+    int nWordX, nWordW, nY;
+    int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
+    VPEXTSTATS_TabLayout(&nWordX, &nWordW, &nY);
+    D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
+    // R158.2: the band hugs the glyph span (baseline-13..baseline) like the
+    // stash tab's field-proven nY-16..nY+6 - the old nY-4..nY+14 shape only
+    // caught the bottom sliver of the word once the baseline moved down.
+    if (nMouseY >= nY - 16 && nMouseY <= nY + 6 && nMouseX >= nWordX - 4 && nMouseX <= nWordX + nWordW + 4) {
+        gnVpExtStatsView ^= 1;
+        D2Client::Sound::SOUND_PlaySound(SOUND_CURSOR_BUTTON_CLICK, nullptr, 0, 0, 0); // fully qualified: this TU is outside namespace D2Client (the GetPlayerUnit_UI idiom)
+        return TRUE;
+    }
+    if (!gnVpExtStatsView) {
+        return FALSE;          // retail view: only the tab is ours
+    }
+    // Extended page up: consume the whole body. The covered +stat buttons
+    // never arm (this returns before the retail hit-test), so a click on an
+    // invisible button can never spend a stat point; the Done button band
+    // (-0x5c..-0x3c) is outside this rect and still closes the screen.
+    if (nMouseX >= D2Client::UI::Inv::gnPanelOffsetX + 1 && nMouseX <= D2Client::UI::Inv::gnPanelOffsetX + 0x13f &&
+        nMouseY >= D2Client::UI::Inv::gnPanelOffsetY - 0x1df + D2Client::UI::Inv::ScreenSizeY &&
+        nMouseY <= D2Client::UI::Inv::gnPanelOffsetY - 0x5d + D2Client::UI::Inv::ScreenSizeY) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+// Draw hook, called from the stat window's draw tail (after the retail
+// value rows, so the opaque page covers everything drawn before it; the
+// hover-tooltip windows II/III run earlier and stay under the page).
+void __stdcall VPEXTSTATS_DrawOverlay() {
+    if (!VPEXTSTATS_Active()) {
+        return;
+    }
+    DWORD dwNow = GetTickCount();
+    if (dwVpExtStatsLastDraw && dwNow - dwVpExtStatsLastDraw > 2000) {
+        gnVpExtStatsView = 0;  // the panel was closed - back to retail view
+    }
+    dwVpExtStatsLastDraw = dwNow;
+
+    int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
+    int nWordX, nWordW, nY;
+    VPEXTSTATS_TabLayout(&nWordX, &nWordW, &nY);
+    VPSHAREDUI_DrawOutlinedText(VPEXTSTATS_TabWord(), nWordX, nY, gnVpExtStatsView ? 2 : 0);
+
+    if (gnVpExtStatsView) {
+        int nLeft = D2Client::UI::Inv::gnPanelOffsetX + 1;
+        int nRight = D2Client::UI::Inv::gnPanelOffsetX + 0x13f;
+        int nTop = D2Client::UI::Inv::gnPanelOffsetY - 0x1df + D2Client::UI::Inv::ScreenSizeY;
+        int nBottom = D2Client::UI::Inv::gnPanelOffsetY - 0x5d + D2Client::UI::Inv::ScreenSizeY;
+        // The opaque page: one solid block, retail load-bar recipe
+        // (Draw.cpp:235 - color 0 DRAW_SOLID = fully opaque black).
+        D2gfx::D2GFX::D2GFX_DrawSolidRectEx(nLeft, nTop, nRight, nBottom, 0, DRAW_SOLID);
+
+        D2UnitStrc* pPlayer = D2Client::UNIT::Player::GetPlayerUnit_UI();
+        // Title, centered on the panel width.
+        const uint16_t* pwszTitle = (const uint16_t*)L"Extended Stats";
+        int nTitleW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t*)pwszTitle);
+        int nTitleX = D2Client::UI::Inv::gnPanelOffsetX + (0x13f - nTitleW) / 2;
+        VPSHAREDUI_DrawOutlinedText(pwszTitle, nTitleX, nTop + 0x12, 0);
+
+        // The 12 rows, single column: label left, value right-aligned.
+        for (int i = 0; i < 12; ++i) {
+            char szValueAscii[16];
+            if (pPlayer) {
+                // R158.2: the combined value - base array + every child
+                // statlist (items, states), NO ItemStatCost minaccr clamp.
+                // SERVER_GetUnitStat here read 0 for all gear stats and 100
+                // for velocitypercent (the field report).
+                int nVal = D2Common::Stats::StatsEx::UNITS_CalcCombinedStatValue(pPlayer, gaVpExtStatsRows[i].eStat);
+                if (gaVpExtStatsRows[i].nKind == 2) {
+                    wsprintfA(szValueAscii, nVal > 0 ? "Yes" : "--");
+                } else if (gaVpExtStatsRows[i].nKind == 1) {
+                    wsprintfA(szValueAscii, "%i", nVal);
+                } else {
+                    wsprintfA(szValueAscii, "%i%%", nVal);
+                }
+            } else {
+                szValueAscii[0] = '-';
+                szValueAscii[1] = '-';
+                szValueAscii[2] = '\0';
+            }
+            uint16_t wszValue[16];
+            D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszValue, szValueAscii, 16);
+            uint16_t wszLabel[32];
+            // R158.1 build fix: the copy takes char* (it never writes the source), the
+            // table ships const char* - cast away const at the copy site, not in the table.
+            D2Lang::Unicode::UNISYS::STRING_CopyCharToWCharWithSetMaxSize(wszLabel, const_cast<char*>(gaVpExtStatsRows[i].szLabel), 32);
+
+            int nRowY = nTop + 0x3a + i * 0x18;
+            VPSHAREDUI_DrawOutlinedText(wszLabel, D2Client::UI::Inv::gnPanelOffsetX + 0x10, nRowY, 0);
+            int nValW = D2Win::Src::D2WinFont::DRAW_text0(wszValue);
+            VPSHAREDUI_DrawOutlinedText(wszValue, D2Client::UI::Inv::gnPanelOffsetX + 0x130 - nValW, nRowY, 0);
+        }
     }
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
 }

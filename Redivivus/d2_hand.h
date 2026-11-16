@@ -33,4 +33,34 @@ namespace D2Common { namespace INVENTORY { namespace Inventory {
 BOOL __fastcall INVENTORY_RemoveItemFromInventory(struct D2UnitStrc * pItem);
 }}} // D2Common::INVENTORY::Inventory
 
+// --- [Vanilla+ R158.3] D2Common::Stats::StatsEx::UNITS_CalcCombinedStatValue
+// Same shape as the R152 block above: hand re-exposure of a real, unchanged
+// entity. The generated header does declare it (Source/D2Common/Stats/
+// StatsEx.h :159) but inside the "Module-private"
+// `#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_D2Common)` guard
+// (StatsEx.h :121..181) — the R158.2 field-fix switched the extended-stats
+// row loop from SERVER_GetUnitStat (root base array only: every gear stat
+// read 0, and the ItemStatCost minaccr clamp showed velocitypercent as 100)
+// to this getter, which walks base + every child statlist with no display
+// clamp (StatsEx.cpp, via STATLIST_CalcFullStatFromChildren) - and the
+// D2Client TU (it defines D2_MODULE_LIBRARIES) never sees the gated
+// declaration, so the build broke there (error: 'UNITS_CalcCombinedStatValue'
+// is not a member of 'D2Common::Stats::StatsEx', owner build log 2026-11-16).
+// Declared with the exact generated signature; the client call links the
+// existing D2Common definition (StatsEx.cpp, UNITS_CalcCombinedStatValue).
+// No wrapper, no new code.
+// NOTE: at this forced-include point no generated header has run yet, so the
+// parameter type cannot be named `eD2UnitStat` directly - the type is a
+// PLAIN GLOBAL TYPEDEF of uint32_t in d2_enums.h (:14592, the UNITSTAT
+// constants live in eD2UnitStat_ns). Spelling the typedef here is the same
+// type with the same mangled signature, and a legal redeclaration once the
+// generated header typedefs it again; the elaborated-struct trap from the
+// R152 note does not apply to a typedef of a fundamental type.
+// @source Source/D2Common/Stats/StatsEx.h :159 (signature byte-identical) and
+//         StatsEx.cpp (definition, UNITS_CalcCombinedStatValue).
+typedef uint32_t eD2UnitStat;
+namespace D2Common { namespace Stats { namespace StatsEx {
+int32_t __stdcall UNITS_CalcCombinedStatValue(struct D2UnitStrc * pUnit, eD2UnitStat eUnitStat);
+}}} // D2Common::Stats::StatsEx
+
 #endif  // D2_HAND_H
