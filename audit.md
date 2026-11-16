@@ -39,24 +39,10 @@ The overriding pattern across the codebase is unusually high discipline: every f
 
 | ID | Severity | Category | Title |
 |----|----------|----------|-------|
-| ROB-01 | **High** | Robustness | Transient stash read failure pins degraded state; next save overwrites good file |
-| ROB-02 | **High** | Robustness | Partial page materialization re-serializes incomplete set, dropping records |
-| SEC-01 | Medium | Security | DEV control channel binds unauthenticated listener on 0.0.0.0 |
-| SEC-02 | Medium | Security | Control-channel commands parse remote input unsafely (deref, negative index) |
 | ROB-03 | Medium | Robustness | Stash ownership pin uses pointer identity; address reuse resurrects stale pool pointers |
-| ROB-04 | Medium | Robustness | Personal stash is memory-only while a shared page is active |
-| ROB-05 | Medium | Robustness | `wvsprintfA` 1024-char output cap overruns undersized boot/crash log buffers |
-| ROB-06 | Medium | Robustness | Failed ini writes are silent; Windows profile cache defeats the hot-read contract |
-| ROB-07 | Medium | Robustness | Stash header claims dead/trading refusal that is not implemented |
-| ROB-08 | Medium | Robustness | `VANILLAPLUS_SelfCheck` calls `exit(-1)` mid-game on first ini poll |
-| MAINT-01 | Medium | Maintainability | CONTRIBUTING cites retired gate script `tools/check-vanilla-plus.sh` |
-| MAINT-02 | Medium | Maintainability | Adding a feature requires 4 coordinated edits; in-code comment understates it |
 | MAINT-03 | Medium | Maintainability | Maintained mirror copies: DC6 builder, font metrics, D3D/Glide camera-zoom pair |
-| ARCH-01 | Medium | Architecture | 2-second ini-gate pattern duplicated across the module boundary |
-| TEST-01 | Medium | Testing | Gate suite retired; marker hygiene now only checked on git-changed files |
 | TEST-02 | Medium | Testing | No automated tests for stash serialization / save invariants |
-| FEAT-01 | Medium | New Feature | Session journal or save-on-flip for the memory-only personal stash |
-| FEAT-02 | Medium | New Feature | User-visible feedback for failed settings writes |
+| FEAT-01 | Medium | New Feature | Session journal or save-on-flip for the memory-only personal stash
 | SEC-03 | Low | Security | `d2_boot` path assembly with `lstrcpyA`/`lstrcatA` can overrun by ~11 bytes |
 | ROB-09 | Low | Robustness | Three unbalanced VP-BEGIN markers; two nested marker pairs |
 | ROB-10 | Low | Robustness | Bounded-but-fragile buffer idioms (ilvl suffix, label buffers, walldir slot) |
