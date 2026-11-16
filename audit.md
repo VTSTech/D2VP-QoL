@@ -4,7 +4,7 @@
 
 **Repository:** https://github.com/VTSTech/D2VP-QoL
 **Author:** VTSTech (fork of jaenster/redivivus) | **License:** see LICENSE | **Date:** 2026-11-16 (commit 0951f99)
-**7 Findings** | **7 Categories** | SEC, ROB, MAINT, PERF, FEAT, ARCH, TEST
+**12 Findings** | **7 Categories** | SEC, ROB, MAINT, PERF, FEAT, ARCH, TEST
 
 ---
 
@@ -29,7 +29,7 @@
 
 D2VP-QoL is a fork of jaenster/redivivus — the recovered Diablo II 1.14d C++ source (~771K lines of ghidra-mcp-generated code under `Source/`) — carrying a hand-written "Vanilla+" layer of crash fixes, a widescreen resolution ladder, and sixteen opt-in quality-of-life features gated behind a hot-polled `d2vp.ini`. This audit covered the hand-written surface in depth: the settings core (`Source/D2Client/UI/VanillaPlusCore.{h,cpp}`), the Options page, the shared stash (`Source/D2Game/PLAYER/VanillaPlusStash.cpp`), the portable-save hook (`Source/Fog/Source/SFile.cpp`), the Redivivus support code (boot, crash reporter, patcher, DEV control channel), the 147 VP-marked regions across 49 upstream files, and the build/gate wiring. The 771K generated lines were treated as read-only context per the repo's own house rules, not audited line-by-line.
 
-The audit produced 31 findings: 2 High, 16 Medium, 13 Low. Both High findings are data-integrity risks in the shared-stash subsystem: a transient read failure of `_d2vp_shared.sss` pins an all-empty in-memory state for the session, and the next save overwrites the good on-disk file (the one-generation `.bak` is the only recourse); and a partially-failed page materialization re-serializes the incomplete set over the full block, permanently dropping the records that failed to decode. The most consequential Medium cluster sits in the DEV-only control channel (`Redivivus/d2_control.cpp`), which binds an unauthenticated TCP listener on 0.0.0.0:7777 with commands for arbitrary memory reads, raw packet injection and arbitrary file writes — correctly compiled out of release builds, but exposed to the local network whenever a DEV build runs. The rest of the Medium set is a mix of silent-failure paths (ini write failures produce no user feedback, and the Windows profile cache can defeat the documented "external editor" hot-read contract), boot-path buffer-formatting limits (`wvsprintfA`'s 1024-char output cap against undersized stack buffers), and documentation drift (`CONTRIBUTING.md` still cites the retired 525-check gate script that no longer exists in `tools/`).
+The audit produced 31 findings: 2 High, 16 Medium, 13 Low. **24 findings have been resolved in rounds R159-R161.** Both High findings are data-integrity risks in the shared-stash subsystem: a transient read failure of `_d2vp_shared.sss` pins an all-empty in-memory state for the session, and the next save overwrites the good on-disk file (the one-generation `.bak` is the only recourse); and a partially-failed page materialization re-serializes the incomplete set over the full block, permanently dropping the records that failed to decode. The most consequential Medium cluster sits in the DEV-only control channel (`Redivivus/d2_control.cpp`), which binds an unauthenticated TCP listener on 0.0.0.0:7777 with commands for arbitrary memory reads, raw packet injection and arbitrary file writes — correctly compiled out of release builds, but exposed to the local network whenever a DEV build runs. The rest of the Medium set is a mix of silent-failure paths (ini write failures produce no user feedback, and the Windows profile cache can defeat the documented "external editor" hot-read contract), boot-path buffer-formatting limits (`wvsprintfA`'s 1024-char output cap against undersized stack buffers), and documentation drift (`CONTRIBUTING.md` still cites the retired 525-check gate script that no longer exists in `tools/`).
 
 The overriding pattern across the codebase is unusually high discipline: every fork edit is tagged `[R###]`/`[#issue]` between `// VP-BEGIN`/`// VP-END` markers, every feature is opt-in with byte-vanilla defaults, every crash fix lands at a choke point with a written analysis, and the docs encode a deliberate two-lane policy (concise human docs, verbose agent memory). The gaps are correspondingly systematic too: correctness currently rests on the owner's field verification and static re-reads rather than any automated test, and the retired gate suite means marker/doc hygiene checks now only run on files that happen to change.
 
@@ -42,16 +42,6 @@ The overriding pattern across the codebase is unusually high discipline: every f
 | ROB-03 | Medium | Robustness | Stash ownership pin uses pointer identity; address reuse resurrects stale pool pointers |
 | MAINT-03 | Medium | Maintainability | Maintained mirror copies: DC6 builder, font metrics, D3D/Glide camera-zoom pair |
 | TEST-02 | Medium | Testing | No automated tests for stash serialization / save invariants |
-| FEAT-01 | Medium | New Feature | Session journal or save-on-flip for the memory-only personal stash
-| SEC-03 | Low | Security | `d2_boot` path assembly with `lstrcpyA`/`lstrcatA` can overrun by ~11 bytes |
-| ROB-09 | Low | Robustness | Three unbalanced VP-BEGIN markers; two nested marker pairs |
-| ROB-10 | Low | Robustness | Bounded-but-fragile buffer idioms (ilvl suffix, label buffers, walldir slot) |
-| MAINT-04 | Low | Maintainability | Stale doc comments (clock format, options geometry, README `__ftol2`) |
-| MAINT-05 | Low | Maintainability | Dead code inventory: parked diagnostics, unused macro, `if (0)`, `sym` command |
-| MAINT-06 | Low | Maintainability | Hardcoded "0.0.8" literal in boot self-ID drifts from build tag |
-| MAINT-07 | Low | Maintainability | Naming warts: `VPSHADOW`, `VPSTASH_PAGES/COUNT`, mixed ScreenSize namespaces |
-| PERF-01 | Low | Performance | Options page polls 16 ini gates per frame while open |
-| PERF-02 | Low | Performance | `timeBeginPeriod(1)` is a one-way latch, never undone |
 | FEAT-03 | Low | New Feature | Compile-time tripwires tying resolution-ladder constants together |
 | FEAT-04 | Low | New Feature | Hot-reload parity (or documentation) for restart-only settings |
 | ARCH-02 | Low | Architecture | Client shared-page mirror drifts from authoritative server page by design |
@@ -70,14 +60,6 @@ Severity levels: **High** — affects correctness, security, or data integrity; 
 
 ### Robustness
 
-#### ROB-01: Transient stash read failure pins degraded state; next save overwrites good file
-
-| Property | Value |
-|----------|-------|
-| **Severity** | High |
-| **Category** | Robustness |
-| **File(s)** | `Source/D2Game/PLAYER/VanillaPlusStash.cpp:399-414, 419-485` |
-
 #### ROB-03: Stash ownership pin uses pointer identity; address reuse resurrects stale pool pointers
 
 | Property | Value |
@@ -94,52 +76,12 @@ Severity levels: **High** — affects correctness, security, or data integrity; 
 
 ---
 
-#### ROB-04: Personal stash is memory-only while a shared page is active
-
-| Property | Value |
-|----------|-------|
-| **Severity** | Medium |
-| **Category** | Robustness |
-| **File(s)** | `Source/D2Game/PLAYER/VanillaPlusStash.cpp:160-162, 652` |
-
-#### ROB-09: Three unbalanced VP-BEGIN markers; two nested marker pairs
-
-| Property | Value |
-|----------|-------|
-| **Severity** | Medium |
-| **Category** | Robustness |
-| **File(s)** | `Source/D2Client/UI/VanillaPlusCore.cpp:358, 1755-1832` |
-
-#### MAINT-01: CONTRIBUTING cites retired gate script `tools/check-vanilla-plus.sh`
+#### MAINT-03: Maintained mirror copies: DC6 builder, font metrics, D3D/Glide camera-zoom pair
 
 | Property | Value |
 |----------|-------|
 | **Severity** | Low |
 | **Category** | Robustness |
-| **File(s)** | `Source/D2Client/D2Client.cpp:1815`, `Source/D2Client/UI/ui.cpp:8952`, `Source/D2Client/GAME/Wall2.h:63`, `Source/D2Client/UI/Path.cpp:187-225` |
-
-Census: 147 `VP-BEGIN` markers across 49 files. Three files have an open `VP-BEGIN` with no matching `VP-END` (`D2Client.cpp:1815` `[issue #26 / R92]`, `ui.cpp:8952` `[issue-18 fmt-args]`, `Wall2.h:63` `[R118]`), and `Path.cpp:187/199` + `:217/225` contain `VP-BEGIN [R92]` regions nested inside open `VP-BEGIN [R95]` regions. These are hygiene issues today, but `docs_gate.py` §8 checks marker pairing on git-changed files — each will fail the gate the next time its file is touched.
-
-**Recommendation:** close the three markers (or mark the region intentionally-open with a matching comment convention docs_gate understands) and flatten the two nested pairs.
-
-**Impact:** The marker contract — the fork's insurance against source regeneration — stays mechanically verifiable.
-
----
-
-#### ROB-10: Bounded-but-fragile buffer idioms
-
-| Property | Value |
-|----------|-------|
-| **Severity** | Low |
-| **Category** | Robustness |
-| **File(s)** | `Source/D2Client/UI/VanillaPlusCore.cpp:612-646`, `Source/D2Client/UI/ShowItems.cpp:343-345`, `Source/D2Win/Src/D2WinFont.cpp:1560-1582`, `Source/Fog/Source/SFile.cpp:355, 527`, `Redivivus/d2_control.cpp:632-638` |
-
-A cluster of places where safety holds today but rests on exact-fit or cross-module slack rather than an explicit bound: `ITEMILVL_AppendNameSuffix` appends into an upstream-owned buffer whose capacity it cannot see (`Core.cpp:612-646`, safe only by the documented slack in `Core.h:174-176`); ground-item labels fill `wszName[128]` via a 0x100 **byte** cap with zero slack (`ShowItems.cpp:343-345`); the shift-compare guard is `< 0x400` rather than `<=` (`D2WinFont.cpp:1560-1582`); and two recovered-retail bugs sit in the registry-migration path of `SFile.cpp` — `szSrcPath[nLen + 0x103]` reads an uninitialized local (`:355`, `szDstDir` intended) and `szOldSavePath` is read where `szNewSavePath` appears intended (`:527`).
-
-**Recommendation:** pass explicit capacities into `ITEMILVL_AppendNameSuffix`; add one-element slack or a static_assert to label buffers; fix the two `SFile.cpp` registry-path reads (they are upstream-visible bugs, not fork edits — record upstream or wrap in a VP region).
-
-**Impact:** Removes the handful of spots where an unrelated upstream change would turn a documented invariant into an overflow.
-
 ---
 
 ### Maintainability
@@ -153,22 +95,6 @@ A cluster of places where safety holds today but rests on exact-fit or cross-mod
 | **File(s)** | `Source/D2Client/UI/VanillaPlusOptions.cpp:413-453` vs `VanillaPlusCore.cpp:1572-1612`; `Options.cpp:477-591` vs `Core.cpp:1617-1717`; `Source/D2Direct3D` vs `Source/D2Glide` camera-zoom sites (R155/R156) |
 
 ### Performance
-
-#### PERF-01: Options page polls 16 ini gates per frame while open
-
-| Property | Value |
-|----------|-------|
-| **Severity** | Low |
-| **Category** | Maintainability |
-| **File(s)** | `Source/D2Game/PLAYER/VanillaPlusStash.cpp:218-224`, `:113-119`, `Source/D2Client/UI/VanillaPlusCore.cpp:1072-1075, 2778-2779`, `:403-417` |
-
-Small consistency issues: the checksum helper is named `VPSHADOW_BlockChecksum` (missing "S" for VPSHARED) and also only detects truncation, not bit rot; `VPSTASH_PAGES` vs `VPSTASH_PAGE_COUNT` are both 100 but serve array-size vs file-format roles (colliding names invite a wrong-site edit); `PANELSHIFT_NoShiftWorld` reads `D2Client::UI::ui::ScreenSizeX` but `D2Client::UI::Inv::ScreenSizeY` — two module headers re-exporting presumably the same global, which breaks subtly if they ever diverge (same pattern at `Core.cpp:2778-2779` and `Options.cpp:334-335`); and the alt-toggle latch `gbAltLatched` is never cleared on gate-off (harmless today because every consumer requires both signals, but a future consumer of `ALTTOGGLE_Latched` alone inherits stale state).
-
-**Recommendation:** rename `VPSHADOW`→`VPSHARED`, pick one of the two page-count constants and alias the other, standardize on one ScreenSize re-export, and clear the latch in the gate-off path.
-
-**Impact:** Removes four places where a mechanical-looking edit produces a subtle bug.
-
----
 
 ### Performance
 
@@ -221,8 +147,8 @@ The project versions by code round (R###), currently R158. Timelines below use r
 
 | Timeline | Findings |
 |----------|----------|
-| **Near term (R162–R166)** | ROB-03 (ownership epoch), ROB-07 (dead/trade refusal), ROB-06 (write feedback + cache caveat), MAINT-03 (mirror dedup / gate check), TEST-02 (stash harness) |
-| **Medium term (R167+)** | ROB-09 (marker closure), ROB-10 (buffer idioms), MAINT-05 (dead code), MAINT-07 (naming), PERF-01/02, FEAT-01 (session journal), FEAT-03 (ladder tripwires), FEAT-04 (restart-only docs), ARCH-01 (gate skeleton standardization), ARCH-02 (mirror resync) |
+| **Near term (R162–R166)** | ROB-03 (ownership epoch), ROB-06 (write feedback + cache caveat), MAINT-03 (mirror dedup / gate check), TEST-02 (stash harness) |
+| **Medium term (R167+)** | MAINT-05 (dead code), MAINT-07 (naming), FEAT-01 (session journal), FEAT-03 (ladder tripwires), FEAT-04 (restart-only docs), ARCH-01 (gate skeleton standardization), ARCH-02 (mirror resync) |
 
 ---
 
