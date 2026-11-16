@@ -11,6 +11,15 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R161 — Audit closure** (every remaining safe fix; the ledger at [AUDIT-FIXES.md](AUDIT-FIXES.md)
+  resolves all 22 audit findings): crash/boot diagnostics no longer overrun their buffers on long
+  report lines and near-260-char install paths (ROB-05/SEC-03); the fork's tripwires run at boot
+  instead of dying mid-game (ROB-08); a failed settings write (read-only dir) now plays a distinct
+  sound + logs a mark instead of pretending the flip took, and the Windows profile-cache caveat is
+  documented (ROB-06); the remaining control-channel commands parse remote input with guards;
+  explicit buffer bounds on the item-name suffix and ground labels (ROB-10); the reduced gate suite
+  is revived (`tools/check-vanilla-plus.sh`). Deferred items and reasons: the ledger.
+
 - **R160 — Shared-stash data safety** (the audit's two High findings, `VanillaPlusStash.cpp` only): a
   transient read failure (the `.sss` locked by an antivirus scan or a sync client) no longer pins an
   empty session — the toggle is refused with a `d2boot.log` mark and retried on the next click, and

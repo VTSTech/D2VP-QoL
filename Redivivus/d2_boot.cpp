@@ -23,16 +23,26 @@ static void BootLogOpen() {
     DWORD n = GetModuleFileNameA(0, szPath, MAX_PATH);
     if (n == 0 || n >= MAX_PATH) return;
     while (n > 0 && szPath[n - 1] != '\\') n--;
-    lstrcpyA(szPath + n, "d2boot.log");
-    // GENERIC_WRITE + CREATE_ALWAYS: fresh log every run (pointer starts at 0,
-    // sequential WriteFile calls then accumulate the run's marks in order).
-    g_hBootLog = CreateFileA(szPath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                             0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    // [R161 SEC-03] bounded append: the exe path may already be MAX_PATH-1
+    // long, and lstrcpyA/lstrcatA cannot check - an exe installed at a
+    // near-260-char path overran the stack buffer by up to ~11 bytes here and
+    // in the %TEMP% fallback below. "d2boot.log" needs 11 bytes; if the base
+    // cannot hold them, skip the exe-dir attempt (the %TEMP% fallback runs
+    // with the same reserve).
+    if (n + 11 <= MAX_PATH) {
+        lstrcpyA(szPath + n, "d2boot.log");
+        // GENERIC_WRITE + CREATE_ALWAYS: fresh log every run (pointer starts at 0,
+        // sequential WriteFile calls then accumulate the run's marks in order).
+        g_hBootLog = CreateFileA(szPath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    }
     if (g_hBootLog == INVALID_HANDLE_VALUE) {
-        // Game dir not writable - fall back to %TEMP% and say so in the log.
+        // Game dir not writable (or the exe path left no room) - fall back to
+        // %TEMP% and say so in the log. GetTempPathA is capped 12 below
+        // MAX_PATH so the suffix above always fits.
         char szTmp[MAX_PATH];
-        DWORD m = GetTempPathA(MAX_PATH, szTmp);
-        if (m == 0 || m >= MAX_PATH) return;
+        DWORD m = GetTempPathA(MAX_PATH - 12, szTmp);
+        if (m == 0 || m >= MAX_PATH - 12) return;
         lstrcatA(szTmp, "d2boot.log");
         g_hBootLog = CreateFileA(szTmp, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                  0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -47,6 +57,18 @@ static void BootLogWrite(const char* pszLine) {
     if (g_bBootLogCsReady) EnterCriticalSection(&g_csBootLog);
     BootLogOpen();
     if (g_hBootLog != INVALID_HANDLE_VALUE) {
+        // [R161 ROB-05] wsprintfA truncates its OUTPUT at 1024 chars but takes
+        // no destination size: a long input (a crash-report line routed through
+        // D2BOOT_Mark can be up to 1023 chars) overran this 640-byte stack
+        // buffer - precisely on the process-is-dying path, where the report
+        // silently corrupted. Pre-truncate every input below the destination
+        // size (the idiom d2_hangwatch.cpp already used for symbol names);
+        // 580 + the 20-char timestamp prefix + NUL stays inside 640.
+        char szTrunc[580];
+        if (lstrlenA(pszLine) >= (int)sizeof(szTrunc)) {
+            lstrcpynA(szTrunc, pszLine, (int)sizeof(szTrunc));
+            pszLine = szTrunc;
+        }
         char szBuf[640];
         int n = wsprintfA(szBuf, "[%8lu ms] %s\r\n", (unsigned long)GetTickCount(), pszLine);
         DWORD dwWritten = 0;
@@ -61,7 +83,11 @@ extern "C" void D2BOOT_Mark(const char* pszStage) {
 }
 
 extern "C" void D2BOOT_MarkFmt(const char* pszFormat, ...) {
-    char szBody[512];
+    // [R161 ROB-05] wvsprintfA writes at most 1024 output chars (its own cap,
+    // no destination-size parameter) - the old 512-byte body could be overrun
+    // by a long formatted mark. Size the body to the API cap; BootLogWrite
+    // then pre-truncates for its own 640-byte line buffer.
+    char szBody[1024];
     va_list args;
     va_start(args, pszFormat);
     wvsprintfA(szBody, pszFormat, args);

@@ -459,7 +459,9 @@ static void HandleLine(char* line, char* reply, int replyMax) {
     // sizes and struct fields do not, and that is what a diff is for.
     //   hex <hexaddr> <len>      arbitrary address
     //   dt <off> <len>           bytes at &sgtDataTable + off  (the whole data-table struct)
-    //   sym <name>               address of a named global in THIS build
+    //   ("sym" was retired R161 - documented here for years but never
+    //    implemented in the dispatch; a name lookup needs the map file at
+    //    runtime, which the channel does not load.)
     if (!strncmp(line, "hex ", 4) || !strncmp(line, "dt ", 3) || !strncmp(line, "dt", 2)) {
         unsigned long addr = 0; int len = 64, off = 0;
         if (!strncmp(line, "hex ", 4)) {
@@ -534,7 +536,12 @@ static void HandleLine(char* line, char* reply, int replyMax) {
     // mode, the path point count and the target per server-side monster so a single run says which.
     if (!strncmp(line, "ai", 2)) {
         int nStart = 0, nCount = 12;
-        sscanf(line, "ai %d %d", &nStart, &nCount);
+        // [R161 SEC-02] parse guard (the `mon` pattern): malformed line -> error
+        // reply; start/count clamped >= 0 so a negative start cannot index the
+        // unit tables below.
+        if (sscanf(line, "ai %d %d", &nStart, &nCount) < 2) { lstrcpynA(reply, "{\"err\":\"ai <start> <count>\"}", replyMax); return; }
+        if (nStart < 0) nStart = 0;
+        if (nCount < 0) nCount = 0;
         static char aiOut[8192];
         int u = wsprintfA(aiOut, "{\"mon\":[");
         int nSeen = 0, nEmitted = 0, nMoving = 0, nWithPath = 0, nWithTarget = 0;
@@ -630,7 +637,12 @@ static void HandleLine(char* line, char* reply, int replyMax) {
         // +0x18 is the DT1 library entry; the entry's +0x00 is nDirection and +0x14 the
         // orientation. Reading the node or the wall struct directly gives world coords.
         int kSlot = 0x14;
-        sscanf(line, "walldir %x", &kSlot);
+        // [R161 SEC-02] parse guard + clamp: kSlot indexes every row of the
+        // 0x24-stride wall grid below, so anything outside [0, 0x20] read
+        // out of bounds - malformed line keeps the default, an over-range
+        // slot clamps into the row.
+        if (sscanf(line, "walldir %x", &kSlot) < 1) kSlot = 0x14;
+        if (kSlot < 0 || kSlot > 0x20) kSlot = 0x20;
         int aDir[17] = { 0 }, aOri[17] = { 0 }, nNodes = 0, nBadTile = 0, nDrawn = 0;
         int nZeroBlk = 0, nMaxBlk = 0, nNoLru = 0;
         const unsigned char* pGrid = (const unsigned char*)pView->sWall2.pWall2;
@@ -836,7 +848,9 @@ static void HandleLine(char* line, char* reply, int replyMax) {
     if (!strncmp(line, "objname", 7)) {
         static char on[512];
         int a = 409, b = 408;
-        sscanf(line, "objname %d %d", &a, &b);
+        // [R161 SEC-02] parse guard (the `mon` pattern): a malformed line
+        // errors out instead of silently reporting the default rows.
+        if (sscanf(line, "objname %d %d", &a, &b) < 2) { lstrcpynA(reply, "{\"err\":\"objname <rowA> <rowB>\"}", replyMax); return; }
         D2ObjectsTxt* pA = D2Common::DATATBLS::ObjectTbls::TXT_Objects_GetLine(a);
         D2ObjectsTxt* pB = D2Common::DATATBLS::ObjectTbls::TXT_Objects_GetLine(b);
         wsprintfA(on,
@@ -1168,7 +1182,12 @@ static void HandleLine(char* line, char* reply, int replyMax) {
     // holds (553 = screenHeight - 0x2f) and see whether the missing geometry appears.
     if (!strncmp(line, "setclip", 7)) {
         int v = D2gfx::D2GFX::gnTileClipBottom;
-        sscanf(line, "setclip %d", &v);
+        // [R161 SEC-02] parse guard + clamp: gnTileClipYMin gates every
+        // software tile blitter, so a garbage value (or a huge negative one)
+        // breaks rendering process-wide - clamp to the sane screen band.
+        if (sscanf(line, "setclip %d", &v) < 1) v = D2gfx::D2GFX::gnTileClipBottom;
+        if (v < -0x40) v = -0x40;
+        if (v > 4096) v = 4096;
         int nOld = D2gfx::gnTileClipYMin;
         D2gfx::gnTileClipYMin = v;
         wsprintfA(reply, "{\"was\":%d,\"now\":%d,\"clipBottom\":%d}", nOld, D2gfx::gnTileClipYMin, D2gfx::D2GFX::gnTileClipBottom);

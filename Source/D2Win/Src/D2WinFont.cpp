@@ -1556,6 +1556,12 @@ struct VPSHIFTCOMPARE_TooltipStrc {
     int nPopulated;          // 0 = channel empty (draw is a no-op)
 };
 static VPSHIFTCOMPARE_TooltipStrc gVpCompareTooltip = {};
+// [R161 ROB-10] pins the channel size TEXT_CompareTooltipSetAttributes' guard
+// assumes (1024 wchars; see its length check below the publish head).
+static_assert(offsetof(VPSHIFTCOMPARE_TooltipStrc, nPrimaryX) == 2048,
+    "vanilla-plus: VPSHIFTCOMPARE_TooltipStrc::wszString is no longer 1024 "
+    "wchars - the < 0x400 length guard in TEXT_CompareTooltipSetAttributes "
+    "no longer matches the channel");
 
 void __fastcall TEXT_CompareTooltipSetAttributes(uint16_t * wszBuffer, int32_t nPrimaryX, int32_t nPrimaryY, int32_t nPrimaryColor, int32_t nPrimaryCenterFlag, int32_t nCompareColor) {
     int32_t nStrLen;
@@ -1565,6 +1571,10 @@ void __fastcall TEXT_CompareTooltipSetAttributes(uint16_t * wszBuffer, int32_t n
     }
 
     nStrLen = D2Lang::Unicode::UNISYS::STRING_GetWideStringLength(wszBuffer);
+    // [R161 ROB-10] the channel is wszString[1024]; `< 0x400` admits exactly
+    // 1023 chars, and STRING_CopyWideString's terminator lands in [1023] -
+    // correct, but only by exact fit. The static_assert below pins the array
+    // so the guard and the buffer cannot drift apart silently.
     if (nStrLen < 0x400) {
         // Same shape as the primary publish (TEXT_TooltipSetAttributes):
         // the length check guards the copy, the metadata rides along.

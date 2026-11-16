@@ -8186,7 +8186,7 @@ void __fastcall ITEM_BuildSetItemTooltip(D2UnitStrc * pUnit) {
     }
 
     GetItemName(pItemToDescribe, wszItemName, 0x100);
-    ITEMILVL_AppendNameSuffix(pItemToDescribe, wszItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
+    ITEMILVL_AppendNameSuffix(pItemToDescribe, wszItemName, 0x100); // VP: [item-ilvl] name suffix, no-op when the gate is off (R161: explicit buffer cap, BYTE units like GetItemName's)
     bFlagCheck = D2Common::ITEMS::Items::CheckItemFlag(pItemToDescribe, ITEMFLAG_BROKEN, 0xddb, ".\\UI\\inv.cpp");
     nSetItemLoopIdx = 1;
     if (!bFlagCheck) {
@@ -8851,7 +8851,7 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
 
       INV_FormatItemSpellDescText((uint32_t)pItemToDescribe, pItemsTxt, wszStatCost);
       GetItemName(pItemToDescribe, szItemName, 0x100);
-      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
+      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName, 0x100); // VP: [item-ilvl] name suffix, no-op when the gate is off (R161: explicit buffer cap, BYTE units like GetItemName's)
       pwTmp = ui::AppendAsWideChar(wszEtherealSock, 3);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszWorkBuf, pwTmp);
       nTmp = pItemsTxt->dwCode;
@@ -8945,7 +8945,7 @@ void __stdcall LoadItemDesc(D2UnitStrc * pUnit, int32_t bUsePlayer) {
       }
     } else {
       GetItemName(pItemToDescribe, szItemName, 0x80);
-      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName); // VP: [item-ilvl] name suffix, no-op when the gate is off
+      ITEMILVL_AppendNameSuffix(pItemToDescribe, szItemName, 0x100); // VP: [item-ilvl] name suffix, no-op when the gate is off (R161: explicit buffer cap, BYTE units like GetItemName's)
       pwTmp = D2Lang::StrTable::strtable::GetLocaleString(0xd7f);
       D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszUnidentified, pwTmp);
       pwTmp = pwSeparator;

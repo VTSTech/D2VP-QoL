@@ -175,8 +175,9 @@ HANDLE g_hFile = INVALID_HANDLE_VALUE;
 
 // When no report file could be created, Out() routes every line into
 // d2boot.log instead, which is unbuffered and has already proven it reaches
-// disk from a dying process. Lines longer than ~600 chars are truncated by
-// the boot writer; every report line is far below that.
+// disk from a dying process. Lines longer than ~580 chars are pre-truncated
+// by the boot writer (R161: the writer now enforces this bound - before, it
+// was documented here but wsprintfA never implemented it).
 bool g_bOutToBootLog = false;
 
 void Out(const char* pszFormat, ...) {

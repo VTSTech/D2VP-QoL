@@ -188,6 +188,10 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         "; to vanilla behavior. The file is re-read at most every 2 seconds\r\n"
         "; while the game runs. Delete this file and a fresh copy is written\r\n"
         "; on the next game start.\r\n"
+        "; NOTE (R161): after the FIRST in-game Options toggle, Windows may\r\n"
+        "; serve the game's reads from an internal profile cache - if you edit\r\n"
+        "; this file by hand afterwards and the change does not take, restart\r\n"
+        "; the game (or make the change from the Options page).\r\n"
         "\r\n"
         "[features]\r\n"
         "; Ground-item labels on the Alt key:\r\n"
@@ -340,7 +344,18 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       other renderers clamp to 1.0 (a one-line note lands in\r\n"
         ";       d2boot.log when that happens). The zoom level resets to 1.0\r\n"
         ";       each time you join a game.\r\n"
-        "camera_zoom=0\r\n";
+        "camera_zoom=0\r\n"
+        "\r\n"
+        "[ui]\r\n"
+        "; Ground-item label font override (R153): 0 = measured pick, then the\r\n"
+        ";       Font16/Font30/Font42/Font24 probe order; explicit ids select a\r\n"
+        ";       specific menu font (1 = Font16, 2 = Font30, 3 = Font42, 7 =\r\n"
+        ";       Font24; anything outside 0..13 falls back to the measured\r\n"
+        ";       pick). [R161 FEAT-04] REQUIRES RESTART: read once per process\r\n"
+        ";       when the font metrics are decided, not on the 2 s hot-read -\r\n"
+        ";       the font probe is expensive and the metrics are baked into the\r\n"
+        ";       label layout.\r\n"
+        "label_font=0\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -610,7 +625,7 @@ BOOL __stdcall ITEMILVL_Active() {
 // color. Hardcoded ASCII: the vanilla string table has no such entry and the
 // fork never edits MPQ data. Digit idiom = the FormatLine round's (SStrPrintf
 // + char->wchar copy); AppendToBuffer is the tooltip builder's own concat.
-void __stdcall ITEMILVL_AppendNameSuffix(D2UnitStrc * pItem, uint16_t * wszName) {
+void __stdcall ITEMILVL_AppendNameSuffix(D2UnitStrc * pItem, uint16_t * wszName, int nCapBytes) {
     uint16_t wszSuffix[24];
     char szSuffix[20];
     if (!wszName || *wszName == L'\0') {
@@ -639,6 +654,15 @@ void __stdcall ITEMILVL_AppendNameSuffix(D2UnitStrc * pItem, uint16_t * wszName)
     }
     if (nNameLen == 0) {
         return;   // paranoia: name was all whitespace
+    }
+    // [R161 ROB-10] explicit bound: AppendToBuffer cannot see the caller's
+    // capacity, and the old safety rested on a documented cross-module slack.
+    // nCapBytes arrives in the site's GetItemName convention (BYTE units,
+    // e.g. 0x100 = 128 wchars); the widest suffix (" (12345)" + NUL) needs 8
+    // wchars - refuse when they would not fit with one slot of slack.
+    int nCapWChars = nCapBytes / 2;
+    if (nCapWChars > 0 && nNameLen + 8 > nCapWChars - 1) {
+        return;   // name too long for the caller's buffer + suffix: skip the suffix, keep the name intact
     }
     memset(wszSuffix, 0, sizeof(wszSuffix));
     Storm::Source::SSTR::SStrPrintf(szSuffix, sizeof(szSuffix), " (%i)", nItemLevel);
@@ -1497,20 +1521,36 @@ int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault) {
         return nDefault ? 1 : 0;
     }
     // Missing file/section/key or a non-numeric value = nDefault.
+    // [R161 ROB-06] Windows profile-cache caveat: after the FIRST in-process
+    // ini write (any Options-page flip), Windows serves subsequent
+    // GetPrivateProfileIntA calls from a per-process profile cache - external
+    // edits to d2vp.ini may then stop being seen until the process restarts.
+    // The 2 s hot-read contract holds until the first in-game toggle; after
+    // that, prefer the Options page (or restart) for changes.
     return GetPrivateProfileIntA("features", szKey, nDefault ? 1 : 0, szIniPath) ? 1 : 0;
 }
 
-void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {
+// [R161 ROB-06/FEAT-02] returns 1 when the ini write SUCCEEDED, 0 when it
+// failed (read-only game directory, missing path - GetLastError says which):
+// the Options row plays a distinct sound on 0 instead of pretending the flip
+// took (the display snapped back on the next poll while the select sound
+// claimed success), and the failure lands one [d2boot] line.
+int __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {
     char szIniPath[260];
     char szValue[2];
     if (!szKey || !ALTTOGGLE_BuildIniPath(szIniPath)) {
-        return;
+        return 0;
     }
     ALTTOGGLE_EnsureIni();
     szValue[0] = nValue ? '1' : '0';
     szValue[1] = '\0';
-    WritePrivateProfileStringA("features", szKey, szValue, szIniPath);
-    D2VP_ConfigReloaded();
+    D2VP_ConfigReloaded(); // flush the 2 s caches either way: on failure the next poll re-reads the old value, so the row display snaps back truthfully
+    if (!WritePrivateProfileStringA("features", szKey, szValue, szIniPath)) {
+        D2BOOT_MarkFmt("vanilla-plus: ini write FAILED (key %s, err %d) - flip did not stick",
+                       szKey, (int)GetLastError()); // [d2boot]
+        return 0;
+    }
+    return 1;
 }
 
 // Bust every gate's 2 s hot-read cache so the next poll re-reads d2vp.ini.
@@ -1925,6 +1965,13 @@ static int gbVpSharedStashMode = 0;   // 2 s ini gate cache
 static DWORD dwVpSharedStashGateTick = 0;
 static int gnVpSharedPage = 0;        // client mirror of the page toggle:
                                       // 0 personal, 1..100 = shared pages 1..100
+                                      // [R161 ARCH-02] cosmetic mirror ONLY - the
+                                      // server (VanillaPlusStash.cpp) is authoritative
+                                      // and idempotent; outside SP the label toggles
+                                      // while the server refuses 0x7D (see the
+                                      // client/server agreement note above). Any
+                                      // future non-SP work should echo the effective
+                                      // page in the 0x9C stream so this resyncs.
 
 // Options-page hook (D2VP_ConfigReloaded, R67): zero the gate tick so the
 // next VPSHAREDUI_FeatureActive() re-reads shared_stash - the "Shared" tab

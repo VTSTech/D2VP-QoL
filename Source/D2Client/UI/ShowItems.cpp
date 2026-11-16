@@ -342,7 +342,12 @@ void __stdcall DRAW_AltItems() {
             if (nItemX >= nItemPosY && nItemX <= nMaxX && nColorIdx >= -8 && nColorIdx <= Inv::ScreenSizeY - 0x10) {
               wszText = gaGroundItemLabels[nItemSlotIdx].wszName;
               *wszText = L'\0';
-              ui::UI_FormatItemNameWithQuality(pCurrentItem, wszText, 0x100);
+              // [R161 ROB-10] the cap is BYTE units here: 0x100 bytes = exactly
+              // 128 wchars = the label's full width, leaving no room for the
+              // terminator - a max-length name wrote its NUL one slot past the
+              // array. 0xFE leaves one wchar of slack; the formatter caps
+              // output at the same limit.
+              ui::UI_FormatItemNameWithQuality(pCurrentItem, wszText, 0xFE);
               D2Win::Src::D2WinFont::TEXT_CalcTextDimensions(wszText, &nItemNameWidth, &nItemNameHeight);
               nItemNameWidth += 8;
               nItemX -= nItemNameWidth >> 1;

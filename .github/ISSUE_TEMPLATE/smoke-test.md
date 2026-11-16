@@ -15,7 +15,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first. The r
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R160`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R161`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -259,6 +259,15 @@ R160 changes only the failure paths of the shared stash (`Source/D2Game/PLAYER/V
 - [ ] **97. Transient lock refused (ROB-01):** with `_d2vp_shared.sss` present and holding items, hold it open with an exclusive lock from outside the game (PowerShell: `$f=[IO.File]::Open("<path>\_d2vp_shared.sss",'Open','Read','None')` and leave that window open), then click a shared page in game → `d2boot.log` says `shared stash: open failed (32) - file unreadable`, `unreadable - load deferred; toggles and saves refused until a read succeeds` and `toggle refused - stash file unreadable (will retry; disk untouched)`; the stash view does NOT switch and the personal set stays live. Release the lock (close the PowerShell handle), click the page again → it loads normally (the deferred retry). The on-disk file is byte-identical throughout (checksum it before/after).
 - [ ] **98. No-file regression (the benign path, unchanged):** rename `_d2vp_shared.sss` away, toggle to a shared page → `shared stash: no file - starting empty`, the page starts empty and the toggle WORKS (the normal first-run shape stays pinned-empty); toggle back to personal → the file is recreated (`shared stash: saved (...)`) with the session's items and gold.
 - [ ] **99. Round-trip regression (ROB-02 healthy path):** toggle to shared page 1, add/move an item, flip to page 2 and back, toggle to personal → marks show `switched to page ...` / `personal page restored (...)` / `saved (...)`, the items and gold are where they should be, and the `.bak` rotated. No `was partial - stored copy kept` mark anywhere (that mark only appears if a record decode ever failed — if it does, the stored copy survives the session; file the `d2boot.log`).
+
+---
+
+## Y. Audit closure — the R161 hardening (R161 — audit; field ask)
+
+R161 changes failure paths, comments and the boot sequence only — no healthy-path behavior change anywhere. The two asks verify the boot surface and the settings write path; everything else rides the standing belts (§A boot, §B labels, the Options rows, the §X stash drills).
+
+- [ ] **100. Boot self-check + self-ID (ROB-08, MAINT-06):** start the game → `d2boot.log` line 1 reads `Vanilla+0.0.8-R161` (the version now composes from one header — the tag on the title screen and automap must match it exactly), the boot completes normally (no self-check message box, no exit), and no `vanilla-plus self-check:` failure line appears anywhere in the log (the tripwire now runs at boot, before any game state — a failure WOULD be a message box + log line at startup, which is itself the diagnosis).
+- [ ] **101. Options toggle still writes + failure feedback exists (ROB-06):** flip two features in the Options page (e.g. Automap Clock On then Off) → the select chime plays each time and `d2vp.ini` shows the flip within ~2 s. (Failure path, no need to force it: on a read-only game directory a flip would instead play the distinct button-click sound and `d2boot.log` gains one `ini write FAILED (key ..., err ...)` line — if you ever see that, the flip did not stick; that is the R161 truthfulness fix, not a bug.)
 
 ---
 

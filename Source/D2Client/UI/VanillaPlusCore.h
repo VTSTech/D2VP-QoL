@@ -185,7 +185,7 @@ BOOL __stdcall ITEMILVL_Active(); // config: item_ilvl on?
 // spaces/tabs are trimmed off first (R59) - the GetItemName composition
 // glues string-table entries and some (magic affix words, unique names) end
 // with their own space, which read as a double gap before (N).
-void __stdcall ITEMILVL_AppendNameSuffix(struct D2UnitStrc * pItem, uint16_t * wszName);
+void __stdcall ITEMILVL_AppendNameSuffix(struct D2UnitStrc * pItem, uint16_t * wszName, int nCapBytes); // [R161 ROB-10] nCapBytes = the site's GetItemName cap (BYTE units, same convention); the suffix append refuses when name + suffix would not fit with NUL slack
 // [vanilla-plus shift-compare] Hold-Shift equipped-item compare tooltip
 // (FEATURES.md row 0b, R125). D2R hover-compare parity: with
 // [features] shift_compare=1, holding the key bound to retail cmd 0x24
@@ -241,11 +241,12 @@ void __stdcall VPEXTSTATS_DrawTab();       // R158.5: the tab word ONLY; call fr
 // WritePrivateProfileStringA and flush every gate's 2 s hot-read cache.
 int __stdcall D2VP_GetFeatureToggle(const char* szKey);   // 0 = off/missing/garbage
 int __stdcall D2VP_GetFeatureToggleDefault(const char* szKey, int nDefault); // R144: per-row read default (unlock_fps_interp's gate reads a missing key as 1)
-void __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue); // write + flush
+int __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue); // write + flush; [R161 ROB-06] returns 1 written / 0 failed (row plays its failure sound, [d2boot] mark)
 void __stdcall D2VP_ConfigReloaded();                     // bust all 2 s gate caches
 // Boot-time consistency audit of the Vanilla+ injection points (count bumps,
 // table rows). Halts loudly with a d2boot.log line when an edit was lost -
-// see handoff.md §8. Cheap; called from ALTTOGGLE_EnsureIni.
+// see handoff.md §8. Cheap; [R161 ROB-08] called from Game/Main.cpp boot
+// (before any game state exists) AND once-guarded from ALTTOGGLE_EnsureIni.
 void __stdcall VANILLAPLUS_SelfCheck();
 // [vanilla-plus shared-stash] Client side of the shared stash (track N
 // round 1 = one page; two shared pages + an outlined pager label since R75,

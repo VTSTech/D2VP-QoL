@@ -144,11 +144,18 @@ static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
 static const int VPPAGE_BACK_ROW_Y = 0x164;        // from box top (R155: was 0x144 - eight rows per column push it down one pitch, the exact R108 geometry)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
-// [features] keys rendered by the page. Adding a slate feature = +1 entry
-// here and +1 template block in ALTTOGGLE_WriteIniTemplate - nothing else.
-// (shared_stash's and no_panel_shift's template blocks shipped with their
-// features themselves - R63/Rev 82 and the issue-#26 gate - so for the R101
-// row the +1 entry really was all it took beyond the back-row move below.)
+// [features] keys rendered by the page. [R161 MAINT-02] Adding a slate
+// feature takes FOUR coordinated edits, not two:
+//   1. +1 entry in this table;
+//   2. a gate accessor in VanillaPlusCore.cpp (its tick static ABOVE
+//      D2VP_ConfigReloaded, or the bust line below cannot see it);
+//   3. a template block in ALTTOGGLE_WriteIniTemplate (a fresh d2vp.ini then
+//      documents the key; missing = invisible - the feature still works);
+//   4. a cache-bust line in D2VP_ConfigReloaded (missing = the Options flip
+//      does not take effect for <= 2 s, or looks broken).
+// The per-feature comments catch the details; this note replaces the old
+// "+1 entry here and +1 template block - nothing else", which was false for
+// every R147+ feature.
 struct VPPFeatureRow {
     const char* szKey;        // d2vp.ini [features] key
     const wchar_t* wszLabel;  // row label
@@ -679,8 +686,17 @@ static void VANILLAPLUS_ToggleRow(int nRowIndex) {
     // and flushes every gate's 2 s hot-read cache (same-frame effect for the
     // draw, <= 1 frame for auto_gold, next save-path resolution for
     // portable_save - matching its ini template wording).
-    D2VP_SetFeatureToggle(szKey, nValue ? 0 : 1);
-    Sound::SOUND_PlaySound(SOUND_CURSOR_SELECT, nullptr, 0, 0, 0);
+    // [R161 ROB-06/FEAT-02] the bridge returns the WRITE result now: on a
+    // read-only game directory the select sound used to claim success while
+    // the display snapped back on the next poll. Failure plays the button
+    // click (distinct from the select chime) and the bridge logs one
+    // [d2boot] line; the next poll re-reads the old value, so the row shows
+    // the truth.
+    if (D2VP_SetFeatureToggle(szKey, nValue ? 0 : 1)) {
+        Sound::SOUND_PlaySound(SOUND_CURSOR_SELECT, nullptr, 0, 0, 0);
+    } else {
+        Sound::SOUND_PlaySound(SOUND_CURSOR_BUTTON_CLICK, nullptr, 0, 0, 0);
+    }
 }
 
 // ===== page: input handlers ==================================================

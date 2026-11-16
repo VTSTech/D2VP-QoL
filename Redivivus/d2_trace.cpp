@@ -61,7 +61,10 @@ extern "C" void D2Trace(const char* pszWhere) {
     (void)pszWhere;
     return;
 #endif
-    char szLine[512];
+    // [R161 ROB-05] 1100, not 512: the formatted line's input can be a
+    // D2TraceFmt body up to wsprintfA's 1024-char output cap, and the "%lu %s"
+    // prefix rides on top - the old buffer overran on a long format result.
+    char szLine[1100];
     wsprintfA(szLine, "D2TRACE %lu %s\n", (unsigned long)GetCurrentThreadId(), pszWhere);
     OutputDebugStringA(szLine);
     FILE* p = TraceLog();
@@ -70,7 +73,10 @@ extern "C" void D2Trace(const char* pszWhere) {
 
 
 extern "C" void D2TraceFmt(const char* pszFormat, ...) {
-    char szBody[768];
+    // [R161 ROB-05] 1024 = wvsprintfA's own output cap: the body can never be
+    // overrun, and D2Trace's (now 1100-byte) line buffer holds the prefix on
+    // top of the full cap.
+    char szBody[1024];
     va_list args;
     va_start(args, pszFormat);
     wvsprintfA(szBody, pszFormat, args);

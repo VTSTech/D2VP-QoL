@@ -1,3 +1,30 @@
+*v22, 2026-11-16. R161 (audit closure — no owner ask; the ledger at AUDIT-FIXES.md resolves all 22
+findings to fixed-or-deferred) — **ROB-05**: the boot/crash writers pre-truncate every input below
+their buffer sizes (a long crash-report line routed through `D2BOOT_Mark` overran the boot writer's
+640-byte stack buffer exactly on the dying-process path; the format bodies are sized to
+`wvsprintfA`'s own 1024-char cap); **SEC-03**: the boot-log path assembly (exe dir and %TEMP%
+fallback) reserves room for the suffix — a near-260-char install path can no longer overrun; **ROB-08**:
+`VANILLAPLUS_SelfCheck` (the tripwires that verify the wired options tables) runs at boot, before any
+game state — a tripped assert is a clean `d2boot.log` diagnosis instead of a mid-game `exit(-1)`;
+**ROB-06/FEAT-02**: a failed settings write (read-only game directory) plays the button-click sound
+instead of the select chime and logs one `[d2boot]` mark, and the Windows profile-cache caveat
+(external ini edits may not be seen after the first in-game toggle) is documented in the gate comment
+and the ini template; **SEC-02 residual**: the `ai`/`walldir`/`objname`/`setclip` control-channel
+commands parse remote input with guards + clamps; **ROB-10**: explicit buffer capacities on the
+item-level name suffix and the ground-item labels, the shift-compare tooltip channel pinned by
+static_assert, the two suspected upstream registry-migration reads in `SFile.cpp` documented under VP
+markers (byte-identical); **MAINT-06**: the build version composes once (`D2VP_VERSION_TAG` in
+`d2_boot.h`) so the boot self-ID and the title/automap tag cannot drift apart; **FEAT-03 partial**:
+`VPRES_MAX_HEIGHT` + a static_assert pin the row-table sizing (the issue-#31 class is a compile error
+now); **TEST-01**: the reduced gate suite is revived as `tools/check-vanilla-plus.sh` (docs_gate +
+whole-repo VP-marker census + LF normalization). No behavior change on any healthy path. **Shared
+stash exposure note (ROB-04, documented)**: while a shared page is active, the personal stash set
+exists only in memory (its serialized block + gold snapshot) — a hard exit (crash, forced kill, power
+loss) without a save destroys that session's personal-set changes and gold deposited before the
+toggle; the on-disk `.sss` and the `.bak` are never touched. Toggle back to personal (or save)
+regularly while using shared pages. The FEAT-01 save-on-flip journal remains the structural fix
+(deferred with reasons in the ledger).
+
 *v21, 2026-11-16. R160 (the audit's two High findings, both in `Source/D2Game/PLAYER/VanillaPlusStash.cpp`; no owner ask — robustness) — **ROB-01**: a transient shared-stash read failure (the `_d2vp_shared.sss` exists but is locked — an AV scan, backup or sync client holding it) no longer pins the all-empty state for the session: `VPSHARED_TryReadFile` now classifies its open failure (file-not-found / path-not-found = the benign first-run case, pin as before; ANY other error = transient, returns -1), `VPSHARED_EnsureLoaded` defers (`gbSharedLoaded` stays 0 so the next toggle retries), the toggle is refused with a mark while `gbSharedLoadFailed` is set, and `VPSHARED_WriteFileLocked` refuses the save (the second lock) — a locked file can never be overwritten with an empty session state; **ROB-02**: a partial page materialization (a record `PLRSAVE_DispatchItemLoadByFormat` fails to decode — the pre-existing "load error %d - partial page" mark) no longer re-serializes the impoverished page-4 set over the stored block: `VPSHARED_MaterializePage4` returns materialization health into `gbActivePagePartial`, and both the page→page switch and the toggle-to-personal skip the serialize-into-block when it is set (the stored block stays authoritative; session edits made on the partial page are discarded, marks name the page and say "stored copy kept") — a decode failure now degrades one session instead of erasing records. Zero v2-format changes; healthy-path behavior byte-identical (formal ask §X 97–99; the R159 quick-win round — loopback control channel, control-input guards, marker hygiene, gate-green docs — shipped without a FEATURES bullet, see AUDIT-FIXES.md).
 
 *v20, 2026-11-16. R158.1–R158.6 (the extended-stats field-fix chain, all 2026-11-16) — the row

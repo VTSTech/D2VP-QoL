@@ -352,6 +352,16 @@ int __fastcall SFILE_MoveDirectoryRecursive(LPCSTR szSrcRoot, LPCSTR szDstRoot) 
           }
 
           nLen = Storm::Source::SSTR::SStrLen(szDstDir);
+          // VP-BEGIN [R161 ROB-10 note]: suspected upstream recovery defect,
+          // left byte-identical on purpose. The length is taken from
+          // szDstDir but the character probe indexes szSrcPath - if szSrcPath
+          // is not populated on this branch the probe reads an uninitialized
+          // local (the audit's reading: the probe was meant for szDstDir,
+          // matching the :527 twin below). Only reachable on the
+          // old-registry save-path migration branch with a missing directory;
+          // not a fork edit, so it is documented, not changed - wrap it in a
+          // VP region so the marker census keeps it visible.
+          // VP-END [R161 ROB-10 note]
           if ((nLen <= 0 || szSrcPath[nLen + 0x103] != '\\') && nLen != 0x103) {
             szDstDir[nLen] = '\\';
             szDstDir[nLen + 1] = '\0';
@@ -524,6 +534,13 @@ void __fastcall GetAndCreateSavePath(char * pBuffer, size_t nSize) {
                 pcLen = szOldSavePath;
               } else {
                 nLen = Storm::Source::SSTR::SStrLen(szNewSavePath);
+                // VP-BEGIN [R161 ROB-10 note]: suspected upstream recovery
+                // defect, left byte-identical on purpose - the length comes
+                // from szNewSavePath but the probe indexes szOldSavePath
+                // (szNewSavePath appears intended, matching the :355 twin).
+                // Retail-migration branch only; documented via markers, not
+                // changed.
+                // VP-END [R161 ROB-10 note]
                 if ((nLen <= 0 || szOldSavePath[nLen + 0x103] != '\\') && nLen != 0x103) {
                   szNewSavePath[nLen] = '\\';
                   szNewSavePath[nLen + 1] = '\0';

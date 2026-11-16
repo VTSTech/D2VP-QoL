@@ -52,7 +52,16 @@
 // draws that never touch this table; 720p windowed (max index 704) stays inside -
 // why the 2026-10-30 field pass never caught it. Size for the tallest ladder stop
 // with retail's +0x20 slack: 1080 + 0x20 = 1112.
-static int32_t gaYBufferRowOffsets[1112] = {}; D2_STATIC_GUARD(gaYBufferRowOffsets, "gaYBufferRowOffsets");
+// [R161 FEAT-03] the sizing is a compile-time tripwire now: a taller ladder
+// stop (or a slack-constant edit) breaks the build instead of reopening
+// issue #31 in the field.
+constexpr int VPRES_MAX_HEIGHT = 1080;
+static int32_t gaYBufferRowOffsets[VPRES_MAX_HEIGHT + 0x20] = {}; D2_STATIC_GUARD(gaYBufferRowOffsets, "gaYBufferRowOffsets");
+static_assert(sizeof(gaYBufferRowOffsets) / sizeof(gaYBufferRowOffsets[0]) == VPRES_MAX_HEIGHT + 0x20,
+    "vanilla-plus: gaYBufferRowOffsets no longer sized for the 1080p ladder "
+    "stop + 0x20 slack - resize for the new tallest stop BEFORE adding it to "
+    "the resolution ladder (the #31 class: the wall/ground blitters index "
+    "height + 0x20)");
 // VP-END [windowed-1080p rowtable #31]
 static uint32_t gbPerspectiveRenderEnabled = 0; D2_STATIC_GUARD(gbPerspectiveRenderEnabled, "gbPerspectiveRenderEnabled");
 namespace D2gfx::D2GFX {
