@@ -54,8 +54,10 @@ BOOL __stdcall VPSHARED_ShouldInterceptClickButton(struct SGAMEDATA * pGame, str
 // (0 personal, 1..100 shared pages 1..100 - two since R75, ten since R82,
 // a hundred since R146; anything above the page count is ignored with a
 // d2boot mark). Idempotent: requesting the
-// already-active page is a no-op. Refuses while the player is dead or
-// trading. Does the full swap: snapshot + dematerialize the current page-4
+// already-active page is a no-op. NOTE (audit ROB-07): no dead/trading
+// guard is implemented - a toggle is processed regardless of player state;
+// the single-player client is the only sender of button 0x7D. Does the
+// full swap: snapshot + dematerialize the current page-4
 // set, materialize the other set, resync the client (the removal packets
 // ride ITEM_RemoveItemFromCurrentLocation; the additions are pushed with
 // Send0x9CItemPutInContainer), swap the goldbank borrow on

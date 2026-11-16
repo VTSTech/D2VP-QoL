@@ -387,8 +387,10 @@ BOOL __stdcall UNLOCKFPS_GetPlayerRenderOffsetOrigin(int32_t* pnOffsetX, int32_t
 // pixels), the shared 2 s hot-read shape, busted by the Options-page write
 // bridge (D2VP_ConfigReloaded) so a flip lands on the next automap frame;
 // the thirteenth Vanilla+ Options row (Automap Clock) since R147 - the page
-// went to two columns of SEVEN (box 0x151 -> 0x171, back row 0x124 ->
-// 0x144, still whole at 640x480).
+// has been two columns since R144 (seven per column then, box 0x151 ->
+// 0x171, back row 0x124 -> 0x144); R155 grew it to EIGHT per column (box
+// 0x191, back row 0x164) and R158 filled column 2's band 7 with the
+// sixteenth row - two full columns of eight, still whole at 640x480.
 //   SESS - real time elapsed since the current game was entered,
 //      hh:mm:ss (zero-padded). Wall-clock elapsed, not tick-counted play
 //      time: pause menus and cutscenes count - the honest stopwatch

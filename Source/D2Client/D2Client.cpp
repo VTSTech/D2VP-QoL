@@ -1830,6 +1830,7 @@ void __stdcall dSceneTransitionDraw() {
           }
       }
     }
+    // VP-END [issue #26 / R92]
 
     D2gfx::D2GFX::D2GFX_DrawSolidRectAlpha(nXStart, 0, nXEnd, nYEnd, 0, nTimeRemaining * 0xff / 500);
 }

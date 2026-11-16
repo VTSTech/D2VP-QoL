@@ -311,12 +311,13 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       world and characters step at the classic 25 Hz cadence\r\n"
         "unlock_fps_interp=1\r\n"
         "\r\n"
-        "; Automap clock (R147):\r\n"
+        "; Automap clock (R147; R148 merged the pair to one line):\r\n"
         ";   0 = off: the automap overlay lines exactly as retail (vanilla behavior)\r\n"
-        ";   1 = the automap gains two lines under the build tag, right-aligned\r\n"
-        ";       with the other overlay text: Session (real time since you\r\n"
-        ";       entered the current game, H:MM:SS - pause menus and cutscenes\r\n"
-        ";       count) and System (your PC's local clock, HH:MM 24-hour).\r\n"
+        ";   1 = the automap gains one line under the build tag, right-aligned\r\n"
+        ";       with the other overlay text: SESS (real time since you entered\r\n"
+        ";       the current game, hh:mm:ss - pause menus and cutscenes count) and\r\n"
+        ";       SYS (your PC's local clock, 12-hour with a trailing AM/PM).\r\n"
+        ";       The level-name line also carries the area's level (R148, always on).\r\n"
         "automap_clock=0\r\n"
         "\r\n"
         "; Transparent HUD (R154):\r\n"
@@ -572,7 +573,7 @@ static DWORD dwGlobeTextPersistentLastCheck = 0;
 BOOL __stdcall VANILLAPLUS_GlobeTextPersistent() {
     // 2 s hot-read cache (the shared gate pattern; this runs per frame).
     DWORD dwNow = GetTickCount();
-    if (dwNow - dwGlobeTextPersistentLastCheck >= 2000) {
+    if (!dwGlobeTextPersistentLastCheck || dwNow - dwGlobeTextPersistentLastCheck >= 2000) {
         dwGlobeTextPersistentLastCheck = dwNow;
         gbGlobeTextPersistentMode = D2VP_GetFeatureToggle("globe_persistent");
     }

@@ -76,6 +76,7 @@ void __fastcall WALL2_BuildSceneDrawList(struct D2GameViewStrc * pGameView, uint
 // byte-identical retail. Shared by the floor pass (Draw.cpp) and the wall2
 // scene pass (Wall2.cpp) so floors, walls, roofs, units and shadows extend
 // together.
+// VP-END [R118]
 int __stdcall WALL2_CollectRoomsBeyondAdjacency(struct D2RoomStrc * pCenterRoom, int nDepth,
     int nCenterX, int nCenterY, int nReach,
     struct D2RoomStrc ** apOut, int nMaxOut);

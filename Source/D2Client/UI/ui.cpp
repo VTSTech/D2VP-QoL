@@ -8962,6 +8962,7 @@ static void __fastcall DRAW_UI_StatWindow_III(int32_t nX, int32_t nY, int32_t nV
       wszFmt = D2Lang::StrTable::strtable::GetLocaleString(0x2778);
       D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x80, wszMessage, wszFmt, pwszClear, nErrorLine);
     }
+    // VP-END [issue-18 fmt-args]
 
     D2Win::Src::D2WinFont::D2WINFONT_DrawTextWithBackgroundRect(wszMessage, Inv::gnPanelOffsetX + 0x8b, Inv::gnPanelOffsetY - 0x13b + Inv::ScreenSizeY, (uint32_t)(uint8_t)gbUIStatWindowDrawFlag, DRAW_LESSTRANSPARENT, 0);
 }

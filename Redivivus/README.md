@@ -202,11 +202,12 @@ The ABI *is* established. `__ftol2` is MSVC's `_ftol2`:
 
 operand in `ST(0)`, 64-bit result in `EDX:EAX`, no stack arguments, no control-word change.
 
-It is left undefined anyway, because **Ghidra's prototype is `ulonglong __ftol2(void)` with no `ST0`
-parameter**, so the emitted call sites carry no operand at all:
-`Storm/Source/SSTR.cpp:1669` and `:1684` are bare `nFtolResult = __ftol2();`. A shim reading `ST(0)`
-would read whatever GCC last left there, which is not the value the binary would have had. A shim
-returning anything else is a fabrication. Same defect at `__CIsqrt`, called argument-less at
+**Update (2026-11-16):** `__ftol2` is no longer left undefined - `d2_crt_impl.cpp` now implements
+it in inline asm (`fnstcw` / `fistpll` with the rounding control set to chop, reading the operand
+in `ST(0)` at the call site). The original rationale is kept below for the record: Ghidra's
+prototype is `ulonglong __ftol2(void)` with no `ST0` parameter, so the emitted call sites carry no
+operand: `Storm/Source/SSTR.cpp:1669` and `:1684` are bare `nFtolResult = __ftol2();`.
+`__CIsqrt` remains in the asm support file (`d2_link_support.s`), called argument-less at
 `D2CMP/SRC/FastCmp.cpp:1596`.
 
 **Prescription** (writer lane, `Diablo2Lod/windows/lod/1.14d/Game.exe`) - do for these two exactly

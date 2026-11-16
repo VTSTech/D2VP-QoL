@@ -58,9 +58,19 @@ repo, [Glide3xVK](https://github.com/VTSTech/Glide3xVK).
 
 ### The house rules
 
-These invariants keep the fork's edits pinned and reviewable. The gate suite
-([`tools/check-vanilla-plus.sh`](tools/check-vanilla-plus.sh), currently **525 checks**)
-enforces most of them mechanically:
+These invariants keep the fork's edits pinned and reviewable. The original
+525-check gate suite (`tools/check-vanilla-plus.sh`) was **retired** with the upstream
+merge line (rev 152; the script lives in git history), so today the mechanical
+enforcement is:
+
+- [`tools/docs_gate.py`](tools/docs_gate.py) — 10 checks: round identity, Options-page
+  row-table invariants, FEATURES row-count parity, VP-BEGIN/VP-END **pairing on
+  git-changed files** (§8) and brace/paren balance (§9), overlay-zip verification
+- [`tools/check-build.sh`](tools/check-build.sh) — the clean-clone mingw-w64 i686
+  build gate (links `build/d2.exe`, no undefined symbols, no `-fpermissive`)
+- the owner's Win11 MSYS2 build — the compile gate of record
+
+The remaining rules are enforced by review and the conventions below, not by script:
 
 1. **Vanilla by default.** With no `d2vp.ini` (or a missing key) the game behaves like
    retail 1.14d. Every feature ships **OFF**, reads a `[features]` key, hot-re-reads it

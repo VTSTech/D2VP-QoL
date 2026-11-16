@@ -253,7 +253,8 @@ static void HandleLine(char* line, char* reply, int replyMax) {
     // class for everything. One command separates the two.
     if (!strncmp(line, "mon", 3)) {
         int nStart = 0, nCount = 8;
-        sscanf(line, "mon %d %d", &nStart, &nCount);
+        if (sscanf(line, "mon %d %d", &nStart, &nCount) < 2) { lstrcpynA(reply, "{\"err\":\"mon <start> <count>\"}", replyMax); return; }
+        if (nStart < 0 || nCount < 0) { lstrcpynA(reply, "{\"err\":\"mon: start and count must be >= 0\"}", replyMax); return; }
         static char monOut[8192];
         int u = wsprintfA(monOut, "{\"size\":%d,\"rows\":[",
                           D2Common::ITEMS::Items::sgptDataTable ? (int)D2Common::ITEMS::Items::sgptDataTable->nTxtMonStatsSize : -1);
@@ -958,7 +959,6 @@ static void HandleLine(char* line, char* reply, int replyMax) {
                 if (aSkip[t]) uu += wsprintfA(lr + uu, "%d:%d ", t, aSkip[t]);
             wsprintfA(lr + uu, "\",\"rooms\":\"%s\"}", names);
         }
-        if (0) wsprintfA(lr, "%d%d%d%d", L, T, R, B);
         lstrcpynA(reply, lr, replyMax);
         return;
     }
@@ -1238,8 +1238,14 @@ static void HandleLine(char* line, char* reply, int replyMax) {
             g_qTail = nextW;
         }
         LeaveCriticalSection(&g_cs);
+        // The reply dereferences the target, and the target comes straight off the wire:
+        // "watch 1" must not fault the process the channel exists to debug. Same
+        // IsBadReadPtr contract the hex command uses. [audit SEC-02]
+        unsigned nWatchValue = 0;
+        if (g_pHwbpTarget && !IsBadReadPtr(g_pHwbpTarget, sizeof(unsigned)))
+            nWatchValue = *(unsigned*)(uintptr_t)g_pHwbpTarget;
         wsprintfA(reply, "{\"watch\":\"0x%X\",\"value\":\"0x%X\"}",
-                  (unsigned)(uintptr_t)g_pHwbpTarget, *(unsigned*)(uintptr_t)g_pHwbpTarget);
+                  (unsigned)(uintptr_t)g_pHwbpTarget, nWatchValue);
         return;
     }
     if (!strncmp(line, "gaddr", 5)) {
@@ -1706,7 +1712,12 @@ static SOCKET OpenListener(void) {
     setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, (const char*)&yes, sizeof(yes));
     struct sockaddr_in a; memset(&a, 0, sizeof(a));
     a.sin_family = AF_INET; a.sin_port = htons(D2CONTROL_PORT);
-    memset(&a.sin_addr, 0, sizeof(a.sin_addr));   // INADDR_ANY; the tree ships its own in_addr shim
+    // Loopback only (127.0.0.1), not INADDR_ANY: the channel is deliberately unauthenticated,
+    // so a 0.0.0.0 bind would let any peer on the network read memory (hex), inject raw
+    // packets (cpkt) and write files (shot). Loopback keeps the whole workflow - a local
+    // agent connects exactly the same way. The tree ships its own in_addr shim (a plain
+    // 32-bit word), so htonl's network-order value is assigned directly.
+    a.sin_addr = htonl(0x7F000001);
     if (bind(srv, (struct sockaddr*)&a, sizeof(a)) != 0 || listen(srv, 4) != 0) {
         D2TraceFmt("D2CONTROL: bind/listen failed err=%d", (int)WSAGetLastError());
         closesocket(srv); return INVALID_SOCKET;

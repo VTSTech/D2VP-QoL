@@ -67,8 +67,6 @@
 #include "Source/globals/globals.h"
 #include "Source/D2Client/D2Client.globals.h" // VP: [tenth sync] the restructure moved the UI globals' externs (ScreenSizeX et al) into the per-module globals header; globals.h no longer carries them
 
-#define DEFAULT_SECURITY_COOKIE 0xBB40E64E
-
 #ifndef D2_ALLOC
 #define D2_ALLOC(size) Fog::Memory::AllocClientMemory((size), __FILE__, __LINE__, 0)
 #endif
