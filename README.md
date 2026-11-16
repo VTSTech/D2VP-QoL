@@ -15,7 +15,7 @@
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
-Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Quality of Life layer maintained by VTSTech directly in the source. Features true in game rendered widescreen (not stretched), portable saves, auto-gold pickup, iLvl tooltips, shift compare, ctrl+click xfer and many more opt-in quality-of-life improvements, all toggled via a settings page. No balance changes, no save-format changes. 100% Compatible with 1.14d Retail saves.
+Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Quality of Life layer maintained by VTSTech directly in the source. Features true in game rendered widescreen (not stretched), 60FPS Unlock, portable saves, auto-gold pickup, iLvl tooltips, shift compare, ctrl+click xfer and many more opt-in quality-of-life improvements, all toggled via a settings page. No balance changes, no save-format changes. 100% Compatible with 1.14d Retail saves.
 
 **Client:** `d2vp.exe` | **Renderer:** Separate [Glide3xVK](https://github.com/VTSTech/Glide3xVK) project
 
