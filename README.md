@@ -11,254 +11,78 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R158-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R161-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
-[![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
-Diablo II: Lord of Destruction 1.14d, recovered as C++ that builds and runs — with
-**Vanilla+** on top: a fix-and-QoL layer maintained by VTSTech directly in the source.
-Crash fixes, widescreen UI support, opt-in quality-of-life features and a settings page —
-nothing silently changes gameplay. The client ships as **`d2vp.exe`**; rendering through
-Vulkan comes from the separate [Glide3xVK](https://github.com/VTSTech/Glide3xVK) project
-(`glide3x.dll` with a libSlang shader chain).
+Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Quality of Life layer maintained by VTSTech directly in the source. Features widescreen support, portable saves, opt-in quality-of-life improvements, and a settings page. No balance changes, no save-format changes.
 
-The tree is organised by the module names the game itself uses (`D2Client`, `D2Common`,
-`D2Game`, `D2Win`, `D2gfx`, `Fog`, ...). Names, types and structure are reconstructions:
-some functions still read like a decompiler wrote them, because one did.
-[CONTRIBUTING.md](CONTRIBUTING.md) lists which paths are generated and which are
-hand-written.
-
-## Scope
-
-Single-player, made to study, preserve and play the game. Online play on Battle.net is
-outside its scope: not designed, tested or supported for it. The repository holds no
-game data — MPQs and CD keys come from your own 1.14d install.
+**Client:** `d2vp.exe` | **Renderer:** Separate [Glide3xVK](https://github.com/VTSTech/Glide3xVK) project
 
 ## Features (opt-in, default OFF)
 
-With no `d2vp.ini` next to `d2vp.exe`, the game behaves exactly like retail 1.14d
-(missing ini/section/key = vanilla; keys hot-re-read every ~2 s; a missing ini is
-auto-created with a documented all-defaults template). Everything below also toggles
-in-game: **Esc → Options → "Vanilla+ Options"**.
-
 | Feature | `d2vp.ini` key | What it does |
 | --- | --- | --- |
-| Show Items Toggle | `[features] alt_toggle` | Each Alt press flips ground-item labels on/off (D2R parity); latched labels survive clicks, and clicking a label or sprite picks the item up. |
-| Portable saves | `[features] portable_save` | Saves read/write `<game folder>\save` instead of the registry-resolved path; registry untouched. |
-| Auto Gold Pickup | `[features] auto_gold` | Gold piles in pickup range are collected when you walk over them, via the game's own server-side pickup path. Gold only; never moves your character. |
-| Persistent Globe Text | `[features] globe_persistent` | Retail's above-orb Life/Mana readout stays visible without hovering. Pure display. |
-| Item Level Tooltips | `[features] item_ilvl` | Appends ` (N)` to the item name on every item tooltip. |
-| Shared Stash | `[features] shared_stash` | An outlined "Shared" tab over **100** retail-shaped stash pages (ten since R82, a hundred since R146) every character on the PC shares (items + one gold pool survive the character), with `<<`/`>>` pager arrows; stored in its own `_d2vp_shared.sss` — character `.d2s` files stay retail-compatible. R152 (#37 root fix): page switches no longer corrupt the client-side inventory chain — the remove echoes unlink each item from its list before the client unit is freed, so fast page flipping with the panels open is crash-free (the R150-era intermittent deposit crash was this, not the transfer itself). R153: the unlink moved to the unit-free choke point — `CUnit::RemoveObject` unlinks ANY item unit before freeing it (RELOAD recreates, equip swaps, ground deletes included), closing the whole crash family. |
-| No Panel World Shift | `[features] no_panel_shift` | With one panel open at the wide layouts the world stays exactly where it was — the panel floats over an unmoved camera instead of the vanilla quarter-screen slide. |
-| Mana Burn Fix | `[features] mana_burn_fix` | Repairs retail's Mana Burn bug (256x the intended mana drain, 512x in Hell) to the designed 66–100% of monster-level damage, matching D2R post-2.4. |
-| Shift Item Compare | `[features] shift_compare` | Hold **Shift** over an equippable item and a second tooltip draws beside it: the item you have equipped for that body slot (D2R hover-compare parity) — inventory, stash, cube, trade, vendor; shield/quiver hovers compare the off-hand, weapons the primary. |
-| Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. R149 (#37) serialized the pick+place pair, R150 (#37 field pass) closed the round-trip window (the pick echo no longer hands the transfer's item to the client cursor — no cursor hop — and clicks inside the 500 ms window are silently consumed), and R152 (#37 root fix, symbolized from the owner's map) fixed the crash that survived both: the page-switch remove storm freed client item units without unlinking them from the inventory chain — the panel draw then walked freed memory (the intermittent deposit crash, withdraw or no withdraw). R153 (#37): the unlink moved to the `CUnit::RemoveObject` choke point, covering every item-free path, not just the page-switch storm. R157: with the Horadric Cube open the cube owns the direction — inventory/stash items Ctrl+Click **into** the cube, cube items **out** to the inventory; a full cube plays the "won't fit" sound. |
-| Extended Stats | `[features] extended_stats` | The character screen gains an outlined **Extended** tab (top-right) that flips to a second view showing the twelve stats retail hides — Magic Find, Gold Find, +% Experience Gained, Vendor Price Reduction, Faster Run/Walk, Increased Attack Speed, Faster Cast Rate, Faster Hit Recovery, Faster Block Rate, Light Radius, Poison Length Reduction, Half Freeze Duration — read live off your character's statlist (base + gear + buffs) every drawn frame (R158; display-only). Click **Back** to return; the Done button stays clickable in both views; the covered +stat buttons are dead while the page is up. |
-| Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. R149 (#38): perspective mode glides too — the warp origin itself (the perspective camera every perspective layer projects around) carries the same two-sample glide, and the screen-unit delta is top-down-only. R150 (#38 field pass): the character rides the same glide (sprite, shadow, state overlays) — screen-fixed at its retail spot while the perspective world glides. R151 (residual pass): the origin delta is computed once per present and shared by every rider, and the hover selection shape + the Whirlwind sprite ride it too. |
-| FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. R149 (#38): the glide works in perspective mode too (the warp origin glides — the perspective camera). R150: the character rides it as well — sprite, shadow and state overlays share the origin's glide, so the character holds its screen spot while the world scrolls. R151: the hover selection shape and the Whirlwind spin sprite join the ride, and the shared delta is computed once per frame. Off = the classic 25 Hz step cadence at ~60 presents. |
-| Automap Clock | `[features] automap_clock` | The automap overlay gains one line under the build tag, right-aligned with the other overlay text: **SESS:** (real time since you entered the current game, `hh:mm:ss`) + **SYS:** (your PC's local clock, 12-hour with a trailing AM/PM, e.g. `12:01PM`). The level-name line also carries the area's level (`Blood Moor (3)`) — always-on, R148. Pure display. |
-| Transparent HUD | `[features] transparent_hud` | The bottom bar's background frame art — the console stone behind the globes and belt, including the chat area background — plus the run button, the menu button and the hostile indicator are **not drawn** (R154; owner ask: "fully transparent"): the world shows through. The globes, belt slots, skill buttons, XP bar and stamina bar draw exactly as retail and keep working; the hidden run/menu buttons still respond to clicks (tooltips included). Panels, the automap and chat text are never touched. Zero renderer code — the skip is upstream of every renderer. Display-only. |
-| Camera Zoom | `[features] camera_zoom` | Press **Z** to step the world zoom 1.0 → 1.25 → 1.5 → 1.0 while you play (D2R parity; R155). The zoom anchors on your character; the UI, panels, tooltips and the cursor stay pixel-1:1, and the cursor is inverse-mapped so clicks, walks and casts land exactly where the zoomed world shows them. D3D and Glide renderers (R156 port; other renderers clamp to 1.0 with a `d2boot.log` note); the level resets to 1.0 each join. Each step and the activation leave one `camera-zoom:` line in `d2boot.log`. |
-
-No balance changes, no save-format changes: `.d2s`/`.d2x` layouts stay untouched, and
-every feature ships OFF (the one deliberate exception: `unlock_fps_interp` — the
-Unlock FPS sub-gate — ships On; it is the look R143 shipped, and `0` restores the
-step-cadence presentation). The wider candidate slate is scoped in
-[FEATURES.md](FEATURES.md); nothing lands without a config gate.
-
-## Status
-
-Current build: **`Vanilla+0.0.8-R161`** (line 1 of `d2boot.log` pins any build); the
-latest tagged release is
-**[`R156`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R156)** (2026-11-11) —
-R157 and R158 shipped after it, per-round notes in
-[RELEASE-NOTES.md](RELEASE-NOTES.md).
-
-- **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
-  **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
-  field-verified), the **Shift Item Compare** feature with its shield-slot fix
-  (R125/R126, field-verified), the **D3D fullscreen boot-crash fix** (R124,
-  field-verified), the **R109–R122 wide-resolution arc** — the 1344x700 / 1366x768 /
-  1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
-  Fix** (R106–R108). Earlier tags on the
-  [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R158, overlay-delivered —
-  per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
-  upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
-  crash fix** (R136,
-  [#29](https://github.com/VTSTech/D2VP-QoL/issues/29), field-verified 2026-11-08),
-  the **proc-tooltip fix** (R137,
-  [#33](https://github.com/VTSTech/D2VP-QoL/issues/33) — "x% Chance to Cast Level 0"
-  lines now read the real level and skill name; field-verified 2026-11-08), the
-  **windowed-1080p crash fix** (R138,
-  [#31](https://github.com/VTSTech/D2VP-QoL/issues/31) — selecting 1920x1080 while
-  running windowed no longer crashes on the first frame; field-verified 2026-11-09),
-  the **on-screen build tag** (R139 — the title screen and the automap overlay
-  show **`D2VP-R139`** instead of the retail "v 1.14d"; one define —
-  `Redivivus/d2_boot.h` `D2VP_ROUND` — feeds the tag and the build self-ID, so a
-  round bump is one line) and the **Ctrl+Click stash transfer** (R140 — one-click
-  inventory ↔ stash move with the stash open, shared pages included,
-  `[features] ctrl_click_xfer`; the R141 follow-up fixed the vacated-slot field catch —
-  field-verified 2026-11-09, [#35](https://github.com/VTSTech/D2VP-QoL/issues/35) closed,
-  SMOKE §R), the **Unlock FPS** feature (R142 — the presentation-FPS unlock:
-  `[features] unlock_fps`, ~60 FPS present on a 25 Hz sim) with its **sub-tick
-  interpolation** (R143/R143.1/R143.2 — `[features] unlock_fps_interp`, default On: the
-  world scroll glides between ticks at the present rate while the sim stays byte-exact
-  25 Hz; two jitter field reports later, the delivery fix landed and the glide was
-  field-accepted 2026-11-09) and the **two-column Vanilla+ Options page** (R144 — the
-  panel split into two columns of six so it fits whole again down to 640x480, and the
-  interpolation knob took the twelfth row, **FPS Interpolation** — the README gallery
-  screenshot shows it in game; field ask SMOKE §S), the **shared stash at a hundred
-  pages** (R145/R146 — the pager arrows doubled to `<<`/`>>` for a bigger click
-  target, then the page count went 10 → 100; field-confirmed "Good job, works") and
-  the **automap clock** (R147, merged to one line in R148 — `[features]
-  automap_clock`: `SESS: hh:mm:ss SYS: 12:01PM` under the build tag; R148 also
-  put the area's level on the level-name line, always-on; field ask SMOKE §T), the
-  **#37/#38 field-crash arc** (R149–R153 — the Ctrl+Click pick/place pair
-  serialization and the full pick→place round-trip window, then the
-  unlink-before-free root fix that moved to the `CUnit::RemoveObject` choke
-  point and closed the whole crash family; plus the #38 second half — the
-  perspective camera glides its warp origin and the character rides the same
-  glide, so perspective mode is smooth end to end), the **Transparent HUD**
-  (R154 — `[features] transparent_hud`: the bottom bar's console frame art, the
-  run/menu buttons and the hostile indicator skip drawing entirely so the world
-  shows through; globes, belt, skill buttons, XP/stamina bars, panels and
-  tooltips keep their vanilla draw and hit areas) and the **Camera Zoom**
-  (R155 D3D + R156 Glide — `[features] camera_zoom`: **Z** steps the world
-  zoom 1.0 → 1.25 → 1.5 → 1.0 anchored on your character, the UI stays
-  pixel-1:1, the cursor is inverse-mapped so clicks land where the zoomed world
-  shows them; field-verified on both renderers 2026-11-11), the **Ctrl+Click cube
-  transfer** (R157 — with the Horadric Cube open the cube owns the direction:
-  inventory/stash items Ctrl+Click **into** the cube, cube items **out** to the
-  inventory; field-verified 2026-11-16) and the **Extended Stats** page (R158 —
-  `[features] extended_stats`: an outlined **Extended** tab on the character screen
-  flips to a second view listing the twelve stats retail hides — Magic Find, Gold
-  Find, +% Experience Gained, Vendor Price Reduction, Faster Run/Walk, Increased
-  Attack Speed, Faster Cast Rate, Faster Hit Recovery, Faster Block Rate, Light
-  Radius, Poison Length Reduction, Half Freeze Duration — read live off the
-  character's statlist every frame, display-only; the sixteenth Options row;
-  field-verified 2026-11-16).
-- **Field-verified**: boot → intro → title → character select → in game; Direct3D and
-  Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
-  smoke belt passed on the R83 and R104 builds
-  ([#24](https://github.com/VTSTech/D2VP-QoL/issues/24),
-  [#28](https://github.com/VTSTech/D2VP-QoL/issues/28)); `d2vp.exe` is field-played
-  daily.
-- **Open issues (2)**: the Refilling Shrine XP buff
-  ([#25](https://github.com/VTSTech/D2VP-QoL/issues/25)) and the intermittent
-  attribute-point crash ([#18](https://github.com/VTSTech/D2VP-QoL/issues/18)) — triage
-  pending. Recently closed: #31 (1080p windowed select crash, fixed R138), #33 (proc
-  tooltips read "Level 0", fixed R137), #29
-  (post-Countess crash, fixed R136), #32 (Gheed gamble crash, fixed R128), #26 (720p
-  panel margins + `no_panel_shift`), #22 (Bloodraven turn-in), #8 (necro skeleton
-  tint).
-- A crash writes a symbolised report (`d2crash-<date>-<time>.txt`) next to the
-  executable; a 12 s hangwatch dumps one if the main loop ever stops beating. See
-  [Crash reports](#crash-reports).
+| Show Items Toggle | `[features] alt_toggle` | Alt press flips ground-item labels on/off (click to pick up) |
+| Portable saves | `[features] portable_save` | Saves read/write `<game folder>\save` (registry untouched) |
+| Auto Gold Pickup | `[features] auto_gold` | Gold collected automatically when walking over piles |
+| Persistent Globe Text | `[features] globe_persistent` | Life/Mana readout stays visible without hovering |
+| Item Level Tooltips | `[features] item_ilvl` | Appends ` (N)` to item name on tooltips |
+| Shared Stash | `[features] shared_stash` | 100 shared stash pages (100+ retail-shaped pages) |
+| No Panel World Shift | `[features] no_panel_shift` | World stays in place when panels open |
+| Mana Burn Fix | `[features] mana_burn_fix` | Fixes retail's Mana Burn bug to match D2R post-2.4 |
+| Shift Item Compare | `[features] shift_compare` | Shift+hover shows equipped item comparison |
+| Ctrl Click Transfer | `[features] ctrl_click_xfer` | Ctrl+Click moves items inventory↔stash (D2R parity) |
+| Extended Stats | `[features] extended_stats` | Character screen gains Extended tab with hidden stats |
+| Unlock FPS | `[features] unlock_fps` | ~60 FPS present while game stays 25 Hz (default On) |
+| FPS Interpolation | `[features] unlock_fps_interp` | World glides between game ticks (default On) |
+| Automap Clock | `[features] automap_clock` | Shows session time and system clock on automap |
+| Transparent HUD | `[features] transparent_hud` | Bottom bar background, run/menu buttons hidden |
+| Camera Zoom | `[features] camera_zoom` | Press **Z** to zoom world (1.0→1.25→1.5→1.0) |
 
 ## Install
 
-1. Grab the latest release 7z from the
-   [releases page](https://github.com/VTSTech/D2VP-QoL/releases) and extract it
-   into your Diablo II: LoD 1.14d folder (next to `Game.exe`).
-2. Run `d2vp.exe -w`. That's the Vanilla+ client; `glide3x.dll` sits beside it for the
-   wrapper route (`-3dfx`), launcher/debug scripts included.
-3. Optional: `d2vp.exe -nointro` skips the two intro videos and the auto-played title
-   cinematic — boot goes straight to the title screen. In-game cutscenes are unaffected.
+1. Download latest release from [releases page](https://github.com/VTSTech/D2VP-QoL/releases)
+2. Extract into your Diablo II: LoD 1.14d folder (next to `Game.exe`)
+3. Run `d2vp.exe -w` (Vanilla+ client)
+4. Optional: `d2vp.exe -nointro` skips intro videos
 
-Upgrading: extract over the previous install — saves, realm logins and `d2vp.ini` carry
-over.
+**Upgrading:** Extract over previous install (saves and `d2vp.ini` carry over)
+
+## In-Game Settings
+
+Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All settings hot-re-read every ~2 seconds.
+
+## Current Status
+
+- **Version:** Vanilla+0.0.8-R161
+- **Renderer:** D3D/Glide via [Glide3xVK](https://github.com/VTSTech/Glide3xVK)
+- **Scope:** Single-player only, Battle.net not supported
+- **Compatibility:** Full backward compatibility, `.d2s` files untouched
+
+## Quick Start
+
+- Default config auto-created if missing
+- All features OFF by default (except `unlock_fps_interp`)
+- No game balance changes
+- Field-verified crash fixes and features
 
 ## Build
 
-You need your own Diablo II: LoD 1.14 installation; this repository holds no game data.
-With a mingw-w64 cross compiler for 32-bit Windows, CMake and Ninja:
-
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake
-cmake --build build          # -> build/d2.exe
+cmake --build build  # -> build/d2vp.exe
 ```
 
-On Windows the same build runs natively — `tools/build-local-win11.ps1` sets up MSYS2's
-i686 toolchain (one-time), then configures, builds, runs the CI gates and strips a
-`d2s-<id>.exe`:
+See [docs/building.md](docs/building.md) for detailed build instructions.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-local-win11.ps1 -Clean -DeployTo "C:\Games\Diablo II"
-```
+## Links
 
-- [docs/building.md](docs/building.md): getting the game, the toolchain per platform.
+- [CHANGELOG.md](CHANGELOG.md) - Release history
+- [FEATURES.md](FEATURES.md) - Feature details
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide
+- [LICENSE](LICENSE) - MIT License
 
-The default build is ~300 MB **on purpose**: `-O0` with full DWARF so the in-process
-fault handler can write a *symbolised* `d2crash-*.txt` at crash time; `strip` removes
-only the DWARF. Linking is fully static. GitHub CI (mingw-i686) builds every release tag
-and ships `d2s-<sha>.exe` (stripped, play/distribute) plus `d2-map-<sha>.map` (the
-linker map, load-bearing for crash symbolisation). Source and CI keep the `d2.exe` /
-`d2s-<sha>.exe` names; each release ships the client renamed **`d2vp.exe`**.
+---
 
-## Known issues
-
-- **When an NPC has quest news, the scrolling text box does not appear.** The quest itself
-  advances normally; only the dialog is missing.
-- **It can still crash.** Rarely now, but it is not ruled out — and each one fixed has
-  taken a class of others with it. A crash writes a report with a symbolised stack trace
-  to `d2crash-<date>-<time>.txt` next to the executable; please attach it to an
-  [issue](https://github.com/VTSTech/D2VP-QoL/issues) in this repository.
-
-## Crash reports
-
-To attribute a crash correctly, collect **both** artifacts from one repro:
-
-| Artifact | Comes from | Tells us |
-| --- | --- | --- |
-| `d2crash-<date>-<time>.txt` | `d2vp.exe` (symbolised, written next to the exe) | the crashed module, function and offset in game-source terms |
-| `glide3x.log` | the glide3xvk wrapper | what the wrapper was doing (frame, preset, chain) and whether the faulting thread was in wrapper code |
-
-Rule of thumb: faulting frame in `glide3xvk`/`vk_backend`/slang → wrapper issue (the
-[Glide3xVK repo](https://github.com/VTSTech/Glide3xVK)); faulting frame in
-`D2*`/`Storm`/`Fog` with a d2crash report → issue in this repository. Attach both files
-to an issue — a crash without both artifacts cannot be attributed.
-[CONTRIBUTING.md](CONTRIBUTING.md) has the detail, including the routing for a root
-cause that turns out to be a reconstruction bug.
-
-## Project documents
-
-**For humans:** [CHANGELOG.md](CHANGELOG.md) (per-release changes, short) ·
-[VANILLA-PLUS.md](VANILLA-PLUS.md) (the charter: layering, principles, crash-triage
-protocol) · [SMOKE-CHECKLIST.md](SMOKE-CHECKLIST.md) (the in-game test pass).
-**For agents (verbose by design):** [FEATURES.md](FEATURES.md) (the feature slate + house
-feature contract) · [handoff.md](handoff.md) (live work log) ·
-[HISTORY.md](HISTORY.md) (the verbatim archive) · [plans/](plans/) ·
-[docs/building.md](docs/building.md).
-
-## Contributing
-
-Changes are welcome as pull requests or patches against a release tag. CI builds every
-push and PR with the mingw-i686 toolchain
-([`tools/check-build.sh`](tools/check-build.sh) is the same build locally) — a clean
-build is the bar. (The old vanilla-plus gate suite — `tools/check-vanilla-plus.sh`,
-525 checks — was retired 2026-11-09; the script lives in git history, and the Win11
-MSYS2 build stays the compile gate of record for release rounds.)
-
-[CONTRIBUTING.md](CONTRIBUTING.md) routes every kind of finding: Vanilla+ improvements
-belong in this repository; fixes to the recovered source itself belong upstream at
-[Redivivus](https://github.com/jaenster/redivivus). Upstream syncs are **retired**
-(owner, 2026-11-09: unlikely to resume) — the fork maintains its source directly, and
-the merge-era tooling and plans have left the tree (recoverable from git history).
-
-## Credits
-
-- The source this fork builds on is [Redivivus](https://github.com/jaenster/redivivus)
-  by jaenster and contributors. Much of the 1.14d reverse-engineering comes from
-  [blizzhackers](https://blizzhackers.dev), dzik in particular;
-  [D2MOO](https://github.com/ThePhrozenKeep/D2MOO) supplied many of the structure
-  layouts the work started from.
-- Vanilla+, the Glide3xVK wrapper and this fork: VTSTech.
-
-## License
-
-MIT, see [LICENSE](LICENSE). Code under `thirdparty/` keeps its own license.
-
-Diablo and Blizzard Entertainment are trademarks of Blizzard Entertainment, Inc. This
-project is not affiliated with or endorsed by Blizzard. 
+*D2VP Vanilla+QoL is a fork of [Redivivus](https://github.com/jaenster/redivivus) with Vanilla+ enhancements by VTSTech.*
