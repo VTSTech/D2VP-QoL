@@ -69,7 +69,7 @@ step-cadence presentation). The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R158`** (line 1 of `d2boot.log` pins any build); the
+Current build: **`Vanilla+0.0.8-R160`** (line 1 of `d2boot.log` pins any build); the
 latest tagged release is
 **[`R156`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R156)** (2026-11-11) —
 R157 and R158 shipped after it, per-round notes in

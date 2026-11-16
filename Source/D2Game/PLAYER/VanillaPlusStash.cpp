@@ -155,7 +155,9 @@ struct VPStashState {
     ::SGAMEDATA * pOwnerGame;   // owning game (ownership pin / lazy reset)
     int gbSharedActive;         // 1 while page 4 holds a shared page's set
     int gnActiveSharedPage;     // 0..VPSTASH_PAGES-1 - which shared page is materialized (while gbSharedActive)
-    int gbSharedLoaded;         // 1 once the .sss was read this game (success or degrade)
+    int gbSharedLoaded;         // 1 once the .sss was read this game with a FINAL verdict (success, or benign no-file/corrupt degrade); a transient failure leaves it 0 so the next toggle retries
+    int gbSharedLoadFailed;     // [ROB-01] 1 = the last load attempt hit a TRANSIENT error (file exists but locked/unreadable): the memory state may be an empty shell, so toggles and saves are refused until a read succeeds
+    int gbActivePagePartial;    // [ROB-02] 1 = the active shared page materialized PARTIALLY (a record failed to decode): page 4 is a subset of the stored block, which stays authoritative - toggling away skips the re-serialize
     uint32_t dwSharedGold;      // shared gold pool - ONE pool across all pages (.sss header)
     uint32_t dwPersonalGoldSnapshot; // goldbank value at toggle-to-shared
     uint8_t * pPersonalBlock;   // 'JM' block of the personal set while a shared page is active
@@ -296,17 +298,29 @@ static int VPSHARED_PageItemCount(int nPage) {
 }
 
 // Validate + ingest one file (path given). Returns 1 with the shared
-// blocks/gold filled - a v2 file fills the pages it carries (a pre-R82 file:
-// pages 1-2; pages 3..100 stay empty; an R82-R145 ten-page file: pages
-// 1-10, 11..100 empty), a v1 file fills page 1 - or 0 to start
-// empty (file left untouched on disk; the caller then retries the .bak
-// generation).
+// blocks/gold filled (stored), 0 with a benign verdict (no file, or corrupt -
+// a re-read cannot change it; the file on disk is never touched), -1 on a
+// TRANSIENT failure (the file exists but could not be opened - a lock held
+// by an AV scan or a sync client; a retry can succeed). [ROB-01] A stored
+// read fills the pages the file carries (a pre-R82 file: pages 1-2; pages
+// 3..100 stay empty; an R82-R145 ten-page file: pages 1-10, 11..100 empty);
+// a v1 file fills page 1 - or 0 to start empty (file left untouched on
+// disk; the caller then retries the .bak generation).
 static int VPSHARED_TryReadFile(const char * szPath) {
     HANDLE hFile = CreateFileA(szPath, GENERIC_READ, FILE_SHARE_READ, nullptr,
                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
-        D2BOOT_Mark("shared stash: no file - starting empty"); // [d2boot]
-        return 0;
+        int nErr = (int)GetLastError();
+        if (nErr == ERROR_FILE_NOT_FOUND || nErr == ERROR_PATH_NOT_FOUND) {
+            D2BOOT_Mark("shared stash: no file - starting empty"); // [d2boot]
+            return 0;
+        }
+        // The file EXISTS but could not be opened - a sharing/lock violation
+        // (AV scan, backup or sync client holding it). Transient: the caller
+        // defers instead of pinning an empty session state, and nothing may
+        // be saved until a read succeeds. [ROB-01]
+        D2BOOT_MarkFmt("shared stash: open failed (%d) - file unreadable", nErr); // [d2boot]
+        return -1;
     }
 
     uint8_t aHeader[VPSTASH_HEADER_SIZE_V2];
@@ -393,30 +407,66 @@ static int VPSHARED_TryReadFile(const char * szPath) {
     return nOk;
 }
 
-// Lazy read of the shared file. One attempt per game: a degraded read keeps
-// its verdict for the session (the on-disk file is never touched by a
-// misread, so nothing is destroyed and the owner can inspect it).
+// Lazy read of the shared file. [ROB-01] Three verdicts: a success pins the
+// loaded state; a benign failure (no file anywhere, or corrupt primary whose
+// .bak also benign-fails) pins the empty state - a re-read cannot change it,
+// the on-disk file is never touched by a misread, and the owner can inspect
+// it; a TRANSIENT failure (file exists but locked/unreadable) pins NOTHING -
+// gbSharedLoaded stays 0 so the next toggle retries, and until a read
+// succeeds neither a toggle nor a save runs, so a transient lock can never
+// flush an empty session state over the real file.
 static void VPSHARED_EnsureLoaded() {
     if (s_VpStash.gbSharedLoaded) {
         return;
     }
-    s_VpStash.gbSharedLoaded = 1;
 
     char szPath[1100];
     VPSHARED_BuildFilePath(szPath, sizeof(szPath));
-    if (VPSHARED_TryReadFile(szPath)) {
+    int nPrimary = VPSHARED_TryReadFile(szPath);
+    if (nPrimary > 0) {
+        s_VpStash.gbSharedLoaded = 1;
+        s_VpStash.gbSharedLoadFailed = 0;
         return;
     }
-    // Primary failed (or missing): retry once with the .bak generation.
+    if (nPrimary < 0) {
+        s_VpStash.gbSharedLoadFailed = 1;
+        D2BOOT_Mark("shared stash: unreadable - load deferred; toggles and saves refused until a read succeeds"); // [d2boot]
+        return;
+    }
+    // Primary benign (absent or corrupt): retry once with the .bak generation.
     char szBak[1100];
     sprintf(szBak, "%s.bak", szPath);
-    VPSHARED_TryReadFile(szBak);
+    int nBak = VPSHARED_TryReadFile(szBak);
+    if (nBak > 0) {
+        s_VpStash.gbSharedLoaded = 1;
+        s_VpStash.gbSharedLoadFailed = 0;
+        return;
+    }
+    if (nBak < 0) {
+        s_VpStash.gbSharedLoadFailed = 1;
+        D2BOOT_Mark("shared stash: unreadable - load deferred; toggles and saves refused until a read succeeds"); // [d2boot]
+        return;
+    }
+    // No file anywhere (the normal first run) or both generations corrupt:
+    // the empty state IS the truth - pin it, saves may run.
+    s_VpStash.gbSharedLoaded = 1;
+    s_VpStash.gbSharedLoadFailed = 0;
 }
 
 // Atomic write: full temp file, one-generation .bak of the old file, then
 // MoveFileExA replace. Any failure leaves the old file + .bak untouched and
 // keeps the session memory copy (mark says which).
+// [ROB-01] Second lock of the transient-read hole: if the load never
+// succeeded this game, the in-memory shared state may be an empty shell -
+// refuse to serialize it over a file this build could not read. (Unreachable
+// through the toggle path, which refuses while gbSharedLoadFailed; kept as
+// the belt to the flush-before-save suspenders.)
 static void VPSHARED_WriteFileLocked() {
+    if (s_VpStash.gbSharedLoadFailed) {
+        D2BOOT_Mark("shared stash: save refused - last load failed (disk untouched)"); // [d2boot]
+        return;
+    }
+
     char szPath[1100];
     VPSHARED_BuildFilePath(szPath, sizeof(szPath));
 
@@ -578,10 +628,14 @@ static void VPSHARED_DematerializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit)
 }
 
 // Materialize a 'JM' block into the (now empty) page 4 and push the client
-// 0x9C put-in-container packets for everything that landed.
-static void VPSHARED_MaterializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint8_t * pBlock, uint32_t nSize) {
+// 0x9C put-in-container packets for everything that landed. Returns 1 when
+// the page materialized completely (an empty block is a complete empty
+// page), 0 when a record failed to decode - the page-4 set is then a SUBSET
+// of the block, and the caller must treat the stored block as authoritative.
+// [ROB-02]
+static int VPSHARED_MaterializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint8_t * pBlock, uint32_t nSize) {
     if (!pBlock || nSize < 4) {
-        return;
+        return 1;
     }
 
     short int * pAfter = nullptr;
@@ -591,12 +645,12 @@ static void VPSHARED_MaterializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, u
     int nResult = D2Game::PLAYER::PlayerSave::PLRSAVE_DispatchItemLoadByFormat(pGame, pUnit, pBlock, 0x60, (int32_t)nSize, 0, &pAfter);
     if (nResult) {
         D2BOOT_MarkFmt("shared stash: load error %d - partial page", nResult); // [d2boot]
-        return;
+        return 0; // [ROB-02] caller keeps the stored block authoritative.
     }
 
     D2ClientStrc * pClient = D2Game::UNIT::SUnit::SUNIT_GetClient(pUnit, ".\\PLAYER\\VanillaPlusStash.cpp", 0x1d5);
     if (!pClient) {
-        return; // No client to resync (should not happen in SP) - state is still correct.
+        return 1; // No client to resync (should not happen in SP) - state is still correct.
     }
 
     D2UnitStrc * apItems[VPSTASH_PAGE_ITEM_CAP];
@@ -613,6 +667,7 @@ static void VPSHARED_MaterializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, u
               ITEMFLAG_ADDED | ITEMFLAG_REMOVED | ITEMFLAG_IDENTIFIED | ITEMFLAG_IGNORE | ITEMFLAG_CURSOR |
               ITEMFLAG_BOUGHT | ITEMFLAG_RELOAD));
     }
+    return 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -639,6 +694,14 @@ static void VPSHARED_ActivatePage(::SGAMEDATA * pGame, D2UnitStrc * pUnit, int n
 
     if (!s_VpStash.gbSharedActive) {
         VPSHARED_EnsureLoaded();
+        // [ROB-01] A transient read failure (file locked by an AV scan or a
+        // sync client) deferred the load: refuse the toggle now - the next
+        // click retries the read - instead of running the session on an
+        // empty state the next save would flush over the real file.
+        if (s_VpStash.gbSharedLoadFailed) {
+            D2BOOT_Mark("shared stash: toggle refused - stash file unreadable (will retry; disk untouched)"); // [d2boot]
+            return;
+        }
 
         // 1. Snapshot the personal set FIRST - it is the only copy while a
         //    shared page is active (it is NOT in the .d2s until the next save).
@@ -655,7 +718,12 @@ static void VPSHARED_ActivatePage(::SGAMEDATA * pGame, D2UnitStrc * pUnit, int n
         }
         s_VpStash.pPersonalBlock = pPersonal;
         s_VpStash.nPersonalSize = nPersonal;
-        VPSHARED_MaterializePage4(pGame, pUnit, s_VpStash.apSharedBlock[nPage], s_VpStash.anSharedSize[nPage]);
+        s_VpStash.gbActivePagePartial = !VPSHARED_MaterializePage4(pGame, pUnit, s_VpStash.apSharedBlock[nPage], s_VpStash.anSharedSize[nPage]);
+        if (s_VpStash.gbActivePagePartial) {
+            // [ROB-02] The stored block stays this page's authoritative copy;
+            // toggling away will NOT re-serialize the subset over it.
+            D2BOOT_Mark("shared stash: stored block kept authoritative - toggling away will not overwrite it"); // [d2boot]
+        }
 
         // 3. Goldbank borrow: park the personal bank, show the shared pool.
         uint32_t dwBank = D2Common::Stats::StatsEx::STATSEX_GetCurrentStat(pUnit, UNITSTAT_goldbank, 0);
@@ -678,20 +746,31 @@ static void VPSHARED_ActivatePage(::SGAMEDATA * pGame, D2UnitStrc * pUnit, int n
 
     // 1. Serialize the current page-4 set into page A's block - swap it in
     //    only on success so a failed serialize can never poison the page.
-    uint8_t * pBlock = nullptr;
-    uint32_t nSize = 0;
-    if (!VPSHARED_SerializePage4(pGame, pUnit, &pBlock, &nSize)) {
-        return; // Degrade: keep the current shared page live and untouched.
+    //    [ROB-02] If A materialized partially, page 4 is a SUBSET of A's
+    //    stored block: skip the serialize entirely and keep the stored
+    //    block - a decode failure degrades this session's edits on A, it
+    //    never erases records that exist on disk.
+    if (s_VpStash.gbActivePagePartial) {
+        D2BOOT_MarkFmt("shared stash: page %d was partial - stored copy kept, session edits on it discarded", (int)(nFrom + 1)); // [d2boot]
+    } else {
+        uint8_t * pBlock = nullptr;
+        uint32_t nSize = 0;
+        if (!VPSHARED_SerializePage4(pGame, pUnit, &pBlock, &nSize)) {
+            return; // Degrade: keep the current shared page live and untouched.
+        }
+        if (s_VpStash.apSharedBlock[nFrom]) {
+            D2_FREE_POOL_AT(pGame->pMemoryPool, s_VpStash.apSharedBlock[nFrom], ".\\PLAYER\\VanillaPlusStash.cpp", 0x21d);
+        }
+        s_VpStash.apSharedBlock[nFrom] = pBlock;
+        s_VpStash.anSharedSize[nFrom] = nSize;
     }
 
     // 2. Park page A, materialize page B.
     VPSHARED_DematerializePage4(pGame, pUnit);
-    if (s_VpStash.apSharedBlock[nFrom]) {
-        D2_FREE_POOL_AT(pGame->pMemoryPool, s_VpStash.apSharedBlock[nFrom], ".\\PLAYER\\VanillaPlusStash.cpp", 0x21d);
+    s_VpStash.gbActivePagePartial = !VPSHARED_MaterializePage4(pGame, pUnit, s_VpStash.apSharedBlock[nPage], s_VpStash.anSharedSize[nPage]);
+    if (s_VpStash.gbActivePagePartial) {
+        D2BOOT_Mark("shared stash: stored block kept authoritative - toggling away will not overwrite it"); // [d2boot]
     }
-    s_VpStash.apSharedBlock[nFrom] = pBlock;
-    s_VpStash.anSharedSize[nFrom] = nSize;
-    VPSHARED_MaterializePage4(pGame, pUnit, s_VpStash.apSharedBlock[nPage], s_VpStash.anSharedSize[nPage]);
 
     s_VpStash.gnActiveSharedPage = nPage;
     D2BOOT_MarkFmt("shared stash: switched to page %d (%d items)",
@@ -707,19 +786,27 @@ static void VPSHARED_ToggleToPersonal(::SGAMEDATA * pGame, D2UnitStrc * pUnit) {
     // 1. Serialize the active shared set AS IT STANDS NOW (session changes
     //    included) into a scratch block; swap it in only on success so a
     //    failed write can never poison the in-memory shared copy.
-    uint8_t * pShared = nullptr;
-    uint32_t nShared = 0;
-    if (!VPSHARED_SerializePage4(pGame, pUnit, &pShared, &nShared)) {
-        return; // Degrade: keep the shared page live and untouched.
+    //    [ROB-02] A partial materialization is the exception: page 4 is a
+    //    subset of the stored block, so the serialize is skipped and the
+    //    stored block survives as authoritative (this session's edits on
+    //    the page are discarded - a decode failure degrades, never erases).
+    if (s_VpStash.gbActivePagePartial) {
+        D2BOOT_MarkFmt("shared stash: page %d was partial - stored copy kept, session edits on it discarded", (int)(nFrom + 1)); // [d2boot]
+    } else {
+        uint8_t * pShared = nullptr;
+        uint32_t nShared = 0;
+        if (!VPSHARED_SerializePage4(pGame, pUnit, &pShared, &nShared)) {
+            return; // Degrade: keep the shared page live and untouched.
+        }
+        if (s_VpStash.apSharedBlock[nFrom]) {
+            D2_FREE_POOL_AT(pGame->pMemoryPool, s_VpStash.apSharedBlock[nFrom], ".\\PLAYER\\VanillaPlusStash.cpp", 0x21d);
+        }
+        s_VpStash.apSharedBlock[nFrom] = pShared;
+        s_VpStash.anSharedSize[nFrom] = nShared;
     }
 
     // 2. Park the shared set, restore the personal set.
     VPSHARED_DematerializePage4(pGame, pUnit);
-    if (s_VpStash.apSharedBlock[nFrom]) {
-        D2_FREE_POOL_AT(pGame->pMemoryPool, s_VpStash.apSharedBlock[nFrom], ".\\PLAYER\\VanillaPlusStash.cpp", 0x21d);
-    }
-    s_VpStash.apSharedBlock[nFrom] = pShared;
-    s_VpStash.anSharedSize[nFrom] = nShared;
     VPSHARED_MaterializePage4(pGame, pUnit, s_VpStash.pPersonalBlock, s_VpStash.nPersonalSize);
 
     // 3. Un-borrow the goldbank: absorb what the retail gold buttons moved.

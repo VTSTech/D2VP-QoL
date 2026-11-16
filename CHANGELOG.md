@@ -11,6 +11,14 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R160 — Shared-stash data safety** (the audit's two High findings, `VanillaPlusStash.cpp` only): a
+  transient read failure (the `.sss` locked by an antivirus scan or a sync client) no longer pins an
+  empty session — the toggle is refused with a `d2boot.log` mark and retried on the next click, and
+  saves are refused until a read succeeds, so the real stash file can never be overwritten with empty
+  state (ROB-01). A page whose items fail to decode (partial materialization) keeps its stored copy
+  authoritative — toggling away no longer re-serializes the subset over it (ROB-02). No file-format
+  or healthy-path behavior change. Detail: [ROUND-SUMMARY.md](ROUND-SUMMARY.md).
+
 - **R158 — Extended Stats: the character screen's second view** (`[features] extended_stats`, the
   sixteenth Options row — owner ask 2026-11-16): an outlined **Extended** tab flips the character
   screen to a second view listing the twelve stats retail hides — Magic Find, Gold Find, +% XP,

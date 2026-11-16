@@ -15,7 +15,7 @@ Core path takes ~15 min. Run top to bottom — the fast checks come first. The r
 
 ## Setup (once, ~1 min)
 
-- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R156`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
+- [ ] **0.** Confirm the right exe: line 1 of `d2boot.log` must say `Vanilla+0.0.8-R160`. If it says an older round (or still carries the `0.0.6` prefix), wrong exe — don't test further.
 
 ## A. Boot & menus (~3 min)
 
@@ -249,6 +249,16 @@ With `[features] extended_stats=1` (ini template block + the Options page's sixt
 - [ ] **94. Dead buttons stay dead:** with stat points available, flip to the extended view and click where the covered +Strength/+Vitality buttons were → NOTHING spends a point (the click is consumed silently); the Done button still closes the screen; the points are intact after closing. In the retail view the + buttons work exactly as always.
 - [ ] **95. Reset + gate:** flip to the extended view, close the screen (Done), reopen after a couple of seconds → the retail view is back (the 2 s draw-gap reset). Flip **Extended Stats** off in the Options page → the tab is gone and the screen is byte-retail; back on → the tab returns within 2 s, no restart.
 - [ ] **96. Options row + 640x480:** the Vanilla+ Options page shows **Extended Stats** as the sixteenth row — two full columns of eight, the Previous Menu row and box unchanged from R155, everything whole and clickable at 640x480. Flipping the row lands on the next stat-window draw (no restart).
+
+---
+
+## X. Shared-stash data safety — the ROB-01/ROB-02 hardening (R160 — audit; field ask)
+
+R160 changes only the failure paths of the shared stash (`Source/D2Game/PLAYER/VanillaPlusStash.cpp`): the healthy-path chain load → toggle → page flip → toggle back → save is byte-identical, so the standing stash checks (§R, §W-adjacent stash rows) double as the R160 regression belt. The two new drills exercise the paths that used to be able to destroy data.
+
+- [ ] **97. Transient lock refused (ROB-01):** with `_d2vp_shared.sss` present and holding items, hold it open with an exclusive lock from outside the game (PowerShell: `$f=[IO.File]::Open("<path>\_d2vp_shared.sss",'Open','Read','None')` and leave that window open), then click a shared page in game → `d2boot.log` says `shared stash: open failed (32) - file unreadable`, `unreadable - load deferred; toggles and saves refused until a read succeeds` and `toggle refused - stash file unreadable (will retry; disk untouched)`; the stash view does NOT switch and the personal set stays live. Release the lock (close the PowerShell handle), click the page again → it loads normally (the deferred retry). The on-disk file is byte-identical throughout (checksum it before/after).
+- [ ] **98. No-file regression (the benign path, unchanged):** rename `_d2vp_shared.sss` away, toggle to a shared page → `shared stash: no file - starting empty`, the page starts empty and the toggle WORKS (the normal first-run shape stays pinned-empty); toggle back to personal → the file is recreated (`shared stash: saved (...)`) with the session's items and gold.
+- [ ] **99. Round-trip regression (ROB-02 healthy path):** toggle to shared page 1, add/move an item, flip to page 2 and back, toggle to personal → marks show `switched to page ...` / `personal page restored (...)` / `saved (...)`, the items and gold are where they should be, and the `.bak` rotated. No `was partial - stored copy kept` mark anywhere (that mark only appears if a record decode ever failed — if it does, the stored copy survives the session; file the `d2boot.log`).
 
 ---
 
