@@ -10054,7 +10054,7 @@ void __stdcall DRAW_UI_StatWindow_I() {
         D2Win::Src::D2WinFont::SetAndReturnLastFont((int32_t)pCharStatsTxtOrFont);
       }
     }
-    VPEXTSTATS_DrawOverlay(); // VP: [extended-stats R158] the tab + the extended page; gate off = no-op (no pixel, no rect)
+    VPEXTSTATS_DrawOverlay(); // VP: [extended-stats R158] the extended page only since R158.5 - the tab word draws from Draw.cpp's UI pass tail after the border art; gate off = no-op (no pixel, no rect)
 }
 
 void __stdcall CHAR_FreePanelAssets_NoOp_Unref_004b3330() {

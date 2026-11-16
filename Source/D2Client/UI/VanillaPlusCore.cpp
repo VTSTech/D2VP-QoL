@@ -2247,11 +2247,13 @@ void __stdcall VPSHAREDUI_DrawTab() {
 //   body X   gnPanelOffsetX+1 .. +0x13f     (the panel is ~0x140 wide)
 //   body Y   gnPanelOffsetY-0x1df+SSY .. gnPanelOffsetY-0x5d+SSY
 //            (panel top edge .. just above the Done button at -0x5c..-0x3c)
-//   tab      right-aligned to +0x13c, baseline gnPanelOffsetY-0x1cc+SSY
-//            (R158.2 field fix: the draft's -0x1db baseline put the glyph
-//            halo 8 px ABOVE the panel top edge - the R69 float-word class;
-//            -0x1cc is the R77-proven stash inset, halo top -0x1d9 stays
-//            7 px inside the edge, the click band never probes the world)
+//   tab      right-aligned to +0x13c, baseline gnPanelOffsetY-0x1ea+SSY
+//            (R158.4 owner ask: 30 px above the R158.2 stash inset, so the
+//            glyph halo spans -0x1f7..-0x1ea - 10 px ABOVE the panel top
+//            edge, floating in the world strip; the R158 draft's -0x1db
+//            straddled the frame seam and showed only a sliver, and the
+//            R158.2 inset sat 20 px inside; the click band covers the
+//            full glyph span, nY-26..nY+6)
 //   rows     12 * 0x18 px from body top +0x3a; label +0x10, value -> +0x130
 
 // The 12 rows the retail screen cannot show (plans/EXTENDED-STATS-PLAN.md
@@ -2306,15 +2308,16 @@ static void VPEXTSTATS_TabLayout(int* pnWordX, int* pnWordW, int* pnY) {
     int nWordW = D2Win::Src::D2WinFont::DRAW_text0((uint16_t*)VPEXTSTATS_TabWord());
     *pnWordX = D2Client::UI::Inv::gnPanelOffsetX + 0x13c - nWordW;
     *pnWordW = nWordW;
-    // R158.2: baseline = panel top (-0x1e0) + the R77-proven 0x14 inset - the
-    // same edge geometry as the stash panel, so the stash tab's field-bounded
-    // headroom transfers verbatim (halo top -0x1d9 = 7 px inside the edge;
-    // DRAW_text Y is the glyph BASELINE, halo spans baseline-13..baseline).
-    // The draft's -0x1db rode the world strip (owner: "drawing below the art,
-    // I can see just a tiny portion of it") - the exact R69 float-word class.
-    // The char panel art spans -0x1e0..-0x30 in BOTH modes (the draw has no
-    // expansion branch), so one constant serves classic and expansion.
-    *pnY = D2Client::UI::Inv::gnPanelOffsetY - 0x1cc + D2Client::UI::Inv::ScreenSizeY;
+    // R158.4: owner ask ("move the 'Extended' label up about 30px") - the
+    // baseline rose 30 px (0x1e) from the R158.2 inset (0x14 below the panel
+    // top), landing at 10 px ABOVE the panel top edge: the whole glyph
+    // (baseline-13..baseline = -0x1f7..-0x1ea; DRAW_text Y is the glyph
+    // BASELINE) now floats in the top world strip, clear of the panel frame
+    // seam the R158 draft straddled (owner: "drawing below the art, I can see
+    // just a tiny portion of it"). The char panel art spans -0x1e0..-0x30 in
+    // BOTH modes (the draw has no expansion branch), so one constant serves
+    // classic and expansion.
+    *pnY = D2Client::UI::Inv::gnPanelOffsetY - 0x1ea + D2Client::UI::Inv::ScreenSizeY;
 }
 
 // MouseDown hook, called FIRST from INPUT_StatScreenMouseDown. Returns 1 =
@@ -2328,10 +2331,11 @@ BOOL __stdcall VPEXTSTATS_HandleMouseDown(int nMouseX, int nMouseY) {
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
     VPEXTSTATS_TabLayout(&nWordX, &nWordW, &nY);
     D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
-    // R158.2: the band hugs the glyph span (baseline-13..baseline) like the
-    // stash tab's field-proven nY-16..nY+6 - the old nY-4..nY+14 shape only
-    // caught the bottom sliver of the word once the baseline moved down.
-    if (nMouseY >= nY - 16 && nMouseY <= nY + 6 && nMouseX >= nWordX - 4 && nMouseX <= nWordX + nWordW + 4) {
+    // R158.4: the band still hugs the glyph span, widened with the raise -
+    // the glyph now spans baseline-23..baseline (the R158.4 geometry above),
+    // so the band is nY-26..nY+6; the R158.2 band (nY-16) would have left the
+    // glyph's top 7 px dead once the baseline moved above the panel edge.
+    if (nMouseY >= nY - 26 && nMouseY <= nY + 6 && nMouseX >= nWordX - 4 && nMouseX <= nWordX + nWordW + 4) {
         gnVpExtStatsView ^= 1;
         D2Client::Sound::SOUND_PlaySound(SOUND_CURSOR_BUTTON_CLICK, nullptr, 0, 0, 0); // fully qualified: this TU is outside namespace D2Client (the GetPlayerUnit_UI idiom)
         return TRUE;
@@ -2351,9 +2355,29 @@ BOOL __stdcall VPEXTSTATS_HandleMouseDown(int nMouseX, int nMouseY) {
     return FALSE;
 }
 
-// Draw hook, called from the stat window's draw tail (after the retail
-// value rows, so the opaque page covers everything drawn before it; the
-// hover-tooltip windows II/III run earlier and stay under the page).
+// R158.5: the TAB word's own draw, called from Draw.cpp's UI pass tail AFTER
+// Panel::DRAW_UI_BordersAndOrbsAndFillers - the border art draws after the
+// whole stat window and covered the word in the strip above the panel top
+// edge (owner field report: "its in the right spot, but the art is drawing
+// on top of it"). Draw.cpp gates the call on GFX_bShowUIFlag.CharStat; the
+// 2 s draw-gap reset stays in DrawOverlay, which still runs per frame from
+// DRAW_UI_StatWindow_I. Gate off = no-op (no pixel, no rect).
+void __stdcall VPEXTSTATS_DrawTab() {
+    if (!VPEXTSTATS_Active()) {
+        return;
+    }
+    int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
+    int nWordX, nWordW, nY;
+    VPEXTSTATS_TabLayout(&nWordX, &nWordW, &nY);
+    VPSHAREDUI_DrawOutlinedText(VPEXTSTATS_TabWord(), nWordX, nY, gnVpExtStatsView ? 2 : 0);
+    D2Win::Src::D2WinFont::SetAndReturnLastFont(nPrevFont);
+}
+
+// Draw hook for the extended PAGE, called from the stat window's draw tail
+// (after the retail value rows, so the opaque page covers everything drawn
+// before it; the hover-tooltip windows II/III run earlier and stay under the
+// page). The tab word does NOT draw here any more - it draws from the UI pass
+// tail after the border art (VPEXTSTATS_DrawTab above).
 void __stdcall VPEXTSTATS_DrawOverlay() {
     if (!VPEXTSTATS_Active()) {
         return;
@@ -2365,9 +2389,6 @@ void __stdcall VPEXTSTATS_DrawOverlay() {
     dwVpExtStatsLastDraw = dwNow;
 
     int32_t nPrevFont = D2Win::Src::D2WinFont::SetAndReturnLastFont(1);
-    int nWordX, nWordW, nY;
-    VPEXTSTATS_TabLayout(&nWordX, &nWordW, &nY);
-    VPSHAREDUI_DrawOutlinedText(VPEXTSTATS_TabWord(), nWordX, nY, gnVpExtStatsView ? 2 : 0);
 
     if (gnVpExtStatsView) {
         int nLeft = D2Client::UI::Inv::gnPanelOffsetX + 1;

@@ -718,6 +718,9 @@ void __fastcall DRAW_UI(D2GameViewStrc * pGameView) {
     }
 
     Panel::DRAW_UI_BordersAndOrbsAndFillers();
+    if (GFX_bShowUIFlag.CharStat) {
+      VPEXTSTATS_DrawTab(); // VP: [extended-stats R158.5] the tab word, drawn after the border art that covered it in the strip above the panel edge (owner field report); gate off = no-op
+    }
     if (GFX_bShowUIFlag.QuickSkill) {
       SpellSel::SPELLSEL_RenderAllSkillGrids();
     }

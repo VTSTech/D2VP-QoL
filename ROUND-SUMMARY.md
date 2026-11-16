@@ -99,6 +99,36 @@ later; (2) a two-side mock TU pair compiles and links with BOTH sides mangling
 identically (`...EP10D2UnitStrcj`) — typedef-transparency and duplicate-decl
 legality proven, scripts/mock_link_check.cpp keeps the harness.
 
+## R158.4 — the tab label raised 30 px (owner ask, 2026-11-16)
+
+"Can we move the 'Extended' label up about 30px" - the tab word's baseline
+moved 30 px (0x1e) up, from the R158.2 stash inset (-0x1cc, 20 px BELOW the
+panel top edge) to -0x1ea: 10 px ABOVE the panel top edge, so the whole glyph
+spans -0x1f7..-0x1ea and floats in the top world strip, clear of the panel
+frame seam the R158 draft straddled. One constant in VPEXTSTATS_TabLayout
+(draw and click band share it, the VPSHAREDUI_TabLayout idiom); the click band
+widened nY-16..nY+6 -> nY-26..nY+6 so it keeps hugging the glyph span (the top
+of the glyph now reaches baseline-23, outside the old band). If the word looks
+off in the world strip on the field pass, the constant dials 1 px per 0x1.
+
+## R158.5 — the tab draw moved after the panel border art (owner field report 2026-11-16)
+
+The R158.4 raise landed in the right spot but the word was invisible: the
+retail UI pass draws `Panel::DRAW_UI_BordersAndOrbsAndFillers()` AFTER the
+whole stat window (Draw.cpp, right behind `DRAW_UI_StatWindow_I`), and the
+border pieces cover the strip above the panel top edge - owner: "its in the
+right spot, but the art is drawing on top of it". Fix: the tab word got its
+own exported draw, `VPEXTSTATS_DrawTab()` (same TabLayout measure, same
+outlined-text, its own font save/restore), called from Draw.cpp's UI pass
+tail immediately after the border art, gated on `GFX_bShowUIFlag.CharStat`.
+`VPEXTSTATS_DrawOverlay()` keeps the page body + the 2 s draw-gap reset at
+the field-proven call site (the page sits inside the frame, borders never
+touched it in the R158 field pass); DrawOverlay no longer draws the tab.
+Nothing retail draws after the border art reaches the strip above the char
+panel (skill grids, stat icons, panel layout, mini panel, chat input are all
+inside their own panels or the bottom strip). Position (-0x1ea baseline),
+click band (nY-26..nY+6) and the flip behavior unchanged.
+
 ## Field ask
 
 SMOKE **§W 92–96**: tab + flip; live values (base+47 MF gear test, plus the
