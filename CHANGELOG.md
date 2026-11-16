@@ -11,6 +11,21 @@ its source round. Per-tag notes: the
 
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
+- **R158 — Extended Stats: the character screen's second view** (`[features] extended_stats`, the
+  sixteenth Options row — owner ask 2026-11-16): an outlined **Extended** tab flips the character
+  screen to a second view listing the twelve stats retail hides — Magic Find, Gold Find, +% XP,
+  vendor price reduction, Faster Run/Walk, IAS, FCR, FHR, FBR, light radius, poison length
+  reduction, half freeze duration — read live off the statlist every drawn frame. Display-only:
+  zero packets, zero server code; the covered +stat buttons never arm, the Done button stays
+  clickable, the view resets when the screen closes. Six field-driven rounds (R158.1–R158.6) fixed
+  the value getter, the tab position/draw order and the FRW stat id; field-verified 2026-11-16
+  ("R158 works. Stats appear accurate"). Per-round detail: [RELEASE-NOTES.md](RELEASE-NOTES.md).
+
+- **R157 — Ctrl+Click transfer covers the Horadric Cube** (`ctrl_click_xfer`, owner ask): with the
+  cube panel open the cube owns the direction — inventory/stash items Ctrl+Click INTO the cube,
+  cube items OUT to the inventory; the stash views keep the R140 directions; a full cube plays the
+  "won't fit" sound. Field-verified 2026-11-16 ("Ctrl+Click working fine for Cube in R157").
+
 - **R156 — Camera Zoom on Glide: the same Z zoom now renders on the Glide renderer**
   (plans/CAMERA-ZOOM-PLAN.md, FEATURES row 0a — owner field-verified the R155 D3D zoom and
   ordered the port 2026-11-11): the R155 D3D site set mirrored into `Glide.cpp` — the two

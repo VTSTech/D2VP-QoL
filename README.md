@@ -11,7 +11,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R156-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R158-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Fork of](https://img.shields.io/badge/fork%20of-jaenster%2Fredivivus-2b5797)](https://github.com/jaenster/redivivus)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
@@ -53,7 +53,8 @@ in-game: **Esc → Options → "Vanilla+ Options"**.
 | No Panel World Shift | `[features] no_panel_shift` | With one panel open at the wide layouts the world stays exactly where it was — the panel floats over an unmoved camera instead of the vanilla quarter-screen slide. |
 | Mana Burn Fix | `[features] mana_burn_fix` | Repairs retail's Mana Burn bug (256x the intended mana drain, 512x in Hell) to the designed 66–100% of monster-level damage, matching D2R post-2.4. |
 | Shift Item Compare | `[features] shift_compare` | Hold **Shift** over an equippable item and a second tooltip draws beside it: the item you have equipped for that body slot (D2R hover-compare parity) — inventory, stash, cube, trade, vendor; shield/quiver hovers compare the off-hand, weapons the primary. |
-| Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. R149 (#37) serialized the pick+place pair, R150 (#37 field pass) closed the round-trip window (the pick echo no longer hands the transfer's item to the client cursor — no cursor hop — and clicks inside the 500 ms window are silently consumed), and R152 (#37 root fix, symbolized from the owner's map) fixed the crash that survived both: the page-switch remove storm freed client item units without unlinking them from the inventory chain — the panel draw then walked freed memory (the intermittent deposit crash, withdraw or no withdraw). R153 (#37): the unlink moved to the `CUnit::RemoveObject` choke point, covering every item-free path, not just the page-switch storm. |
+| Ctrl Click Transfer | `[features] ctrl_click_xfer` | With the stash open, **Ctrl**+Click moves an item in one click — inventory → stash or stash → inventory (D2R parity); the Shared tab behaves the same, a full target plays the "won't fit" sound, and Ctrl+Click in an open shop still sells. R149 (#37) serialized the pick+place pair, R150 (#37 field pass) closed the round-trip window (the pick echo no longer hands the transfer's item to the client cursor — no cursor hop — and clicks inside the 500 ms window are silently consumed), and R152 (#37 root fix, symbolized from the owner's map) fixed the crash that survived both: the page-switch remove storm freed client item units without unlinking them from the inventory chain — the panel draw then walked freed memory (the intermittent deposit crash, withdraw or no withdraw). R153 (#37): the unlink moved to the `CUnit::RemoveObject` choke point, covering every item-free path, not just the page-switch storm. R157: with the Horadric Cube open the cube owns the direction — inventory/stash items Ctrl+Click **into** the cube, cube items **out** to the inventory; a full cube plays the "won't fit" sound. |
+| Extended Stats | `[features] extended_stats` | The character screen gains an outlined **Extended** tab (top-right) that flips to a second view showing the twelve stats retail hides — Magic Find, Gold Find, +% Experience Gained, Vendor Price Reduction, Faster Run/Walk, Increased Attack Speed, Faster Cast Rate, Faster Hit Recovery, Faster Block Rate, Light Radius, Poison Length Reduction, Half Freeze Duration — read live off your character's statlist (base + gear + buffs) every drawn frame (R158; display-only). Click **Back** to return; the Done button stays clickable in both views; the covered +stat buttons are dead while the page is up. |
 | Unlock FPS | `[features] unlock_fps` | The picture (cursor, tooltips, target highlights, Alt labels) refreshes at ~60 FPS while the game itself keeps the exact retail speed — ticks, movement, animations and timers unchanged (a presents/ticks-per-second pair lands in `d2boot.log` every 5 s as the proof). Vsync behavior untouched. R143 (two-sample R143.1, delivery wiring R143.2): with `[features] unlock_fps_interp` (default 1; ini-only through R143 — the in-game **FPS Interpolation** row since R144) the world scroll and everything in it also glide between ticks at the present rate — render-time interpolation between the last two tick samples with the snapshot taken before each draw, no tick-boundary kick; `0` restores the 25 Hz step cadence. R149 (#38): perspective mode glides too — the warp origin itself (the perspective camera every perspective layer projects around) carries the same two-sample glide, and the screen-unit delta is top-down-only. R150 (#38 field pass): the character rides the same glide (sprite, shadow, state overlays) — screen-fixed at its retail spot while the perspective world glides. R151 (residual pass): the origin delta is computed once per present and shared by every rider, and the hover selection shape + the Whirlwind sprite ride it too. |
 | FPS Interpolation | `[features] unlock_fps_interp` | Rides **Unlock FPS** (default On; Options row since R144): the world scroll and everything in it glide between game ticks at the present rate — pure render smoothing, the sim stays byte-exact 25 Hz. R149 (#38): the glide works in perspective mode too (the warp origin glides — the perspective camera). R150: the character rides it as well — sprite, shadow and state overlays share the origin's glide, so the character holds its screen spot while the world scrolls. R151: the hover selection shape and the Whirlwind spin sprite join the ride, and the shared delta is computed once per frame. Off = the classic 25 Hz step cadence at ~60 presents. |
 | Automap Clock | `[features] automap_clock` | The automap overlay gains one line under the build tag, right-aligned with the other overlay text: **SESS:** (real time since you entered the current game, `hh:mm:ss`) + **SYS:** (your PC's local clock, 12-hour with a trailing AM/PM, e.g. `12:01PM`). The level-name line also carries the area's level (`Blood Moor (3)`) — always-on, R148. Pure display. |
@@ -68,9 +69,11 @@ step-cadence presentation). The wider candidate slate is scoped in
 
 ## Status
 
-Current build: **`Vanilla+0.0.8-R156`** (line 1 of `d2boot.log` pins any build); the
-latest release tag is
-**[`R156`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R156)**, 2026-11-11.
+Current build: **`Vanilla+0.0.8-R158`** (line 1 of `d2boot.log` pins any build); the
+latest tagged release is
+**[`R156`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R156)** (2026-11-11) —
+R157 and R158 shipped after it, per-round notes in
+[RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 - **Shipped** (short form — per-release detail: [CHANGELOG.md](CHANGELOG.md)): the
   **Gheed gamble crash fix** (R128, [#32](https://github.com/VTSTech/D2VP-QoL/issues/32),
@@ -80,7 +83,7 @@ latest release tag is
   1920x1080 video-options stops with hosted-stretch fullscreen — and the **Mana Burn
   Fix** (R106–R108). Earlier tags on the
   [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
-- **In the working build since the R128 tag** (rounds R135–R156, overlay-delivered —
+- **In the working build since the R128 tag** (rounds R135–R158, overlay-delivered —
   per-round detail: [CHANGELOG.md](CHANGELOG.md)): the salvage line from the paused
   upstream window (the `d6746a33` retail-table supersession), the **Countess-chest
   crash fix** (R136,
@@ -125,7 +128,17 @@ latest release tag is
   (R155 D3D + R156 Glide — `[features] camera_zoom`: **Z** steps the world
   zoom 1.0 → 1.25 → 1.5 → 1.0 anchored on your character, the UI stays
   pixel-1:1, the cursor is inverse-mapped so clicks land where the zoomed world
-  shows them; field-verified on both renderers 2026-11-11).
+  shows them; field-verified on both renderers 2026-11-11), the **Ctrl+Click cube
+  transfer** (R157 — with the Horadric Cube open the cube owns the direction:
+  inventory/stash items Ctrl+Click **into** the cube, cube items **out** to the
+  inventory; field-verified 2026-11-16) and the **Extended Stats** page (R158 —
+  `[features] extended_stats`: an outlined **Extended** tab on the character screen
+  flips to a second view listing the twelve stats retail hides — Magic Find, Gold
+  Find, +% Experience Gained, Vendor Price Reduction, Faster Run/Walk, Increased
+  Attack Speed, Faster Cast Rate, Faster Hit Recovery, Faster Block Rate, Light
+  Radius, Poison Length Reduction, Half Freeze Duration — read live off the
+  character's statlist every frame, display-only; the sixteenth Options row;
+  field-verified 2026-11-16).
 - **Field-verified**: boot → intro → title → character select → in game; Direct3D and
   Glide (`-3dfx`) rendering; sound end to end; the six-stop resolution ladder; the full
   smoke belt passed on the R83 and R104 builds
