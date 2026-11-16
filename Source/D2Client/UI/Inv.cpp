@@ -9119,6 +9119,7 @@ void __stdcall DRAW_UI_Inventory() {
           }
 
           CurrentInventoryPage = byPrevInvPage;
+          VPCTRLXFER_TickPendingPlace(); // VP: [ctrl-click cube R157] releases the parked 0x18 one frame after the pick (no-op when idle); the stash draw's tick above is panel-exclusive with this one - only one of the two branches runs per frame
           sGfxData.pDC6 = ui::GetBuySellBtnDC6();
           sGfxData.nFrameNumber = gbInvCubePageOpen + 10;
           D2gfx::D2GFX::D2GFX_DrawImage(&sGfxData, gnPanelOffsetX + 0x113, gnPanelOffsetY - 0x41 + ScreenSizeY, -1, DRAW_SOLID, nullptr);
@@ -9768,7 +9769,27 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
         // gated on [features] ctrl_click_xfer (d2vp.ini / the Options page's
         // "Ctrl Click Transfer" row, via VPCTRLXFER_Active's 2 s hot-read):
         // off = the retail dead click, byte-for-byte pre-R140.
-        if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd)) {
+        // R157 (owner ask: "Ctrl+Click transfer for Horadric Cube"): the
+        // cube joins the family. With the CUBE panel open
+        // (g_nCurrentInventoryPage == 0xe - OpenCube sets it, INV_FreeCubeImages
+        // treats it as the cube-open mark), the cube owns the direction: an
+        // item clicked outside the cube (INVPAGE_INVENTORY or INVPAGE_STASH)
+        // goes INTO the cube (page byte 3 - the same buffer id retail's own
+        // hand-place onto an empty cube cell puts on the wire, the
+        // place_or_use_on_item tail below with cPage == 3; the server's
+        // SCMD_0x18_ItemToInventory routes bufferId == 3 straight to
+        // place_item with no town/trade precondition - only bufferId 2 needs
+        // the trade check and 4 the in-town check), and a cube item comes
+        // OUT to the inventory (page byte 0). The stash panel's 0xc/0xd
+        // views keep the R140 inv<->stash directions. The cube grid and the
+        // inventory grid are both drawn and clickable while the cube panel
+        // is open (the 0xe branch of DRAW_UI_Inventory falls through into
+        // draw_inventory_panel exactly like the stash branch), so both legs
+        // are reachable. The target page for byte 3 comes from the same
+        // GetInventoryPage(pUnit, 3, expansion) +
+        // INVENTORY_FindItemGridPosition(..., 3) pair retail's put-in-cube
+        // path uses; a full cube plays the refuse sound and nothing moves.
+        if (VPCTRLXFER_Active() && !nItemType && (g_nCurrentInventoryPage == 0xc || g_nCurrentInventoryPage == 0xd || g_nCurrentInventoryPage == 0xe)) {
           // R149 (issue #37, "Intermittent Crash when Ctrl+Click Xfer very
           // fast"): a second Ctrl+Click while a pick+place pair is settling
           // sent a second 0x19 the server rejects (the hand still holds item
@@ -9796,8 +9817,18 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
           int nTargetCellX;
           int nTargetCellY;
           eClickedFromPage = D2Common::ITEMS::Items::ITEM_GetContainingInventoryPage(pCursorItem_lcl);
-          if (eClickedFromPage == INVPAGE_INVENTORY || eClickedFromPage == INVPAGE_STASH) {
+          if (g_nCurrentInventoryPage == 0xe) {
+            // R157: cube panel open - the cube owns the direction. Anything
+            // not already inside the cube goes INTO it (buffer 3); a cube
+            // item comes OUT to the inventory (buffer 0). The legality check
+            // below additionally admits INVPAGE_CUBE here (the stash views
+            // never see cube items - the cube grid only draws with the cube
+            // panel open).
+            nTargetPageByte = (eClickedFromPage == INVPAGE_CUBE) ? 0 : 3;
+          } else {
             nTargetPageByte = (eClickedFromPage == INVPAGE_INVENTORY) ? 4 : 0;
+          }
+          if (eClickedFromPage == INVPAGE_INVENTORY || eClickedFromPage == INVPAGE_STASH || (g_nCurrentInventoryPage == 0xe && eClickedFromPage == INVPAGE_CUBE)) {
             nExpansionFlag = GAME::Game::CLIENT_CheckExpansion();
             nTargetPage = (int)D2Common::Units::GetInventoryPage(pUnit, (uint8_t)nTargetPageByte, nExpansionFlag);
             nTargetCellX = 0;
@@ -9806,9 +9837,10 @@ BOOL __stdcall ClickItemLeft(D2UnitStrc * pUnit, D2InventoryStrc * pInventory, D
               /* Remove item from buffer 19 [DWORD item] - pick up to cursor; the
                  parked 0x18 below is rejected unless the item is the hand item */
               GAME::Msg::NET_D2GS_CLIENT_Send_INT(0x19, pCursorItem_lcl->nUnitGUID);
-              /* R141: the 0x18 place is parked, not sent - the stash-panel draw
-                 releases it one frame later (VPCTRLXFER_TickPendingPlace), so the
-                 pick echo settles before the place echo, exactly a manual drag */
+              /* R141: the 0x18 place is parked, not sent - the open panel's
+                 draw (stash since R141, cube since R157) releases it one
+                 frame later (VPCTRLXFER_TickPendingPlace), so the pick echo
+                 settles before the place echo, exactly a manual drag */
               VPCTRLXFER_ParkPlace(pCursorItem_lcl->nUnitGUID, nTargetCellX, nTargetCellY, nTargetPageByte);
               UNIT::ITEM_RemoveClientSide(pCursorItem_lcl);
               Sound::SOUND_PlaySound(UNIT::SOUND_GetIdFromUnit(pCursorItem_lcl), nullptr, 0, 0, 0);

@@ -1,11 +1,14 @@
-# Round summary — R156 (rev 172, 2026-11-11): camera_zoom Glide port — the Z zoom renders on the Glide renderer
+# Round summary — R157 (rev 173, 2026-11-16): ctrl_click_xfer covers the Horadric Cube
+
+> Previous round (R156, camera_zoom Glide port, rev 172) — its summary was superseded
+> by the field handoff; the round record lives in handoff.md's R156 line and HISTORY.md **H76**.
+
 
 ## The ask
 
-Owner, 2026-11-11, after field-verifying the R155 D3D zoom ("Great job, z to zoom works as
-intended in D3D", "R155 sent to Github"): "Now lets do Glide." The R155 plan had deferred
-the Glide path ("D3D only this round — the Glide port rides the gaGlidePerspective
-vertices work"); this round = the port @ R156.
+Owner, 2026-11-16: "Let's add Ctrl+Click transfer for Horadric Cube." The R140
+Ctrl+Click transfer only knew the stash views (0xc/0xd); this round = the cube legs
+@ R157.
 
 ## The design (what the port actually needed)
 

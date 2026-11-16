@@ -125,7 +125,7 @@ Every slate row must satisfy all of these before it ships:
 |---|---|---|---|---|---|---|
 | 0 | Z-key camera zoom | Controls | D2R launch feature (Z / wheel) | M–L | Med | `camera_zoom` — **Implemented** (R155 D3D + R156 Glide port — option **Camera Zoom**, the fifteenth Options row; **Z** steps 1.0 → 1.25 → 1.5 → 1.0 anchored on the character, the UI stays pixel-1:1, the cursor is inverse-mapped; DDraw/Gdi clamp to 1.0 with a `d2boot.log` note; plan at [plans/CAMERA-ZOOM-PLAN.md](plans/CAMERA-ZOOM-PLAN.md); **FIELD-VERIFIED 2026-11-11** — "z to zoom works as intended in D3D" / "Z to Zoom working as intended in Glide R156" — see §0a) |
 | 1 | Shift equipment-compare | Controls | D2R hover-compare | M | Med | **Implemented** (R125 — hold-Shift second tooltip, D2R side-by-side parity; shop stock included per owner; R126 field catch — shields compared the primary weapon, fixed with the same-kind slot pick — see §0b; `shift_compare`; **FIELD-VERIFIED 2026-11-06** — "Great job, works") |
-| 2 | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; R149 pair serialization + R150 round-trip window closed the deterministic deposit-leg crash; R152 #37 root fix — the surviving intermittent crash was the page-switch remove storm freeing client units without unlinking them from the inventory chain, fixed by unlink-before-free in the REMOVED echo; **FIELD-VERIFIED 2026-11-09** — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
+| 2 | Ctrl+Click stash transfer | Controls | D2R PC Ctrl+Click move (container-open swap) | S–M | Med | **Implemented** (R140 — `ctrl_click_xfer`; one-click inventory ↔ stash move with the stash open, shared pages included, full target refuses, shop sell untouched — see §0c; R149 pair serialization + R150 round-trip window closed the deterministic deposit-leg crash; R152 #37 root fix — the surviving intermittent crash was the page-switch remove storm freeing client units without unlinking them from the inventory chain, fixed by unlink-before-free in the REMOVED echo; **FIELD-VERIFIED 2026-11-09**; R157 — the Horadric Cube joins: with the cube panel open, inventory/stash items go INTO the cube and cube items OUT to the inventory (same pair, buffer byte 3; field ask SMOKE §R item 61) — "R141 confirmed", owner-closed [#35](https://github.com/VTSTech/D2VP-QoL/issues/35)) |
 | 3 | Persistent globe text (was: hover values) | HUD | D2R globe hover shows current/max | S | Low | **Shipped 0.0.5** — repurposed 2026-10-30 pre-ship: the orb-face readout duplicated retail's own above-orb hover text, so `globe_persistent` just pins that text on (ledger row 40; options page row 4; see §1) |
 | 4 | Item ilvl on tooltips | Loot | D2R 2.5 display-item-level toggle | S–M | Low | **Shipped** (R55 standalone line → R56 name-suffix → R57 bare digits → R59 single-space trim — `item_ilvl`, see §3; first shipped in release 0.0.7) |
 | 5 | Transparent bottom bar | HUD | None — owner suggestion; see-through-HUD staple elsewhere | S–M | Low–Med | `transparent_hud` — **Implemented** (R154 — option **Transparent HUD**, the fourteenth Options row; the console frame art + run/menu buttons + hostile indicator skip drawing, everything functional untouched, zero renderer code — see §4) |
@@ -235,7 +235,7 @@ slot preference (Slot rules above), +1 `shiftcmp:` gate (shield-kind slot pick) 
 docs-budget gate). **FIELD-VERIFIED 2026-11-06** ("Great job, works" — the shield
 slot legs ran on the owner builds). Nothing owed.
 
-### 2. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35; R149 pair serialization + R150 round-trip window + R152 root fix for #37)
+### 2. Ctrl+Click stash transfer — `[features] ctrl_click_xfer` (IMPLEMENTED R140; R141 slot fix FIELD-VERIFIED 2026-11-09 — "R141 confirmed", owner-closed #35; R149 pair serialization + R150 round-trip window + R152 root fix for #37; R157 cube coverage — field QA pending)
 
 **The ask** (owner, 2026-11-09, no issue): "Can we make Ctrl+Click put/remove items from
 Stash when Stash is open?" — D2R PC parity (Ctrl+Click moves an item with a container
@@ -263,8 +263,20 @@ field build (`0x18` alone) silently did nothing: sound played, item stayed. Succ
 placement exactly like a drag-drop. Full target = the cube path's refuse sound (0x13),
 `return 0`. The stash UI's personal (`0xc`) and shared (`0xd`) views are both page-4
 content (the fork's shared pages are page-4 content swaps), so the Shared tab works
-unchanged. Untouched on purpose (the retail fall-through keeps their shape): belt
-items, the cube-open panel, the trade-open panel, and the shop sell/refuse path.
+unchanged. **R157 — the cube joins**: with the Horadric Cube panel open
+(`g_nCurrentInventoryPage == 0xe`), the cube owns the direction — an inventory or
+stash item goes INTO the cube (target buffer byte 3) and a cube item comes OUT to
+the inventory (byte 0). Buffer 3 is retail-legal for `0x18`: retail's own
+hand-place onto an empty cube cell sends exactly that buffer byte, and the server's
+`SCMD_0x18_ItemToInventory` routes `bufferId == 3` to `place_item` with no
+town/trade precondition (only buffer 2 needs the trade check and 4 the in-town
+check — `PlayerMsg.cpp`). Both grids are drawn and clickable with the cube panel
+open (the 0xe draw branch falls through into `draw_inventory_panel` like the stash
+branch), and the cube draw site releases the parked `0x18` exactly like the stash
+draw's R141 tick (the two sites are panel-exclusive — one runs per frame).
+A full cube plays the refuse sound and nothing moves. Still untouched on purpose
+(the retail fall-through keeps their shape): belt items, the trade-open panel, and
+the shop sell/refuse path.
 
 **Gate**: `[features] ctrl_click_xfer` default 0 — the Vanilla+ Options page's **"Ctrl
 Click Transfer"** row (the tenth; `VPCTRLXFER_Active` hot-reads per click and the write
