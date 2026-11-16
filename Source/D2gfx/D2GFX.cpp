@@ -462,7 +462,7 @@ void __stdcall D2GFX_GetWindowSizeByResolutionMode(int32_t nResolutionMode, int 
     }
 }
 
-BOOL __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution) {
+HWND __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution) {
     int nSystemResolutionXY;
     int nSystemMetricsX;
     DWORD nErrorCode;
@@ -478,7 +478,7 @@ BOOL __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution) {
       sprintf(szCaption, "Diablo II Critical Error");
       sprintf(szMessage, "Only one copy of Diablo II may run at a time.");
       /* UINT uType for MessageBoxA */ /* LPCSTR lpCaption for MessageBoxA */ /* LPCSTR lpText for MessageBoxA */ /* HWND hWnd for MessageBoxA */ MessageBoxA((HWND)0x0, szMessage, szCaption, 0x30);
-      return FALSE;
+      return (HWND)0x0;
     }
     if (!RENDERER_CurrentRenderedFunctions) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x90);
@@ -559,7 +559,7 @@ BOOL __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution) {
       if (!hwndD2GFX_Window) {
         nErrorCode = GetLastError();
         D2Hell::FAULT_ShowFormattedErrorWithArgs(nErrorCode);
-        return FALSE;
+        return (HWND)0;
       }
 
       /* int nCmdShow for ShowWindow */ /* HWND hWnd for ShowWindow */ ShowWindow(hwndD2GFX_Window, 1);
@@ -578,8 +578,16 @@ BOOL __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution) {
       }
 
       D2GFX_InitializeWindowSize();
-      /* UINT uFlags for SetWindowPos */ /* int cy for SetWindowPos */ /* int cx for SetWindowPos */ /* int Y for SetWindowPos */ /* int X for SetWindowPos */ /* HWND hWndInsertAfter for SetWindowPos */ /* HWND hWnd for SetWindowPos */ SetWindowPos(hwndD2GFX_Window, HWND_NOTOPMOST, 0, 0, nSystemResolutionX, nSystemResolutionXY, 2);
-      return TRUE;
+      /* UINT uFlags for SetWindowPos */ /* int cy for SetWindowPos */ /* int Y for SetWindowPos */ /* int X for SetWindowPos */ /* HWND hWndInsertAfter for SetWindowPos */ /* HWND hWnd for SetWindowPos */ SetWindowPos(hwndD2GFX_Window, HWND_NOTOPMOST, 0, 0, nSystemResolutionX, nSystemResolutionXY, 2);
+      // VP [glide-postvideo-resize] restore fork semantics: return the provider's
+      // nfpCreateWindow result, not TRUE. With return TRUE the port swallowed a
+      // failed glide window open (ghWndMain=1 singlet, hwndD2GFX_Window destroyed)
+      // and kept booting; the process then died silently at the post-cutscene
+      // D2GFX_ResizeWindow(1,1) -> glide grSstWinOpen reopen -> 0 -> exit(-1)
+      // ("Failed to resize window after cutscenes... this is fatal!") - the
+      // reported "glide dies after intro videos". Propagating the result makes
+      // the failure fail-fast at CreateWindowWithChecks where [d2boot] marks name it.
+      return hWnd;
     }
 }
 

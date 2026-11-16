@@ -359,7 +359,7 @@ void __stdcall RENDERER_TogglePerspective();
 void __stdcall RENDERER_ToggleBlendedShadows();
 BOOL __stdcall D2GFX_ToggleLowQuality();
 void __stdcall D2GFX_GetWindowSizeByResolutionMode(int32_t nResolutionMode, int * nWidth, int * nHeight);
-BOOL __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution);
+HWND __stdcall D2GFX_CreateWindow(BOOL bWindowed, int32_t nResolution);
 BOOL __stdcall D2GFX_DestroyWindow();
 void __stdcall D2GFX_OnActivationChange(BOOL bActive);
 HWND __stdcall GetHwnd();

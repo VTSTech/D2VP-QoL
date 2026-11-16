@@ -28,7 +28,7 @@ namespace D2Win::D2GFX {
 
 BOOL __stdcall CreateWindowWithChecks(BOOL bWindowed, int32_t nResolutionMode) {
     gbGfxWindowCreated = 1;
-    BOOL hWnd = D2gfx::D2GFX::D2GFX_CreateWindow(bWindowed, nResolutionMode);
+    HWND hWnd = D2gfx::D2GFX::D2GFX_CreateWindow(bWindowed, nResolutionMode);
     if (!hWnd) {
       return 0;
     }

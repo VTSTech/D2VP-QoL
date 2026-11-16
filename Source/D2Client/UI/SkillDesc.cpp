@@ -1096,7 +1096,7 @@ static BOOL __stdcall ItemStatCost_DescFunc_DGrpFunc(D2UnitStrc * pUnit, D2StatL
     int iVar1;
     uint16_t* wszSecondaryStr;
     uint32_t nCharClassIndex;
-    uint32_t uVar2;
+    // uVar2 removed [proc-level0 #33]: the literal-0 vararg is gone; see case 0xf below.
     uint16_t wszFormatBuffer[256];
     int nRepairCostAlt;
     int nRepairCostBase;
@@ -1359,11 +1359,18 @@ static BOOL __stdcall ItemStatCost_DescFunc_DGrpFunc(D2UnitStrc * pUnit, D2StatL
 
       wStrId = SKILLDESC_GetStatNameString(iVar1, 0);
       wszLocaleStr = D2Lang::StrTable::strtable::GetLocaleString(wStrId);
-      /* The 0 fills the argument slot UNICODE_FormatWideString consumes for the %% in
-                         the descstr: the formatter advances one argument per conversion, %% included.
-                         1.14d pushes seven dwords here (ADD ESP,0x1c). */ uVar2 = 0;
       nRepairCostFinal = nStatParam;
-      D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszOutputBuffer, D2Lang::StrTable::strtable::GetLocaleString(pStatCostLine->descstrpos), nGroupValue, uVar2, nRepairCostFinal, wszLocaleStr);
+      // VP-BEGIN [proc-level0 #33]: descfunc 15's format consumes %d(chance) %d(level)
+      // %s(skill name) - "...%d%% Chance to Cast Level %d %s..." (+ the literal event
+      // tail inside descstrpos). The regeneration inserted a literal 0 as the second
+      // vararg (ghidra register-reuse artifact, same family as the #18 dropped-name
+      // call site), so the Level %d slot read the constant: every "x% Chance to Cast"
+      // line rendered "Level 0", and the level int landed in the %s slot where the
+      // [issue-18 fmt-args] sub-0x10000 guard terminates the line - no skill name, no
+      // event tail (issue #33). Pass the decoded level, then the name, as vanilla did.
+      // Generation and the save/packet round-trip were verified correct - display-only.
+      D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszOutputBuffer, D2Lang::StrTable::strtable::GetLocaleString(pStatCostLine->descstrpos), nGroupValue, nRepairCostFinal, wszLocaleStr);
+      // VP-END [proc-level0 #33]
       goto append_descstr2;
       case 0x10:
         wStrId = SKILLDESC_GetStatNameString(nStatParam, 0);
@@ -1669,7 +1676,11 @@ static int __stdcall SKILLDESC_BuildStatDescription(eD2UnitStat eUnitStat, uint1
       pSecondStatValue = apnStatValues[0x19];
       if (!(pStatDescResult < pSecondStatValue)) {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe1c);
-        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate);
+        // VP [item-tooltip-zero-fix R84] issue #16: the single-value branch called the
+        // formatter with NO varargs, so a min==max elemental roll printed the stack
+        // residue (zeros in our builds) instead of the value. Pass min/max exactly
+        // like the range branch below; unused varargs are harmless in cdecl.
+        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
       } else {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe1d);
         D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
@@ -1684,7 +1695,11 @@ static int __stdcall SKILLDESC_BuildStatDescription(eD2UnitStat eUnitStat, uint1
       pSecondStatValue = apnStatValues[0xd];
       if (!(pStatDescResult < pSecondStatValue)) {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe1e);
-        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate);
+        // VP [item-tooltip-zero-fix R84] issue #16: THE reported case - 'of Frost'
+        // (MagicSuffix, weap) rolls cold-max 1..2 while cold-min is fixed 1, so on a
+        // roll of 1 the pair collapses to min==max and this branch printed the stack
+        // residue as "+0 Cold Damage". Pass min/max like the range branch.
+        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
       } else {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe1f);
         D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
@@ -1699,7 +1714,8 @@ static int __stdcall SKILLDESC_BuildStatDescription(eD2UnitStat eUnitStat, uint1
       pSecondStatValue = apnStatValues[0x13];
       if (!(pStatDescResult < pSecondStatValue)) {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe20);
-        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate);
+        // VP [item-tooltip-zero-fix R84] issue #16: same missing-varargs family as fire.
+        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
       } else {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe21);
         D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
@@ -1714,7 +1730,8 @@ static int __stdcall SKILLDESC_BuildStatDescription(eD2UnitStat eUnitStat, uint1
       pSecondStatValue = apnStatValues[0x25];
       if (!(pStatDescResult < pSecondStatValue)) {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe22);
-        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate);
+        // VP [item-tooltip-zero-fix R84] issue #16: same missing-varargs family as fire.
+        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
       } else {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe23);
         D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pStatDescResult, pSecondStatValue);
@@ -1738,7 +1755,12 @@ static int __stdcall SKILLDESC_BuildStatDescription(eD2UnitStat eUnitStat, uint1
       apnStatValues[0x1f] = pMaxDamage;
       if (!(pSecondStatValue < pMaxDamage)) {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe24);
-        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate);
+        // VP [item-tooltip-zero-fix R84] issue #16: the poison single-value branch had
+        // the same missing-varargs defect - a poison mod whose computed range collapses
+        // to min==max (rounding via len_disp, or poisonlength==0 content) printed the
+        // stack residue as "0 Poison Damage over 0 Seconds". Pass value+seconds like
+        // the range branch (pSecondStatValue=min==max, pMaxDamage=max, pStatDescResult=seconds).
+        D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pSecondStatValue, pMaxDamage, pStatDescResult);
       } else {
         wszFmtTemplate = D2Lang::StrTable::strtable::GetLocaleString(0xe25);
         D2Lang::Unicode::UNISYS::UNICODE_FormatWideString(0x100, wszTooltipLine, wszFmtTemplate, pSecondStatValue, pMaxDamage, pStatDescResult);
