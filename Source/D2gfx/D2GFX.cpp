@@ -698,7 +698,9 @@ BOOL __stdcall D2GFX_ResizeWindow(int32_t nResolution, BOOL bForceResize) {
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x1e5);
       exit(-1);
     }
+    D2BOOT_MarkFmt("ResizeWindow: enter mode=%d force=%d", (int)nResolution, (int)bForceResize); // [d2boot]
     if (!bForceResize && nResolution == nResolutionMode) {
+      D2BOOT_Mark("ResizeWindow: same mode, skipped"); // [d2boot]
       return 1;
     }
 
@@ -718,8 +720,11 @@ BOOL __stdcall D2GFX_ResizeWindow(int32_t nResolution, BOOL bForceResize) {
       }
     }
 
+    D2BOOT_MarkFmt("ResizeWindow: dispatch provider mode=%d", (int)nResolution); // [d2boot]
     BOOL bResult = RENDERER_CurrentRenderedFunctions->nfpResizeWindow(hwndD2GFX_Window, nResolution);
+    D2BOOT_MarkFmt("ResizeWindow: provider -> %d", (int)bResult); // [d2boot]
     D2GFX_InitializeWindowSize();
+    D2BOOT_Mark("ResizeWindow: InitializeWindowSize done"); // [d2boot]
     return bResult;
 }
 
@@ -793,6 +798,7 @@ BOOL __stdcall D2GFX_UpdateWindowSize(int32_t nResolutionMode) {
       }
     }
 
+    D2BOOT_Mark("UpdateWindowSize: done"); // [d2boot]
     return 1;
 }
 
@@ -924,13 +930,16 @@ void __stdcall D2GFX_EndCutScene() {
       } while (nCursorDisplayCount < 0);
     }
 
+    D2BOOT_Mark("EndCutScene: dispatch provider"); // [d2boot]
     RENDERER_CurrentRenderedFunctions->nfpEndCutScene(hwndD2GFX_Window, nResolutionMode, ::D2GFX_EndCutScene);
+    D2BOOT_MarkFmt("EndCutScene: provider done (flag=%d)", (int)::D2GFX_EndCutScene); // [d2boot]
     if (::D2GFX_EndCutScene) {
       return;
     }
 
     D2GFX_SetPalette((LPPALETTEENTRY)0x0);
     D2GFX_InitializeWindowSize();
+    D2BOOT_Mark("EndCutScene: palette+initsize done"); // [d2boot]
 }
 
 int32_t __stdcall D2GFX_EndCutSceneReturnSceneState() {
@@ -945,9 +954,12 @@ void __stdcall EndCutScene(int32_t nResolution) {
       exit(-1);
     }
 
+    D2BOOT_Mark("EndCutScene(res): enter"); // [d2boot]
     D2GFX_EndCutScene();
+    D2BOOT_MarkFmt("EndCutScene(res): inner done (flag=%d)", (int)::D2GFX_EndCutScene); // [d2boot]
     if (!::D2GFX_EndCutScene) {
       bResizeOk = D2GFX_ResizeWindow(nResolution, 1);
+      D2BOOT_MarkFmt("EndCutScene(res): resize -> %d", (int)bResizeOk); // [d2boot]
       if (!bResizeOk) {
         Fog::Src::LogManager::LOGFILE_WriteStringToFile("Failed to resize window after cutscenes... this is fatal!");
         exit(-1);
@@ -957,6 +969,7 @@ void __stdcall EndCutScene(int32_t nResolution) {
     }
 
     D2GFX_SetPalette((LPPALETTEENTRY)0x0);
+    D2BOOT_Mark("EndCutScene(res): SetPalette done"); // [d2boot]
 }
 
 // Start render frame. Dispatches to backend (Glide/D3D/OpenGL/Rave) via vtable.
@@ -1117,6 +1130,7 @@ void __stdcall D2GFX_SetPalette(LPPALETTEENTRY pPalette) {
     // Static local variables (originally global data)
     static tagPALETTEENTRY gaPaletteCurrentBuffer[256] = {}; D2_STATIC_GUARD(gaPaletteCurrentBuffer, "D2gfx::D2GFX::D2GFX_SetPalette::gaPaletteCurrentBuffer");
 
+    D2BOOT_MarkFmt("SetPalette: enter pPalette=%p", (void*)pPalette); // [d2boot]
     LPPALETTEENTRY pSrcEntry;
     tagPALETTEENTRY* pDstEntry;
     if (pPalette) {
@@ -1134,6 +1148,7 @@ void __stdcall D2GFX_SetPalette(LPPALETTEENTRY pPalette) {
     }
 
     RENDERER_CurrentRenderedFunctions->nfpSetPalette(gaPaletteCurrentBuffer);
+    D2BOOT_Mark("SetPalette: provider done"); // [d2boot]
 }
 
 void __stdcall D2GFX_SetPaletteTable(BYTE * * ppPaletteTable) {
@@ -2087,10 +2102,12 @@ void __stdcall D2GFX_InitializeWindowSize() {
       __frame0.nContrast = 100;
     }
     D2GFX_SetOption(0xb, __frame0.nContrast);
+    D2BOOT_MarkFmt("InitWindowSize: SetOption(0xb, contrast=%d) done", (int)__frame0.nContrast); // [d2boot]
     __frame0.dwGamma = 0x9b;
     Storm::Source::SReg::SRegLoadValue("Diablo II", "Gamma", 0, (int32_t*)&__frame0.dwGamma);
     D2GFXRenderedData.nGamma = __frame0.dwGamma;
     D2GFX_SetGamma(__frame0.dwGamma);
+    D2BOOT_MarkFmt("InitWindowSize: SetGamma(%d) done", (int)__frame0.dwGamma); // [d2boot]
 }
 
 void StaticInit_gpszWindowClassName() {

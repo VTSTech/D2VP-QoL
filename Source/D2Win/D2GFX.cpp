@@ -15,6 +15,7 @@
 #include "Source/D2Win/D2GFX.data.h"
 #include "Source/D2Win/D2WinList.h"
 #include "Source/D2Win/Src/D2WinMain.data.h"
+#include "Redivivus/d2_boot.h" // [d2boot] SetVideoMode diagnostics
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -117,16 +118,21 @@ static RECT gWindowRect = {}; D2_STATIC_GUARD(gWindowRect, "D2Win::D2GFX::D2GFX_
       /* LPRECT lpRect for GetWindowRect */ /* HWND hWnd for GetWindowRect */ GetWindowRect(hWndResult, &gWindowRect);
     }
 
+    D2BOOT_MarkFmt("SetVideoMode: enter mode=%d", (int)nResolutionMode); // [d2boot]
     gnResolutionMode = nResolutionMode;
     D2CMP::SRC::SpriteCache::SPRITECACHE_Shutdown(1);
+    D2BOOT_Mark("SetVideoMode: spritecache shutdown done"); // [d2boot]
     BOOL bResult = D2gfx::D2GFX::D2GFX_ResizeWindow(nResolutionMode, 0);
+    D2BOOT_MarkFmt("SetVideoMode: resize -> %d", (int)bResult); // [d2boot]
     if (!bResult) {
       Fog::Src::LogManager::LOGFILE_WriteStringToFile("Failed to resize window... this is fatal!");
       exit(-1);
     }
 
     Src::D2WinPalette::D2WINPALETTE_SetPaletteIndex(0);
+    D2BOOT_Mark("SetVideoMode: SetPaletteIndex done"); // [d2boot]
     D2CMP::SRC::SpriteCache::GFX_InitCelDataCache(nullptr, 0x800000, 0x7d000, 0);
+    D2BOOT_Mark("SetVideoMode: cel data cache init done"); // [d2boot]
     return 1;
 }
 
