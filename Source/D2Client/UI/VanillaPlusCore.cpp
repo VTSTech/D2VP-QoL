@@ -347,7 +347,7 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         "camera_zoom=0\r\n"
         "\r\n"
         "[ui]\r\n"
-        "; Ground-item label font override (R153): 0 = measured pick, then the\r\n"
+        "; Menu label font override (R153): 0 = measured pick, then the\r\n"
         ";       Font16/Font30/Font42/Font24 probe order; explicit ids select a\r\n"
         ";       specific menu font (1 = Font16, 2 = Font30, 3 = Font42, 7 =\r\n"
         ";       Font24; anything outside 0..13 falls back to the measured\r\n"
@@ -355,7 +355,7 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       when the font metrics are decided, not on the 2 s hot-read -\r\n"
         ";       the font probe is expensive and the metrics are baked into the\r\n"
         ";       label layout.\r\n"
-        "label_font=0\r\n";
+        "label_font=3\r\n";
     HANDLE hFile = CreateFileA(pszPath, GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
