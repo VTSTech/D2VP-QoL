@@ -129,6 +129,23 @@ panel (skill grids, stat icons, panel layout, mini panel, chat input are all
 inside their own panels or the bottom strip). Position (-0x1ea baseline),
 click band (nY-26..nY+6) and the flip behavior unchanged.
 
+## R158.6 — the FRW row read the wrong stat (owner field report 2026-11-16)
+
+"My faster run/walk is only 25% but it's showing as 90%" - the row table's
+one odd row out: the eleven other rate/percent rows all use the item_ stat
+family, but Faster Run/Walk read UNITSTAT_velocitypercent - the RUNTIME
+movement-speed stat, not the item-granted one. velocitypercent is SEEDED
+with base 100 on every unit at init (client JoinRoomSetup Player.cpp:511
+and server SUnitMsg.cpp:188; monsters get 0x4b) and cold chill writes
+negative deltas onto it at runtime (SUnitDmg.cpp:576), so its combined
+base+children value mixes a movement baseline and speed modifiers into a
+"FRW" figure. The stat gear grants - the one the tooltips sum - is
+UNITSTAT_item_fastermovevelocity (=96; base 0, child statlists only). One
+row-table word, with the mechanism documented at the table. This also
+retires the R158.2 clamp theory: the unarmed "100" in that field report was
+the seeded base read through SERVER_GetUnitStat, not a minaccr display
+clamp (the clamp exists but was not the source of that 100).
+
 ## Field ask
 
 SMOKE **§W 92–96**: tab + flip; live values (base+47 MF gear test, plus the

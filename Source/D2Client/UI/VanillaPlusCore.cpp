@@ -2269,7 +2269,19 @@ static const struct {
     { "Gold Find",                UNITSTAT_item_goldbonus,            0 },
     { "+% Experience Gained",     UNITSTAT_item_addexperience,        0 },
     { "Vendor Price Reduction",   UNITSTAT_item_reducedprices,        0 },
-    { "Faster Run/Walk",          UNITSTAT_velocitypercent,           0 },
+    { "Faster Run/Walk",          UNITSTAT_item_fastermovevelocity,   0 },
+    //  ^ R158.6 field fix (owner: "My faster run/walk is only 25% but it's
+    //    showing as 90%"): the row first read UNITSTAT_velocitypercent -
+    //    the RUNTIME movement-speed stat every unit is SEEDED with base 100
+    //    at init (client JoinRoomSetup Player.cpp:511 / server SUnitMsg.cpp:188,
+    //    monsters 0x4b), and cold chill writes negative deltas onto it
+    //    (SUnitDmg.cpp:576) - so the combined value mixed a baseline and
+    //    speed modifiers into a "FRW" figure. The stat gear grants, the one
+    //    the tooltips sum, is item_fastermovevelocity (=96; base 0, child
+    //    statlists only) - the same item_ family every other rate row here
+    //    already uses. This also retires the R158.2 clamp theory: the
+    //    unarmed "100" in that field report was this seeded base, read
+    //    through SERVER_GetUnitStat, not a minaccr display clamp.
     { "Increased Attack Speed",   UNITSTAT_item_fasterattackrate,     0 },
     { "Faster Cast Rate",         UNITSTAT_item_fastercastrate,       0 },
     { "Faster Hit Recovery",      UNITSTAT_item_fastergethitrate,     0 },
