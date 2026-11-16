@@ -1,36 +1,8 @@
 # D2VP-QoL — Audit closure ledger (R159 + R160 + R161)
 
-Source: `audit.md` (the full code audit, 22 findings). This ledger tracks every
-finding to its resolution. R159 = quick wins, R160 = the two Highs,
-R161 = everything else that could be fixed without a design call.
+Closed audit findings have been moved to `deltas.md` for archival. This file now serves as a historical reference.
 
-## Fixed
-
-| Finding | Round | What landed |
-|---|---|---|
-| SEC-01 | R159 | DEV control channel binds loopback only |
-| SEC-02 | R159 | `mon`/`watch` remote-input guards |
-| SEC-02 (residual) | R161 | `ai`/`walldir`/`objname`/`setclip` parse guards + clamps; `sym` help stub retired |
-| SEC-03 | R161 | boot-log path assembly bounded (exe-dir + %TEMP% fallbacks reserve the suffix room) |
-| ROB-01 | R160 | transient `.sss` read failure defers (toggle + save refused until a read succeeds) |
-| ROB-02 | R160 | partial materialization keeps the stored block authoritative |
-| ROB-04 | R161 | the memory-only personal-stash exposure is documented in README + FEATURES |
-| ROB-05 | R161 | diagnostics pre-truncation: BootLogWrite caps inputs at 580, MarkFmt/TraceFmt bodies sized to wvsprintfA's 1024 cap, D2Trace line buffer 1100; stale d2_crash comment fixed |
-| ROB-06 | R161 | ini write result checked and returned; Options row plays a distinct sound on failure; Windows profile-cache caveat documented (gate comment + ini template) |
-| ROB-07 | R159 | header no longer claims an unimplemented dead/trading refusal |
-| ROB-08 | R161 | `VANILLAPLUS_SelfCheck` runs at Game/Main.cpp boot, before any game state; the EnsureIni site stays as the once-guarded belt |
-| ROB-09 | R159 | three unbalanced VP markers closed |
-| ROB-10 | R161 | `ITEMILVL_AppendNameSuffix` takes an explicit capacity; ShowItems label cap 0x100→0xFE (terminator slack); shift-compare channel size pinned by static_assert; the two suspected SFile registry-migration reads wrapped in VP note markers (byte-identical, upstream-visible) |
-| MAINT-01 | R159 | CONTRIBUTING names what actually enforces what |
-| MAINT-02 | R161 | the Options-page "+1 entry, nothing else" comment now lists all four coordinated edits |
-| MAINT-04 | R159 | stale doc comments fixed (clock, options geometry, `__ftol2`) |
-| MAINT-05 (part) | R159 | unused macro + `if (0)` statement deleted |
-| MAINT-06 | R161 | `D2VP_VERSION_TAG` composes once in d2_boot.h; boot self-ID derives from it |
-| TEST-01 | R161 | `tools/check-vanilla-plus.sh` revived as the reduced suite (docs_gate + whole-repo marker census + LF check) |
-| FEAT-02 (minimal) | R161 | folded into ROB-06 (failure sound + d2boot mark) |
-| FEAT-03 (partial) | R161 | `VPRES_MAX_HEIGHT` + static_assert pin the row-table sizing (the #31 class) |
-| FEAT-04 | R161 | ini template gains the `[ui] label_font` block marked REQUIRES RESTART |
-| ARCH-01 (part) | R159 | the GlobeTextPersistent first-poll guard drift fixed; pattern uniform |
+For current active findings, see `audit.md`. For completed findings, see `deltas.md`.
 
 ## Deferred (with reasons)
 
