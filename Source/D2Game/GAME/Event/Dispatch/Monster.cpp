@@ -142,6 +142,7 @@ void __fastcall MONSTEREVENT_DefaultCallback(::SGAMEDATA * pGame, D2UnitStrc * p
       BOOL eState;
       skip_if_frozen:
       eState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_freeze);
+      eState = eState || D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_cold);
       if (!(!eState || (eState = UNIT::SUnit::CheckForModeZeroDeath(pUnit) , eState != 0))) {
         return;
       }
@@ -163,6 +164,12 @@ void __fastcall MONSTEREVENT_DefaultCallback(::SGAMEDATA * pGame, D2UnitStrc * p
       case UNITEVENTCALLBACK_PERIODICSKILLS:
 
       case UNITEVENTCALLBACK_REMOVESTATE:
+
+      case UNITEVENTCALLBACK_MODECHANGE:
+
+      case UNITEVENTCALLBACK_ENDANIM:
+
+      case UNITEVENTCALLBACK_AITHINK:
         goto run_timer_callback;
       default:
         goto skip_if_frozen;
