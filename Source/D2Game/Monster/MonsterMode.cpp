@@ -640,7 +640,7 @@ void __fastcall RegenAndPsnDecreaser(::SGAMEDATA * pGame, D2UnitStrc * pUnit, in
       iPoisonSearch++;
     } while (iPoisonSearch < 2);
 
-    D2UnitStrc* pAttacker = 0;
+D2UnitStrc* pAttacker = 0;
     pUnit->dwLastHitClass = 0;
     ::SGAMEDATA* pGameKill = pGameSaved;
     if (pStatList) {
@@ -650,6 +650,22 @@ void __fastcall RegenAndPsnDecreaser(::SGAMEDATA * pGame, D2UnitStrc * pUnit, in
       pAttacker = UNIT::SUnit::FindUnitFromTable(pGameSaved, eUnitType, nAttackerGUID);
     }
 
+    // Check for cold/frozen states and bypass uninterruptable check for poison death
+    bool bIsColdOrFrozen = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_freeze) ||
+                           D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_cold);
+
+    if (bIsColdOrFrozen) {
+      // Always allow death for cold/frozen monsters - bypass any uninterruptable checks
+      UNIT::SUnitDmg::SERVER_KillMonster(pGameKill, pUnit, pAttacker, 1);
+      UNIT::SUnitEvent::UNITEVENT_DispatchEventsByType(pGameKill, 10, pUnit, pAttacker, nullptr);
+      if (!pAttacker) {
+        return;
+      }
+      UNIT::SUnitEvent::UNITEVENT_DispatchEventsByType(pGameKill, 9, pAttacker, pUnit, nullptr);
+      return;
+    }
+
+    // Original logic for non-cold/frozen monsters
     eUnitState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
     if (eUnitState) {
       D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 1);
