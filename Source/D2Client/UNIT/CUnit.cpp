@@ -2222,7 +2222,7 @@ D2UnitStrc * __fastcall UNIT_CreatePlayer(int32_t nUnitGuid, int32_t nClassId, i
     return pUnit;
 }
 
-D2UnitStrc * __fastcall CreateObject(int32_t nUnitGUID, int32_t nClassId, int32_t nX, int32_t nY, eD2UnitType eUnitType, int32_t nUnused, int32_t nState, bool nInteraction) {
+D2UnitStrc * __fastcall CreateObject(int32_t nUnitGUID, int32_t nClassId, int32_t nX, int32_t nY, eD2UnitType eUnitType, int32_t nUnused, int32_t nState, uint8_t nInteraction) {
     D2UnitStrc* pUnit = D2Common::Units::AllocUnit(nullptr, eUnitType);
     if (!pUnit) {
       return nullptr;
@@ -2231,7 +2231,7 @@ D2UnitStrc * __fastcall CreateObject(int32_t nUnitGUID, int32_t nClassId, int32_
     pUnit = InitCommonData(pUnit, nUnitGUID, nClassId, nX, nY, eUnitType, nUnused, nState);
     if (pUnit) {
       BOOL bIsShrine;
-      pUnit->pUnitData.pUnitDataPlayer->szCharName[4] = nInteraction;
+      pUnit->pUnitData.pUnitDataMonster->Components[0] = nInteraction;
       bIsShrine = D2Common::Units::IsShrine(pUnit);
       if (bIsShrine) {
         Object::SetShrineTextInfo(pUnit);

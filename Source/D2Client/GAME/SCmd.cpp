@@ -1510,7 +1510,7 @@ void __fastcall NET_D2GS_CLIENT_Incoming0x09_AssignLevelWarp(D2GSPacketSrv0x09 *
 }
 
 void __fastcall NET_D2GS_CLIENT_Incoming0x51_NEWOBJECT(D2GSPacketSrv0x51 * pBytes) {
-    UNIT::CUnit::CreateObject(pBytes->dwObjectGUID, (uint32_t)pBytes->wClassId, (uint32_t)pBytes->wX, (uint32_t)pBytes->wY, (eD2UnitType)pBytes->nObjectType, 0, (uint32_t)pBytes->nState, (bool)pBytes->nInteraction);
+    UNIT::CUnit::CreateObject(pBytes->dwObjectGUID, (uint32_t)pBytes->wClassId, (uint32_t)pBytes->wX, (uint32_t)pBytes->wY, (eD2UnitType)pBytes->nObjectType, 0, (uint32_t)pBytes->nState, (uint8_t)pBytes->nInteraction);
 }
 
 // JMP thunk
