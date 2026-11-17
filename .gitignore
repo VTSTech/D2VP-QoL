@@ -7,3 +7,8 @@ sites2.tsv
 *.bak
 build*/
 a.out
+/CMakeFiles
+Makefile
+compile_commands.json
+CMakeCache.txt
+cmake_install.cmake
