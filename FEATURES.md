@@ -1373,5 +1373,7 @@ boot lockstep) + docs_gate green (compile gate: the owner's Win11 build). Field 
 
 **The audit** (plan P0.2, recorded here as shipped): the only other palshift-index writers are Monster.cpp's death-palette path (writes 3/4/5 for the Andariel/Duriel/difficulty cases, passes values < 8, else forces 2) and RosterPets' ownership recolors (0/1) — all provably in-window, so the create clamp is the sole `>= 38` gatekeeper and the draw-time halt stays unreachable in both gate states. The halt is deliberately kept retail-faithful: it is the canary if a future write site skips the audit.
 
+**Field status.** Field-verified 2026-11-18, the day it shipped (owner: "It works!") — the tint span gate-on, the byte-retail gate-off, Griswold and the champion tinting (R167) all confirmed in-game.
+
 **The panel.** Row 17 (`palette_37`, label **Palette 37 Tints**, nReadDefault 0) sits in column 1 band 7, directly under Extended Stats. `VPP_ROWS_PER_COL` 8 → 9: column 0 carries rows 0–8 (bands 0–8), column 1 rows 9–16 (bands 0–7, band 8 empty — the R147 precedent); the back row moves to boxTop+0x184 and the box grows 0x191 → 0x1b1 (433 px; 640x480 top margin 23 px, the same 0x13 bottom margin).
 

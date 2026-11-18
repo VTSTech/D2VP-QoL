@@ -24,6 +24,8 @@ its source round. Per-tag notes: the
   retail-faithful as the canary. Options page reflows to two columns of NINE (box
   0x191 → 0x1b1, back row 0x184, 640x480 top margin 23 px, col 1 band 8 empty — the R147
   precedent); ini template block ships in the same round.
+  **Field-verified 2026-11-18** (owner: "It works!"). A consolidated release-notes file for
+  R162 → R168 ships this round too: [RELEASE-NOTES-R162-R168.md](RELEASE-NOTES-R162-R168.md).
 
 - **R167 — issue #34 regression: champion/unique tinting restored** (owner report after
   R166: "Unique Monsters (Regular Champions) are not tinted anymore"). The R165

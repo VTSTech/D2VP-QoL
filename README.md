@@ -39,6 +39,7 @@ Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Q
 | Automap Clock | `[features] automap_clock` | Shows session time and system clock on automap |
 | Transparent HUD | `[features] transparent_hud` | Bottom bar background, run/menu buttons hidden |
 | Camera Zoom | `[features] camera_zoom` | Press **Z** to zoom world (1.0→1.25→1.5→1.0) |
+| Palette 37 Tints | `[features] palette_37` | Full tint table: 8 tint rows retail never rendered start appearing on champions/uniques |
 
 ## Install
 

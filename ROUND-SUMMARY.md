@@ -61,6 +61,7 @@ table — kept from the draw-time halt only by the clamp it shares a site with.
 1. Rebuild (R168); first `d2boot.log` line must read `Vanilla+0.0.8-R168`.
 2. SMOKE §Z **102**: the Options page shows seventeen rows in two columns, the
    box fits 640x480 unclipped, the new row toggles + writes the ini.
+0. **FIELD PASS 2026-11-18: owner confirms R168 GREEN ("It works!") — §Z 102–103 recorded as passed; the release-notes file RELEASE-NOTES-R162-R168.md ships the R162–R168 window.**
 3. SMOKE §Z **103**: with `palette_37=1`, champion/unique tints span new hue
    families (the former rows 30..37); champions still tinted (R167 preserved),
    Griswold still untinted (#34), ownership tints unchanged (R51/R89). With the
