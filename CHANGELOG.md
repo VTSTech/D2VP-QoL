@@ -9,6 +9,17 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R166 — issue #39 residual: chilled/frozen monsters no longer strand at 0 HP** (the
+  rare "disappears without loot" after R163): the poison-tick kill for cold/frozen monsters
+  no longer runs while the victim is uninterruptable — retail's invariant is that such units
+  take the `STATE_death_delay` deferral (`MONSTERAI_ExecuteLifecycleTransition` halts on
+  uninterruptable victims), and a chilled monster killed mid-cast was being fed straight
+  into that halt path. The deferred death now also **completes**: the freeze/cold expiry
+  callbacks finish any stranded `STATE_death_delay` kill
+  (`SUNITDMG_CompleteDeathDelayIfPending`), so the unit dies and drops loot at state expiry
+  even when the cast-end completion path never runs. Non-uninterruptable cold/frozen kills
+  stay immediate (R163 behavior unchanged).
+
 - **R165 — issue #34 "Griswold is Green"** (spawn-time palette fix): Griswold (and any
   one-off boss class whose monster code ships no `palshift.dat`) rendered with a green
   unique tint instead of retail's untinted base palette. Root cause: the R49 global-table

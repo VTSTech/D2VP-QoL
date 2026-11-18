@@ -444,6 +444,64 @@ static void __stdcall DAMAGE_ApplyPoison(D2UnitStrc * pUnit, int32_t nPoisonRate
     D2Common::Stats::StatsEx::D2AddStatToStatsListEx(pPoisonStatList, UNITSTAT_hpregen, -nPoisonRate, 0);
 }
 
+// [R166] Completes a deferred death (STATE_death_delay) left stranded on a monster whose
+// uninterruptable window ended without the normal completion path running. Retail sets
+// STATE_death_delay (the SUnitDmg post-hit dispatcher and the RegenAndPsnDecreaser
+// poison-tick killer) precisely to keep uninterruptable units OUT of
+// MONSTERAI_ExecuteLifecycleTransition, whose first check halts on a victim with
+// STATE_uninterruptable (upstream asm_matching, line 0x753). Retail completes the deferred
+// kill in SetUninterruptableState(0) — but for a chilled monster that path is routinely
+// unreachable: MONSTER_EndOfFrameAiDispatch's flagged-mode branch skips everything for
+// frozen-alive units and the cast-end clear only runs through the per-frame mode processors,
+// so a chilled monster killed mid-cast sat at 0 HP with death_delay set and never finished
+// dying (issue #39's residual "disappears without loot" — the unit lingered until a room
+// update dropped it). This mirrors SetUninterruptableState's completion branch: monster,
+// alive, death_delay active, uninterruptable already cleared — then kill through the same
+// killer-aware pair (GetHitCalculation with the KILL result flag when a killer resolves,
+// SERVER_KillMonster otherwise). Returns TRUE when a deferred death was completed. Called
+// from the freeze and cold state-expiry callbacks; no-op for players, dead units and units
+// still uninterruptable.
+BOOL __fastcall SUNITDMG_CompleteDeathDelayIfPending(D2UnitStrc * pUnit) {
+    BOOL eDeathDelayState;
+    D2UnitStrc* pKillerUnit;
+    D2DamageStrc sDamage;
+    ::SGAMEDATA* pGame;
+    if (!pUnit || pUnit->eUnitType != UNIT_MONSTER) {
+      return 0;
+    }
+
+    eDeathDelayState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_death_delay);
+    if (!eDeathDelayState) {
+      return 0;
+    }
+
+    if (D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable)) {
+      return 0; // cast still running — its end clears uninterruptable and completes the kill
+    }
+
+    if (SUnit::CheckForModeZeroDeath(pUnit)) {
+      D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
+      return 0; // already dying/dead — just drop the stale flag
+    }
+
+    pGame = SUnit::GetGamePointer(pUnit);
+    if (!pGame) {
+      return 0;
+    }
+
+    D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
+    pKillerUnit = SUnit::GetKillerUnit(pGame, pUnit);
+    if (pKillerUnit) {
+      memset(&sDamage, 0, 0x70);
+      sDamage.wResultFlags |= 2;
+      SERVER_GetHitCalculation(pGame, pKillerUnit, pUnit, &sDamage);
+    } else {
+      SERVER_KillMonster(pGame, pUnit, nullptr, 1);
+    }
+
+    return 1;
+}
+
 // @sourcefile .\UNIT\SUnitDmg.cpp
 void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, eD2States eState, uint32_t dwParam) {
     BOOL bIsDead = SUnit::CheckForModeZeroDeath(pUnit);
@@ -459,6 +517,12 @@ void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, eD2States eState, uint32
     bIsDead = SUnit::CheckForModeZeroDeath(pUnit);
     if (!bIsDead) {
       D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_shatter, 0);
+    }
+
+    // [R166] a chilled monster whose lethal hit was deferred (STATE_death_delay) completes
+    // its death here if the cast-end path never ran — see SUNITDMG_CompleteDeathDelayIfPending.
+    if (pUnit && pUnit->eUnitType == UNIT_MONSTER && SUNITDMG_CompleteDeathDelayIfPending(pUnit)) {
+      return;
     }
 
     D2Common::Units::UpdateAnimSpeed(pUnit, ".\\UNIT\\SUnitDmg.cpp", 0x152);
@@ -611,6 +675,9 @@ void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, eD2Stat
 
     D2Common::DATATBLS::ItemStats::SetState(pUnit, eState, 0);
     SUnit::FreeCombatAndChangeAnimMode(SUnit::GetGamePointer(pUnit), pUnit, 1);
+    if (pUnit && pUnit->eUnitType == UNIT_MONSTER && SUNITDMG_CompleteDeathDelayIfPending(pUnit)) {
+      return; // [R166] deferred death completed at freeze end — the death flow takes over
+    }
     if (!(pUnit && pUnit->eUnitType == UNIT_MONSTER)) {
       return;
     }

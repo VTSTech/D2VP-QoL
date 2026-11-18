@@ -655,6 +655,21 @@ D2UnitStrc* pAttacker = 0;
                            D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_cold);
 
     if (bIsColdOrFrozen) {
+      // [R166] retail's invariant: a unit with STATE_uninterruptable must NEVER enter
+      // MONSTERAI_ExecuteLifecycleTransition — its first check halts on uninterruptable
+      // victims (upstream asm_matching, line 0x753), which is why retail defers lethal
+      // kills on such units via STATE_death_delay and completes them when the state
+      // clears (SetUninterruptableState(0), and since R166 also the freeze/cold expiry
+      // callbacks). R163's immediate kill for cold/frozen poison deaths skipped that
+      // deferral and fed chilled mid-cast units straight into the halt path. Restore the
+      // deferral here; the kill now completes at cast end or state expiry (whichever
+      // clears uninterruptable first) instead of stranding the unit at 0 HP.
+      eUnitState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
+      if (eUnitState) {
+        D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 1);
+        return;
+      }
+
       // Always allow death for cold/frozen monsters - bypass any uninterruptable checks
       UNIT::SUnitDmg::SERVER_KillMonster(pGameKill, pUnit, pAttacker, 1);
       UNIT::SUnitEvent::UNITEVENT_DispatchEventsByType(pGameKill, 10, pUnit, pAttacker, nullptr);
