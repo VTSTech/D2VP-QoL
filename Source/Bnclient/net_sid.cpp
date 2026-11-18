@@ -1347,6 +1347,16 @@ void __stdcall NET_SID_CLIENT_InitializeSRP() {
 }; D2_STATIC_GUARD(gabSrpModulusN, "Bnclient::_net_sid::NET_SID_CLIENT_InitializeSRP::gabSrpModulusN");
     static uint32_t gnSrpModulusNLen = 0x20; D2_STATIC_GUARD(gnSrpModulusNLen, "Bnclient::_net_sid::NET_SID_CLIENT_InitializeSRP::gnSrpModulusNLen");
 
+    // VP-BEGIN [bn-srp-context R169]: SRP_GlobalInit (D2Net::SRP) has no caller in the rebuild -
+    // retail created g_pSrpContext during game init, so it arrived here non-NULL. In the fork it
+    // is still NULL on the first Battle.net click and SRP_SetParameters's (*ppSrp)->bInitialized
+    // read dereferenced it -> the game crashed inside ConnectingToBattleNet, synchronously, the
+    // instant the button was pressed (before the connect thread even started). Create-on-demand
+    // keeps retail behavior: one context, allocated before any SRP use; SRP_DestroyContext /
+    // SRP_AtexitCleanup already tolerate a NULL context when Battle.net is never used.
+    if (!g_pSrpContext) {
+      SRP::SRP_CreateContext(&g_pSrpContext);
+    }
     SRP::SRP_SetParameters(&g_pSrpContext, gnSrpGeneratorGLen, (uint8_t*)&gabSrpGeneratorG, gnSrpModulusNLen, gabSrpModulusN);
     DWORD dwTickCount = GetTickCount();
     SRP::SRP_SeedRandom(&g_pSrpContext, dwTickCount);
@@ -1513,7 +1523,14 @@ int32_t __stdcall NET_SID_CLIENT_Send_0x51_AuthCheck() {
       dwClientToken.dwKeyCount = 2;
       BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sClassicKeyHash, g_dwCdKeyClientToken, 0);
       BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sExpansionKeyHash, g_dwCdKeyClientToken, 1);
-      pPacketEnd = (char*)szExeInfoClassic;
+      // VP-BEGIN [bn-authcheck-bound R169]: the bound for the CD-key owner copy must be the end
+      // of the packet's szTail (szTail is 0x200 bytes at 0x5C, packet total 0x25c) - as
+      // decompiled it pointed at the 256-byte LOCAL szExeInfoClassic buffer, so
+      // pKeyOwnerStr became an arbitrary stack-delta and SStrCopy copied the registry Owner
+      // string unbounded into szTail. The classic branch's szTail + 0x1dc bound is retail and
+      // stays as-is.
+      pPacketEnd = dwClientToken.szTail + 0x200;
+      // VP-END [bn-authcheck-bound R169]
     } else {
       bHasPatchFile = Storm::Source::SSTR::SStrCopy((char*)&dwClientToken.sExpansionKeyHash, (char*)szExeInfoClassic, 0x200);
       szBufferOutput = dwClientToken.sExpansionKeyHash.abHash + (bHasPatchFile - 0xf);

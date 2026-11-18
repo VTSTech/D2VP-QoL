@@ -9,6 +9,22 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R169 — the Battle.net title-screen click crash fixed + private-server gateway tools**
+  (owner ask: "Currently, Clicking 'Battle.net' from the Title Screen crashes the game.
+  Can we fix that?"). Root cause: the rebuild never calls `D2Net::SRP::SRP_GlobalInit`, so
+  the SRP context global was still NULL on the first Battle.net click and `SRP_SetParameters`
+  dereferenced it — an instant crash before the connect thread even started. Fixed with a
+  create-on-demand in `NET_SID_CLIENT_InitializeSRP` (retail-identical). Three more defects
+  on the same connect path fixed in the same round: the Battle.net read thread died right
+  after the first server response (a pointer used where the packet loop wants a byte offset
+  — no Battle.net connection could ever complete), an unbounded CD-key owner copy in the
+  SID_AUTH_CHECK expansion packet, and gateway-list lookup failures returning the gateway
+  struct pointer as a string. New tools: `tools/D2VP-SetPrivateGateway.ps1` points the
+  Battle.net button at any private server (PvPGN etc., TCP 6112) via the registry gateway
+  override + `BNETIP`, and `tools/D2VP-RestoreGateway.ps1` puts real Battle.net back.
+  Field ask: the Battle.net click must now show the connect screen and a connect result,
+  not a crash.
+
 - **R168 — the retail 30-vs-37 palette-window bug, gated** (owner ask: "lets fix the 30
   vs 37 retail bug, and make it a gated fix in the Options Panel" — on the R167 plan
   `plans/R168-30v37-Palette-Plan.md`). Retail's rolled unique/champion tint roll

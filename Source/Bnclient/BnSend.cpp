@@ -1589,7 +1589,14 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
     }
 
     DWORD dwLastKeepaliveTick = GetTickCount();
-    char* pBufPos = 0;
+    // VP-BEGIN [bn-read-offset R169]: nBufPos is a BYTE OFFSET into chRecvBuf, not a pointer.
+    // NET_SID_CLIENT_IncomingPacketHandlerLoop returns a pointer one past the compacted
+    // remainder (BnSend.cpp ~1566), so the offset is (returned pointer - chRecvBuf). As
+    // decompiled, char* pBufPos doubled as the offset: after the first dispatched packet it
+    // held a wild stack address, the next recv aimed at chRecvBuf + (that address) with a
+    // negative length, and the Battle.net read thread died right after the first server
+    // response - no 0x50/0x51 replies were ever processed, so no connection could complete.
+    int nBufPos = 0;
     D2NetDataStrc* pSafesock = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
     do {
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (!pSafesock) {
@@ -1618,13 +1625,13 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
         break;
       }
       if (nPollResult) {
-        nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + (int)pBufPos, 0x2000 - (int)pBufPos);
+        nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + nBufPos, 0x2000 - nBufPos);
         if (nBytesRead <= 0) {
           _net_sid::SID_SetReadyFlag();
           break;
         }
 
-        pBufPos = NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, (size_t)(pBufPos + nBytesRead));
+        nBufPos = (int)NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, (size_t)(nBufPos + nBytesRead)) - (int)chRecvBuf;
       }
 
       dwCurrentTick = GetTickCount();

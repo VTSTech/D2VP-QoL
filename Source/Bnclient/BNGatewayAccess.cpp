@@ -115,6 +115,11 @@ void __stdcall SaveAndUnload(D2BNetGatewayAccessStr * pGatewayAccess) {
 }
 
 char * __thiscall Nth(void * pThis, int nIndex) {
+    // VP-BEGIN [bn-nth-failstr R169]: every failure path below used to return the gateway
+    // struct pointer itself (Ghidra reused `this` as the return slot); retail returns an empty
+    // string. The struct pointer reinterpreted as char* fed raw struct bytes into
+    // gethostbyname via GetBnetIp -> DNS whenever the registry gateway list was missing or
+    // truncated. An empty-string failure keeps every caller on a clean "no gateway" path.
     int nFieldIdx;
     int nTargetField;
     char* szDataCursor = *(char**)((int)pThis + 0x10);
@@ -136,11 +141,12 @@ char * __thiscall Nth(void * pThis, int nIndex) {
         } while (nFieldIdx < nTargetField);
       }
       if (nIndex < *(int*)((int)pThis + 0x14) && nFieldIdx <= nTargetField) {
-        pThis = (void*)szDataCursor;
+        return szDataCursor;
       }
     }
 
-    return (char*)pThis;
+    return "";
+    // VP-END [bn-nth-failstr R169]
 }
 
 char * __stdcall DNS(D2BNetGatewayAccessStr * pGatewayAccess, int nIndex) {
