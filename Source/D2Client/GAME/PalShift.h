@@ -43,6 +43,11 @@ int * __fastcall PALSHIFT_FindPalShiftByToken(int32_t nToken);
 void __fastcall PALSHIFT_LoadMonsterPalShift(int32_t nMonsterId);
 // @sourcefile .\GAME\PalShift.cpp
 void __stdcall PALSHIFT_InitPalShiftTable();
+// [R165] TRUE when the class has a palshift.dat entry in gpMonsterPalShiftList (slot+4).
+// Create-time companion of PALSHIFT_GetMonsterTransform's entry check; see the [R165]
+// block in UNIT_CreateMonster (issue #34).
+// @sourcefile .\GAME\PalShift.cpp
+BOOL __fastcall PALSHIFT_HasMonsterPalShift(int32_t nMonsterId);
 // Returns a pointer into the monster's palette-shift transform table for the given unit's current pal-shift index. Returns null for non-monster units or those without a palette-shift entry. For random transforms (index 8-37) uses PalShift_RandTransform; for blood-palette indices (2-7) returns the green-blood sub-table offset if blood is enabled and the monster uses local blood; otherwise returns the base palette-shift offset. Halts if the random index is out of the 30-entry range.
 struct D2GamePalShiftRandTransformStrc * * __fastcall PALSHIFT_GetMonsterTransform(struct D2UnitStrc * pUnit);
 int32_t __fastcall PALSHIFT_GenerateShiftDuration(struct D2UnitStrc * pUnitSeedBase, uint16_t nSeedInput);

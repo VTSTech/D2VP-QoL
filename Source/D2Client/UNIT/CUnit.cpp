@@ -2259,6 +2259,12 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
     D2UnitDataMonsterStrc* pItemData;
     D2SeedStrc nSeedLow;
     uint32_t nPalShiftIdx = pCreateData->nUnitGUID;
+    // [R165] tracks whether the tint index came from explicit txt data (MonStats2
+    // byUtrans / superuniques.txt Utrans) rather than the random unique roll. Retail's
+    // draw-time lookup early-outs for entry-less classes, so an explicit tint on a class
+    // that ships no palshift.dat is dead data there; the neutralizer below reproduces
+    // that (issue #34 "Griswold is Green"). See PalShift.cpp PALSHIFT_HasMonsterPalShift.
+    int32_t bExplicitUtransTint = 0;
     uint32_t nDifficulty = GAME::RosterPets::GetRosterPetGUID(pPlayerUnit, 7, 1);
     if (nPalShiftIdx == nDifficulty) {
       pUnit = Player::FindUnit(nPalShiftIdx, ServerSideUnitHashTables[1], UNIT_MONSTER, nPalShiftIdx & 0x7f);
@@ -2366,6 +2372,9 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
           if (pMonStats2Diff->byUtrans[byDifficulty]) {
             byDifficulty = GAME::Game::GetDificulity();
             nPalShiftIdx = (uint32_t)pMonStats2Diff->byUtrans[byDifficulty];
+            // [R165] explicit MonStats2.txt Utrans data (incl. the 0xFF ownership
+            // reassignment below) — not a roll; subject to the entry-less neutralizer.
+            bExplicitUtransTint = 1;
             if (nPalShiftIdx == 0xff) {
               uMercType = GAME::RosterPets::ROSTER_IsUnitHostileToPlayer(pUnit);
               // [R51] spawn-time ownership polarity: the RAW hostility flag selects
@@ -2388,6 +2397,9 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
     if (pUnit->nClassId == 0x16b || pUnit->nClassId == 0x16c) {
       uMercType = GAME::RosterPets::ROSTER_IsUnitHostileToPlayer(pUnit);
       nPalShiftIdx = (uint32_t)uMercType;
+      // [R165] the ownership index resolves through the class's own entry sub-tables
+      // (hardcoded loads in PALSHIFT_InitPalShiftTable) — never neutralize it.
+      bExplicitUtransTint = 0;
     }
 
     bResult = MonUnique::CheckMonTypeForMonster(pUnit, 2);
@@ -2399,9 +2411,28 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
       if (pSuperUnique->Utrans[byDifficulty] != '\0') {
         byDifficulty = GAME::Game::GetDificulity();
         nPalShiftIdx = (uint32_t)(uint8_t)pSuperUnique->Utrans[byDifficulty];
+        // [R165] explicit superuniques.txt Utrans data — not a roll; subject to the
+        // entry-less neutralizer below (Griswold rides this branch, Utrans 17).
+        bExplicitUtransTint = 1;
       }
     }
     if ((int)nPalShiftIdx >= 0x1e) {
+      nPalShiftIdx = 2;
+    }
+
+    // [R165] issue #34 "Griswold is Green" — the create-time half of retail's draw-time
+    // entry check. PALSHIFT_GetMonsterTransform's retail form early-outs for monsters
+    // without their own palshift.dat, and one-off boss classes (Griswold's monster code
+    // "gz" among them) ship none in the MPQ, so retail never tints them: their explicit
+    // superuniques.txt Utrans (Griswold = 17) is dead data and the boss renders its base
+    // palette. The R49 global-table fallback (issue #9, "no unique colors") must only
+    // serve the ROLLED tint path — as written it leaked the RandTransforms table onto
+    // entry-less classes carrying explicit Utrans data too, and Griswold landed on the
+    // green-family transform row. Neutralize back to the untinted base (idx 2, the same
+    // default the TransLvl path stores) exactly when the tint came from txt data AND the
+    // class has no entry — rolled tints keep the R49 fallback, entry-bearing classes keep
+    // the tint (retail resolves idx 8+ through the global table for them regardless).
+    if (bExplicitUtransTint && !GAME::PalShift::PALSHIFT_HasMonsterPalShift(pUnit->nClassId)) {
       nPalShiftIdx = 2;
     }
 

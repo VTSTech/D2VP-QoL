@@ -9,6 +9,17 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R165 — issue #34 "Griswold is Green"** (spawn-time palette fix): Griswold (and any
+  one-off boss class whose monster code ships no `palshift.dat`) rendered with a green
+  unique tint instead of retail's untinted base palette. Root cause: the R49 global-table
+  fallback (issue #9) let **every** entry-less monster resolve the RandTransforms tint
+  table, including classes whose tint came from explicit `superuniques.txt` Utrans data
+  (Griswold = transform 17) — data retail never renders for those classes because the
+  draw-time lookup early-outs for them. The create path now neutralizes explicit-Utrans
+  tints back to the untinted base when the class has no palshift entry
+  (`PALSHIFT_HasMonsterPalShift` + the `[R165]` guard in `UNIT_CreateMonster`); rolled
+  unique/champion tints keep the R49 fallback, entry-bearing classes are unchanged.
+
 ## [0.0.8] — 2026-11-06 ([`R128`](https://github.com/VTSTech/D2VP-QoL/releases/tag/R128))
 
 - **R161 — Audit closure** (every remaining safe fix; the ledger at [AUDIT-FIXES.md](AUDIT-FIXES.md)

@@ -386,6 +386,24 @@ void __stdcall PALSHIFT_InitPalShiftTable() {
     PALSHIFT_LoadMonsterPalShift(0x1a5);
 }
 
+// [R165] Returns TRUE when the monster class has a palshift.dat entry registered in
+// gpMonsterPalShiftList (slot+4, the same word PALSHIFT_GetMonsterTransform reads at
+// draw time). One-off boss classes — Griswold's "gz" among them — ship no
+// Data\Global\Monsters\<code>\Cof\palshift.dat in the MPQ, so their slot stays empty for
+// the unit's whole life. The create-time explicit-Utrans neutralizer (CUnit.cpp, issue #34)
+// uses this to reproduce retail: PALSHIFT_GetMonsterTransform's retail form early-outs for
+// entry-less classes, so an explicit superuniques.txt Utrans tint on such a class is dead
+// data and the boss renders its base palette. Call only after PALSHIFT_InitPalShiftTable
+// has allocated the list (client init), which precedes every spawn.
+// @sourcefile .\GAME\PalShift.cpp
+BOOL __fastcall PALSHIFT_HasMonsterPalShift(int32_t nMonsterId) {
+    if (nMonsterId < 0 || nMonsterId >= SCmd::GetTxtMonStatsSize()) {
+      return 0;
+    }
+
+    return *(int*)((int)gpMonsterPalShiftList + nMonsterId * 8 + 4) != 0;
+}
+
 // Returns a pointer into the monster's palette-shift transform table for the given unit's current pal-shift index. Returns null for non-monster units or those without a palette-shift entry. For random transforms (index 8-37) uses PalShift_RandTransform; for blood-palette indices (2-7) returns the green-blood sub-table offset if blood is enabled and the monster uses local blood; otherwise returns the base palette-shift offset. Halts if the random index is out of the 30-entry range.
 D2GamePalShiftRandTransformStrc * * __fastcall PALSHIFT_GetMonsterTransform(D2UnitStrc * pUnit) {
     BOOL nBloodFlag;
@@ -396,9 +414,17 @@ D2GamePalShiftRandTransformStrc * * __fastcall PALSHIFT_GetMonsterTransform(D2Un
 
     int pPalShiftEntryPtr = *(int*)((int)gpMonsterPalShiftList + pUnit->nClassId * 8 + 4);
     // [R49] no early entry-out here: RandTransforms.dat is a GLOBAL table (indices 8-0x25) and must
-    // resolve for monsters without a per-monster palshift.dat — the entry pointer is consumed only by
-    // the index 0-7 sub-table paths below, which carry the guard themselves. The unconditional
+    // resolve for monsters without a per-monster palshift.dat — the entry pointer is consumed only
+    // by the index 0-7 sub-table paths below, which carry the guard themselves. The unconditional
     // entry-out made every rolled unique/champion tint (the issue #9 "no unique colors") unreachable.
+    // [R165] supersession note (issue #34 "Griswold is Green"): this fallback is now scoped to the
+    // ROLLED tint path only. Retail's form of this function early-outs for entry-less classes, which
+    // keeps one-off boss classes (Griswold's "gz" ships no palshift.dat) untinted even though their
+    // superuniques.txt Utrans is explicit data. Reproducing that fully here would re-break issue #9
+    // on MPQs that lack the per-monster palshift.dat files, so instead the CREATE site
+    // (UNIT_CreateMonster, CUnit.cpp) neutralizes explicit-Utrans tints back to idx 2 for entry-less
+    // classes via PALSHIFT_HasMonsterPalShift. Rolled tints still resolve through this global-table
+    // arm exactly as the owner field-verified on R49; entry-bearing classes are unchanged.
 
     int32_t nPalShiftIndex = UNIT::CUnit::GetPalShiftIndex(pUnit);
     switch (nPalShiftIndex) {
