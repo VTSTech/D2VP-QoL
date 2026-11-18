@@ -2259,11 +2259,15 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
     D2UnitDataMonsterStrc* pItemData;
     D2SeedStrc nSeedLow;
     uint32_t nPalShiftIdx = pCreateData->nUnitGUID;
-    // [R165] tracks whether the tint index came from explicit txt data (MonStats2
-    // byUtrans / superuniques.txt Utrans) rather than the random unique roll. Retail's
-    // draw-time lookup early-outs for entry-less classes, so an explicit tint on a class
-    // that ships no palshift.dat is dead data there; the neutralizer below reproduces
-    // that (issue #34 "Griswold is Green"). See PalShift.cpp PALSHIFT_HasMonsterPalShift.
+    // [R165][R167] tracks whether the tint index came from superuniques.txt Utrans —
+    // explicit txt data on one-off fixed boss classes. Retail's draw-time lookup
+    // early-outs for entry-less classes, so an explicit tint on a class that ships no
+    // palshift.dat is dead data there; the neutralizer below reproduces that for the
+    // SUPERUNIQUE branch only (issue #34 "Griswold is Green"). [R167] the MonStats2
+    // byUtrans branch no longer sets this: it is shared by champions/uniques whose
+    // rolled tint it overrides, and those must keep the R49 global-table tint
+    // (owner regression report: champions untinted on R165/R166). See the [R167]
+    // comment at the byUtrans branch and PalShift.cpp PALSHIFT_HasMonsterPalShift.
     int32_t bExplicitUtransTint = 0;
     uint32_t nDifficulty = GAME::RosterPets::GetRosterPetGUID(pPlayerUnit, 7, 1);
     if (nPalShiftIdx == nDifficulty) {
@@ -2372,9 +2376,15 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
           if (pMonStats2Diff->byUtrans[byDifficulty]) {
             byDifficulty = GAME::Game::GetDificulity();
             nPalShiftIdx = (uint32_t)pMonStats2Diff->byUtrans[byDifficulty];
-            // [R165] explicit MonStats2.txt Utrans data (incl. the 0xFF ownership
-            // reassignment below) — not a roll; subject to the entry-less neutralizer.
-            bExplicitUtransTint = 1;
+            // [R167] NOT flagged for the entry-less neutralizer. The byUtrans branch is
+            // shared by ordinary monsters AND champions/uniques whose rolled tint it
+            // overrides — champion-eligible classes routinely ship no palshift.dat, so
+            // flagging this branch neutralized every such champion back to the untinted
+            // base (owner regression report on R165/R166: "Unique Monsters (Regular
+            // Champions) are not tinted anymore"). Their tint resolves at draw time
+            // through the R49 global RandTransforms arm exactly like rolled tints — the
+            // behavior the owner field-verified since R49. Only the superuniques.txt
+            // branch below (one-off fixed bosses, Griswold among them) still neutralizes.
             if (nPalShiftIdx == 0xff) {
               uMercType = GAME::RosterPets::ROSTER_IsUnitHostileToPlayer(pUnit);
               // [R51] spawn-time ownership polarity: the RAW hostility flag selects
@@ -2429,9 +2439,12 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
     // serve the ROLLED tint path — as written it leaked the RandTransforms table onto
     // entry-less classes carrying explicit Utrans data too, and Griswold landed on the
     // green-family transform row. Neutralize back to the untinted base (idx 2, the same
-    // default the TransLvl path stores) exactly when the tint came from txt data AND the
-    // class has no entry — rolled tints keep the R49 fallback, entry-bearing classes keep
-    // the tint (retail resolves idx 8+ through the global table for them regardless).
+    // default the TransLvl path stores) exactly when the tint came from superuniques.txt
+    // AND the class has no entry — [R167] the MonStats2 byUtrans branch no longer feeds
+    // this flag: it overrode champion/unique ROLLED tints too, and neutralizing those
+    // untinted every champion on an entry-less class (owner regression report on
+    // R165/R166). Rolled tints and byUtrans tints keep the R49 fallback, entry-bearing
+    // classes keep the tint (retail resolves idx 8+ through the global table regardless).
     if (bExplicitUtransTint && !GAME::PalShift::PALSHIFT_HasMonsterPalShift(pUnit->nClassId)) {
       nPalShiftIdx = 2;
     }

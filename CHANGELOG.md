@@ -9,6 +9,20 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R167 — issue #34 regression: champion/unique tinting restored** (owner report after
+  R166: "Unique Monsters (Regular Champions) are not tinted anymore"). The R165
+  create-time neutralizer flagged BOTH explicit tint branches — superuniques.txt Utrans
+  AND the MonStats2 byUtrans branch. The byUtrans branch is shared: it overrides the
+  rolled unique/champion tint whenever the class carries byUtrans data, and
+  champion-eligible classes routinely ship no palshift.dat — so every such champion was
+  neutralized back to the untinted base. The neutralizer now covers the superuniques.txt
+  branch only (one-off fixed bosses, Griswold among them — still untinted, issue #34
+  stays fixed); rolled tints and byUtrans tints resolve through the R49 global
+  RandTransforms arm as field-verified since R49. Also adds
+  `R2/R168-30v37-Palette-Plan.md`: the full plan for the original retail 30-vs-37
+  palette bug (roll `%0x1e+9` yields 9-38, the global table serves 8-37, the create-time
+  clamp discards >=30 — rows 30-37 are dead data and the roll value 38 is out of range).
+
 - **R166 — issue #39 residual: chilled/frozen monsters no longer strand at 0 HP** (the
   rare "disappears without loot" after R163): the poison-tick kill for cold/frozen monsters
   no longer runs while the victim is uninterruptable — retail's invariant is that such units

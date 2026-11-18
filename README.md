@@ -11,7 +11,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R166-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R167-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -55,7 +55,7 @@ Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All
 
 ## Current Status
 
-- **Version:** Vanilla+0.0.8-R166
+- **Version:** Vanilla+0.0.8-R167
 - **Renderer:** D3D/Glide via [Glide3xVK](https://github.com/VTSTech/Glide3xVK)
 - **Scope:** Single-player only, Battle.net not supported
 - **Compatibility:** Full backward compatibility, `.d2s` files untouched
