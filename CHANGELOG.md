@@ -9,6 +9,22 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R168 — the retail 30-vs-37 palette-window bug, gated** (owner ask: "lets fix the 30
+  vs 37 retail bug, and make it a gated fix in the Options Panel" — on the R167 plan
+  `plans/R168-30v37-Palette-Plan.md`). Retail's rolled unique/champion tint roll
+  (`nSeedLow % 0x1e + 9`) spans 9..38 while the global RandTransforms table serves only
+  rows 8..37, and the create-time clamp (`>= 0x1e`) discarded everything from row 30 up —
+  eight fully loaded tint rows never rendered and the roll's top value pointed one row
+  past its own table (kept from the draw-time halt only by that clamp). The fix ships
+  OFF behind `[features] palette_37` (Options row 17, **Palette 37 Tints**):
+  `PALSHIFT37_Active()` (2 s hot-read, cache busted in D2VP_ConfigReloaded) gates the
+  roll (`+ 8` — the full 30-row window) and the clamp (`>= 0x26` — a pure safety net);
+  gate off = byte-retail. Write-site audit (plan P0.2): Monster.cpp's death-palette path
+  and RosterPets' ownership recolors are provably in-window, so the draw-time halt stays
+  retail-faithful as the canary. Options page reflows to two columns of NINE (box
+  0x191 → 0x1b1, back row 0x184, 640x480 top margin 23 px, col 1 band 8 empty — the R147
+  precedent); ini template block ships in the same round.
+
 - **R167 — issue #34 regression: champion/unique tinting restored** (owner report after
   R166: "Unique Monsters (Regular Champions) are not tinted anymore"). The R165
   create-time neutralizer flagged BOTH explicit tint branches — superuniques.txt Utrans
@@ -19,7 +35,7 @@ its source round. Per-tag notes: the
   branch only (one-off fixed bosses, Griswold among them — still untinted, issue #34
   stays fixed); rolled tints and byUtrans tints resolve through the R49 global
   RandTransforms arm as field-verified since R49. Also adds
-  `R2/R168-30v37-Palette-Plan.md`: the full plan for the original retail 30-vs-37
+  `plans/R168-30v37-Palette-Plan.md`: the full plan for the original retail 30-vs-37
   palette bug (roll `%0x1e+9` yields 9-38, the global table serves 8-37, the create-time
   clamp discards >=30 — rows 30-37 are dead data and the roll value 38 is out of range).
 

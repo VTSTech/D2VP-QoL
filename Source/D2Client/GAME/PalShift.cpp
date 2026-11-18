@@ -27,6 +27,7 @@
 #include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/Memory.h"
 #include "Source/Fog/Src/ErrorManager.h"
+#include "Source/D2Client/UI/VanillaPlusCore.h" // VP: [palette-37 R168] PALSHIFT37_Active - the gated roll alignment below
 #include "3rdparty/Storm/D2ArchiveStrc.h"
 #include "3rdparty/Storm/D2MPQFileStrc.h"
 #include "3rdparty/Storm/Source/SFile.h"
@@ -483,6 +484,17 @@ int32_t __fastcall PALSHIFT_GenerateShiftDuration(D2UnitStrc * pUnitSeedBase, ui
     D2Common::Seed::InitSeed_Param_666(pSeed, (uint32_t)nSeedInput + pUnitSeedBase->nClassId);
     D2SeedStrc qwRandState = D2_SEED_NEXT(*pSeed);
     *pSeed = qwRandState;
+    // [R168 palette-37] the retail roll `% 0x1e + 9` spans 9..38 while the global
+    // RandTransforms table serves only 8..37 (`PALSHIFT_GetMonsterTransform`'s
+    // `idx - 8 <= 0x1d` arm) — the top roll value points one row PAST the table
+    // and only the create-time clamp (`>= 0x1e`, which also threw away live rows
+    // 30..37) kept it from the draw-time halt. With the palette_37 gate on the
+    // roll spans the FULL window (8..37 — the same 30 values, one row lower);
+    // gate off = exactly retail. Cosmetic seed-domain shift only: the roll
+    // re-seeds per unit from the name seed (no shared gameplay-RNG sequence).
+    if (PALSHIFT37_Active()) {
+      return qwRandState.nSeedLow % 0x1e + 8;
+    }
     return qwRandState.nSeedLow % 0x1e + 9;
 }
 

@@ -346,6 +346,19 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       each time you join a game.\r\n"
         "camera_zoom=0\r\n"
         "\r\n"
+        "; Full palette window (R168; the Vanilla+ Options row is called\r\n"
+        "; \"Palette 37 Tints\") - fixes the original retail 30-vs-37 bug:\r\n"
+        ";   0 = retail behavior: the random unique/champion tint roll runs\r\n"
+        ";       9-38 but the tint table only serves rows 8-37, and the\r\n"
+        ";       spawn-time clamp discards everything from row 30 up - eight\r\n"
+        ";       fully loaded tint rows never render and one roll value\r\n"
+        ";       points past the table entirely (vanilla behavior)\r\n"
+        ";   1 = the roll and the clamp line up with the table: every tint\r\n"
+        ";       row renders (tints you have never seen before start\r\n"
+        ";       appearing on champions and uniques; existing monsters may\r\n"
+        ";       pick a different tint than they used to - purely cosmetic)\r\n"
+        "palette_37=0\r\n"
+        "\r\n"
         "[ui]\r\n"
         "; Menu label font override (R153): 0 = measured pick, then the\r\n"
         ";       Font16/Font30/Font42/Font24 probe order; explicit ids select a\r\n"
@@ -1572,6 +1585,7 @@ static DWORD dwHudBarTranslucentLastCheck = 0; // 2 s ini re-read gate (row-28 p
 static int gbCameraZoomMode = 0;
 static DWORD dwCameraZoomLastCheck = 0; // 2 s ini re-read gate (row-28 pattern)
 static DWORD dwVpExtStatsLastCheck = 0; // 2 s ini re-read gate (row-28 pattern; R158 - the definition lives here, ahead of D2VP_ConfigReloaded, not in the extended-stats section below)
+static DWORD dwVpPalshift37LastCheck = 0; // 2 s ini re-read gate (row-28 pattern; R168 - defined here ahead of D2VP_ConfigReloaded for the same reason)
 void __stdcall D2VP_ConfigReloaded() {
     dwAltToggleLastCheck = 0;     // next ALTTOGGLE_Active() re-reads alt_toggle
     dwAutoGoldLastCheck = 0;      // next AUTO_GOLD_Active() re-reads auto_gold
@@ -1585,6 +1599,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwHudBarTranslucentLastCheck = 0; // next VANILLAPLUS_HudBarTransparent() re-reads transparent_hud (R154)
     dwCameraZoomLastCheck = 0;    // next VANILLAPLUS_CameraZoomActive() re-reads camera_zoom (R155)
     dwVpExtStatsLastCheck = 0;    // next VPEXTSTATS_Active() re-reads extended_stats (R158)
+    dwVpPalshift37LastCheck = 0;  // next PALSHIFT37_Active() re-reads palette_37 (R168)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
@@ -2352,6 +2367,28 @@ BOOL __stdcall VPEXTSTATS_Active() {
         gbVpExtStatsMode = D2VP_GetFeatureToggle("extended_stats");
     }
     return gbVpExtStatsMode;
+}
+
+// [palette-37 R168] gate - the standard 2 s hot-read (row-28 pattern), bust
+// by the Options write bridge (D2VP_ConfigReloaded), same as VPEXTSTATS_Active
+// above. Gates the retail 30-vs-37 palette-window alignment (plans/
+// R168-30v37-Palette-Plan.md): with the key on, the rolled tint roll spans the
+// FULL RandTransforms window (8..37 - retail's `% 0x1e + 9` yields 9..38, one
+// value past its own 30-row table) and the create-time clamp discards only
+// >= 38 instead of >= 30 (retail's clamp threw away the eight loaded rows
+// 30..37 before they could ever render). OFF = exactly retail: the `+ 9` roll
+// and the `>= 0x1e` clamp. The two gated sites read this per event (roll per
+// unique/champion spawn, clamp per monster create), so no restart is needed -
+// a flip lands on the next spawn; already-spawned units keep their tint.
+static int gbVpPalshift37Mode = 0;
+
+BOOL __stdcall PALSHIFT37_Active() {
+    DWORD dwNow = GetTickCount();
+    if (!dwVpPalshift37LastCheck || dwNow - dwVpPalshift37LastCheck >= 2000) {
+        dwVpPalshift37LastCheck = dwNow;
+        gbVpPalshift37Mode = D2VP_GetFeatureToggle("palette_37");
+    }
+    return gbVpPalshift37Mode;
 }
 
 // View state + the 2 s draw-gap reset (the panel closed -> back to retail

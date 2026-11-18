@@ -137,11 +137,11 @@ static const uint16_t VPPAGE_FONT_ID = 0xd;        // FontInGameChat - ControlCo
 // every stop whole again, 640x480 included ((480-337)/2 = 71 top margin).
 static const int VPPAGE_BOX_WIDTH = 0x26c;
 static const int VPPAGE_COL_WIDTH = 0x136;         // R144: half the box width - one column's span
-static const int VPPAGE_BOX_HEIGHT = 0x191;        // R155: was 0x171 - two columns of eight rows (see the layout check)
+static const int VPPAGE_BOX_HEIGHT = 0x1b1;        // R168: was 0x191 (R155: 0x171) - two columns of nine rows (see the layout check)
 static const int VPPAGE_ROW_PITCH = 0x20;
 static const int VPPAGE_ROW_HEIGHT = 0x1a;
 static const int VPPAGE_FIRST_ROW_Y = 0x50;        // from box top
-static const int VPPAGE_BACK_ROW_Y = 0x164;        // from box top (R155: was 0x144 - eight rows per column push it down one pitch, the exact R108 geometry)
+static const int VPPAGE_BACK_ROW_Y = 0x184;        // from box top (R168: was 0x164 - nine rows per column push it down one pitch, the R155 pattern)
 static const int VPPAGE_TEXT_BASELINE_INSET = 4;   // baseline above row bottom
 
 // [features] keys rendered by the page. [R161 MAINT-02] Adding a slate
@@ -161,7 +161,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[16] = {
+static const VPPFeatureRow gaVanillaPlusRows[17] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -267,10 +267,21 @@ static const VPPFeatureRow gaVanillaPlusRows[16] = {
     // hides, live off the player's statlist); zero packets, zero server
     // code, nothing writes.
     { "extended_stats", L"Extended Stats", 0 },
+    // VP: [palette-37 R168] palette_37 - the seventeenth row (FEATURES.md row
+    // 21, plans/R168-30v37-Palette-Plan.md). Label = the plan's short name.
+    // The gate PALSHIFT37_Active (VanillaPlusCore.cpp) is 2 s hot-read and the
+    // write bridge busts dwVpPalshift37LastCheck (D2VP_ConfigReloaded), so a
+    // flip here lands on the next monster spawn - no restart, no panel
+    // reopen. Gated bug fix, ships OFF (retail behavior): with the gate on
+    // the rolled unique/champion tint roll spans the full 30-row
+    // RandTransforms window (8..37; retail's roll yields 9..38 and its
+    // >= 30 clamp discarded the eight loaded rows 30..37) - tints retail
+    // never rendered start appearing; purely cosmetic, no gameplay data.
+    { "palette_37", L"Palette 37 Tints", 0 },
 };
-static const int VPP_ROW_COUNT = 16;
-static const int VPP_ROW_BACK = 16; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 8; // R155: was 7; R158: sixteen rows = two FULL columns of eight (col 0 bands 0-7 = rows 0-7, col 1 bands 0-7 = rows 8-15; no empty band left)
+static const int VPP_ROW_COUNT = 17;
+static const int VPP_ROW_BACK = 17; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 9; // R168: was 8 (R155: 7; R158: 8) - seventeen rows: col 0 bands 0-8 (rows 0-8), col 1 bands 0-7 (rows 9-16; band 8 empty, the R147 precedent)
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same
@@ -316,6 +327,15 @@ static const int VPP_ROWS_PER_COL = 8; // R155: was 7; R158: sixteen rows = two 
 // back row STAYS at boxTop+0x164 and the box STAYS 0x191; the page is now
 // two full columns of eight with no layout move at all. 640x480 unchanged
 // ((480-0x191)/2 = (480-401)/2 = 39 top margin, the R155 stop).
+// R168: the seventeenth row (palette_37) needs nine bands per column -
+// VPP_ROWS_PER_COL 8 -> 9 (the R147 move, one pitch up). Column 0's last
+// band (index 8) spans boxTop+0x150..0x16a, so the back row moves down one
+// pitch to boxTop+0x184 (0x16a+0x1a, the same one-row 0x1a gap), its bottom
+// 0x19e grows the box from 0x191 to 0x1b1 (433 px, the same 0x13 bottom
+// margin) - every stop still fits whole, 640x480 included
+// ((480-433)/2 = 23 top margin). Column 1 carries rows 9-16 (bands 0-7,
+// boxTop+0x50..0x14a); the empty band 8 of column 1 stays empty - the
+// hit-test only accepts bands rows actually occupy (the R147 precedent).
 
 // Input handlers (definitions below; the batch array references them).
 // Deliberately NO WM_MOUSEMOVE (0x200) entry - see the header comment block:

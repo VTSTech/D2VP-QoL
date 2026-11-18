@@ -1,6 +1,6 @@
 # R168 Plan — the original retail 30 vs 37 palette bug
 
-Status: **plan** (no code change in R167). Target round: **R168**, single commit, same
+Status: **IMPLEMENTED in R168** (shipped gated OFF behind `[features] palette_37`, Options row 17 "Palette 37 Tints"; P0 audit recorded in FEATURES.md §21, field asks SMOKE §Z 102–103). Original plan text below. Round: **R168**, single commit, same
 round conventions as every prior round (boot self-ID bump, CHANGELOG, ROUND-SUMMARY,
 handoff rev bump, docs gate + vanilla-plus gate green, zips + tmpfiles upload).
 

@@ -276,6 +276,16 @@ R161 changes failure paths, comments and the boot sequence only — no healthy-p
 
 ---
 
+## Z. Palette 37 Tints — the gated 30-vs-37 palette-window fix (R168 — owner ask, `plans/R168-30v37-Palette-Plan.md`; field ask)
+
+With `[features] palette_37=1` (ini template block + the Options page's seventeenth row, **Palette 37 Tints**), the rolled unique/champion tint roll spans the full 30-row RandTransforms window (8..37) and the spawn-time clamp discards only >= 38 — the eight tint rows retail never rendered (30..37) start appearing. Gate off = byte-retail (the roll runs 9..38 and the clamp discards >= 30 exactly as retail ships). The Options page itself reflows to two columns of nine this round.
+
+- [ ] **102. Options page, seventeen rows (the R168 geometry):** open Esc → Vanilla+ Options → the page shows **seventeen** feature rows in two columns — column 0 nine rows (Show Items Toggle .. No Panel World Shift bands 0-8), column 1 eight rows (Mana Burn Fix .. Palette 37 Tints) with **Palette 37 Tints** directly under **Extended Stats**; the Previous Menu row sits clear below the last band and the whole box fits 640x480 unclipped (top margin ~23 px); hover highlight and click land correctly on every row including the new one; flipping Palette 37 Tints plays the select chime and writes `palette_37=1` to `d2vp.ini` within ~2 s (flip it back Off after item 103, or leave per preference).
+- [ ] **103. The tint span (gate on vs off):** with `palette_37=1`, farm champion/unique-heavy areas (e.g. repeatedly re-enter an act with champion packs) → tints that never appeared before now show up (the former rows 30..37 — new hue families on champions/uniques); champions and uniques stay tinted exactly as R167 restored; Griswold still renders his base palette; mercs and raised skeletons keep their ownership tints. With `palette_37=0`, tints match the pre-R168 build exactly (old range, same frequency mix) — the gate off is byte-retail.
+
+
+---
+
 ## Evidence to keep if anything breaks
 
 | Artifact | Comes from | Tells us |

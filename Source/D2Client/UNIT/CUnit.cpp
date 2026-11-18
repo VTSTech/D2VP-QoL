@@ -2426,8 +2426,24 @@ D2UnitStrc * __fastcall UNIT_CreateMonster(D2CreateMonsterUnitStrc * pCreateData
         bExplicitUtransTint = 1;
       }
     }
-    if ((int)nPalShiftIdx >= 0x1e) {
-      nPalShiftIdx = 2;
+    // [R168 palette-37] retail clamps at 0x1e (30) — but the global RandTransforms
+    // table serves rows 8..37, so retail threw away eight loaded tint rows (30..37)
+    // before they could ever render (the "30 vs 37" bug, plans/R168-30v37-Palette-Plan.md).
+    // Gate on: clamp at 0x26 (38) instead — a pure safety net for out-of-table
+    // values, no live-row discard; gate off: exactly retail. Write-site audit
+    // (plan P0.2): the only other palshift-index writers are Monster.cpp's
+    // death-palette path (idx 3/4/5 or < 8, else 2) and RosterPets' ownership
+    // recolors (0/1) — all provably in-window, so this clamp is the sole >= 38
+    // gatekeeper and PALSHIFT_GetMonsterTransform's draw-time halt stays
+    // unreachable in both gate states.
+    if (PALSHIFT37_Active()) {
+      if ((int)nPalShiftIdx >= 0x26) {
+        nPalShiftIdx = 2;
+      }
+    } else {
+      if ((int)nPalShiftIdx >= 0x1e) {
+        nPalShiftIdx = 2;
+      }
     }
 
     // [R165] issue #34 "Griswold is Green" — the create-time half of retail's draw-time

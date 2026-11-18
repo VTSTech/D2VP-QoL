@@ -233,6 +233,7 @@ BOOL __stdcall VPCTRLXFER_PairInFlight(); // R149 #37, R150 round-trip window: T
 BOOL __stdcall VPCTRLXFER_EchoSuppressHand(int nItemGuid); // R150 #37: TRUE while nItemGuid is the pair's picked item inside the round-trip window - Item.cpp's 0x19 echo skips the client-hand set (the item stays in its source cell; the hand never fills; see PairInFlight)
 void __stdcall SHIFTCOMPARE_CompareForHover(); // per-frame trigger, Inv.cpp after the LoadItemDesc publish
 BOOL __stdcall VPEXTSTATS_Active();        // config: extended_stats on? (R158)
+BOOL __stdcall PALSHIFT37_Active();        // config: palette_37 on? - the retail 30-vs-37 palette-window alignment (R168)
 BOOL __stdcall VPEXTSTATS_HandleMouseDown(int nMouseX, int nMouseY); // R158: tab flip / body consume while the page is up; call FIRST from INPUT_StatScreenMouseDown
 void __stdcall VPEXTSTATS_DrawOverlay();   // R158: the extended page; call from DRAW_UI_StatWindow_I's tail (no-op when gated off)
 void __stdcall VPEXTSTATS_DrawTab();       // R158.5: the tab word ONLY; call from Draw.cpp's UI pass tail, AFTER Panel::DRAW_UI_BordersAndOrbsAndFillers (the border art covers the word - it draws after the whole stat window; gate the call on GFX_bShowUIFlag.CharStat)
