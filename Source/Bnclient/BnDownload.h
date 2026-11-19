@@ -44,11 +44,13 @@ struct SID_C2S_ExtraWork {
 namespace Bnclient::BnDownload {
 
 // Function declarations
-// Module-private: no other module references these
-#if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_Bnclient)
-void __stdcall BNDOWNLOAD_SetCancelFlag();
-uint32_t __stdcall BNDOWNLOAD_HasActiveDownloads();
-int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uint32_t * pdwChecksumOut, uint8_t * pbResultOut);
+    // Module-private: no other module references these
+    #if !defined(D2_MODULE_LIBRARIES) || defined(D2_MODULE_Bnclient)
+    void __stdcall BNDOWNLOAD_SetCancelFlag();
+    uint32_t __stdcall BNDOWNLOAD_HasActiveDownloads();
+    int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uint32_t * pdwChecksumOut, uint8_t * pbResultOut);
+    // Custom CheckRevision bypass for D2VP-D2GS compatibility (Strategy 1: Direct Function Hooking)
+    int32_t __fastcall BNDOWNLOAD_PerformCheckRevision_Custom(LPCSTR szFile1, LPCSTR szFile2, LPCSTR szFile3, LPCSTR szValueString, DWORD * pdwVersion, DWORD * pdwChecksum, uint8_t * pbStatstring);
 void __fastcall BNDOWNLOAD_ExtractFileFromArchive(char * szFileName, struct D2ArchiveStrc * pArchive, LPCSTR szFilePath);
 void __fastcall BNDOWNLOAD_UpdateProgressPercent(uint32_t dwUnused, int32_t nBytesDone, uint32_t nTotalSize);
 void __fastcall BNDOWNLOAD_ResetState(uint32_t nResetValue);
