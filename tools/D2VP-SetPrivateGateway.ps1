@@ -134,7 +134,7 @@ if (-not (Test-Path $backupPath)) {
 
 # ---- build the MULTI_SZ gateway blob ----
 # Entry count must satisfy the client's 3n+1 parse (version + index + 3 strings per gateway).
-$version = "1014"
+$version = "1009"
 $index   = "01"
 $zoneStr = "{0}" -f [int]$Zone
 
