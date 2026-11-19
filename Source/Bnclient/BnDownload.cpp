@@ -913,13 +913,19 @@ uint32_t __stdcall BnetDownloadFile_II(void * lpThreadParam) {
     }
 
     Storm::Source::SMem::SMemFree(pDownloadCtxCopy, ".\\BnDownload.cpp", 0x368, 0);
-    if (nConnResult == -0x7ffffffe && gnNetworkSendState < 100) {
+    // VP-BEGIN [bn-versionfile-progress]: retail only raised the progress sentinel for the
+    // patch-download mode (0x80000002). The SID_AUTH_INFO version archive (0x80000001) exits
+    // this thread with the state stuck at a raw percent, so the "Checking Versions" pump in
+    // D2Launch (LAUNCHER_CheckRevisionAndShowDialog, exit at 0x65/101) could spin forever.
+    // Clear the transfer flag and raise 101 for the version-file mode too.
+    if ((nConnResult == -0x7ffffffe || nConnResult == -0x7fffffff) && gnNetworkSendState < 100) {
       /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&lpCriticalSection_00881f64);
       /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ gbBnetFtpFileTransferActive[0] = '\0';
       gbBnetFtpFileTransferActive[1] = '\0';
       gnNetworkSendState = 0x65;
       LeaveCriticalSection(&lpCriticalSection_00881f64);
     }
+    // VP-END [bn-versionfile-progress]
 
     /* LONG * lpAddend for InterlockedDecrement */ InterlockedDecrement((LONG*)&lpAddend_00881d5c);
     return 0;
@@ -1260,7 +1266,14 @@ uintptr_t __fastcall BNDOWNLOAD_InitiatePatchDownload(BYTE * pPatchList, size_t 
 
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ gnNetworkSendState = 0;
     EnterCriticalSection(&lpCriticalSection_00881f64);
+    // VP-BEGIN [bn-patchlist-clamp]: gbBnetFtpFileTransferActive is a 256-byte global and the
+    // patch list is server-supplied; copy without a clamp overflows it on any list >= 256 bytes.
+    if (nSize > sizeof(gbBnetFtpFileTransferActive) - 1) {
+      nSize = sizeof(gbBnetFtpFileTransferActive) - 1;
+    }
     Storm::Source::SMem::SMemCopy(gbBnetFtpFileTransferActive, pPatchList, nSize);
+    gbBnetFtpFileTransferActive[nSize] = '\0';
+    // VP-END [bn-patchlist-clamp]
     /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ gnNetworkSendState = 0;
     LeaveCriticalSection(&lpCriticalSection_00881f64);
     Storm::Source::SReg::SRegSaveData("Patch", "Patches", 0x82, pPatchList, nSize + 1);

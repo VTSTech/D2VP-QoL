@@ -1,0 +1,50 @@
+// VP-BEGIN [d2vp-versioninfo]
+//
+// The Battle.net CheckRevision DLL (ver-IX86-1.mpq) reads the VS_FIXEDFILEINFO
+// of the running executable and reports (a) the version DWORD sent in
+// SID_AUTH_CHECK 0x51 and (b) success/failure itself: with no VERSIONINFO
+// resource present, CheckRevision() fails, BNDOWNLOAD_PerformCheckRevision
+// returns 0 and the client aborts on the "Checking Versions" screen even
+// against a permissive PvPGN server.
+//
+// Retail Game.exe 1.14d carries ProductVersion 1.14.3.256 (dwProductVersionLS
+// 0x00030100); CheckRevision byte-masks each part, so the wire version is
+// 0x010E0300, which is what PvPGN's versioncheck.json entry "1.14.3.0" decodes
+// to. FILEVERSION/PRODUCTVERSION 1,14,3,0 below byte-masks to the same
+// 0x010E0300, so the client matches the stock 1.14d entries.
+//
+// NOTE: adding this resource changes the d2vp.exe bytes, so the CheckRevision
+// checksum changes too. After rebuilding, recompute it with
+// scripts/checkrev.py (see D2VP-D2GS-notes.md) and update the D2XP/D2DV 0x0e
+// entry in versioncheck.json.
+//
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    1,14,3,0
+ PRODUCTVERSION 1,14,3,0
+ FILEFLAGSMASK  0x3fL
+ FILEFLAGS      0x0L
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_APP
+ FILESUBTYPE    0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "VTSTech"
+            VALUE "FileDescription",  "Diablo II Vanilla+ (d2vp)"
+            VALUE "FileVersion",      "1.14.3.0"
+            VALUE "InternalName",     "d2vp"
+            VALUE "OriginalFilename", "d2vp.exe"
+            VALUE "ProductName",      "D2VP Vanilla+QoL"
+            VALUE "ProductVersion",   "1.14.3.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+// VP-END [d2vp-versioninfo]

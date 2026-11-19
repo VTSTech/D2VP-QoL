@@ -4949,31 +4949,43 @@ void __stdcall UIMENU_DownloadingPatch() {
 }
 
 // Updates the progress bar display during patch download. Clears existing text, retrieves download percentage via revision check callback (capped at 100%), updates animation frame proportionally, formats "%d%%" into buffer with embedded color codes (\\r\\xFA B = blue), then sets textbox content.
+// VP-BEGIN [bn-progressbar-guard]: retail derefs gpPatchProgressTextBox / gpCtlPatchProgressAnimImage
+// BEFORE the null guard. If the form list failed to create (UI resources missing/changed) this AVs
+// inside the Checking Versions pump. Guard both controls before every use, keep the return order.
 void __stdcall MAINMENU_UpdateProgressBar() {
     char szPercentBuffer[100];
+    if (!gpPatchProgressTextBox) {
+      return;
+    }
+
     D2Win::Src::D2WinTextBox::D2WINTEXTBOX_ClearAllLines(gpPatchProgressTextBox);
     int nProgressPercent = Launcher::gpBNetCallbacks->pfnGetDownloadProgress();
     if (nProgressPercent > 100) {
       nProgressPercent = 100;
     }
 
-    int nFrameCount = D2Win::Src::D2WinImage::D2WINIMAGE_StopAnimation((int*)gpCtlPatchProgressAnimImage);
-    D2Win::Src::D2WinImage::D2WINIMAGE_SetFrame(gpCtlPatchProgressAnimImage, nFrameCount * nProgressPercent / 100);
-    sprintf(szPercentBuffer, "%d%%", nProgressPercent);
-    if (!gpPatchProgressTextBox) {
-      return;
+    if (gpCtlPatchProgressAnimImage) {
+      int nFrameCount = D2Win::Src::D2WinImage::D2WINIMAGE_StopAnimation((int*)gpCtlPatchProgressAnimImage);
+      D2Win::Src::D2WinImage::D2WINIMAGE_SetFrame(gpCtlPatchProgressAnimImage, nFrameCount * nProgressPercent / 100);
     }
-
+    sprintf(szPercentBuffer, "%d%%", nProgressPercent);
     D2Win::Src::D2WinTextBox::D2WINTEXTBOX_SetTextFromAnsi(gpPatchProgressTextBox, szPercentBuffer, 0);
 }
+// VP-END [bn-progressbar-guard]
+
+// VP-BEGIN [bn-patchflag-dedicated]: retail aliases the patch-download flag with
+// gbTermsOfServiceCancelled; a ToS cancel in a previous session makes the next connect's
+// patch wait read "cancelled" immediately and bounce to the main menu. Use a dedicated flag.
+static uint32_t gbPatchDownloadCancelled = 0; D2_STATIC_GUARD(gbPatchDownloadCancelled, "gbPatchDownloadCancelled");
 
 void __stdcall LAUNCHER_ClearPatchDownloadFlag() {
-    gbTermsOfServiceCancelled = 0;
+    gbPatchDownloadCancelled = 0;
 }
 
 BOOL __stdcall LAUNCHER_GetPatchDownloadFlag() {
-    return gbTermsOfServiceCancelled;
+    return gbPatchDownloadCancelled;
 }
+// VP-END [bn-patchflag-dedicated]
 
 // Reads "Aux Battle.net" registry key from "Diablo II" hive. If key exists, returns 1. Otherwise, formats default IP "216.148.246.34" into buffer with embedded color codes, writes it to registry via REGISTRY_SaveStringKey, and returns 0. Ensures Battle.net IP is always present in registry.
 BOOL __stdcall MAINMENU_ReadBattleNetRegistry() {
@@ -9532,6 +9544,11 @@ int __stdcall LAUNCHER_BnetConnectionPollCallback(int nFrameIndex) {
     DVar1 = WaitForSingleObject(ghBnetConnectHandle, 0);
     if (!DVar1) {
       D2Win::Src::D2WinMain::D2WINMAIN_ClearMessageLoopFlag();
+      // VP-BEGIN [bn-poll-fallthrough]: after the connect thread signals success, return
+      // immediately; falling through into the busy check let an ESC in the same frame tear
+      // down a just-established socket.
+      return 1;
+      // VP-END [bn-poll-fallthrough]
     }
 
     BOOL BVar2;

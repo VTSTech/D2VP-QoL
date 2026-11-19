@@ -319,6 +319,10 @@ endif()
 # shim performs a real C++ throw, so libstdc++ is needed regardless.
 # ---------------------------------------------------------------------------
 set_target_properties(d2 PROPERTIES WIN32_EXECUTABLE ON OUTPUT_NAME d2)
+# [d2vp-versioninfo] VERSIONINFO resource: CheckRevision reads VS_FIXEDFILEINFO from the
+# running exe; without it CheckRevision() fails on Battle.net and the client aborts at
+# "Checking Versions". CMake hands .rc sources to windres with the MinGW toolchain.
+target_sources(d2 PRIVATE "${D2_ROOT}/Source/D2VP-Version.rc")
 # -Wl,-Map: write build/d2exe.map next to the exe. Map emission is a link-time
 # text dump only - it does not change code layout, so addresses in the exe stay
 # identical with and without it. It lets any crash address (module+0xOFFSET
