@@ -109,6 +109,14 @@ extern "C" void D2BOOT_Fail(const char* pszStage) {
     MessageBoxA(0, szMsg, "d2.exe boot diagnostic", MB_ICONERROR | MB_OK);
 }
 
+// VP-BEGIN [bn-ctl-replay R178]: the exact outbound SID_AUTH_INFO (0x50) frame stashed by
+// NET_SID_CLIENT_Send (BnSend.cpp) at send time; the Safesock autopsy's control socket
+// replays it verbatim onto a fresh connection to test whether the 10053 death follows the
+// conversation content or the original flow's kernel state. See d2_boot.h for the contract.
+char g_chCtlReplayAuthInfo[0x2000] = {};
+int g_nCtlReplayAuthInfoLen = 0;
+// VP-END [bn-ctl-replay R178]
+
 // First mark proves the CRT and static initializers ran. Priority 130 puts it
 // ahead of the crash (140) and trace (150) handlers on purpose.
 __attribute__((init_priority(130))) static struct D2BootInit {

@@ -1527,6 +1527,15 @@ int32_t __fastcall NET_SID_CLIENT_Send(uint8_t nPacketId, char * pBytes, size_t 
           Storm::Source::SMem::SMemCopy(chRealPacket + 4, pBytes, nSizeNoHeader);
         }
 
+        // VP-BEGIN [bn-ctl-replay R178]: stash the exact 0x50 frame (header included) so the
+        // autopsy's control socket can replay the full auth conversation verbatim on a fresh
+        // connection. Auth thread writes, read thread reads, forensic-only - no locking.
+        if (nPacketId == 0x50 && nSizeNoHeader + 4 < 0x2000) {
+          Storm::Source::SMem::SMemCopy(g_chCtlReplayAuthInfo, chRealPacket, nSizeNoHeader + 4);
+          g_nCtlReplayAuthInfoLen = (int)(nSizeNoHeader + 4);
+        }
+        // VP-END [bn-ctl-replay R178]
+
         nBytesSent = Fog::Src::Safesock::WSASocket2_Send(pSafesock, chRealPacket, nSizeNoHeader + 4);
         D2BOOT_MarkFmt("BNet: SID send op=0x%02x len=%u -> %d", (unsigned)nPacketId, (unsigned)nSizeNoHeader, (int)nBytesSent); // [d2boot]
         return nBytesSent;

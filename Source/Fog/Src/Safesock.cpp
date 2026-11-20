@@ -417,6 +417,42 @@ static void sCopyInetString(char * pDst, int nSize, uint32_t nAddrHostDword) {
     *pCur = '\0';
 }
 
+// VP-BEGIN [bn-ctl-replay R178]: the probes the autopsy runs on the dead auth socket, run
+// against a live (or post-verdict) control socket so both sides of the A/B print the same
+// shape: soerr/type carry ret/err, hvalid is kernel-handle validity, fion is bytes pending
+// per AFD, sel is a zero-timeout read/except poll.
+static void sLogCtlProbeBattery(const char* szTag, SOCKET hSock) {
+    int nSoError = -1;
+    int nSoErrorGet = 0;
+    int nSoType = -1;
+    int nSoTypeGet = 0;
+    int nOptLen = 4;
+    if (getsockopt(hSock, 0xffff, 0x1007, (char*)&nSoError, &nOptLen) == -1) nSoErrorGet = (int)WSAGetLastError();
+    nOptLen = 4;
+    if (getsockopt(hSock, 0xffff, 0x1004, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError();
+    DWORD dwHandleFlags = 0;
+    BOOL bHandleOk = GetHandleInformation((HANDLE)hSock, &dwHandleFlags);
+    int nHandleErr = bHandleOk ? 0 : (int)GetLastError();
+    u_long nFionBytes = 0;
+    int nFionRet = ioctlsocket(hSock, 0x4004667F, &nFionBytes); // FIONREAD
+    int nFionErr = nFionRet == -1 ? (int)WSAGetLastError() : 0;
+    fd_set readSet;
+    fd_set exceptSet;
+    readSet.fd_count = 1;
+    readSet.fd_array[0] = hSock;
+    exceptSet.fd_count = 1;
+    exceptSet.fd_array[0] = hSock;
+    timeval tvZero;
+    tvZero.tv_sec = 0;
+    tvZero.tv_usec = 0;
+    int nSelect = select(0x40, &readSet, nullptr, &exceptSet, &tvZero);
+    D2BOOT_MarkFmt(
+        "BNet: battery %s h=0x%08x soerr=%d/%d type=%d/%d hvalid=%d/%d fion=%lu/%d sel=%d",
+        szTag, (unsigned)hSock, nSoError, nSoErrorGet, nSoType, nSoTypeGet,
+        bHandleOk ? 1 : 0, nHandleErr, (unsigned long)nFionBytes, nFionErr, nSelect); // [d2boot]
+}
+// VP-END [bn-ctl-replay R178]
+
 // One-shot-per-connection forensic probe for the BNCS read thread's WSAECONNABORTED path.
 // The 2026-11-20 pcap proved the wire was healthy when this client's own stack reported
 // 10053 twice on the same blocking socket, so the question is WHICH half of Winsock still
@@ -520,58 +556,119 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
         nSelect, nReadFlag, nExceptFlag,
         nPeek, nPeekError, nSend0, nSend0Error); // [d2boot]
 
-    // VP-BEGIN [bn-ctl-socket R177]: THE DIFFERENTIAL. A brand-new socket from THIS process,
-    // opened WHILE the auth socket sits dead, replays the opening BNCS leg against the same
-    // server: connect -> 0x01 protocol byte -> 1 s wait -> recv if readable.
-    //   ctl alive => the block spares fresh sockets: the death is handle-scoped (in-process
-    //                close/alias/poison of THAT handle) or triggered later in the conversation
-    //                - the drift watch + close traps then name the killer.
-    //   ctl dead  => the block is app-connection-wide at the opening leg: image-keyed filter,
-    //                and the retail-vs-D2VP exe difference is the lever.
-    // Runs once per read-thread start (the autopsy call site is the first 10053 of each
-    // attempt), so both reconnect attempts produce one line each.
+    // VP-BEGIN [bn-ctl-replay R178]: THE DECISIVE REPLAY, upgrading the R177 opening-leg
+    // probe. A brand-new socket from THIS process replays the exact auth conversation
+    // against the same server while the auth socket sits dead:
+    //   connect -> 0x01 protocol byte -> stashed 0x50 verbatim -> server ping -> echo ->
+    //   AUTHREQ wait. Every step logged, and the probe battery (soerr/type/hvalid/fion/sel)
+    //   runs on the live socket BEFORE the replay and AGAIN after the verdict, so the
+    //   batteries print the same shape as the dead auth socket's autopsy line.
+    //   Verdicts:
+    //   replay reaches AUTHREQ -> the death is bound to the ORIGINAL flow's kernel state
+    //                             (flow-scoped) - chase the 10042/fion=0 forensics thread.
+    //   replay dies at a step  -> the trigger is the conversation content (content-scoped
+    //                             classifier) - netsh wfp capture then names the callout.
+    // Runs once per read-thread start (the autopsy call site fires on the first 10053 of
+    // each attempt), so both reconnect attempts produce one verdict each.
     if (bPeerOk) {
       SOCKET hCtl = socket(2, 1, 0);
       if (hCtl == -1) {
         D2BOOT_MarkFmt("BNet: ctl socket create failed err=%d", (int)WSAGetLastError()); // [d2boot]
       } else {
         int nCtlConn = connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer));
-        int nCtlConnErr = nCtlConn == -1 ? (int)WSAGetLastError() : 0;
-        int nCtlSend = -1;
-        int nCtlSendErr = 0;
-        int nCtlSel = -1;
-        int nCtlRecv = -1;
-        int nCtlRecvErr = 0;
-        char chCtlHead[8];
-        memset(chCtlHead, 0, sizeof(chCtlHead));
-        if (nCtlConn != -1) {
+        if (nCtlConn == -1) {
+          D2BOOT_MarkFmt("BNet: ctl-replay connect failed err=%d", (int)WSAGetLastError()); // [d2boot]
+        } else {
+          sLogCtlProbeBattery("ctl-live", hCtl);
+          int nStep = 0;
+          int nStepErr = 0;
+          char chPingReq[64];
+          char chAuthReq[256];
+          int nPingLen = 0;
+          int nAuthLen = 0;
+          memset(chPingReq, 0, sizeof(chPingReq));
+          memset(chAuthReq, 0, sizeof(chAuthReq));
           char chProtoByte = 0x01;
-          nCtlSend = send(hCtl, &chProtoByte, 1, 0);
-          nCtlSendErr = nCtlSend < 0 ? (int)WSAGetLastError() : 0;
-          fd_set ctlReadSet;
-          ctlReadSet.fd_count = 1;
-          ctlReadSet.fd_array[0] = hCtl;
-          timeval tvCtlWait;
-          tvCtlWait.tv_sec = 1;
-          tvCtlWait.tv_usec = 0;
-          nCtlSel = select(0x40, &ctlReadSet, nullptr, nullptr, &tvCtlWait);
-          if (nCtlSel > 0) {
-            nCtlRecv = recv(hCtl, chCtlHead, (int)sizeof(chCtlHead), 0x2); // MSG_PEEK: leave the byte for the real owner (nobody - we close below)
-            nCtlRecvErr = nCtlRecv < 0 ? (int)WSAGetLastError() : 0;
+          int nSend1 = send(hCtl, &chProtoByte, 1, 0);
+          if (nSend1 < 0) {
+            nStep = 1;
+            nStepErr = (int)WSAGetLastError();
           }
+
+          if (!nStep && g_nCtlReplayAuthInfoLen > 0) {
+            int nSend50 = send(hCtl, g_chCtlReplayAuthInfo, g_nCtlReplayAuthInfoLen, 0);
+            if (nSend50 < 0) {
+              nStep = 2;
+              nStepErr = (int)WSAGetLastError();
+            }
+          } else if (!nStep) {
+            nStep = 2;
+            nStepErr = -2; // no stashed 0x50 (send never reached the stash path)
+          }
+
+          if (!nStep) {
+            fd_set ctlReadSet;
+            ctlReadSet.fd_count = 1;
+            ctlReadSet.fd_array[0] = hCtl;
+            timeval tvPingWait;
+            tvPingWait.tv_sec = 2;
+            tvPingWait.tv_usec = 0;
+            int nSelPing = select(0x40, &ctlReadSet, nullptr, nullptr, &tvPingWait);
+            if (nSelPing <= 0) {
+              nStep = 3;
+              nStepErr = nSelPing == 0 ? 10060 : (int)WSAGetLastError();
+            } else {
+              nPingLen = recv(hCtl, chPingReq, (int)sizeof(chPingReq), 0);
+              if (nPingLen < 0) {
+                nStep = 4;
+                nStepErr = (int)WSAGetLastError();
+              } else {
+                int nEchoLen = nPingLen < 8 ? nPingLen : 8;
+                if (send(hCtl, chPingReq, nEchoLen, 0) < 0) {
+                  nStep = 5;
+                  nStepErr = (int)WSAGetLastError();
+                }
+              }
+            }
+          }
+
+          if (!nStep) {
+            fd_set ctlReadSet2;
+            ctlReadSet2.fd_count = 1;
+            ctlReadSet2.fd_array[0] = hCtl;
+            timeval tvAuthWait;
+            tvAuthWait.tv_sec = 3;
+            tvAuthWait.tv_usec = 0;
+            int nSelAuth = select(0x40, &ctlReadSet2, nullptr, nullptr, &tvAuthWait);
+            if (nSelAuth <= 0) {
+              nStep = 6;
+              nStepErr = nSelAuth == 0 ? 10060 : (int)WSAGetLastError();
+            } else {
+              nAuthLen = recv(hCtl, chAuthReq, (int)sizeof(chAuthReq), 0);
+              if (nAuthLen < 0) {
+                nStep = 7;
+                nStepErr = (int)WSAGetLastError();
+              }
+            }
+          }
+
+          D2BOOT_MarkFmt(
+              "BNet: ctl-replay verdict step=%d err=%d ping=%d [%02x %02x %02x %02x] authreq=%d [%02x %02x %02x %02x]",
+              nStep, nStepErr, nPingLen,
+              (unsigned)(unsigned char)chPingReq[0], (unsigned)(unsigned char)chPingReq[1],
+              (unsigned)(unsigned char)chPingReq[2], (unsigned)(unsigned char)chPingReq[3],
+              nAuthLen,
+              (unsigned)(unsigned char)chAuthReq[0], (unsigned)(unsigned char)chAuthReq[1],
+              (unsigned)(unsigned char)chAuthReq[2], (unsigned)(unsigned char)chAuthReq[3]); // [d2boot]
+          sLogCtlProbeBattery("ctl-post", hCtl);
         }
 
-        D2BOOT_MarkFmt(
-            "BNet: ctl-socket connect=%d/%d send=%d/%d sel=%d recv=%d/%d head=%02x %02x %02x %02x",
-            nCtlConn, nCtlConnErr, nCtlSend, nCtlSendErr, nCtlSel, nCtlRecv, nCtlRecvErr,
-            (unsigned)(unsigned char)chCtlHead[0], (unsigned)(unsigned char)chCtlHead[1],
-            (unsigned)(unsigned char)chCtlHead[2], (unsigned)(unsigned char)chCtlHead[3]); // [d2boot]
         closesocket(hCtl);
       }
     } else {
       D2BOOT_Mark("BNet: ctl-socket skipped (peer sockaddr unavailable)"); // [d2boot]
     }
-    // VP-END [bn-ctl-socket R177]
+    // VP-END [bn-ctl-replay R178]
     return 1;
 }
 // VP-END [bn-recv-autopsy R174]

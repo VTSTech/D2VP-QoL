@@ -1,5 +1,92 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R177 field result: two suspect classes died, the block is conversation-scoped — SO_TYPE fails with WSAENOPROTOOPT(10042)
+
+**Machine-side classes eliminated by the user's Process Hacker dump + the in-log census.**
+
+- **No LSP.** `winsock catalog: 12 providers, 0 layered` — the stock provider set, zero
+  layered entries. A legacy LSP shim (the classic "recv returns 10053 on an open socket,
+  select stays green" producer) is ruled out.
+- **No in-process hook.** The full DLL list of the failing process contains only system
+  DLLs and AMD graphics (`aticfx32`/`atiu9pag`/`atiumdag` = Radeon driver;
+  `amdihk32` = AMD's Radeon *input/overlay* hook, graphics-side only; `mswsock` thread at
+  `sethostname+0x25d0` = the stock Winsock async worker, present in every networked
+  process). No AV/content-filter DLL injected. An "extra caller in our process" is dead as
+  a theory; whatever remains runs in the kernel (WFP callout driver) — invisible to
+  Process Hacker by design.
+
+**The R177 log itself.** Autopsy, both attempts, identical: `soerr=0/0` (SO_ERROR
+works, empty), `type=-1/10042` (**SO_TYPE fails with WSAENOPROTOOPT** — now with its error
+code), `hvalid=1/0` (kernel handle VALID — no closesocket ever ran on it), `fion=0/0`
+(AFD reports **zero bytes pending** — the receive queue is purged, i.e. the TCB was
+already aborted at autopsy time; the AUTHREQ's 103 bytes never sat readable), `sel=1(r1,e0)`,
+`peek=-1/10053`, `send0=-1/10053`. Drift: exactly one drift line per attempt, then nothing
+— handle value, SO_TYPE and kernel validity stable across the whole 20-retry budget. Close
+traps: the only `SAFESOCK ... closesocket` lines in the entire log are the two sanctioned
+`Free` calls by the auth thread (tid 12244) *after* death — no rogue closer exists.
+
+**The ctl-socket came back ALIVE on both attempts** (`ctl-socket connect=0/0 send=1/0
+sel=0 recv=-1/0`): a brand-new socket from the same process, same millisecond, same server —
+connect and send succeed; the server stays silent for the 1 s window because it pings only
+after receiving 0x50, exactly as both real attempts show. Combined with the catalog and the
+module dump: the block is **NOT app-wide and NOT keyed on the image wholesale** — it is
+scoped to the auth conversation/flow. (UI note: "Accessing your account" appearing before
+"Unable to connect" is the mess queue posting the next status string optimistically —
+`mess queue state -> 18` fires the instant the protocol-dead flag is set; the protocol
+itself was already dead. Not a hidden progress step.)
+
+**The one remaining anomaly: SO_TYPE → 10042.** A retail-class MSAFD TCP provider answers
+SO_TYPE on any live or aborted socket — R175's autopsies did exactly that (`type=1`). Since
+R176 the same probe on the same machine returns WSAENOPROTOOPT, "bad protocol option", on a
+handle that simultaneously answers SO_ERROR and FIONREAD and passes GetHandleInformation.
+Either the provider/option layer for THIS flow's kernel object is corrupted or delegated
+(flow-scoped state), or the machine's WFP/provider state changed between the R175 and R176
+runs (AV definitions update silently). The R178 A/B battery settles it empirically: the
+same probes run against a live control socket in the same process, same instant.
+
+**R178 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate):**
+
+- `BnSend.cpp` `NET_SID_CLIENT_Send` — **bn-ctl-replay**: the exact outbound 0x50 frame
+  (47 bytes, header included) is stashed into `g_chCtlReplayAuthInfo` (defined in
+  `d2_boot.cpp`, declared in `d2_boot.h`) before every send. Auth thread writes, read
+  thread reads, forensic-only, no locking.
+- `Safesock.cpp` — the R177 opening-leg ctl probe became the **full conversation replay**:
+  fresh socket → connect → **0x01 → stashed 0x50 verbatim** → wait 2 s for the server ping
+  → echo it → wait 3 s for the AUTHREQ. Step-coded verdict line
+  (`ctl-replay verdict step=%d err=%d ping=%d [...] authreq=%d [...]`; step 0 = replayed
+  the whole conversation). Plus **`sLogCtlProbeBattery`** — the autopsy's probes
+  (soerr/type/hvalid/fion/sel) run against the replay socket before start (`battery
+  ctl-live`) and after the verdict (`battery ctl-post`), so the A/B against the dead auth
+  socket's autopsy line is one-to-one.
+- `Redivivus/d2_boot.h` — `D2VP_ROUND` → 178.
+
+**How to read the R178 log (decision tree):**
+
+1. `ctl-replay verdict step=0` (replay survives ping + echo + reads the AUTHREQ) → the
+   death is bound to the ORIGINAL flow's kernel state, not the conversation content and
+   not the image. Forensics then hinge on the battery pair: if `ctl-live`/`ctl-post` show
+   `type=1` while the autopsy shows `type=-1/10042`, the original flow's option layer is
+   demonstrably corrupted per-flow → kernel-side per-flow state (WFP flow context) is the
+   killer; `netsh wfp capture` (below) names it.
+2. `ctl-replay verdict step=3/4/5` (died at/after the ping echo, before AUTHREQ) or
+   `step=6/7` (died at AUTHREQ) → the trigger IS the conversation content — a
+   content-inspecting kernel classifier aborts any flow of this process that replays this
+   byte sequence. Still testable: `netsh wfp capture`.
+3. Any `battery ctl-*` line showing `type=-1/10042` on a HEALTHY socket → SO_TYPE=10042 is
+   machine-wide behavior (provider state changed between rounds), the datum loses
+   per-flow power, and R175's `type=1` was the anomaly worth re-checking.
+4. Machine-side decisive test, independent of 1–3: **`netsh wfp capture`**
+   - `netsh wfp capture start` (needs admin; records WFP events + state)
+   - reproduce one failed connect in D2VP
+   - `netsh wfp capture stop` → writes a `.cab`; inside, `wfpstate.xml` lists filters and
+     callout providers — search for the `192.168.0.14` / port `6112` flow and any
+     **non-Microsoft provider name** (an AV's kernel driver aborting flows shows up here).
+   - quick alternative without a cab: `netsh wfp show state file=wfp.xml` then search the
+     XML for provider names, and `netsh wfp show filters` for BLOCK filters on 6112.
+5. The AV exclusion test stays on the list as the fastest user-side lever (Windows
+   Defender's network inspection / a third-party web-shield module both run WFP callouts;
+   exclude `F:\GAMES\Diablo II\` or disable network protection for one run).
+
 ## R176 field result: HARD ABORT confirmed — and SO_TYPE now fails where the R175 sample said type=1
 
 **The rideout answered its question (checklist item 3).** Both attempts spent the full
