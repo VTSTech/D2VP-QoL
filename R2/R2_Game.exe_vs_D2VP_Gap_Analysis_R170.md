@@ -65,7 +65,7 @@ Everything else in R170 (framing, timers, cache, error tables, abort codes, stat
 dispatcher 0x520dc0 = LogonResponse2, vercheck 0x520e50 = ReportVersion) **was
 confirmed correct** by the D2VP implementations.
 
-## 4. D2VP naming fixes recommended (cosmetic, no behavior change)
+## 4. D2VP naming fixes recommended (cosmetic, no behavior change) — APPLIED in phase 14 (see R2_D2GS_Protocol_and_Transport_Certification_R170.md §1)
 
 1. `NET_SID_CLIENT_LogonSequence` (0x51ca90, `Bnclient/BnSend.cpp:1704`) — its own body
    begins `DEBUG_Trace("sFastestConnect()")`; it is the fastest-server probe + connect
@@ -97,7 +97,7 @@ confirmed correct** by the D2VP implementations.
 | Registry value types for wrappers | Resolved: `SRegSaveValue(..., 2, ...)` (REG-style type 2 = string slot per Storm SReg) and `SRegSaveData("Patch","Patches",0x82,...)`; behavior reproduced faithfully. |
 | Other D2CS request senders | Resolved: 0x01 StartUp, 0x02 CharCreate, 0x03 CreateGame, 0x04 JoinGame, 0x07 CharLogon, 0x16 CharRank (all in D2MCPClient/McpConnect.cpp with exact framing). |
 
-## 7. What to actually work on next (priority order)
+## 7. What to actually work on next (priority order) — ALL FOUR ITEMS DONE in phase 14 (see R2_D2GS_Protocol_and_Transport_Certification_R170.md)
 
 Since the BNet path is closed, the remaining recreation risk is **outside** it:
 

@@ -1437,7 +1437,7 @@ BOOL __stdcall BNSEND_Disconnect() {
     D2NetDataStrc* pNetData = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
     if (pNetData) {
       D2NetDataStrc* pOldNetData;
-      _net_sid::SID_SetReadyFlag();
+      _net_sid::SID_SetProtocolDeadFlag();
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ nAtomicVal = InterlockedCompareExchange((LONG*)&Destination_00881c00, 0, 0);
       while (nAtomicVal) {
         /* DWORD dwMilliseconds for Sleep */ Sleep(10);
@@ -1514,7 +1514,7 @@ int32_t __fastcall NET_SID_CLIENT_Send(uint8_t nPacketId, char * pBytes, size_t 
       }
     }
 
-    _net_sid::SID_SetReadyFlag();
+    _net_sid::SID_SetProtocolDeadFlag();
     return 0;
 }
 
@@ -1627,7 +1627,7 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
       if (nPollResult) {
         nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + nBufPos, 0x2000 - nBufPos);
         if (nBytesRead <= 0) {
-          _net_sid::SID_SetReadyFlag();
+          _net_sid::SID_SetProtocolDeadFlag();
           break;
         }
 
@@ -1701,7 +1701,7 @@ void __fastcall BNSEND_SetGlobalFlag(uint32_t dwThreadInitFlag) {
 }
 
 // Battle.net connection orchestrator. Manages full logon sequence: server selection via fastest-connect test (select() on 64 candidate sockets, 5-second timeout per batch), protocol init (0x01 byte), SID_AUTHINFO (0x50) handshake, SID_AUTHCHECK (0x51) version/CD-key verification. Uses non-blocking socket multiplexing across up to 32 server candidates. Connection state machine: 2=searching, 3=accessing accounts, 4=checking version. Stores final socket in g_pBNetSocketData via InterlockedCompareExchange.
-void __stdcall NET_SID_CLIENT_LogonSequence(char * szServerList) {
+void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
     // Frame slots -8508..-8 are ONE object: &nAddrLen is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
     struct __frame0_t {
@@ -2027,7 +2027,7 @@ int __stdcall BattleConnectFastest() {
     }
 
     SID_SetStateFlag1(0);
-    NET_SID_CLIENT_LogonSequence(EntireDnsRecordOfServers);
+    NET_SID_CLIENT_ConnectFastest(EntireDnsRecordOfServers);
     Bnet::BNET_LogIndent(2, -4);
     /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ lInterlockedResult = InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
     if (!lInterlockedResult) {

@@ -42,6 +42,7 @@ R2/
 | Recreating the Battle.net client path in D2VP | `R2_Game.exe_BNetPath_Function_Reference_R170.md` (+ CSV) | High | corrected in the R170 gap-analysis pass |
 | D2VP vs Game.exe gap status / what to build next | `R2_Game.exe_vs_D2VP_Gap_Analysis_R170.md` | High | — |
 | Full-binary coverage (in-game layer + uncovered-region inventory) | `R2_Game.exe_vs_D2VP_InGame_Layer_Coverage_R170.md` | High | — |
+| D2GS protocol depth + Storm/Fog transport certification | `R2_D2GS_Protocol_and_Transport_Certification_R170.md` | High | — |
 
 > **R170b housekeeping:** the Boot/Entering/Loot/Chest/Shrine and TCP/IP + Battle.net
 > call-flow docs were **removed** — their address tables were placeholders or 1.10-1.13-era
