@@ -1,5 +1,92 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R176 field result: HARD ABORT confirmed — and SO_TYPE now fails where the R175 sample said type=1
+
+**The rideout answered its question (checklist item 3).** Both attempts spent the full
+budget: `retry 1/20` through `retry 20/20` at a steady ~15 ms cadence (`Sleep(10)` + the
+failing recv), then `recv failed (-1) - WSA err 10053 -> protocol dead`. Attempt 1: first
+abort 169347234 → dead 169347453 = **219 ms of continuous 10053, zero healing**. Attempt 2
+replays it identically (169347515 → 169347734). No `recv RECOVERED` mark anywhere. The
+"stall vs hard abort" question is closed forever: **hard, instant, deterministic abort** —
+the filter class (whatever it is) does not ride out; it kills on first sight and keeps
+killing for as long as the process keeps asking. The 200 ms workaround class (retry budgets)
+is dead as a fix; the remaining levers are identifying/removing the aborting agent (checklist
+items 1/2/4) or bypassing the data path it chokes on (item 6).
+
+**Death-point precision (tid tags paying off).** All death-stage lines carry the read
+thread's tid (16736 / 15644 per attempt) while the 0x50 wait and teardown lines carry the
+auth thread (1456) — no misattribution possible. The sequence inside one millisecond:
+`recv 8 bytes (FF 25 08 00 ...)` → `SID send op=0x25 len=4 -> 8` (echo) → recv →
+`autopsy` → `retry 1/20`. So the abort lands on the **first recv after our echo** — the
+recv that would have delivered the AUTHREQ the R175 pcap shows was already in the host
+buffer (arrival preceded death by ~750 µs, our `win=0` RST followed 753 µs later). Also
+recorded: attempt 2's autopsy handle (0x00000df0) equals attempt 1's — handle-value reuse
+after `Free`, benign and expected, but now visible in the log instead of assumed.
+
+**New contradiction between autopsy samples.** R175's two autopsies: `soerr=0`,
+`type=1`, `sel=1(r1,e0)`, `peek=-1/10053`, `send0=-1/10053`. Today's two autopsies: same
+except **`type=-1`** — the SO_TYPE getsockopt FAILED, microseconds after SO_ERROR on the
+same handle succeeded and while select still reports the handle readable. SO_TYPE reads a
+static property of the socket object; it cannot legitimately differ between sessions.
+Possibilities: the aborting agent's interaction with the option layer varies run to run, or
+the probe pair straddles the death instant differently per run (probe order is
+SO_ERROR → SO_TYPE → select → peek → send). Either way the one-instant snapshot cannot
+answer it — R177 turns the autopsy into a per-probe-error timeline and adds the two probes
+that split the remaining classes cleanly (see below).
+
+**R177 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate):**
+
+- `Safesock.cpp` — **bn-sock-ops-trap**: every closesocket path in the process now logs
+  handle + owning tid: the `closeSocket` wrapper (game-server/MPQ-download sockets),
+  `Free` (the sanctioned BNCS closer — the R173/R174 call-site marks name WHO ordered the
+  teardown, this line proves the handle's state at execution time), and
+  `SendOrCloseOnTimeout` (the one close that does NOT wait for the read thread — a
+  candidate for a racing close).
+- `Safesock.cpp` — autopsy v3: every failing probe logs its own error code
+  (`soerr=%d/%d type=%d/%d`), plus **`GetHandleInformation`** (`hvalid=%d/%d` — kernel-side
+  handle validity: an in-process closesocket frees the kernel handle → `kvalid=0 err=6`)
+  and **`FIONREAD`** (`fion=%lu/%d` — does AFD still queue the AUTHREQ?).
+- `Safesock.cpp` — **bn-ctl-socket**: the differential. One-shot at autopsy time: a
+  brand-new socket connects to the captured peer, sends the 0x01 protocol byte, waits
+  1 s, MSG_PEEKs. **ctl alive** ⇒ fresh sockets from this process sail through the
+  opening leg while the auth handle sits dead ⇒ the death is handle-scoped (in-process
+  close/alias/poison) or conversation-triggered — the drift watch + close traps name it.
+  **ctl dead** ⇒ the block is app-connection-wide at the opening leg ⇒ image-keyed filter,
+  and the retail-vs-D2VP exe difference is the lever.
+- `Safesock.cpp` — **bn-lsp-catalog**: one-shot `WSAEnumProtocolsA` census at the first
+  `Create` (provider count, layered-provider count, up to 4 LSP names). A legacy LSP shim
+  is exactly the provider class that reports 10053 from recv/send on an otherwise-open
+  socket while select (which bypasses LSP data hooks) stays green; an empty LSP list
+  pushes the WFP-callout/kernel class further up. Cross-checks `netsh winsock show
+  catalog` for free.
+- `BnSend.cpp` — **bn-drift-watch**: each retry iteration probes h-value + SO_TYPE +
+  kernel validity and logs ONLY on change (`retry %d/20 drift h=0x%08x type=%d/%d
+  kvalid=%d/%d`); state is function-scoped and reset per thread start so each attempt
+  starts clean. The three verdicts it can deliver: `type` flipping back to `1` mid-budget
+  = the handle was **recycled** by a new socket (aliasing bug in-process); `kvalid`
+  flipping to `0` = an **in-process closesocket ran** (and the traps will show which one);
+  all three stable for the whole budget = the handle is intact and the **provider layer**
+  is refusing the data plane (WFP-callout class).
+- `Redivivus/d2_boot.h` — `D2VP_ROUND` → 177.
+
+**How to read the R177 log (the decision tree):**
+
+1. `winsock catalog: N providers, M layered` — M > 0 with an AV/VPN name = prime suspect
+   found before any test runs.
+2. `ctl-socket connect=0/0 send=1/0 sel=...` (error slots `0`) = alive; any nonzero error
+   slot = dead. Compare across both attempts.
+3. Drift lines during the 20-retry budget, three shapes:
+   - stable `type=-1/<err> kvalid=1/0` all budget → handle valid kernel-side but Winsock's
+     option layer lost it → LSP/handle-table poisoning class (matches today's `type=-1`);
+     the `typeErr` code (expect 10038 WSAENOTSOCK vs 10053) narrows it further;
+   - `kvalid=0/6` at some retry → in-process close — the `SAFESOCK ... closesocket` trap
+     lines name the culprit and tid;
+   - `type=1/0` stays green while peek/send keep 10053 → WFP-callout class (matches
+     R175's `type=1`) — go straight to checklist item 4 (`netsh wfp capture`).
+4. Everything else (DLL diff, exclusion test, WFP capture, API Monitor) — unchanged from
+   the R176 checklist below; the exclusion test is still the single fastest decisive
+   experiment a user can run.
+
 ## R176: the sandbox half of the retail-vs-D2VP trace is done — filter class confirmed by elimination
 
 **What the R175 field run proved (d2boot.log + `game-d2vp-bnet.pcapng` re-read).** The

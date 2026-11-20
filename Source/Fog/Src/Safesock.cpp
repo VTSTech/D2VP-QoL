@@ -50,8 +50,14 @@ static char cp_0075d040[256] = {}; D2_STATIC_GUARD(cp_0075d040, "cp_0075d040");
 namespace Fog::Src::Safesock {
 
 int __fastcall closeSocket(SOCKET hSocket) {
+    // VP-BEGIN [bn-sock-ops-trap R177]: every close through this wrapper (game-server socket,
+    // MPQ download sockets) gets one log line pairing the handle with its owning tid, so a
+    // stray close of the BNCS auth socket by any of these paths is provable from d2boot.log
+    // alone. Volume is a handful of lines per session.
     int nResult = closesocket(hSocket);
+    D2BOOT_MarkFmt("SAFESOCK closeSocket h=0x%08x -> %d [tid %lu]", (unsigned)hSocket, nResult, (unsigned long)GetCurrentThreadId()); // [d2boot]
     return nResult;
+    // VP-END [bn-sock-ops-trap R177]
 }
 
 BOOL __stdcall StartUp() {
@@ -64,6 +70,52 @@ BOOL __stdcall StartUp() {
 int __stdcall WSACleanup() {
     return ::WSACleanup();
 }
+
+// VP-BEGIN [bn-lsp-catalog R177]: one-shot layered-provider census, run at the first
+// Safesock::Create. WFP callouts do not appear in the catalog, but a legacy LSP shim WOULD
+// - and an LSP shim is exactly the kind of provider that can report WSAECONNABORTED from
+// recv()/send() on an otherwise-open socket while the kernel TCB is untouched. A catalog
+// with zero layered entries pushes the WFP-callout / kernel-filter theory further up.
+static void sLogWinsockCatalogOnce() {
+    static BOOL s_bCatalogDone = FALSE;
+    if (s_bCatalogDone) {
+      return;
+    }
+    s_bCatalogDone = TRUE;
+    DWORD dwBufLen = 0;
+    WSAEnumProtocolsA(nullptr, nullptr, &dwBufLen);
+    if (WSAGetLastError() != WSAENOBUFS || dwBufLen < sizeof(WSAPROTOCOL_INFOA)) {
+      D2BOOT_MarkFmt("BNet: winsock catalog enum failed len=%lu err=%d", (unsigned long)dwBufLen, (int)WSAGetLastError()); // [d2boot]
+      return;
+    }
+
+    void* pCatalogBuf = HeapAlloc(GetProcessHeap(), 0, dwBufLen);
+    if (!pCatalogBuf) {
+      D2BOOT_Mark("BNet: winsock catalog alloc failed"); // [d2boot]
+      return;
+    }
+
+    int nCount = WSAEnumProtocolsA(nullptr, (LPWSAPROTOCOL_INFOA)pCatalogBuf, &dwBufLen);
+    if (nCount == -1) {
+      D2BOOT_MarkFmt("BNet: winsock catalog enum err=%d", (int)WSAGetLastError()); // [d2boot]
+    } else {
+      int nLayered = 0;
+      LPWSAPROTOCOL_INFOA pInfo = (LPWSAPROTOCOL_INFOA)pCatalogBuf;
+      for (int i = 0; i < nCount; ++i) {
+        if (pInfo[i].ProtocolChain.ChainLen > 1) {
+          ++nLayered;
+          if (nLayered <= 4) {
+            D2BOOT_MarkFmt("BNet: winsock LSP: \"%s\" chain=%d", pInfo[i].szProtocol, (int)pInfo[i].ProtocolChain.ChainLen); // [d2boot]
+          }
+        }
+      }
+
+      D2BOOT_MarkFmt("BNet: winsock catalog: %d providers, %d layered", nCount, nLayered); // [d2boot]
+    }
+
+    HeapFree(GetProcessHeap(), 0, pCatalogBuf);
+}
+// VP-END [bn-lsp-catalog R177]
 
 // @sourcefile .\Src\Safesock.cpp
 D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_START_ROUTINE pThreadProc, LPVOID pThreadParam, char * szConnectionAlias, uint32_t dwFlags) {
@@ -89,6 +141,9 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
     Storm::Source::SSTR::SStrCopy(pSafesockStrc->szHost, szConnectionAlias, 0x40);
     /* LPCRITICAL_SECTION lpCriticalSection for InitializeCriticalSection */ InitializeCriticalSection(&pSafesockStrc->pSync);
     int nResult = WSAStartup(0x101, &wsaData);
+    // VP-BEGIN [bn-lsp-catalog R177]
+    sLogWinsockCatalogOnce();
+    // VP-END [bn-lsp-catalog R177]
     if (nResult) {
       /* LPCRITICAL_SECTION lpCriticalSection for DeleteCriticalSection */ pSafesockStrc->nWSALastError = nResult;
       pSafesockStrc->nError = 1;
@@ -193,7 +248,13 @@ void __fastcall Free(D2NetDataStrc * pNetData) {
       int nResult;
       /* SOCKET s for closesocket */ pNetData->hSocket = -1;
       pNetData->bConnected = 0;
+      // VP-BEGIN [bn-sock-ops-trap R177]: Free() is the only sanctioned closer of the BNCS
+      // auth socket. The call-site marks (R173/R174) name WHO ordered the teardown; this
+      // line pairs the actual closing tid with the actual handle value, and - paired with
+      // the R177 drift watch - proves whether the handle was still intact at close time.
+      D2BOOT_MarkFmt("SAFESOCK Free closesocket h=0x%08x [tid %lu]", (unsigned)hSocket, (unsigned long)GetCurrentThreadId()); // [d2boot]
       nResult = closesocket(hSocket);
+      // VP-END [bn-sock-ops-trap R177]
       if (nResult == -1) {
         nResult = WSAGetLastError();
         pNetData->nWSALastError = nResult;
@@ -263,7 +324,11 @@ int32_t __fastcall WSASocket2_SendOrCloseOnTimeout(D2NetDataStrc * pNetData, cha
     if (nBytesSent == -1 && nWSAError == 0x274c) {
       nBytesSent = 0;
       LogManager::LOGFILE_WriteStringToFile("ERROR: Disconnecting socket due to WSAETIMEDOUT\n");
+      // VP-BEGIN [bn-sock-ops-trap R177]: this is the one close path that does NOT wait for
+      // the read thread, so it is a candidate for a racing close of the auth socket - tag it.
+      D2BOOT_MarkFmt("SAFESOCK SendOrCloseOnTimeout closesocket h=0x%08x [tid %lu]", (unsigned)pNetData->hSocket, (unsigned long)GetCurrentThreadId()); // [d2boot]
       /* SOCKET s for closesocket */ closesocket(pNetData->hSocket);
+      // VP-END [bn-sock-ops-trap R177]
     }
 
     return nBytesSent;
@@ -352,18 +417,25 @@ static void sCopyInetString(char * pDst, int nSize, uint32_t nAddrHostDword) {
     *pCur = '\0';
 }
 
-// One-shot forensic probe for the BNCS read thread's WSAECONNABORTED path. The 2026-11-20
-// pcap proved the wire was healthy when this client's own stack reported 10053 twice on
-// the same blocking socket, so the question is WHICH half of Winsock still believes the
-// connection is alive. Deliberately takes no critical section and touches no safesock
-// state (Free() may run concurrently), exactly like SAFESOCK_IsSocketOpen above:
+// One-shot-per-connection forensic probe for the BNCS read thread's WSAECONNABORTED path.
+// The 2026-11-20 pcap proved the wire was healthy when this client's own stack reported
+// 10053 twice on the same blocking socket, so the question is WHICH half of Winsock still
+// believes the connection is alive. Deliberately takes no critical section and touches no
+// safesock state (Free() may run concurrently), exactly like SAFESOCK_IsSocketOpen above:
 //   getpeername / getsockname - does TCP still know both endpoints?
 //   SO_ERROR (0x1007)         - did the stack queue an error of its own on the TCB?
 //   SO_TYPE (0x1004)          - is the handle still a stream socket (reuse detector)?
+//   GetHandleInformation      - [R177] kernel-side handle validity: an in-process
+//                               closesocket frees the kernel handle -> ERROR_INVALID_HANDLE,
+//                               which cleanly splits "our process closed it" from
+//                               "provider layer poisoned it".
+//   FIONREAD                  - [R177] does the AFD object still queue receive data?
 //   select(read,except)       - does the readiness layer still report the handle?
 //   recv(MSG_PEEK=0x2)        - does the receive path still fail, and with which error?
 //   send(len 0)               - transmit-path probe: fails too => TCB aborted, succeeds
 //                               => receive-only poisoning.
+// Every failing probe now logs its own error code: R176 produced the contradiction
+// soerr=0 + type=-1 + select readable, and without per-probe errors that is unreadable.
 int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvError) {
     if (!pNetData) {
       D2BOOT_Mark("BNet: autopsy skipped (no safesock struct)"); // [d2boot]
@@ -376,14 +448,18 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
       return 0;
     }
 
+    // VP-BEGIN [bn-ctl-socket R177]: hoisted to function scope so the control socket below
+    // can replay against the exact peer sockaddr captured at autopsy time.
+    sockaddr_in saPeer;
+    BOOL bPeerOk;
+    // VP-END [bn-ctl-socket R177]
+
     char szPeerIp[24];
     char szLocalIp[24];
     szPeerIp[0] = '\0';
     szLocalIp[0] = '\0';
-    BOOL bPeerOk;
     BOOL bLocalOk;
     {
-      sockaddr_in saPeer;
       int nNameLen = (int)sizeof(saPeer);
       bPeerOk = getpeername(hSocket, (sockaddr*)&saPeer, &nNameLen) != -1;
       if (bPeerOk) {
@@ -399,11 +475,22 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
     }
 
     int nSoError = -1;
+    int nSoErrorGet = 0;
     int nSoType = -1;
+    int nSoTypeGet = 0;
     int nOptLen = 4;
-    getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen); // SOL_SOCKET / SO_ERROR
+    if (getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen) == -1) nSoErrorGet = (int)WSAGetLastError(); // SOL_SOCKET / SO_ERROR
     nOptLen = 4;
-    getsockopt(hSocket, 0xffff, 0x1004, (char*)&nSoType, &nOptLen); // SOL_SOCKET / SO_TYPE
+    if (getsockopt(hSocket, 0xffff, 0x1004, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError(); // SOL_SOCKET / SO_TYPE
+    // VP-BEGIN [bn-handle-probe R177]: split the layers - kernel handle vs AFD object vs
+    // option layer vs readiness layer vs recv/send paths.
+    DWORD dwHandleFlags = 0;
+    BOOL bHandleOk = GetHandleInformation((HANDLE)hSocket, &dwHandleFlags);
+    int nHandleErr = bHandleOk ? 0 : (int)GetLastError();
+    u_long nFionBytes = 0;
+    int nFionRet = ioctlsocket(hSocket, 0x4004667F, &nFionBytes); // FIONREAD
+    int nFionErr = nFionRet == -1 ? (int)WSAGetLastError() : 0;
+    // VP-END [bn-handle-probe R177]
     fd_set readSet;
     fd_set exceptSet;
     readSet.fd_count = 1;
@@ -423,12 +510,68 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
     int nSend0 = send(hSocket, &chZero, 0, 0);
     int nSend0Error = nSend0 < 0 ? (int)WSAGetLastError() : 0;
     D2BOOT_MarkFmt(
-        "BNet: autopsy recvErr=%d h=0x%08x peer=%s local=%s soerr=%d type=%d sel=%d(r%d,e%d) peek=%d/%d send0=%d/%d",
+        "BNet: autopsy recvErr=%d h=0x%08x peer=%s local=%s soerr=%d/%d type=%d/%d hvalid=%d/%d fion=%lu/%d sel=%d(r%d,e%d) peek=%d/%d send0=%d/%d",
         nRecvError, (unsigned)hSocket,
         bPeerOk ? szPeerIp : "unavail",
         bLocalOk ? szLocalIp : "unavail",
-        nSoError, nSoType, nSelect, nReadFlag, nExceptFlag,
+        nSoError, nSoErrorGet, nSoType, nSoTypeGet,
+        bHandleOk ? 1 : 0, nHandleErr,
+        (unsigned long)nFionBytes, nFionErr,
+        nSelect, nReadFlag, nExceptFlag,
         nPeek, nPeekError, nSend0, nSend0Error); // [d2boot]
+
+    // VP-BEGIN [bn-ctl-socket R177]: THE DIFFERENTIAL. A brand-new socket from THIS process,
+    // opened WHILE the auth socket sits dead, replays the opening BNCS leg against the same
+    // server: connect -> 0x01 protocol byte -> 1 s wait -> recv if readable.
+    //   ctl alive => the block spares fresh sockets: the death is handle-scoped (in-process
+    //                close/alias/poison of THAT handle) or triggered later in the conversation
+    //                - the drift watch + close traps then name the killer.
+    //   ctl dead  => the block is app-connection-wide at the opening leg: image-keyed filter,
+    //                and the retail-vs-D2VP exe difference is the lever.
+    // Runs once per read-thread start (the autopsy call site is the first 10053 of each
+    // attempt), so both reconnect attempts produce one line each.
+    if (bPeerOk) {
+      SOCKET hCtl = socket(2, 1, 0);
+      if (hCtl == -1) {
+        D2BOOT_MarkFmt("BNet: ctl socket create failed err=%d", (int)WSAGetLastError()); // [d2boot]
+      } else {
+        int nCtlConn = connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer));
+        int nCtlConnErr = nCtlConn == -1 ? (int)WSAGetLastError() : 0;
+        int nCtlSend = -1;
+        int nCtlSendErr = 0;
+        int nCtlSel = -1;
+        int nCtlRecv = -1;
+        int nCtlRecvErr = 0;
+        char chCtlHead[8];
+        memset(chCtlHead, 0, sizeof(chCtlHead));
+        if (nCtlConn != -1) {
+          char chProtoByte = 0x01;
+          nCtlSend = send(hCtl, &chProtoByte, 1, 0);
+          nCtlSendErr = nCtlSend < 0 ? (int)WSAGetLastError() : 0;
+          fd_set ctlReadSet;
+          ctlReadSet.fd_count = 1;
+          ctlReadSet.fd_array[0] = hCtl;
+          timeval tvCtlWait;
+          tvCtlWait.tv_sec = 1;
+          tvCtlWait.tv_usec = 0;
+          nCtlSel = select(0x40, &ctlReadSet, nullptr, nullptr, &tvCtlWait);
+          if (nCtlSel > 0) {
+            nCtlRecv = recv(hCtl, chCtlHead, (int)sizeof(chCtlHead), 0x2); // MSG_PEEK: leave the byte for the real owner (nobody - we close below)
+            nCtlRecvErr = nCtlRecv < 0 ? (int)WSAGetLastError() : 0;
+          }
+        }
+
+        D2BOOT_MarkFmt(
+            "BNet: ctl-socket connect=%d/%d send=%d/%d sel=%d recv=%d/%d head=%02x %02x %02x %02x",
+            nCtlConn, nCtlConnErr, nCtlSend, nCtlSendErr, nCtlSel, nCtlRecv, nCtlRecvErr,
+            (unsigned)(unsigned char)chCtlHead[0], (unsigned)(unsigned char)chCtlHead[1],
+            (unsigned)(unsigned char)chCtlHead[2], (unsigned)(unsigned char)chCtlHead[3]); // [d2boot]
+        closesocket(hCtl);
+      }
+    } else {
+      D2BOOT_Mark("BNet: ctl-socket skipped (peer sockaddr unavailable)"); // [d2boot]
+    }
+    // VP-END [bn-ctl-socket R177]
     return 1;
 }
 // VP-END [bn-recv-autopsy R174]

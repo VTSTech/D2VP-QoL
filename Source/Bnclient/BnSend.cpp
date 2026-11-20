@@ -1619,6 +1619,16 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
     // "did not heal in 200 ms" data point before tearing down as before.
     static int s_nRecvAbortRetries = 0;
     s_nRecvAbortRetries = 0;
+    // VP-BEGIN [bn-drift-watch R177]: drift-probe state, function scope so the per-thread-start
+    // reset below gives each reconnect attempt a clean slate (loop-scope statics would inherit
+    // the previous attempt's final state and swallow a "changed back" transition).
+    static SOCKET s_hDriftLast = -1;
+    static int s_nTypeDriftLast = -1;
+    static int s_nKDriftLast = -1;
+    s_hDriftLast = -1;
+    s_nTypeDriftLast = -1;
+    s_nKDriftLast = -1;
+    // VP-END [bn-drift-watch R177]
     // VP-END [bn-recv-abort-retry R173]
     DWORD dwLastKeepaliveTick = GetTickCount();
     // VP-BEGIN [bn-read-offset R169]: nBufPos is a BYTE OFFSET into chRecvBuf, not a pointer.
@@ -1679,6 +1689,35 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
             // VP-END [bn-recv-autopsy R174]
             D2BOOT_MarkFmt("BNet: recv aborted (WSA 10053) but socket still open - retry %d/20",
                            s_nRecvAbortRetries); // [d2boot]
+            // VP-BEGIN [bn-drift-watch R177]: once per retry iteration, probe the handle's
+            // identity - value, SO_TYPE, kernel validity - and log ONLY on change. R176's
+            // field autopsy produced a one-instant contradiction (soerr=0 yet SO_TYPE failing
+            // while select still claimed readable); the watch turns that snapshot into a
+            // per-10ms timeline: a type flipping back to 1 mid-budget proves the handle got
+            // RECYCLED by a new socket (aliasing bug), a kvalid flip to 0 proves an
+            // in-process closesocket ran, stability across all three proves the provider
+            // layer - not the handle - is what fails.
+            {
+              SOCKET hDriftNow = pSafesock->hSocket;
+              int nTypeDriftNow = -1;
+              int nTypeDriftErr = 0;
+              int nOptLenDrift = 4;
+              if (getsockopt(hDriftNow, 0xffff, 0x1004, (char*)&nTypeDriftNow, &nOptLenDrift) == -1) {
+                nTypeDriftErr = (int)WSAGetLastError();
+              }
+              DWORD dwDriftFlags = 0;
+              BOOL bDriftKernelOk = GetHandleInformation((HANDLE)hDriftNow, &dwDriftFlags);
+              int nKDriftNow = bDriftKernelOk ? 1 : 0;
+              if (hDriftNow != s_hDriftLast || nTypeDriftNow != s_nTypeDriftLast || nKDriftNow != s_nKDriftLast) {
+                D2BOOT_MarkFmt("BNet: retry %d/20 drift h=0x%08x type=%d/%d kvalid=%d/%d",
+                               s_nRecvAbortRetries, (unsigned)hDriftNow, nTypeDriftNow, nTypeDriftErr,
+                               nKDriftNow, bDriftKernelOk ? 0 : (int)GetLastError()); // [d2boot]
+                s_hDriftLast = hDriftNow;
+                s_nTypeDriftLast = nTypeDriftNow;
+                s_nKDriftLast = nKDriftNow;
+              }
+            }
+            // VP-END [bn-drift-watch R177]
             Sleep(10);
             continue;
           }
