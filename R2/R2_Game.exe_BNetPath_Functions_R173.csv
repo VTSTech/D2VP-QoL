@@ -1,0 +1,58 @@
+va,name,proto,stage,globals,key_calls,recreation_note
+0x51d1c0,BNET_Connect,void(),1,0x881bf0/0x881bfc/0x881c04,"0x51c470, 0x5193e0, 0x520b30, 0x521b50, [0x6cc250] _beginthreadex(0x51d0a0)",UI entry: reset state + spawn worker; 'already connected' short-circuit
+0x51d0a0,BattleConnectFastest,uint32 __stdcall(void*),1,"0x881c00, 0x8818e8, 0x8819e8","0x51ea40, 0x51c190, 0x518c70, 0x40d890, 0x51c0e0, 0x520520, 0x51ca90","Worker thread: mutex-guard, ini parse, fastest-server probe, set connected events"
+0x51ca90,sFastestConnect,(char* servers),1,"0x881bf8, 0x8818e0","0x51ea40, [0x6cc258](0xa), 0x68264f strtok(' ,;')",Per-server probe with 5 s budget; client-local
+0x51c470,BNET_ResetConnectionState,bool(),1,"0x881bf0/bf4/bfc, 0x881c00","0x51ac20, 0x51b210, 0x519300, 0x520440, 0x521b90, 0x520ad0, 0x51e5d0/e0",Idempotent teardown of events/mutex/transport
+0x51c5c0,BNCS_SendPacket,"int __fastcall(u8 opcode, void* data, u32 len)",1,"0x881bf0, 0x881bfc","0x40dcc0 (queue), 0x520ad0 (disconnect)",Single BNCS egress primitive; framing FF OP LEN16(len includes header)
+0x5182b0,RealmsBin_Load,"(out1, out2)",1,-,"0x41b650('Data\Global\Realms.bin'), fatal on fail",Gateway list file loader; parser keys BATTLENETIP/MCPIP/REALM/CHARACTER
+0x51c0e0,BnserverIni_Parse,"(ecx=name_buf, edx=ok_flag)",1,"0x8818e0, 0x881be8/bec, 0x881bfc",[0x6cc250](proc 0x51bee0),"Spawns ini-parse thread, pumps messages, waits completion"
+0x51ea40,ProbeSlots_Init,(ecx=count),1,"0x881c50, 0x881d60/61",-,Probe table init (0x66 slots in fastest path)
+0x518d40,StatusLog_Print,"(fmt, ...)",1,critsec 0x881860,-,All 'Connected...'/'Logon...' status messages
+0x51a480,DebugLog_Print,(str),1,-,-,Trace printer for assert-name strings
+0x520520,SetConnectStatus,(ecx=code),1,0x88201c (critsec 0x882004),-,"0xc=failed server list, 0x12=generic abort"
+0x518c70,SocketMode_Set,(mode),1,-,-,"2=init, 0=normal, -4=close"
+0x520b30,AuthState_Reset,void(),2,"0x8822a8, 0x882128 (94 slots), 0x72ffa8, 0x882528",0x520520,Zero both step tables before connect
+0x521b50,AuthEngine_Init,void(),2,"obj 0x88273c, .data 0x730164","0x5285a0 (ctor, sep '/'), 0x528620 (timestamp)",BD auth-engine C++ object construction
+0x520cb0,BDClientId_RecvHandler,"(ecx=payload, edx=len)",2,HKLM Configuration,"0x4150e0 x4, 0x518c70, 0x518d40",len>=0x10: ver/authority/clientID/token -> registry; 'client acknowledged'
+0x520d50,Ack_Store,(ecx=payload),2,0x8818bc,0x51a540,Store ack payload dword
+0x520d60,LogonAllowed_Set,(ecx=payload),2,0x882318,-,If [payload]==0 -> logon allowed flag
+0x520d70,LogonAck_RecvHandler,(ecx=payload),2,0x8818bc,"0x51a540, 0x518c70, 0x518d40",'logon acknowledged'; sets [ecx+4] as ack
+0x520da0,Ack_Mirror,(ecx=payload),2,0x72ffa8,-,[0x72ffa8] = ([payload]==0)
+0x520dc0,Auth_StatusDispatcher,(ecx=payload),2,0x72ffa8,0x5204a0/0x5204d0,jmp [status*4+0x520e28]; 0/1/2->abort 0xd/0xe/0xf; 3->abort-with-data 0x1b; else 0x12
+0x520e50,VerCheck_ResultHandler,"(ecx=status, edx=extra)",2,0x8822c4,"0x51bcf0, 0x415000, 0x51e370, 0x51f910, 0x518d40","1=downloading upgrade, 2=latest version, 3=reinstall+patch, else unknown"
+0x520f60,ServerList_RecvHandler,"(ecx=payload, edx=len)",2,-,inline strlen/compare,Two NUL strings at +8 / +8+n+1; requires len>=strlen+9
+0x5210a0,ServerList_Persist,(ecx=payload),2,HKLM Configuration,0x415070,Registry string write 'Server List'
+0x521110,ErrorDetail_Handler,(ecx=payload),2,-,0x51f910,Result 0x80000005/0x80000006 -> sized registry write
+0x521150,Notify_Handler,"(ecx=payload, edx=len)",2,0x88252c (dedup id),0x51f910,len>=0x11; id-deduped two-string notification write
+0x5215b0,AccountLogon_ChainHead,"(ecx=payload, edx=len)",2,-,-> 0x5216b0 family,Account-logon step; result switch 0/1/5 (ok/unknown/upgrade)
+0x523ac0,SHA1_Init,(eax=ctx),2,-,-,Standard SHA-1 IV; backs logon-proof hashing
+0x523af0,SHA1_Transform,"(ctx, block)",2,-,-,0x6b0-byte block transform
+0x520b70,AuthStep_Wait,(ecx=step),2,"0x882128, 0x882528",0x5204a0(0x12) on timeout,Poll + 10 ms sleep; 45000 ms timeout
+0x5204a0,BNCS_AbortWithStatus,(ecx=status),2,"0x88201c, critsec 0x882004",-,Abort primitive; variant 0x5204d0 adds 0x80-byte data to 0x881f80
+0x51bdc0,BnSend_BufferA,"(ecx=payload, edx=len)",2,slot 0x8818c8,"0x40b3c0/0x40b380 (asserts .\BnSend.cpp 0x1e6/0x1ef), 0x6829c0",BnSend.cpp buffer alloc/append helper
+0x51be20,BnSend_BufferB,"(ecx=payload, edx=len)",2,slot 0x8818d0,same pattern (lines 0x326/0x36a),BnSend.cpp buffer helper
+0x51ab30,BnSend_BufferC,"(ecx=payload, edx=len)",2,slot 0x8818dc,"0x412650/0x413020 (lines 0x188/0x189), 0x6829c0",BnSend.cpp buffer helper
+0x521ba0,Locale_Get,(),2,-,GetSystemDefaultUILanguage (dynamic),Locale id used by auth
+0x449e70,D2CS_RecvDispatch,"(packet, len)",3,cache 0x7992f4,"0x40b380, 0x6829c0, fatal 0x681e09",cmd@[0]; words +1/+3/+5/+7 < 0x100; cmd 0x17/0x19 charlist; heap-caches reply
+0x44aae0,D2CS_SendRequest,"(ecx=struct, edx=arg, [esp+4]=seq)",3,"0x79929c, 0x798fb4","0x449bf0, 0x44a170, 0x6bc8a0","9-byte header (cmd 0x16, dword arg, dword seq) + payload; len<0x10000"
+0x44a170,D2CS_PayloadAppend,"(dst, &len, max)",3,-,fatal on overflow,NUL-string append with cap
+0x44a2e0,D2CS_SendCreateChar,"(ecx=struct, edx=arg, [esp+4]=len)",3,0x798fb4,"0x449bf0(0), 0x449c20(0), 0x44a170, 0x6bc8a0",cmd 0x02 CREATECHARREQ sender; framing [cmd][dword][word][payload]
+0x449bf0,D2CS_SetPendingStatus,(seq),3,0x79929c,-,Set last-request status
+0x449c00,D2CS_GetLastStatus,(),3,0x79929c,-,The err=%d in charcreate error messages
+0x449b30,MCP_IsConnected,(),3,0x798fb4,"0x6bc810, 0x40dee0",Transport peer check
+0x449d20,D2CS_StageStrings,"(a, b, c)",3,0x798f58/0x798f60,-,Request string staging (char name / realm password)
+0x441c95,MCP_RestoreUI,(),3,"0x77bd8c/94, 0x77b084-0x77b090","0x4f93c0, 0x4fdad0/b00 (cb 0x43f9b0/0x43db90), 0x4fdd50(0xc8), 0x4fa420, 0x501290",Rebuild UI after realm reconnect; failure -> 'Could not restore MCP connection.'
+0x437ab0,CharSel_CacheAdd,"(ecx=?, edx=name)",3,head 0x779de8,"0x413020, 0x4135d0 strdup, [0x6cc260] GetTickCount",0x110 node: name/owner/expiry(+300000 ms!)/next; 5-minute charlist cache
+0x438ad0,CharSel_RecordCreate,"(edx=name, [esp+8]=stats, +0xc/+0x10=fields)",3,pool 0x779dbc,"0x40b380 (line 0x414), 0x4135d0","0x350 record: name@+0 (cap 0x100), stats@+0x100, fields@+0x340/344/348"
+0x438ea0,CharSel_CacheTeardown,(),3,0x779dbc/0x779dc0-d8,0x5041b0 free,Free all records + clear globals
+0x43aab0,CharSel_OnCharlistReply,(packet...),3,"0x7795ec, 0x70cc04","0x408f20, 0x524a30(0x1419-0x141b), 0x43a460, 0x438ad0, 0x437b90",Walks charlist blocks (dword count for cmd 0x19; name+stats strings per block)
+0x43a460,CharSel_BlockFill,"(name, stats, sum_byte, ...)",3,-,0x5263e0/0x5267e0,"Fills record (line 0xbaf); charsum byte@+0x320, words@+0x322-0x330"
+0x435e10,CharSel_CreateChar_Handler,(),3,0x7795d4 (+0xbd/+0x3a1/+0x3b1/+0x3c1),"0x449b30, 0x449c00, 0x449df0, 0x410610, 0x524a30(0x145e/0x145f)",Status 0x14=already exists; else 'Error from MCP trying to create %s (err=%d)'
+0x44c000,GameSrv_EnterGame,(),4,"[0x70f234]=8, flags 0x7a061c/50/58/6c","0x463dd0, 0x44bec0, 0x468740/0x468730, 0x462d00(1)",Enter-game transition with token pair from 0x7a6aac/0x7a6ab0
+0x44c060,GameSrv_LeaveGame,(),4,"[0x70f234]=0x10, flags 0x7a0650/58/5c/60/64","0x466ff0, 0x463dd0, 0x468740/0x468730, 0x462d00(2)",Leave/rejoin transition; capability flags 8/8/4
+0x462d00,GameSrv_Transition,"(ecx=class 1|2, edx=token, [esp+8]=id, [esp+0xc]=flags)",4,0x7a5264,"0x4538d0(9), 0x45aff0, 0x463dd0, 0x467a10, 0x45adf0/0x45ae20, 0x625480","Session setup: 8-dword arg block, flags bit8->cap 0x40 (test via 0x625480), bit4->0x20"
+0x468740,GameSrv_TokenA_Get,(),4,0x7a6aac,-,Client token getter
+0x468730,GameSrv_TokenB_Get,(),4,0x7a6ab0,-,Client token getter
+0x518d40,StatusLog_Print,"(fmt, ...)",1,critsec 0x881860,-,See stage 1
+0x44bfe0,GameSrv_Connected_Get1,(),4,0x7a066c,-,Connectivity flag getter
+0x44bff0,GameSrv_Connected_Get2,(),4,0x7a0670,-,Connectivity flag getter
