@@ -1640,6 +1640,19 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
           break;
         }
         D2BOOT_MarkFmt("BNet: recv %d bytes (buffered %d)", (int)nBytesRead, (int)nBufPos + (int)nBytesRead); // [d2boot]
+        if (nBufPos == 0) {
+          const char chHexDigits[] = "0123456789ABCDEF";
+          char szHexHead[64];
+          unsigned uHexLen = (unsigned)nBytesRead < 16u ? (unsigned)nBytesRead : 16u;
+          unsigned uHexIdx;
+          for (uHexIdx = 0; uHexIdx < uHexLen; uHexIdx++) {
+            szHexHead[uHexIdx * 3] = chHexDigits[((unsigned char)chRecvBuf[uHexIdx] >> 4) & 0xF];
+            szHexHead[uHexIdx * 3 + 1] = chHexDigits[(unsigned char)chRecvBuf[uHexIdx] & 0xF];
+            szHexHead[uHexIdx * 3 + 2] = ' ';
+          }
+          szHexHead[uHexLen * 3] = 0;
+          D2BOOT_MarkFmt("BNet: recv head[%u]: %s", uHexLen, szHexHead); // [d2boot]
+        }
 
         nBufPos = (int)NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, (size_t)(nBufPos + nBytesRead)) - (int)chRecvBuf;
         // VP-END [bn-read-offset R169]
@@ -1957,6 +1970,7 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       if (bAuthInfoAccepted) {
         /* in_addr in for inet_ntoa */ pszToken = inet_ntoa((in_addr)*(uint32_t*)((char*)&__frame0.sockaddrPeer + 4));
         Bnet::BnetLog_WriteLine("Connected to server %s", pszToken);
+        D2BOOT_MarkFmt("BNet: race winner peer %s port %u", pszToken, (unsigned)ntohs(*(uint16_t*)((char*)&__frame0.sockaddrPeer + 2))); // [d2boot]
       }
     }
 

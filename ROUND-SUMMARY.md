@@ -1,5 +1,23 @@
-# Round summary — R172 (rev 184, 2026-11-20): step-by-step d2boot.log tracing for Battle.net and TCP/IP — 28 marks closing the blind spots the three R171 field logs exposed
+# Round summary — R173 (rev 185, 2026-11-20): the R172 field log named the BNet death (recv -1 WSA 10053 right after the 0x25 ping echo, no AUTH_INFO reply) — 2 marks to identify the peer: BNCS recv hex dump + race-winner peer IP:port
 
+
+
+## The R172 field log and the R173 follow-up
+
+The R172 marks did their job. The owner's Battle.net log now reads: connection state 0-4
+in sequence, race won, protocol byte ok, 0x50 AUTH_INFO sent (51 bytes), then — same
+millisecond — the peer sent one 8-byte frame (parsed 0x25 PING), the client echoed it ok,
+and the next recv returned -1 with WSA error 10053 (WSAECONNABORTED) -> protocol dead ->
+wait aborted -> UI state 18 -> exit.
+
+Two facts matter. First, the 0x50 AUTH_INFO **reply never arrived** — a real BNCS server
+answers AUTH_INFO before it pings. Second, the peer aborted the connection immediately
+after we sent AUTH_INFO (or a local middlebox did). Both point away from a client bug:
+192.168.0.14:6112 is either not a Battle.net service (a Diablo II TCP/IP game host also
+listens on 6112 and would accept + close on foreign bytes), or something on the path
+(firewall/AV) kills the flow. R173 adds the two marks that settle it: a hex dump of the
+first 16 bytes of every fresh-frame BNCS recv (SID frames start `FF <id> <len lo>
+<len hi>`; foreign garbage is instantly recognizable) and the race-winner peer IP:port.
 
 ## The follow-up ask (field logs, R172)
 

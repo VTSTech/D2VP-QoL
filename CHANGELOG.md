@@ -9,6 +9,18 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R173 — BNCS recv hex dump + race-winner peer port** (the owner's R172 Battle.net log
+  finally named the failure: `SID 0x50 AUTH_INFO` sent ok (51 bytes), the peer sent one
+  8-byte frame parsed as a 0x25 PING, the echo sent ok, then `recv failed (-1) - WSA err
+  10053 -> protocol dead` — all within one millisecond. A real BNCS server answers
+  AUTH_INFO before pinging; a ping-then-abort with no AUTH_INFO reply means
+  192.168.0.14:6112 is either not a Battle.net service (a Diablo II TCP/IP game host
+  also listens on 6112, as do other services) or a middlebox (firewall/AV) aborts the
+  flow). Two marks settle which: the first 16 bytes of every fresh-frame BNCS recv are
+  hex-dumped (real SID frames start FF <id> <len lo> <len hi>; foreign protocol garbage
+  is instantly recognizable), and the fastest-server race winner now logs peer
+  IP:port (confirms which service actually accepted on 6112). No behavior changes.
+
 - **R172 — step-by-step d2boot.log tracing for Battle.net and TCP/IP, driven by the R171
   field logs** (owner sent three R171 logs: offline SP and TCP/IP host complete healthy,
   but the Battle.net log died silently — `SID 0x50 AUTH_INFO stage` then nothing for
