@@ -1,5 +1,59 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R175: autopsy verdict — the TCB is locally aborted; bncs-probe decides who dies
+
+**The R174 field run's autopsy line is the most informative datum yet:**
+
+```
+BNet: autopsy recvErr=10053 h=0x00000dd4 peer=192.168.0.14 local=192.168.0.12
+      soerr=0 type=-1 sel=1(r1,e0) peek=-1/10053 send0=-1/10053
+```
+
+- `soerr=0` + peer/local resolved — the handle is still a live socket object; TCP still
+  knows both endpoints; no error is queued on the TCB.
+- `sel=1(r1,e0)` — the readiness layer reports the socket **readable** (AUTHREQ_109 was
+  in the receive queue, exactly as the pcap predicted).
+- `peek=-1/10053` AND `send0=-1/10053` — **both** data paths fail. Per the
+  interpretation table: the local TCP TCB is **aborted** by something in the local
+  stack (filter/WFP/LSP class), while the management paths (getpeername, getsockopt,
+  select) still work.
+- `type=-1` was a **probe bug, not a finding**: R174 probed `0x1004` = SO_RCVLOWAT,
+  which Windows does not support — it fails on every healthy socket. Real SO_TYPE is
+  `0x1008`; fixed in R175 (and each getsockopt now logs its own failure error).
+- **The reconnect reproduced the kill exactly**: a fresh socket (`h=0x00000de4`) died at
+  the identical byte with the identical signature. The reconnect machinery worked
+  flawlessly — the verdict is that the kill is a standing **per-connection-pattern
+  policy**, not a poisoned handle, not a one-off, and not anything in our code. Three
+  data ops on each connection succeed (`\x01`, 0x50, 0x25 echo); the 4th (recv of the
+  queued AUTHREQ_109) is killed, deterministically, twice in a row.
+
+**R175 changes (all VP-marked):**
+
+- `Safesock.cpp` — autopsy probe fix: SO_TYPE `0x1008`, per-getsockopt error capture,
+  absolute tick in the log line. No behavior change elsewhere; the R174 reconnect stays
+  (budget 1) as a free second chance.
+- `tools/bncs-probe.c` — **the decisive experiment**. A ~250-line plain winsock console
+  program that replays the exact wire sequence (connect → `\x01` → 0x50 AUTH_INFO with
+  D2VP's byte-identical fields → echo 0x25 → log AUTHREQ) from an **unmodded process**,
+  logging every operation with tick deltas and running the same autopsy on any failure.
+  Build on the target box (MSYS2 shell):
+  `clang tools/bncs-probe.c -o bncs-probe.exe -lws2_32` (or gcc). Run:
+  `bncs-probe.exe 192.168.0.14 6112` (writes `bncs-probe.log` next to the exe).
+
+**Decision table for the probe run:**
+
+| probe result | verdict | next lever |
+| --- | --- | --- |
+| probe dies with the same `peek/send0 -1/10053` autopsy | the kill is **connection-based** — a network filter / WFP rule / global AV network shield kills this handshake pattern regardless of process | temporarily disable the AV's network shield (or the AV) on 192.168.0.12 and rerun the probe; if it survives, the AV is the killer |
+| probe sails through the 15 s window | the kill targets **D2VP.exe specifically** (AV reputation/behavior verdict on the modded binary) | add `F:\GAMES\Diablo II` to the AV exclusions / re-test; if that fixes it, keep the exclusion |
+| probe dies only in `--skip0x50`-off mode | the kill keys on the 0x50/echo step specifically | re-test with `--slow 500` (timing invariant) — and capture a new pcap of the probe dying |
+
+**Field-verification checklist for the next run:** compile and run the probe on
+192.168.0.12 (twice: default mode and `--skip0x50`), send both `bncs-probe.log` files,
+plus the new `d2boot.log` (its autopsy line now has `gserr=` so a failing getsockopt
+can no longer masquerade as a value). If the AV disable test is cheap, do it before the
+probe run — it is currently the single most likely root cause.
+
 ## R174: the abort is deterministic — autopsy probe + auth-stage reconnect
 
 **What the R173 field run added.** The R173 build's one-shot recovery fired exactly as
