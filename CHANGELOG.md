@@ -9,6 +9,24 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R172 — step-by-step d2boot.log tracing for Battle.net and TCP/IP, driven by the R171
+  field logs** (owner sent three R171 logs: offline SP and TCP/IP host complete healthy,
+  but the Battle.net log died silently — `SID 0x50 AUTH_INFO stage` then nothing for
+  ~2.8 s until exit, no 0x05 CLIENTID, no 0x51 AUTH_CHECK — i.e. the death is between
+  the 0x50 send and the first reply, on paths that had zero marks). 28 new marks close
+  every blind spot on those paths: `SID_SetProtocolDeadFlag` (the flag itself — if it
+  fires now, the log says so directly), `NET_SID_CLIENT_Send` (op/len/result, plus the
+  refused-send fallback), `NET_SID_CLIENT_WaitForPacketId` (entry, reply-arrived,
+  45 s-timeout, protocol-dead-abort), the BNCS recv loop (per-read byte counts, read
+  failure + WSA error), `NET_SID_CLIENT_IncomingPacketHandler` (every SID packet
+  received), the fastest-server race win point, the BNCS protocol-byte send, the 0x51
+  AUTH_CHECK result code, the 0x29/0x3A/0x3D/0x3E login/realm senders, all five
+  `g_nBNetConnectionState` transitions, and the UI state machine
+  (`SID_SetStateFlag1`/`BNMESSQUEUE_SetStateIfZero`). TCP/IP side: D2GS `connect()`
+  result + WSA error, recv-thread lifecycle (running/exit), and the QServer host path
+  (listen on port, client accepted). A Battle.net death can now only be silent above
+  the socket API itself. No behavior changes; passwords never logged.
+
 - **R171 — d2boot.log now traces the full pre-game journey** (follow-up to the R161 boot
   trace, which stopped at the main loop). 46 new `D2BOOT_Mark`/`D2BOOT_MarkFmt` milestones
   across the four flows a silent-exit report needs: offline character select (main-menu

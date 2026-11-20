@@ -31,6 +31,7 @@
 #include "Source/D2Net/Game/Server.data.h"
 #include "Source/D2Net/in_addr.h"
 #include "Source/Fog/QServer.h"
+#include "Redivivus/d2_boot.h" // [d2boot]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -206,6 +207,9 @@ static int32_t __stdcall AcceptConnection(D2QServerStrc * pQServer, sockaddr * p
     (*pnTelemetryCounter)++;
     /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(pCsTelemetry);
     HANDLE FileHandle = (HANDLE)_Wrappers::accept(pQServer->aListenSockets[nWorkerIndex], pSockAddr, pSockAddrLen);
+    if (FileHandle != (HANDLE)-1) {
+      D2BOOT_MarkFmt("TCP/IP: host accepted a client (worker %d)", (int)nWorkerIndex); // [d2boot]
+    }
     /* LARGE_INTEGER * lpPerformanceCount for QueryPerformanceCounter */ QueryPerformanceCounter(&pQServer->aWorkerTelemetry[nWorkerIndex].qpcStampAfterAccept);
     LPCRITICAL_SECTION pCsTelemetryLocal = pCsTelemetry;
     if (FileHandle == (HANDLE)-1) {
@@ -743,6 +747,7 @@ SOCKET __fastcall StartListening(D2QServerStrc * pQServer, uint32_t nPort) {
         pQServer->aIoCompletionPorts[nResult] = (HANDLE)pIocp;
         pQServer->aListenPorts[nResult] = (u_short)nPortLocal;
         pQServer->aListenSockets[nResult] = hListenSocket;
+        D2BOOT_MarkFmt("TCP/IP: host listening on port %u (worker %d)", (unsigned)nPortLocal, (int)nResult); // [d2boot]
         pQServer->aWorkerSlotValues[nResult] = 1;
         pThreadArgs = (uint32_t*)D2_ALLOC_AT(8, ".\\Src\\QServer\\QServerNT.cpp", 0xa2);
         /* LPDWORD lpThreadId for CreateThread */ /* DWORD dwCreationFlags for CreateThread */ /* LPVOID lpParameter for CreateThread */ /* LPTHREAD_START_ROUTINE lpStartAddress for CreateThread */ /* SIZE_T dwStackSize for CreateThread */ /* LPSECURITY_ATTRIBUTES lpThreadAttributes for CreateThread */ *pThreadArgs = (uint32_t)(uintptr_t)pQServer;

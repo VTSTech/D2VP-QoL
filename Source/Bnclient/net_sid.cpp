@@ -286,6 +286,7 @@ void __fastcall XSHA1(D2XSHA1Strc * pOutput, char * szInput, size_t nInputSize) 
 }
 
 BOOL __stdcall SID_SetProtocolDeadFlag() {
+    D2BOOT_Mark("BNet: SID PROTOCOL DEAD FLAG set (a send/recv/parse path gave up)"); // [d2boot]
     g_bSIDProtocolReady = 1;
     return 1;
 }
@@ -329,11 +330,13 @@ int __stdcall SID_InitializeProtocolState() {
 }
 
 BOOL __fastcall NET_SID_CLIENT_WaitForPacketId(uint8_t nPacketId) {
+    D2BOOT_MarkFmt("BNet: wait for SID 0x%02x reply...", (unsigned)nPacketId); // [d2boot]
     DWORD dwStartTick = GetTickCount();
     int bReceivedResponse = NET_SID_INCOMING_CLIENT_PacketRequireAnswer[nPacketId];
     while (true) {
       DWORD dwCurrentTick;
       if (bReceivedResponse) {
+        D2BOOT_MarkFmt("BNet: wait 0x%02x -> reply arrived", (unsigned)nPacketId); // [d2boot]
         return 1;
       }
       if (g_bSIDProtocolReady) {
@@ -342,6 +345,7 @@ BOOL __fastcall NET_SID_CLIENT_WaitForPacketId(uint8_t nPacketId) {
 
       dwCurrentTick = GetTickCount();
       if (dwCurrentTick - dwStartTick > 45000) {
+        D2BOOT_MarkFmt("BNet: wait 0x%02x -> 45 s TIMEOUT (server never answered)", (unsigned)nPacketId); // [d2boot]
         BNMESSQUEUE_SetStateIfZero(0x11);
         return 0;
       }
@@ -350,6 +354,7 @@ BOOL __fastcall NET_SID_CLIENT_WaitForPacketId(uint8_t nPacketId) {
       bReceivedResponse = NET_SID_INCOMING_CLIENT_PacketRequireAnswer[nPacketId];
     }
 
+    D2BOOT_MarkFmt("BNet: wait 0x%02x -> aborted (protocol flagged dead)", (unsigned)nPacketId); // [d2boot]
     BNMESSQUEUE_SetStateIfZero(0x12);
     return 0;
 }
@@ -1196,6 +1201,7 @@ BOOL __fastcall NET_SID_CLIENT_Incoming_RequiredWork(char * pBytes, size_t nSize
 // Packet format: 0xFF | PacketId(1) | Size(2, LE) | Data(...)
 // Validates nPacketId < 0x5E, calls handler from function pointer table.
 BOOL __fastcall NET_SID_CLIENT_IncomingPacketHandler(uint8_t nPacketId, char * pBytes, size_t nSize) {
+    D2BOOT_MarkFmt("BNet: SID pkt 0x%02x received (%u bytes)", (unsigned)nPacketId, (unsigned)nSize); // [d2boot]
     // Static local variables (originally global data)
     static D2NET_CLIENT_SIDtoCLT NET_SID_CLIENT_INCOMING[94] = {
     &Bnclient::_net_sid::NET_SID_CLIENT_IncomingReturn,

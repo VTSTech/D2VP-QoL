@@ -115,7 +115,9 @@ static sockaddr * name_00882b38; D2_STATIC_GUARD_BSS(name_00882b38, "D2Net::SRC:
     char* szResolvedIp = Fog::Src::Safesock::inet_nameToIp((char*)lpThreadParam);
     /* char * cp for inet_addr */ nClientSockAddrIn = inet_addr(szResolvedIp);
     int nConnectResult = connect(::D2Net::SRC::Client::CLIENT_SocketToServer, (sockaddr*)&name_00882b38, 0x10);
+    D2BOOT_MarkFmt("D2GS: connect(%s:4000) -> %d (WSA err %u)", szResolvedIp ? szResolvedIp : "?", (int)nConnectResult, (unsigned)WSAGetLastError()); // [d2boot]
     if (nConnectResult == -1) {
+      D2BOOT_Mark("D2GS: connect FAILED - socket marked dead"); // [d2boot]
       ::D2Net::SRC::Client::CLIENT_SocketToServer = -1;
     }
 
@@ -313,6 +315,7 @@ DWORD __stdcall ThreadClientToServer(void * lpThreadParam) {
     pCompressedRead = 0;
     int bCompressedMode;
     bCompressedMode = 0;
+    D2BOOT_Mark("D2GS: client recv thread running"); // [d2boot]
     do {
       do {
         while (true) {
@@ -419,6 +422,7 @@ DWORD __stdcall ThreadClientToServer(void * lpThreadParam) {
 
         /* LPCSTR lpOutputString for OutputDebugStringA */ lpOutputString = "Client thread close #6\n";
         exit_thread:
+        D2BOOT_Mark("D2GS: client recv thread exiting (close path)"); // [d2boot]
         OutputDebugStringA(lpOutputString);
         return 0;
       }

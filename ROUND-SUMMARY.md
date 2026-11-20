@@ -1,6 +1,33 @@
-# Round summary — R171 (rev 183, 2026-11-20): d2boot.log now traces the full pre-game journey — 46 milestones across offline char select, Battle.net connect/login/auth, MCP create/join game, and TCP/IP
+# Round summary — R172 (rev 184, 2026-11-20): step-by-step d2boot.log tracing for Battle.net and TCP/IP — 28 marks closing the blind spots the three R171 field logs exposed
 
-## The ask
+
+## The follow-up ask (field logs, R172)
+
+Owner sent three R171 logs. Offline SP (`d2boot-offline-join.log`) and TCP/IP host
+(`d2boot-tcpip-host.log`) complete healthy end to end. The Battle.net log
+(`d2boot-d2gs.log`) dies silently: `BNet: SID 0x50 AUTH_INFO stage` at T+609, then
+nothing for ~2.8 s until `mode loop exited`. No 0x05 CLIENTID, no 0x51 AUTH_CHECK,
+no recv/send marks — the death is between the 0x50 send and the first reply, exactly
+where R171 had no instrumentation. The wait aborts through the protocol-dead branch
+(not the 45 s timeout), so `SID_SetProtocolDeadFlag` fired somewhere with no mark.
+
+R172 closes every blind spot on those paths (28 marks, 5 files):
+- `SID_SetProtocolDeadFlag` itself now logs — the next silent BNet death names itself.
+- `NET_SID_CLIENT_Send`: op/len/result per send, plus the refused-send fallback.
+- `NET_SID_CLIENT_WaitForPacketId`: entry, reply-arrived, 45 s timeout, dead-abort.
+- BNCS recv loop: per-read byte counts; read failure logs the WSA error before dying.
+- `NET_SID_CLIENT_IncomingPacketHandler`: every SID packet received (id + size).
+- Race win point, BNCS protocol-byte send result, 0x51 AUTH_CHECK result code.
+- Login/realm senders 0x29/0x3A/0x3D/0x3E; all five `g_nBNetConnectionState` steps;
+  the UI state machine (`SID_SetStateFlag1`, `BNMESSQUEUE_SetStateIfZero`).
+- TCP/IP: D2GS `connect()` result + WSA error, recv-thread lifecycle, QServer host
+  listen (port) + client-accepted marks (QServerNT path).
+
+Expected next BNet log shape: race won -> protocol byte -> 0x50 sent -> either "recv N
+bytes" + "SID pkt 0x51 received" (server answered) or "recv failed (WSA err)" /
+"send refused" / "DEAD FLAG set" — the failing step names itself.
+
+## The R171 round (previous ask, table retained)
 
 Owner: "Let's add more entries to d2boot.log covering character select (offline),
 connecting to battle.net, login, auth, create/join game. do tcp/ip as well" — the

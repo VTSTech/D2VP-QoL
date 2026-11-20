@@ -203,6 +203,7 @@ DWORD __stdcall BNCLIENT_GetBNetClientToken() {
 }
 
 int __fastcall NET_SID_CLIENT_Send_0x29_LogonResponse(char * szText1, char * szText2) {
+    D2BOOT_Mark("BNet: SID 0x29 LOGON sending (legacy)"); // [d2boot]
     SID_C2S_LogonResponse dwClientToken;
     BnDoubleHashInput dwTickCount;
     char szPasswordLower[256];
@@ -223,6 +224,7 @@ int __fastcall NET_SID_CLIENT_Send_0x29_LogonResponse(char * szText1, char * szT
 }
 
 int __fastcall NET_SID_CLIENT_Send_0x3A_LogonResponse2(char * szText1, char * szText2) {
+    D2BOOT_Mark("BNet: SID 0x3A LOGONRESPONSE2 sending"); // [d2boot]
     SID_C2S_LogonResponse dwClientToken;
     BnDoubleHashInput dwTickCount;
     char szPasswordLower[256];
@@ -243,6 +245,7 @@ int __fastcall NET_SID_CLIENT_Send_0x3A_LogonResponse2(char * szText1, char * sz
 }
 
 int __fastcall NET_SID_CLIENT_Send_0x3D_CreateAccount2(char * szText1, char * szText2) {
+    D2BOOT_Mark("BNet: SID 0x3D CREATEACCOUNT2 sending"); // [d2boot]
     D2XSHA1Strc sha1Password;
     char szUsername[256];
     char szPasswordLower[256];
@@ -727,6 +730,7 @@ void __fastcall BNSEND_StoreUserProfileData(uint8_t * pbProfileData, size_t nDat
 
 // SID_LOGONREALMEX (0x3E) client request sender. Computes double-SHA1 password hash for realm logon. Packet format: (DWORD)ClientToken, (BYTE[20])PasswordHash, (STRING)RealmName. Hash computed as SHA1(SHA1(ClientToken, ServerToken, Password)). Sends request, waits for 0x3E response containing MCP server connection info. Increments gnBNetRealmClientToken client token counter.
 void * __fastcall NET_SID_CLIENT_Send_0x3E_LogonRealmEx(char * szRealmName, char * szPassword) {
+    D2BOOT_MarkFmt("BNet: SID 0x3E LOGONREALM sending (realm=%s)", szRealmName ? szRealmName : "?"); // [d2boot]
     // Static local variables (originally global data)
     static uint32_t gnBNetRealmClientToken; D2_STATIC_GUARD_BSS(gnBNetRealmClientToken, "Bnclient::BnSend::NET_SID_CLIENT_Send_0x3E_LogonRealmEx::gnBNetRealmClientToken");
 
@@ -1203,6 +1207,7 @@ void __fastcall GetDnsRecordSync(char * * ppszDnsOutput, char * nDnsThreadParam2
     // Static local variables (originally global data)
     static D2DnsThreadParamStrc lpParameter_00881be8 = {}; D2_STATIC_GUARD(lpParameter_00881be8, "Bnclient::BnSend::GetDnsRecordSync::lpParameter_00881be8");
 
+    D2BOOT_Mark("BNet: connection state -> 1 (DNS resolve)"); // [d2boot]
     /* DWORD dwMilliseconds for Sleep */ g_nBNetConnectionState = 1;
     char** dwThreadId = ppszDnsOutput;
     Sleep(10);
@@ -1511,10 +1516,12 @@ int32_t __fastcall NET_SID_CLIENT_Send(uint8_t nPacketId, char * pBytes, size_t 
         }
 
         nBytesSent = Fog::Src::Safesock::WSASocket2_Send(pSafesock, chRealPacket, nSizeNoHeader + 4);
+        D2BOOT_MarkFmt("BNet: SID send op=0x%02x len=%u -> %d", (unsigned)nPacketId, (unsigned)nSizeNoHeader, (int)nBytesSent); // [d2boot]
         return nBytesSent;
       }
     }
 
+    D2BOOT_Mark("BNet: SID send refused (no socket / protocol dead)"); // [d2boot]
     _net_sid::SID_SetProtocolDeadFlag();
     return 0;
 }
@@ -1628,9 +1635,11 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
       if (nPollResult) {
         nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + nBufPos, 0x2000 - nBufPos);
         if (nBytesRead <= 0) {
+          D2BOOT_MarkFmt("BNet: recv failed (%d) - WSA err %u -> protocol dead", (int)nBytesRead, (unsigned)WSAGetLastError()); // [d2boot]
           _net_sid::SID_SetProtocolDeadFlag();
           break;
         }
+        D2BOOT_MarkFmt("BNet: recv %d bytes (buffered %d)", (int)nBytesRead, (int)nBufPos + (int)nBytesRead); // [d2boot]
 
         nBufPos = (int)NET_SID_CLIENT_IncomingPacketHandlerLoop(chRecvBuf, (size_t)(nBufPos + nBytesRead)) - (int)chRecvBuf;
         // VP-END [bn-read-offset R169]
@@ -1752,6 +1761,7 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
 
     /* DWORD dwMilliseconds for Sleep */ gbBNetSocketConnected = 0;
     g_nBNetConnectionState = 2;
+    D2BOOT_Mark("BNet: connection state -> 2 (fastest-server race)"); // [d2boot]
     Sleep(10);
     Bnet::BnetLog_WriteLine("searching for the fastest server");
     char* pszToken;
@@ -1932,6 +1942,7 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
     }
 
     gbBNetSocketConnected = 1;
+    D2BOOT_Mark("BNet: fastest-server race WON (socket ready)"); // [d2boot]
     _net_sid::SID_GetState(&__frame0.nSIDState);
     BVar1 = _net_sid::SID_GetReadyFlag();
     /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (BVar1 || __frame0.nSIDState || (lInterlockedResult = (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, 0) , !lInterlockedResult)) {
@@ -1949,12 +1960,14 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       }
     }
 
-    /* DWORD dwMilliseconds for Sleep */ g_nBNetConnectionState = 3;
+    g_nBNetConnectionState = 3;
+    D2BOOT_Mark("BNet: connection state -> 3 (BNCS connected, auth stage)"); // [d2boot]
     Sleep(10);
     Bnet::BnetLog_WriteLine("accessing accounts");
     Fog::Src::Safesock::SAFESOCK_SetSocketNonBlocking(pNetData, 0);
     __frame0.bProtocolByte = '\x01';
     bAuthInfoAccepted = Fog::Src::Safesock::WSASocket2_Send(pNetData, &__frame0.bProtocolByte, 1);
+    D2BOOT_MarkFmt("BNet: BNCS protocol byte sent -> %d", (int)bAuthInfoAccepted); // [d2boot]
     if (bAuthInfoAccepted <= 0) {
       Debug::DEBUG_Trace("  Failed send.");
       return;
@@ -1978,7 +1991,8 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
     if (BVar1) {
       SID_SetStateFlag1(0xb);
     } else {
-      /* DWORD dwMilliseconds for Sleep */ g_nBNetConnectionState = 4;
+      g_nBNetConnectionState = 4;
+      D2BOOT_Mark("BNet: connection state -> 4 (version check)"); // [d2boot]
       Sleep(10);
       Bnet::BnetLog_WriteLine("Checking for the latest version");
       BnDownload::BNDOWNLOAD_ResetState(0x66);
@@ -1992,6 +2006,7 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       _net_sid::SID_GetState(nSIDStateCheck);
       if (!nSIDStateCheck[0]) {
         dwAuthCheckResponse = _net_sid::SID_GetPacketResponseFlag(0x51);
+        D2BOOT_MarkFmt("BNet: SID 0x51 AUTH_CHECK result=%u", (unsigned)dwAuthCheckResponse); // [d2boot]
         if (dwAuthCheckResponse) {
           NET_SID_CLIENT_Send_0x33_GetFileTime("bnserver-D2DV.ini", 0x80000004);
           Bnet::BnetLog_WriteLine("Connected to Battle.net");
@@ -2061,7 +2076,8 @@ HANDLE __fastcall ConnectingToBattleNet() {
       bDisconnected = BNSEND_Disconnect();
       if (bDisconnected) {
         /* LONG Value for InterlockedExchange */ /* LONG * Target for InterlockedExchange */ InterlockedExchange(&Target_00881bfc, 0);
-        /* DWORD dwMilliseconds for Sleep */ g_nBNetConnectionState = 0;
+        g_nBNetConnectionState = 0;
+        D2BOOT_Mark("BNet: connection state -> 0 (reset, reconnecting)"); // [d2boot]
         Sleep(10);
         Cache::CACHE_Open();
         _net_sid::SID_InitializeProtocolState();

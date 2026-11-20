@@ -9,6 +9,7 @@
 #include "Source/Bnclient/SRP.h"
 #include "Source/Bnclient/net_sid.h"
 #include "Source/D2CMP/Draw.h"
+#include "Redivivus/d2_boot.h" // [d2boot]
 #include "Source/D2CMP/SRC/Codec.h"
 #include "Source/D2CMP/SRC/LRUCache.h"
 #include "Source/D2Common/COMPOSIT/Composit.h"
@@ -186,6 +187,7 @@ int __stdcall BNMESSQUEUE_ClearAll() {
 uint32_t __fastcall BNMESSQUEUE_SetStateIfZero(int32_t nState) {
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&lpCriticalSection_00882004);
     if (!g_nBattleNetConnectionState) {
+      D2BOOT_MarkFmt("BNet: mess queue state -> %d", (int)nState); // [d2boot]
       g_nBattleNetConnectionState = nState;
     }
 
@@ -206,6 +208,7 @@ int __fastcall BNMESSQUEUE_SetStateWithString(int32_t nState, char * szMessage) 
 
 uint32_t __fastcall SID_SetStateFlag1(uint32_t nState) {
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&lpCriticalSection_00882004);
+    D2BOOT_MarkFmt("BNet: SID state flag -> %u", (unsigned)nState); // [d2boot]
     g_nBattleNetConnectionState = nState;
     /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&lpCriticalSection_00882004);
     return 1;
