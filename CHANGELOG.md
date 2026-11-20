@@ -9,6 +9,19 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R171 — d2boot.log now traces the full pre-game journey** (follow-up to the R161 boot
+  trace, which stopped at the main loop). 46 new `D2BOOT_Mark`/`D2BOOT_MarkFmt` milestones
+  across the four flows a silent-exit report needs: offline character select (main-menu
+  Single Player / Create Hero / commit-new-character, char-select screen shown with the
+  selection mode, OK → start game), Battle.net (connect click, BNCS connect thread,
+  fastest-server race + candidate connect, DNS failure, SID 0x50/0x51 auth stage, 0x40/0x1D
+  challenges, 0x29/0x3A logon results, 0x05/0x09 first responses), MCP realm protocol
+  (connection/charlogon/create/join/list state setters, 0x02/0x07/0x03/0x04 senders,
+  0x03/0x04/0x07 replies with result codes and the D2GS IP) and TCP/IP (host select with
+  local IP, join screen, resolve+connect, host connection verified/failed, D2GS connection
+  pump and client connection thread). Game names and IPs are logged; passwords are not.
+  No behavior changes — the marks are extern-C calls into the existing diagnostic writer.
+
 - **R170 — issue #39 closed: cold/frozen monsters can no longer strand at 0 HP and vanish**
   (owner report after R166: "still noticing some disappearing monsters when cold or frozen";
   r2 verification of Game.exe 1.14d retail in

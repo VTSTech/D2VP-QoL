@@ -6461,6 +6461,7 @@ BOOL __stdcall UIMENU_TCPIPAddressInput(D2ControlMsg * pControlMsg) {
 }
 
 BOOL __stdcall MAINMENU_OnPressStartTcpIpTimer(D2ControlMsg * pControlMsg) {
+    D2BOOT_Mark("MainMenu: TCP/IP options opened"); // [d2boot]
     FORMS_DestroyList();
     gpMainMenuTcpIpTimerControl = (::D2WinTimer*)FORMS_CreateAnyFormFromListExEx(0x10b);
     D2Win::Src::D2WinTimer::D2WINTIMER_Start((int*)gpMainMenuTcpIpTimerControl);
@@ -6470,6 +6471,7 @@ BOOL __stdcall MAINMENU_OnPressStartTcpIpTimer(D2ControlMsg * pControlMsg) {
 
 int __stdcall MAINMENU_CreateGameServerThreadPump(int nFrameIndex) {
     int nThreadResult = D2Net::Game::Server::CreateThreadClientSocketOrSingleplayer();
+    D2BOOT_MarkFmt("TCP/IP: server pump result %d (2=connected/SP, 1=thread pending, 0=failed)", nThreadResult); // [d2boot]
     if (!nThreadResult) {
       gnTcpIpConnectionSuccessFlag = nThreadResult;
       D2Win::Src::D2WinMain::D2WINMAIN_ClearMessageLoopFlag();
@@ -7943,6 +7945,7 @@ BOOL __stdcall UIMENU_ConnectToServerCallback(D2ControlStrc * pUnusedArg) {
     }
 
     pszResolvedIp = acStack_414;
+    D2BOOT_MarkFmt("TCP/IP: connecting to host %s", acStack_414); // [d2boot]
     char* pszServerIpDst = D2IniData_launcher->szSERVERIP;
     strcpy(pszServerIpDst, acStack_414);
     UIMENU_PleaseWaitWithCancelButton();
@@ -7951,6 +7954,7 @@ BOOL __stdcall UIMENU_ConnectToServerCallback(D2ControlStrc * pUnusedArg) {
     D2Net::SRC::Client::NET_D2GS_ConnectToServer(CONNECTIONTYPE_SERVER, acStack_414);
     D2Win::Src::D2WinMain::MessagePump(MAINMENU_CreateGameServerThreadPump);
     if (!gnTcpIpConnectionSuccessFlag) {
+      D2BOOT_Mark("TCP/IP: join to host failed"); // [d2boot]
       D2Net::SRC::Client::NET_CLIENT_ShutdownConnection();
       FORMS_DestroyList();
       pszEditValue = D2Lang::StrTable::strtable::GetLocaleString(0x145b);
@@ -7964,6 +7968,7 @@ BOOL __stdcall UIMENU_ConnectToServerCallback(D2ControlStrc * pUnusedArg) {
     D2Net::SRC::Client::NET_CLIENT_ShutdownConnection();
     FORMS_DestroyList();
     if (!gnMainMenuConnectFlag) {
+      D2BOOT_Mark("TCP/IP: host connection verified, entering char select (LAN_JOIN)"); // [d2boot]
       OogCurrentCharSelectionMode = CHAR_SELECTION_TCP_IP;
       D2IniData_launcher->nGAMETYPE = GAMETYPE_LAN_JOIN;
       D2IniData_launcher->nJOINID = 1;
@@ -8742,6 +8747,7 @@ int32_t __fastcall fAPPMODE_launcher_ReturnAppMode_Caller(D2IniConfigStrc * pD2I
 }
 
 BOOL __stdcall MAINMENU_OnPressSinglePlayer(D2ControlMsg * pControlMsg) {
+    D2BOOT_Mark("MainMenu: Single Player pressed"); // [d2boot]
     OogCurrentCharSelectionMode = CHAR_SELECTION_SP;
     BOOL bHasSaveFiles = SAVEFILE_FindAllSaveFiles();
     if (bHasSaveFiles == 1) {
@@ -8762,6 +8768,7 @@ BOOL __stdcall MAINMENU_Unused10(D2ControlMsg * pControlMsg) {
 }
 
 BOOL __stdcall MAINMENU_OnPressSelectBattleNet(D2ControlMsg * pControlMsg) {
+    D2BOOT_Mark("MainMenu: Battle.net selected"); // [d2boot]
     OogCurrentCharSelectionMode = CHAR_SELECTION_BNET;
     UIMENU_MainMenuAgain();
     return 1;
@@ -8975,6 +8982,7 @@ int __stdcall Unreferenced_00436340(int param_1) {
 }
 
 BOOL __stdcall MAINMENU_OnPressCommitNewCharacterAndStartGame(D2ControlMsg * pControlMsg) {
+    D2BOOT_MarkFmt("CharSelect: Commit new character (mode=%d, class=%d)", (int)OogCurrentCharSelectionMode, (int)D2IniData_launcher->eCTEMP_eD2PlayerClassID); // [d2boot]
     if (D2IniData_launcher->eCTEMP_eD2PlayerClassID == CLASS_ASSASSIN || D2IniData_launcher->eCTEMP_eD2PlayerClassID == CLASS_DRUID) {
       D2IniData_launcher->eCTEMP_eD2PlayerStatus |= PLAYERSTATUS_Expansion;
     }
@@ -9033,6 +9041,7 @@ BOOL __stdcall MAINMENU_OnPressCommitNewCharacterAndStartGame(D2ControlMsg * pCo
 }
 
 BOOL __stdcall MAINMENU_OnPressCreateHeroSinglePlayer(D2ControlMsg * pControlMsg) {
+    D2BOOT_Mark("MainMenu: Create Hero pressed (offline)"); // [d2boot]
     FORMS_DestroyList();
     UIMENU_CreateHeroSinglePlayer();
     return 1;
