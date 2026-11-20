@@ -1,58 +1,100 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
-## R175: autopsy verdict — the TCB is locally aborted; bncs-probe decides who dies
+## R176: the sandbox half of the retail-vs-D2VP trace is done — filter class confirmed by elimination
 
-**The R174 field run's autopsy line is the most informative datum yet:**
+**What the R175 field run proved (d2boot.log + `game-d2vp-bnet.pcapng` re-read).** The
+R174 auth-stage reconnect fired and **died at the same byte on a brand-new socket**
+(`race winner peer 192.168.0.14 port 6112` → `0x50` ok → `recv 8 bytes` → 0x25 echo ok →
+`recv failed (-1) - WSA err 10053` → `auth-stage teardown freeing socket (wait failed)`),
+so the condition is **per-process, not per-connection** — exactly the branch the R174
+checklist named. Both attempts show the identical single-threaded pattern: recv#1 (the
+8-byte `FF 25` echo-req) → inline echo send (`-> 8`) → recv#2 → 10053 → autopsy → retry →
+dead. (One correction to this session's working notes: attempt 1's echo did NOT go out
+late from a second thread — its `SID send op=0x25 -> 8` sits at the same millisecond
+between `SID pkt received` and `autopsy`; there is exactly one 0x25 sender,
+`NET_SID_CLIENT_Incoming_Ping` at net_sid.cpp:549, dispatched only from the read loop.)
 
-```
-BNet: autopsy recvErr=10053 h=0x00000dd4 peer=192.168.0.14 local=192.168.0.12
-      soerr=0 type=-1 sel=1(r1,e0) peek=-1/10053 send0=-1/10053
-```
+**Pcap forensics this round (own parser, `scripts/parse_pcapng.py`).** Two flows on
+6112: retail `192.168.0.12:9640` (t=+9.2..+11.0 s) and D2VP `192.168.0.12:9676`
+(t=+18.7..+18.8 s, 21 ms total). New facts beyond R173:
 
-- `soerr=0` + peer/local resolved — the handle is still a live socket object; TCP still
-  knows both endpoints; no error is queued on the TCB.
-- `sel=1(r1,e0)` — the readiness layer reports the socket **readable** (AUTHREQ_109 was
-  in the receive queue, exactly as the pcap predicted).
-- `peek=-1/10053` AND `send0=-1/10053` — **both** data paths fail. Per the
-  interpretation table: the local TCP TCB is **aborted** by something in the local
-  stack (filter/WFP/LSP class), while the management paths (getpeername, getsockopt,
-  select) still work.
-- `type=-1` was a **probe bug, not a finding**: R174 probed `0x1004` = SO_RCVLOWAT,
-  which Windows does not support — it fails on every healthy socket. Real SO_TYPE is
-  `0x1008`; fixed in R175 (and each getsockopt now logs its own failure error).
-- **The reconnect reproduced the kill exactly**: a fresh socket (`h=0x00000de4`) died at
-  the identical byte with the identical signature. The reconnect machinery worked
-  flawlessly — the verdict is that the kill is a standing **per-connection-pattern
-  policy**, not a poisoned handle, not a one-off, and not anything in our code. Three
-  data ops on each connection succeed (`\x01`, 0x50, 0x25 echo); the 4th (recv of the
-  queued AUTHREQ_109) is killed, deterministically, twice in a row.
+- **The trigger is the AUTHREQ arriving, not our echo.** Retail: echo-req at +9.254627,
+  echo at +9.254847 (0.22 ms), AUTHREQ at +9.254893, client ACK at +9.295, AUTH_CHECK
+  120 ms later, clean FIN at +10.995. D2VP: echo at +18.757277 (3.17 ms — the delta is
+  D2BOOT logging, not a thread hop), AUTHREQ at +18.757390, then **RST `win=0` 753 µs
+  later with no ACK and no read**. Attempt 1 of the R175 log died on the same schedule.
+- **The RST is ours.** `win=0` + client-host IP-ID continuity (retail used ids
+  51468-51478, D2VP 51479-51484, same capture, same host) — no middlebox injected
+  anything, and the server never sent FIN/RST (R173's finding, reconfirmed).
+- **The wire is byte-clean in both directions.** D2VP's 0x50 is byte-identical to
+  retail's (`IX86`/`D2XP`, version 0x0e, `CAN`/`Canada`); the server's 0x25 and 103-byte
+  `FF 50` AUTHREQ replies are the same shape in both flows.
 
-**R175 changes (all VP-marked):**
+**The retail-vs-D2VP socket API trace — static half complete (r2 6.1.5 portable, project
+`/tmp/game114d.r2`).** Retail disassembly vs D2VP source, function by function:
 
-- `Safesock.cpp` — autopsy probe fix: SO_TYPE `0x1008`, per-getsockopt error capture,
-  absolute tick in the log line. No behavior change elsewhere; the R174 reconnect stays
-  (budget 1) as a free second chance.
-- `tools/bncs-probe.c` — **the decisive experiment**. A ~250-line plain winsock console
-  program that replays the exact wire sequence (connect → `\x01` → 0x50 AUTH_INFO with
-  D2VP's byte-identical fields → echo 0x25 → log AUTHREQ) from an **unmodded process**,
-  logging every operation with tick deltas and running the same autopsy on any failure.
-  Build on the target box (MSYS2 shell):
-  `clang tools/bncs-probe.c -o bncs-probe.exe -lws2_32` (or gcc). Run:
-  `bncs-probe.exe 192.168.0.14 6112` (writes `bncs-probe.log` next to the exe).
+| Retail | D2VP | Verdict |
+|---|---|---|
+| `BnetReadFunction` 0x51c7e0 | `BnSend.cpp:1595` | identical: single-instance guard, `gbBNetSocketConnected` Sleep(10) arm, double re-fetch of `g_pBNetSocketData`/dead-flag between poll and read, `recv(chRecvBuf+nBufPos, 0x2000-nBufPos)` (buffer at `ebp-0x2008`, 0x2014 frame), `IncomingPacketHandlerLoop` offset contract, 180000 ms keepalive (`cmp 0x2bf20`), dead-flag on read failure |
+| `NET_SID_CLIENT_Send` 0x51c5c0 | `BnSend.cpp:1507` | identical: header `FF|id|size+4`, guards on `g_pBNetSocketData` + ready-flag, `SMemCopy` with `nSize+4 < 0x2000` bound, `WSASocket2_Send`, dead-flag on refusal |
+| `NET_SID_CLIENT_Incoming_Ping` 0x520fc0 | `net_sid.cpp:547` | identical 18-byte inline echo (`mov cl,0x25; call Send`) |
+| `NET_SID_CLIENT_ConnectFastest` race | `BnSend.cpp:1771` | identical: non-blocking candidates via `Create(...,flags=1)`, losers `Free()`d post-race, winner CAS'd into `g_pBNetSocketData` with `bConnected=1`, **`SAFESOCK_SetSocketNonBlocking(0)` before the 0x01 protocol byte** |
+| Safesock transport (Create/Free/Read/Send/select) | `Fog/Src/Safesock.cpp` | already certified faithful (R170 phase 14); `SO_SNDTIMEO`=3000 ms explains `WSASocket2_SendOrCloseOnTimeout`'s WSAETIMEDOUT close |
 
-**Decision table for the probe run:**
+With this, **every in-process suspect is eliminated by direct parity**: one reader
+(refcount), no closer in the window (R174 audit), faithful read/send/ping/race/transport.
+What remains sits strictly *between* `recv()` and the TCB.
 
-| probe result | verdict | next lever |
-| --- | --- | --- |
-| probe dies with the same `peek/send0 -1/10053` autopsy | the kill is **connection-based** — a network filter / WFP rule / global AV network shield kills this handshake pattern regardless of process | temporarily disable the AV's network shield (or the AV) on 192.168.0.12 and rerun the probe; if it survives, the AV is the killer |
-| probe sails through the 15 s window | the kill targets **D2VP.exe specifically** (AV reputation/behavior verdict on the modded binary) | add `F:\GAMES\Diablo II` to the AV exclusions / re-test; if that fixes it, keep the exclusion |
-| probe dies only in `--skip0x50`-off mode | the kill keys on the 0x50/echo step specifically | re-test with `--slow 500` (timing invariant) — and capture a new pcap of the probe dying |
+**Autopsy interpretation (now with two samples).** `sel=1(r1,e0)` + `peek=-1/10053` +
+`send0=-1/10053` + `soerr=0` + `type=1` on both attempts = the R174 matrix's
+**layer-conflict class**: the readiness layer still reports the queued AUTHREQ, the data
+plane refuses everything with WSAECONNABORTED, the TCB carries no queued error, and the
+handle is a live stream socket. Combined with a provably clean wire, byte-identical
+server behavior toward retail on the same box, and full in-process parity, the aborting
+agent is the **local Winsock filter stack (WFP callout / AV content scanner / LSP)
+keyed on the process image** — the unsigned rebuild gets its sockets' data plane
+aborted at AUTHREQ-delivery time; signed retail does not. This is now a diagnosis by
+elimination at every layer we can inspect from this side, not a guess.
 
-**Field-verification checklist for the next run:** compile and run the probe on
-192.168.0.12 (twice: default mode and `--skip0x50`), send both `bncs-probe.log` files,
-plus the new `d2boot.log` (its autopsy line now has `gserr=` so a failing getsockopt
-can no longer masquerade as a value). If the AV disable test is cheap, do it before the
-probe run — it is currently the single most likely root cause.
+**R176 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate):**
+
+- `BnSend.cpp` `BnetReadFunction` — **bn-recv-abort-budget**: the R173 one-shot 10053
+  retry became a bounded budget (20 × `Sleep(10)` ≈ 200 ms) with the select-poll re-arming
+  between attempts; the autopsy probe stays one-shot (first failure only); each retry logs
+  `retry %d/20`, and a post-budget healthy recv logs `recv RECOVERED after %d x 10053
+  retry (condition cleared)` before re-arming. Either the condition clears and login
+  proceeds (workaround holds), or the next log writes the definitive "did not heal in
+  200 ms" data point and tears down as before — both outcomes close a question.
+- `Redivivus/d2_boot.cpp` — every boot-log line now carries `[tid %lu]` (the R175 session
+  burned real time on thread attribution; marks come from several threads, the prefix
+  should say which). `D2VP_ROUND` → 176.
+
+**Field-verification checklist for the next run (decisive → cheap):**
+
+1. **Injected-module census (30 s, do this first):** with D2VP sitting at the failed
+   connect, open Process Explorer / Process Hacker → D2VP.exe → DLL list, and diff it
+   against retail Game.exe's. Any AV/WFP user-mode hook DLL present in D2VP but not
+   retail is the suspect. Also `netsh winsock show catalog` — any non-default layered
+   provider explains a per-socket data-plane abort that `select` (which bypasses LSP
+   data hooks) does not see.
+2. **Exclusion test:** add `F:\GAMES\Diablo II\` (or D2VP.exe) to the AV/Defender
+   exclusions (or disable the web/behavior shield for one run) and connect. If it logs
+   in, the filter class is confirmed and the fix is distribution guidance (installer
+   adds the exclusion / signed builds).
+3. **R176 rideout:** if the filter remains enabled, expect
+   `recv aborted (WSA 10053) but socket still open - retry %d/20` up to 20 lines, then
+   either `recv RECOVERED ...` + login, or `recv failed ... protocol dead` ~200 ms after
+   the first abort — that timestamp spread decides "stall" vs "hard abort" forever.
+4. **WFP capture while reproducing:** `netsh wfp capture start` / `stop` around a failed
+   connect names the callout that aborts the flow (look for the BLOCK with
+   `.abortive` on the 192.168.0.14:6112 flow).
+5. Optional dynamic API trace (the R174 lever's other half): API Monitor on ws2_32 in
+   both processes — expect identical sequences (static parity is now proven); any extra
+   caller at the moment of death is the injected module from step 1.
+6. If a hard (non-healing) abort is confirmed and the AV cannot be excluded for users,
+   the fallback lever is switching the BNCS auth stage to non-blocking + select-driven
+   reads (the race phase's pattern), which bypasses the blocking-recv data path the
+   filter is choking on — bigger change, own round.
 
 ## R174: the abort is deterministic — autopsy probe + auth-stage reconnect
 

@@ -70,7 +70,12 @@ static void BootLogWrite(const char* pszLine) {
             pszLine = szTrunc;
         }
         char szBuf[640];
-        int n = wsprintfA(szBuf, "[%8lu ms] %s\r\n", (unsigned long)GetTickCount(), pszLine);
+        // [R176] thread id in every line: the R175 field log interleaved read-thread and
+        // auth-thread marks and cost a session's worth of thread attribution - marks come
+        // from several threads, the prefix should say which.
+        DWORD dwTid = GetCurrentThreadId();
+        int n = wsprintfA(szBuf, "[%8lu ms][tid %lu] %s\r\n", (unsigned long)GetTickCount(),
+                          (unsigned long)dwTid, pszLine);
         DWORD dwWritten = 0;
         WriteFile(g_hBootLog, szBuf, (DWORD)n, &dwWritten, 0);
         FlushFileBuffers(g_hBootLog);

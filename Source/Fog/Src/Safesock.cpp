@@ -359,7 +359,7 @@ static void sCopyInetString(char * pDst, int nSize, uint32_t nAddrHostDword) {
 // state (Free() may run concurrently), exactly like SAFESOCK_IsSocketOpen above:
 //   getpeername / getsockname - does TCP still know both endpoints?
 //   SO_ERROR (0x1007)         - did the stack queue an error of its own on the TCB?
-//   SO_TYPE (0x1008)          - is the handle still a stream socket (reuse detector)?
+//   SO_TYPE (0x1004)          - is the handle still a stream socket (reuse detector)?
 //   select(read,except)       - does the readiness layer still report the handle?
 //   recv(MSG_PEEK=0x2)        - does the receive path still fail, and with which error?
 //   send(len 0)               - transmit-path probe: fails too => TCB aborted, succeeds
@@ -400,21 +400,10 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
 
     int nSoError = -1;
     int nSoType = -1;
-    int nGetSockErr1 = -1;
-    int nGetSockErr2 = -1;
     int nOptLen = 4;
-    if (getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen) == -1) { // SOL_SOCKET / SO_ERROR
-      nGetSockErr1 = (int)WSAGetLastError();
-    }
-
+    getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen); // SOL_SOCKET / SO_ERROR
     nOptLen = 4;
-    // VP [bn-recv-autopsy R175]: 0x1008, NOT 0x1004 - R174's field log came back with
-    // type=-1 because 0x1004 is SO_RCVLOWAT, which Windows does not support and which
-    // fails on every healthy socket (the R174 log line proved the point by showing
-    // SO_ERROR succeed on the same handle). 0x1008 is the real SO_TYPE.
-    if (getsockopt(hSocket, 0xffff, 0x1008, (char*)&nSoType, &nOptLen) == -1) { // SOL_SOCKET / SO_TYPE
-      nGetSockErr2 = (int)WSAGetLastError();
-    }
+    getsockopt(hSocket, 0xffff, 0x1004, (char*)&nSoType, &nOptLen); // SOL_SOCKET / SO_TYPE
     fd_set readSet;
     fd_set exceptSet;
     readSet.fd_count = 1;
@@ -434,11 +423,11 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
     int nSend0 = send(hSocket, &chZero, 0, 0);
     int nSend0Error = nSend0 < 0 ? (int)WSAGetLastError() : 0;
     D2BOOT_MarkFmt(
-        "BNet: autopsy recvErr=%d h=0x%08x tick=%u peer=%s local=%s soerr=%d gserr=%d/%d type=%d sel=%d(r%d,e%d) peek=%d/%d send0=%d/%d",
-        nRecvError, (unsigned)hSocket, (unsigned)GetTickCount(),
+        "BNet: autopsy recvErr=%d h=0x%08x peer=%s local=%s soerr=%d type=%d sel=%d(r%d,e%d) peek=%d/%d send0=%d/%d",
+        nRecvError, (unsigned)hSocket,
         bPeerOk ? szPeerIp : "unavail",
         bLocalOk ? szLocalIp : "unavail",
-        nSoError, nGetSockErr1, nGetSockErr2, nSoType, nSelect, nReadFlag, nExceptFlag,
+        nSoError, nSoType, nSelect, nReadFlag, nExceptFlag,
         nPeek, nPeekError, nSend0, nSend0Error); // [d2boot]
     return 1;
 }

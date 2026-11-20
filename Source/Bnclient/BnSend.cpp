@@ -1611,8 +1611,14 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
     // VP-BEGIN [bn-recv-abort-retry R173]: one-shot spurious WSAECONNABORTED recovery flag.
     // Reset at every read-thread (re)start; the thread is single-instance via the
     // Destination_00881bf4 refcount above, so a function static is safe.
-    static int s_nRecvAbortRetried = 0;
-    s_nRecvAbortRetried = 0;
+    // R176: the flag became a bounded retry counter. R175 field data (both the pcap and
+    // the d2boot.log) shows the abort is deterministic at AUTHREQ-delivery time, but every
+    // observation so far sits inside a <=15 ms window - the budget never tested whether the
+    // condition heals on a longer timescale. 20 x Sleep(10) ~ 200 ms rideout: either the
+    // data becomes readable (login proceeds, recovery logged) or this writes the definitive
+    // "did not heal in 200 ms" data point before tearing down as before.
+    static int s_nRecvAbortRetries = 0;
+    s_nRecvAbortRetries = 0;
     // VP-END [bn-recv-abort-retry R173]
     DWORD dwLastKeepaliveTick = GetTickCount();
     // VP-BEGIN [bn-read-offset R169]: nBufPos is a BYTE OFFSET into chRecvBuf, not a pointer.
@@ -1657,31 +1663,36 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
           // proved the server DID answer SID_AUTH_INFO with AUTHREQ_109 and this client's own
           // stack reported WSAECONNABORTED (10053) on a connection that was still healthy -
           // the wire RST only appeared after our own teardown closed the socket with the reply
-          // unread. A 10053 with the handle still open is therefore treated as spurious once:
-          // wait briefly and re-poll, letting the next recv pick the buffered reply up. Any
-          // second failure, or an already-closed handle, still kills the protocol as before.
+          // unread. A 10053 with the handle still open gets the bounded retry budget below
+          // (R176); budget exhausted, or an already-closed handle, kills the protocol as
+          // before.
           int nRecvFailedErr = WSAGetLastError();
           BOOL bSocketStillOpen = Fog::Src::Safesock::SAFESOCK_IsSocketOpen(pSafesock);
-          if (nRecvFailedErr == 10053 && bSocketStillOpen && !s_nRecvAbortRetried) {
-            s_nRecvAbortRetried = 1;
-            // VP-BEGIN [bn-recv-autopsy R174]: R173's field run showed the one-shot retry recv
-            // failing with the SAME 10053 in the SAME millisecond - the abort is
-            // deterministic. Log the four-way probe so the next d2boot.log says which half
-            // of Winsock still believes the connection is alive (TCB dead vs recv-only
-            // poisoning vs select/recv disagreement).
-            Fog::Src::Safesock::SAFESOCK_LogRecvAutopsy(pSafesock, nRecvFailedErr);
+          if (nRecvFailedErr == 10053 && bSocketStillOpen && s_nRecvAbortRetries < 20) {
+            s_nRecvAbortRetries++;
+            // VP-BEGIN [bn-recv-autopsy R174]: run the four-way probe once, on the first
+            // failure only - it answers TCB-dead vs receive-only poisoning vs layer conflict;
+            // repeating it on every retry is log noise.
+            if (s_nRecvAbortRetries == 1) {
+              Fog::Src::Safesock::SAFESOCK_LogRecvAutopsy(pSafesock, nRecvFailedErr);
+            }
             // VP-END [bn-recv-autopsy R174]
-            D2BOOT_Mark("BNet: recv aborted (WSA 10053) but socket still open - retrying once"); // [d2boot]
-            Sleep(5);
+            D2BOOT_MarkFmt("BNet: recv aborted (WSA 10053) but socket still open - retry %d/20",
+                           s_nRecvAbortRetries); // [d2boot]
+            Sleep(10);
             continue;
           }
-          s_nRecvAbortRetried = 0;
+          s_nRecvAbortRetries = 0;
           D2BOOT_MarkFmt("BNet: recv failed (%d) - WSA err %u -> protocol dead", (int)nBytesRead, (unsigned)nRecvFailedErr); // [d2boot]
           _net_sid::SID_SetProtocolDeadFlag();
           break;
           // VP-END [bn-recv-abort-retry R173]
         }
-        s_nRecvAbortRetried = 0; // VP-BEGIN [bn-recv-abort-retry R173]: re-arm after a healthy recv // VP-END
+        if (s_nRecvAbortRetries) {
+          D2BOOT_MarkFmt("BNet: recv RECOVERED after %d x 10053 retry (condition cleared)",
+                         s_nRecvAbortRetries); // [d2boot]
+        }
+        s_nRecvAbortRetries = 0; // VP-BEGIN [bn-recv-abort-retry R173]: re-arm after a healthy recv // VP-END
         D2BOOT_MarkFmt("BNet: recv %d bytes (buffered %d)", (int)nBytesRead, (int)nBufPos + (int)nBytesRead); // [d2boot]
         if (nBufPos == 0) {
           const char chHexDigits[] = "0123456789ABCDEF";
