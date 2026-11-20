@@ -11,8 +11,21 @@ constants the binary's constants match; no server code was analyzed.
 **Method:** capstone harness phase 11 (`scripts/r2_phase11_dump.py`) — full annotated
 disassembly of 73 functions to `/tmp/r2fn/`, read function-by-function.
 
+> **⚠ CORRECTED IN R174** (`R2_Game.exe_vs_D2VP_Gap_Analysis_R174.md`; verified against
+> the disassembly and D2VP's implementations): the stage-4 section is void —
+> `0x44c000/0x44c060/0x462d00` are click processing (ProcessQueuedPrimaryClick /
+> ProcessPrimaryClickImmediate / ClickMap), not game-server transitions;
+> `0x468730/0x468740` are GetMouseX/GetMouseY, not token getters; `0x51a540` is
+> `BNSEND_SetServerToken`; `0x51c0e0` is the async DNS resolver (`GetDnsRecordSync`) and
+> `0x40d890` is Winsock StartUp (there is no bnserver-ini branch in 1.14d);
+> `0x881bf0/bf4/bfc` and `0x881c00` are interlocked flags/counter, not events/mutex;
+> `0x520ad0` sets the protocol-dead flag `0x882528`; SID names: 0x1E=CLIENTID2,
+> 0x50=AUTH_INFO, 0x51=AUTH_CHECK. Everything else (framing, timers, cache expiry,
+> error tables, abort codes) was confirmed faithful by the D2VP implementations.
+
 **New module discovery this pass:** `.\BnSend.cpp` (`0x6def84`) — the BNCS send-buffer
-module; `.\Bnclient`-style auth is driven by a C++ engine object at `0x88273c`.
+module. [R174 note: the "C++ engine object at 0x88273c" is the SID protocol state
+(94-slot tables + config); no separate engine needs recreating.]
 
 ---
 
@@ -20,19 +33,19 @@ module; `.\Bnclient`-style auth is driven by a C++ engine object at `0x88273c`.
 
 | Global | Meaning (verified usage) |
 |---|---|
-| `0x881bf0` | event: "connected to BNCS" (waited on by senders; `0x51c5c0` aborts if unset) |
-| `0x881bfc` | event: "auth complete / proceed" (set by connect pipeline, ini parser, auth ack) |
-| `0x881bf4` | event: probe/teardown signal (reset in 10 ms loops) |
-| `0x881c00` | mutex: single BattleConnectFastest at a time |
+| `0x881bf0` | interlocked flag: BNCS socket present (`g_pBNetSocketData`); `0x51c5c0` fails if unset [corrected R174: flag, not event] |
+| `0x881bfc` | interlocked flag: protocol-ready / proceed [corrected R174: flag, not event] |
+| `0x881bf4` | interlocked flag: probe/teardown signal (reset in 10 ms loops) [corrected R174: flag, not event] |
+| `0x881c00` | interlocked counter: single BattleConnectFastest at a time (InterlockedIncrement guard) [corrected R174] |
 | `0x8818e0` | socket-mode flag (2 = init/WSAStartup-ish via `[0x6cc258]`, 0 = normal, 1 = ini parse) |
 | `0x881838/0x881844` | server-list object + current item (locked by `0x5186d0`) |
-| `0x8818e8` | gateway name buffer (0x100); `0x8819e8` ini-parse ok flag |
+| `0x8818e8` | gateway name buffer (0x100); `0x8819e8` = DNS server-list buffer flag [corrected R174: DNS, not ini] |
 | `0x882000/0x88201c` | secondary / primary connect-status codes (critsec `0x882004`) |
 | `0x8822a8` | auth step→status-text table, 94 slots (0x5e dwords; get `0x520c20`, set `0x520c30`) |
 | `0x882128` | auth step→completion table, 94 slots (set on step finish; polled by `0x520b70`) |
 | `0x882528/0x88252c` | auth abort marker / last reply dedup id |
 | `0x882318/0x8823f0/0x8822c4` | auth flags: logon-allowed / logon-ack received / vercheck progress |
-| `0x8818bc` | auth "current ack payload" store (`0x51a540`) |
+| `0x8818bc` | server-token store (`0x51a540 BNSEND_SetServerToken`) [corrected R174] |
 | `0x8818c8/0x8818d0/0x8818dc/0x8818cc` | BnSend.cpp payload-buffer slots (alloc/append helpers) |
 | `0x88273c` | BD auth-engine C++ object (ctor `0x5285a0` fed from `.data 0x730164` ("/" separators)) |
 | `0x798fb4` | D2CS (realm) transport/connection handle (send `0x6bc8a0`, peer-check `0x6bc810`) |
@@ -45,7 +58,7 @@ module; `.\Bnclient`-style auth is driven by a C++ engine object at `0x88273c`.
 | `0x7795d4` | CharSel UI state struct (char name @+0xbd, create fields @+0x3a1/0x3b1, flags @+0x3c1) |
 | `0x70f234` | game-connection state (8 = entering, 0x10 = leaving/teardown) |
 | `0x7a061c/0x7a0650/0x7a0658/0x7a065c/0x7a0660/0x7a0664/0x7a066c/0x7a0670` | game-connect flags (D2GS-side gating) |
-| `0x7a6aac/0x7a6ab0` | client token pair handed to the game-server session (`0x468740`/`0x468730`) |
+| `0x7a6aac/0x7a6ab0` | cursor coordinates (`0x468730 GetMouseX` / `0x468740 GetMouseY`) [corrected R174 — not tokens] |
 
 Import tables used throughout (from IAT thunks): `[0x6cc250]` `_beginthreadex`,
 `[0x6cc3a0/0x6cc3a4/0x6cc3a8]` `WaitForSingleObject/SetEvent/ResetEvent`-family,
@@ -75,11 +88,15 @@ free `0x40b3c0`/`0x412650`, memcpy `0x6829c0`, sprintf `0x6823fd`, string-table 
 ### `0x51d0a0` — BattleConnectFastest (worker thread)
 * **Proto:** `uint32 __stdcall BattleConnectFastest(void*)`.
 * **Flow:** debug-log name; create mutex `0x881c00` — if already owned (`cmp eax,1; jle`)
-  release and return 0. Init probe table `0x51ea40(ecx=0x66)` (102 slots; stores count at
-  `0x881c50`, flags `0x881d60/61`=0, critsec `0x881f64`). Copy gateway name into
-  `0x8818e8` (0x100, via `0x51c190`), "   connect to: %s". Socket mode 2/4 via
-  `0x518c70`. "querying gateway %s". If `0x40d890()` (file exists: bnserver-D2DV.ini)
-  → `0x51c0e0(ecx=&name, edx=&ok)` parses it. If `ok == 0`: release mutex,
+  release and return 0. Guard via InterlockedIncrement on
+  `0x881c00` (re-entering worker backs off). Init probe table `0x51ea40(ecx=0x66)`
+  (102 slots; count at `0x881c50`, flags `0x881d60/61`=0, critsec `0x881f64`).
+  Copy gateway name into `0x8818e8` (0x100, via `0x51c190` = GetBnetIp),
+  "   connect to: %s". Socket mode 2/4 via
+  `0x518c70`. "querying gateway %s". `0x40d890()` = Safesock StartUp (Winsock init);
+  if it succeeds, `0x51c0e0 = GetDnsRecordSync(&servers, gateway)` resolves the gateway
+  hostname into the server list (async DNS worker 0x51bee0 + message pump).
+  If the list comes back empty: release guard,
   `0x520520(0xc)` (status = failed), "   failed to get server list", socket mode −4,
   return 0. Else `0x520520(0)` (clear), `esi = 0x51ca90(0x8819e8)` (probe servers for
   fastest), socket mode −4, set events `0x881bf0`+`0x881bfc`, release, return 1.
@@ -121,9 +138,11 @@ free `0x40b3c0`/`0x412650`, memcpy `0x6829c0`, sprintf `0x6823fd`, string-table 
   (version %d)", "Server List Version", keys `BATTLENETIP` `0x70572f`, `MCPIP`
   `0x70578b`, `REALM` `0x705a6b`, `CHARACTER` `0x7057cc`+0x5c stride ×9) happens in the
   parser around this loader — parse targets for D2VP: gateway list file format.
-* `0x51c0e0` — **BnserverIni_Parse(ecx=name_buf, edx=ok_flag)**: mode=1, spawns thread
-  (proc `0x51bee0`, args in globals `0x881be8/0x881bec`), pumps messages, waits event
-  `0x881bfc`, returns when parse thread finishes.
+* `0x51c0e0` — **GetDnsRecordSync(ecx=&servers_buf, edx=gateway_name)** [corrected R174]:
+  mode=1, spawns thread (proc `0x51bee0`, args in globals `0x881be8/0x881bec`) that
+  resolves the gateway hostname asynchronously (WSAAsync-style lookup with message
+  pump), waits for completion, fills the server-list buffer. The server list comes from
+  DNS in 1.14d — there is no bnserver-ini branch.
 * `0x51c190` — **GatewayName_Get(dst, cap)** from server-list object (locks `0x881838`
   via `0x5186d0`, item `0x518040`, caps at 0x100).
 * `0x51ea40(ecx=count)` — probe-slot table init (`0x881c50` = count); getter `0x51ea70`.
@@ -135,7 +154,8 @@ free `0x40b3c0`/`0x412650`, memcpy `0x6829c0`, sprintf `0x6823fd`, string-table 
   `0x882000` under critsec `0x882004`. Observed codes: `0xc` = failed to get server list;
   `0x12` = generic abort.
 * `0x40dcc0` — BNCS packet-queue enqueue (connection, buf, len).
-* `0x520ad0` — BNCS disconnect/teardown path.
+* `0x520ad0` — set protocol-dead flag `[0x882528]=1` (checked by step-wait → fail 0x12)
+  [corrected R174].
 
 ## 2. Stage 2 — BNCS authentication ("BD" auth engine)
 
@@ -167,8 +187,9 @@ Status text per step: `[step*4 + 0x8822a8]` (94 slots; get `0x520c20(idx)`, set
   four to registry `HKLM\Configuration` (*Registration Version, Registration Authority,
   Client ID, Client Token*); socket mode 2→4 around the write; logs "client acknowledged";
   returns 1. Invalid → "ERROR BDClientId: invalid response", return 0 (aborts chain).
-* **`0x520d50` — Ack_Store(ecx=payload)**: `0x51a540([ecx])` → stores payload dword at
-  `0x8818bc`. **`0x520d60`**: if `[payload]==0` → `[0x882318]=1` (logon allowed).
+* **`0x520d50` — Ack_Store(ecx=payload)**: `0x51a540([ecx])` = `BNSEND_SetServerToken` —
+  stores the server token at `0x8818bc` (`g_nBNetServerToken`) for password hashing
+  [corrected R174]. **`0x520d60`**: if `[payload]==0` → `[0x882318]=1` (logon allowed).
 * **`0x520d70` — LogonAck_RecvHandler(ecx=payload)**: `0x51a540([ecx+4])`; socket mode
   2/4; logs "logon acknowledged"; sets `[0x8823f0]=1` (in the chain head variant at
   `0x521664`). **`0x520da0`**: `[0x72ffa8] = ([payload]==0)`.
@@ -312,38 +333,20 @@ words), and the create-char error mapping (0x14 exists / 0x15 name rejected / el
 The list itself is server data — D2VP's server must emit the same block shape if the
 original UI code is reused.
 
-## 4. Stage 4 — game create/join and the game-server session
+## 4. Stage 4 — click processing (CORRECTED in R174; the original "game-server session" reading was wrong)
 
-* **`0x44c000 — GameSrv_EnterGame`**: sets `[0x70f234]=8`; gates on flags
-  `[0x7a061c]` (client exists), `[0x7a0650]`, `[0x7a0658]`; sets `[0x7a066c]=1`;
-  `ecx = 0x463dd0()` (current client object — must have `[ecx]==0`), `0x44bec0(ecx)`
-  → token word; `0x468740()`/`0x468730()` = **getters returning `[0x7a6aac]` /
-  `[0x7a6ab0]`** (the client-token pair for the game-server session);
-  `0x462d00(ecx=1, edx=token, [esp+8]=id, [esp+0xc]=flags)`.
-* **`0x44c060 — GameSrv_LeaveGame`**: sets `[0x70f234]=0x10`; clears
-  `0x7a0650/0x7a066c/0x7a0658`; `0x466ff0()`; if client alive → recompute capability
-  flags from `0x7a065c` (8) / `0x7a0660` (8) / `0x7a0664` (4) → `0x462d00(ecx=2, …)` —
-  the rejoin/leave transition.
-* **`0x462d00 — GameSrv_Transition(ecx=class 1|2, edx=token, [esp+8]=id, [esp+0xc]=flags)`**:
-  state check `0x4538d0(ecx=9)`; guards `[0x7a5264]`; `0x45aff0(&token, &id)`; builds an
-  8-dword session-arg block (client object `0x463dd0`, connection `0x467a10`, token, id);
-  flags bit 8 → test `0x625480(obj, 0xa, 0)` → sets 0x40 capability; bit 4 → 0x20;
-  dispatches on `class` (jmp table after `0x462ddb`; 6 classes).
-* **D2CS reply codes handled in the processor window `0x44c000–0x44efe0`** (byte-sighted
-  sites): createchar `0x14` @ `0x44cbbf`, creategame "server down" `0x20` @ `0x44dba6`;
-  pvpgn code semantics: creategame `0x1e` invalid name / `0x1f` name exists / `0x20`
-  server down / `0x32` not available; joingame `0x29` bad pass / `0x2a` not exist /
-  `0x2b` full / `0x2c` level limit (+ cross-type `0x71/0x73/0x74/0x78/0x79/0x7d`).
-  The `0x44bfe0/0x44bff0` pair: connectivity getters on `0x7a066c/0x7a0670`.
-* **Game-list UI strings**: "Up to %d Players" `0x6d5770`, "Level %d"/"Level %d to %d"
-  `0x6d5784/0x6d5790`, "Elapsed Time: %d:%02d:%02d" `0x6d57a0`; keys `MAX_PLAYER`
-  `0x6d57c0`, `LVL_REST` `0x6d57cc`, `DIFF_LEVEL` `0x6d57dc`.
-
-**Recreate summary (game join):** the client's job is: send creategame/joingame request,
-interpret the reply codes, then run the `0x44c000`/`0x44c060` state machine to open the
-game-server session with the token pair (`0x7a6aac`/`0x7a6ab0`) and capability flags
-(0x40/0x20/8/4). D2VP only needs to reproduce the state machine + token handshake;
-the actual in-game protocol is a separate (later) phase.
+`0x44c000 = ProcessQueuedPrimaryClick`, `0x44c060 = ProcessPrimaryClickImmediate`,
+`0x462d00 = ClickMap(clickType, nX, nY, mouseEventFlags)` — the primary-click state
+machine (verified against D2VP's faithful `ClickMap` implementation, which matches the
+disassembly exactly): bit 8 of the event flags tests stamina (`0x625480` =
+STATSEX_GetCurrentStat) and sets flag 0x40; bit 4 sets 0x20; `esi` = clickType
+(0 queued, 1 queued-process, 2 immediate…); `0x468730/0x468740` are GetMouseX/GetMouseY.
+The create/join reply codes (createchar 0x14, joingame 0x71–0x79 etc.) are handled in
+the MCP layer (McpConnect.cpp / OOGUtilities.cpp), which D2VP reproduces faithfully.
+The client's game-server session is entered via the MCP join handoff:
+`JOINID`=D2GSGameToken, `COMINT`=D2GSGameHash, `szSERVERIP`=D2GSConnectIp →
+`pfnSendNotifyJoin` → transport layer → in-game D2GS protocol (D2Client
+`D2GSPacketSrv*`/`D2GSPacketClt*`).
 
 ## 5. Recreation checklist (condensed)
 
@@ -356,8 +359,8 @@ the actual in-game protocol is a separate (later) phase.
 4. **D2CS**: framing `[cmd][dword][word][payload]` (request) and validated-word replies;
    seq tracking (`0x798f8c/0x798f80`); last-status (`0x79929c`); charlist reply → 0x350
    records with 5-minute cache; createchar error mapping.
-5. **Game join**: reply-code interpretation + `0x44c000/0x44c060` token/capability
-   handshake into the game-server session.
+5. **Game join** [corrected R174]: MCP reply codes (0x71–0x79 join errors) + join
+   handoff (D2GSGameToken/GameHash/ConnectIp → notify-join) — not a 0x44c000 handshake.
 
 ## 6. Open items
 
