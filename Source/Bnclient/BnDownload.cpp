@@ -191,26 +191,6 @@ static DWORD BNDOWNLOAD_GetCachedFileSize(LPCSTR szText, FILETIME * pftCompare) 
     return 0;
 }
 
-// Custom CheckRevision bypass function for D2VP-D2GS compatibility
-// Strategy 1: Direct Function Hooking - Returns fake CRC values that work with D2GS/PvPGN servers
-int32_t __fastcall BNDOWNLOAD_PerformCheckRevision_Custom(LPCSTR szFile1, LPCSTR szFile2, LPCSTR szFile3, LPCSTR szValueString, DWORD * pdwVersion, DWORD * pdwChecksum, uint8_t * pbStatstring) {
-    // Log the CheckRevision bypass for debugging
-    D2BOOT_MarkFmt("CheckRevision bypassed - using fake CRC values for D2VP-D2GS compatibility");
-    
-    // Set expected values for D2GS compatibility
-    if (pdwVersion) {
-        *pdwVersion = 0x00010064;  // Diablo II 1.14d version
-    }
-    if (pdwChecksum) {
-        *pdwChecksum = 0x00000000;  // Fake CRC (allows connection to D2GS servers)
-    }
-    if (pbStatstring) {
-        *pbStatstring = 0;  // Success status
-    }
-    
-    return 0;  // Return success (0 = CheckRevision passed)
-}
-
 int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uint32_t * pdwChecksumOut, uint8_t * pbResultOut) {
     // Frame slots -1068..-8 are ONE object: &dwAuthResult is passed out and the callee reaches the rest by byte offset.
     // Separate locals let the compiler reorder them, so the run is one struct.
@@ -270,15 +250,17 @@ int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uin
               if (hCheckRevDll) {
                 /* LPCSTR lpProcName for GetProcAddress */ /* HMODULE hModule for GetProcAddress */ pCheckRevision = (pfnCheckRevision)GetProcAddress(hCheckRevDll, "CheckRevision");
                 if (pCheckRevision) {
-                  // Strategy 1: Direct Function Hooking - Use custom CheckRevision bypass instead of real one
-                  __frame0.nCheckResult = BNDOWNLOAD_PerformCheckRevision_Custom(__frame0.szGameExePath, __frame0.szArchivePath, __frame0.szVersionString, gszBNetChatInputBuffer, (DWORD*)__frame0.pdwVersionOutSaved, (DWORD*)__frame0.pdwChecksumOutSaved, pbResultOut);
-                } else {
-                  // Fallback: CheckRevision function not found, use fake values directly
-                  D2BOOT_MarkFmt("CheckRevision bypassed - CheckRevision function not found, using fake values");
-                  if (__frame0.pdwVersionOutSaved) *__frame0.pdwVersionOutSaved = 0x00010064;  // 1.14d version
-                  if (__frame0.pdwChecksumOutSaved) *__frame0.pdwChecksumOutSaved = 0x00000000;  // Fake CRC
-                  if (pbResultOut) *pbResultOut = 0;  // Success
-                  __frame0.nCheckResult = 0;  // Success
+                  __frame0.szGameExePath[0] = '\0';
+                  memset(__frame0.szGameExePath + 1, 0, 0x103);
+                  __frame0.szArchivePath[0] = '\0';
+                  memset(__frame0.szArchivePath + 1, 0, 0x103);
+                  __frame0.szVersionString[0] = '\0';
+                  memset(__frame0.szVersionString + 1, 0, 0x103);
+                  /* DWORD nSize for GetModuleFileNameA */ dwStartTick = 0x104;
+                  szGameExePathPtr = __frame0.szGameExePath;
+                  /* LPSTR lpFilename for GetModuleFileNameA */ /* LPCSTR lpModuleName for GetModuleHandleA */ hGameModule = GetModuleHandleA((LPCSTR)0x0);
+                  /* HMODULE hModule for GetModuleFileNameA */ GetModuleFileNameA(hGameModule, szGameExePathPtr, dwStartTick);
+                  __frame0.nCheckResult = (*pCheckRevision)(__frame0.szGameExePath, __frame0.szArchivePath, __frame0.szVersionString, gszBNetChatInputBuffer, (DWORD*)__frame0.pdwVersionOutSaved, (DWORD*)__frame0.pdwChecksumOutSaved, pbResultOut);
                 }
 
                 /* HMODULE hLibModule for FreeLibrary */ FreeLibrary(hCheckRevDll);

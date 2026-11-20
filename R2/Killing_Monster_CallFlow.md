@@ -7,11 +7,11 @@ Complete call flow analysis of monster death processing, including damage calcul
 
 | Component | Address | Purpose |
 |-----------|---------|---------|
-| Damage Calculation | 0x0057ae00 | `COMBAT_ApplyDamage()` |
-| Unit Death Check | 0x0057ad00 | `UNIT_GetUnitLifePercent()` |
-| Death Trigger | 0x0057acc0 | `UNIT_CheckDeath()` |
-| Core Death Function | 0x0057ccb0 | `UNIT_Killed()` |
-| AI Death Event | 0x005a6ff0 | `MONDEATH_EVENT()` |
+| Damage / Kill Application | 0x0057cee0 | `SERVER_GetHitCalculation()` - applies damage and the KILL result; sole generic lethal-hit deferral site (`STATE_death_delay` @ `0x57cf7b`) |
+| Unit Death Check | 0x005541b0 | `CheckForModeZeroDeath()` - mode-0/0xc death-state check used retail-wide |
+| Death Trigger | 0x005a7f80 | `MONSTEREVENT_DefaultCallback()` - monster timer-event dispatcher; gates types 0/1/2/6/7/9/11/13/14 on freeze + mode-zero death |
+| Core Death Function | 0x0057ccb0 | `SERVER_KillMonster()` - verified (16 xrefs; called by SetUninterruptableState `0x5544b0` and GetHitCalculation `0x57d00f`) |
+| AI Death Event | 0x005a6ff0 | lifecycle/MonDeathEvent candidate - pointer-referenced once (`.rdata 0x6e2260`); calls SetUninterruptableState/CheckForModeZeroDeath/KillMonster |
 | XP Award | 0x0057e990 | `XP_OnMonsterKill()` |
 | Quest Event | 0x00543a30 | `QUEST_MONSTERDEATH_EVENT()` |
 
@@ -219,8 +219,8 @@ struct QUEST_KILL_TRACKING {
 ## Key Functions to Analyze
 
 ### Damage & Death
-- `COMBAT_ApplyDamage()` @ 0x0057ae00 - Damage calculation
-- `UNIT_CheckDeath()` @ 0x0057ad00 - Death trigger check
+- `SERVER_GetHitCalculation()` @ 0x0057cee0 - Damage / kill application
+- `CheckForModeZeroDeath()` @ 0x005541b0 - Death trigger check
 - `UNIT_Killed()` @ 0x0057ccb0 - Core death processing
 
 ### XP & Quests

@@ -456,11 +456,15 @@ static void __stdcall DAMAGE_ApplyPoison(D2UnitStrc * pUnit, int32_t nPoisonRate
 // so a chilled monster killed mid-cast sat at 0 HP with death_delay set and never finished
 // dying (issue #39's residual "disappears without loot" — the unit lingered until a room
 // update dropped it). This mirrors SetUninterruptableState's completion branch: monster,
-// alive, death_delay active, uninterruptable already cleared — then kill through the same
-// killer-aware pair (GetHitCalculation with the KILL result flag when a killer resolves,
-// SERVER_KillMonster otherwise). Returns TRUE when a deferred death was completed. Called
-// from the freeze and cold state-expiry callbacks; no-op for players, dead units and units
-// still uninterruptable.
+// alive, death_delay active — then kill through the same killer-aware pair (GetHitCalculation
+// with the KILL result flag when a killer resolves, SERVER_KillMonster otherwise).
+// [R170] While STATE_uninterruptable is STILL set, the function no longer defers to the
+// cast-end clear (unreachable for frozen-alive units; see the guard below): it invokes
+// SUnit::SetUninterruptableState(pUnit, 0) directly — retail's completion primitive
+// (Game.exe 0x5544b0), which clears the state and finishes the pending kill atomically —
+// so repeated freeze/chill re-application can no longer strand the unit indefinitely.
+// Returns TRUE when a deferred death was completed. Called from the freeze and cold
+// state-expiry callbacks; no-op for players and dead units.
 BOOL __fastcall SUNITDMG_CompleteDeathDelayIfPending(D2UnitStrc * pUnit) {
     BOOL eDeathDelayState;
     D2UnitStrc* pKillerUnit;
@@ -476,7 +480,16 @@ BOOL __fastcall SUNITDMG_CompleteDeathDelayIfPending(D2UnitStrc * pUnit) {
     }
 
     if (D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable)) {
-      return 0; // cast still running — its end clears uninterruptable and completes the kill
+      // [R170] Cast-end clear can be unreachable for frozen-alive units (cast modes are
+      // skipped by MONSTER_EndOfFrameAiDispatch) and repeated freeze/chill re-application
+      // keeps pushing the state timeout out, so waiting for the window to end strands the
+      // unit at 0 HP with death_delay set until a room update drops it (issue #39 residual,
+      // r2-verified: retail 0x5544b0 completes the deferred kill here). Retail's own
+      // completion primitive clears STATE_uninterruptable AND finishes the pending kill in
+      // one step (its STATE_death_delay branch runs the same killer-aware pair below); the
+      // later cast-end call then finds no death_delay and no-ops.
+      SUnit::SetUninterruptableState(pUnit, 0);
+      return 1;
     }
 
     if (SUnit::CheckForModeZeroDeath(pUnit)) {
@@ -509,6 +522,13 @@ void __fastcall DAMAGE_OnColdExpire(D2UnitStrc * pUnit, eD2States eState, uint32
       uint32_t bStateActive;
       bStateActive = D2Common::DATATBLS::ItemStats::STATES_IsStateActive(pUnit, eState);
       if (bStateActive) {
+        // [R170] H2 hardening: the unit is already dying/dead, so retail's early return
+        // stands — but a stale STATE_death_delay left over from a deferred kill must not
+        // survive the state run (it would keep H1's completion primed against a dead unit).
+        if (pUnit && pUnit->eUnitType == UNIT_MONSTER
+            && D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_death_delay)) {
+          D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
+        }
         return;
       }
     }
@@ -669,6 +689,12 @@ void __fastcall SUNITDMG_StatExpireCallback_ResumeAI(D2UnitStrc * pUnit, eD2Stat
       uint32_t bStateActive;
       bStateActive = D2Common::DATATBLS::ItemStats::STATES_IsStateActive(pUnit, eState);
       if (bStateActive) {
+        // [R170] H2 hardening (see DAMAGE_OnColdExpire): drop a stale STATE_death_delay on
+        // an already dying/dead unit instead of carrying it out of the expiry callback.
+        if (pUnit && pUnit->eUnitType == UNIT_MONSTER
+            && D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_death_delay)) {
+          D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
+        }
         return;
       }
     }

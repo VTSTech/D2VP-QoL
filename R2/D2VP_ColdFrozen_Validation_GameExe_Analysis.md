@@ -7,6 +7,36 @@ This document presents the comprehensive validation of the D2VP R162 and R163/R1
 
 ✅ **Validation Status: COMPLETE AND CONFIRMED**
 
+> **⚠ CORRECTIONS (R170, 2026-11-20 — binary-verified re-analysis).** This document's
+> claims were re-checked against Game.exe 1.14d retail with r2-portable 6.1.5; see
+> [ColdFrozen_DeathPath_r2_Verified_R170.md](ColdFrozen_DeathPath_r2_Verified_R170.md)
+> for the full evidence. Summary:
+> 1. **`0x0058abc0` is NOT `RegenAndPsnDecreaser`** — the function there references
+>    `.\Quests\a5q3.cpp` (it is an A5Q3 quest timer). The retail poison killer is
+>    unpinned as of R170. The table row below is retained for history but is wrong.
+> 2. **The `STATE_death_delay` deferral lives inside `SERVER_GetHitCalculation`
+>    (`0x57cee0`, set site `0x57cf7b`)** — deferral site 1 of 2 in the binary (site 2: `RegenAndPsnDecreaser 0x5a6920`, set at `0x5a6ac5`; R170b correction, see R2_Game.exe_Validation_Expansion_R170.md §2) —
+>    not in a separate "post-hit dispatcher".
+> 3. **"Frozen monsters never get STATE_uninterruptable" is imprecise.** Verified retail
+>    behavior: `COMBAT_ApplyFreeze` (`0x57b230`) checks uninterruptable at *apply* time
+>    and falls back to `COMBAT_ApplyCold` (`0x57af80`) on three paths (`0x57b2af`,
+>    `0x57b3fc`, `0x57b40e`). A monster already uninterruptable cannot be *newly frozen*,
+>    but a frozen monster's *pending cast* is unaffected by that check.
+> 4. **Newly pinned retail functions** (not in the tables below):
+>    `SetUninterruptableState = 0x5544b0` (contains retail's only deferred-death
+>    completion), `DAMAGE_OnColdExpire = 0x57ad80`, freeze expire callback = `0x57b170`,
+>    `GetKillerUnit = 0x553010`, `FreeCombatAndChangeAnimMode = 0x553570`,
+>    SetState = `0x639db0`, GetUnitState = `0x639df0`.
+> 5. The R166 expiry-callback death completions are **fork-only** — retail completes a
+>    deferred kill exclusively in `SetUninterruptableState(unit, 0)`.
+> 6. Issue #39 was **not fully closed** by R166: the R166 completion still silently
+>    no-oped while `STATE_uninterruptable` was set (H1 in the R170 doc), which re-opened
+>    the strand under sustained freeze/chill. The "✅ RESOLVED" status below predates
+>    R166 and R170. **Fixed in R170** (`SUnitDmg.cpp`: completion now routes through
+>    `SUnit::SetUninterruptableState(pUnit, 0)`; stale-flag hardening in both expiry
+>    callbacks) — see the "FIX APPLIED" note in
+>    [ColdFrozen_Bug_Complete_Analysis.md](ColdFrozen_Bug_Complete_Analysis.md).
+
 The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.14d retail executable and found to be architecturally correct and complete. The fixes successfully resolve the issue where "Frozen monsters disappear instead of dying/dropping loot" by addressing both direct damage and poison damage death pathways.
 
 ## Key Game.exe Functions Identified
@@ -35,7 +65,7 @@ The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.1
 ### Poison/Regeneration Functions
 | Address | Function Name | Purpose |
 |---------|--------------|---------|
-| 0x0058abc0 | sub_0058ABC0_RegenAndPsnDecreaser | Handle poison damage and regeneration |
+| 0x0058abc0 | ~~sub_0058ABC0_RegenAndPsnDecreaser~~ | **WRONG — A5Q3 quest timer function** (references `.\Quests\a5q3.cpp`). Retail poison killer not pinned; see R170 doc §2.3. |
 
 ## Key Game.exe Functions Identified
 

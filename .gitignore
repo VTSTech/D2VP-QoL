@@ -13,3 +13,4 @@ compile_commands.json
 CMakeCache.txt
 cmake_install.cmake
 tools/D2VP-Gateway-Backup.reg
+/build

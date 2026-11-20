@@ -3,6 +3,51 @@
 ## Overview
 This guide provides detailed instructions for setting up and using the radare2 (R2) project for analyzing Game.exe 1.14d retail executable. This setup enables binary analysis to understand Diablo II's internal workings and validate D2VP fixes.
 
+## r2-portable install (verified R170, 2026-11-20)
+
+The canonical package is [`r2-portable.zip`](https://github.com/VTSTech/VTSTech-SRVEmu/raw/main/tools/r2-portable.zip)
+(radare2 6.1.5 +1 abi:87, linux-x86_64, self-contained `lib/*.so` + `bin/*` + `share/6.1.5`).
+
+```bash
+# install (no root needed, keeps everything inside the repo checkout)
+curl -LO https://github.com/VTSTech/VTSTech-SRVEmu/raw/main/tools/r2-portable.zip
+unzip r2-portable.zip -d ~/tools/r2-portable
+chmod +x ~/tools/r2-portable/r2.sh ~/tools/r2-portable/bin/*
+~/tools/r2-portable/r2.sh -v     # radare2 6.1.5 +1 abi:87 @ linux-x86_64
+```
+
+The shipped `r2.sh` wrapper exports `LD_LIBRARY_PATH`, `PATH` and
+`RADARE2_SHARE_DIR=<selfdir>/share/radare2/6.1.5`. Two caveats found in the R170 session:
+
+1. **Zip layout mismatch (bug):** the zip extracts to `share/6.1.5/…` — there is no
+   `share/radare2/` level, so the wrapper's `RADARE2_SHARE_DIR` points nowhere. Point it
+   at the real path: `RADARE2_SHARE_DIR=<selfdir>/share/6.1.5`. (Cosmetic — analysis works.)
+2. **sdb stderr noise:** `format/dll/*.sdb` lookups fall back to
+   `~/.local/share/radare2/6.1.5/` and print `ERROR: Cannot find …` / `ERROR: Cannot find (null)`
+   lines on stderr. Harmless; filter with `2>/dev/null`. No env override redirects the
+   user dir (`R2_HOME`, `RADARE2_HOME`, `R2_USERDIR`, `XDG_DATA_HOME`, `R2_DATDIR` all ignored).
+
+Working session recipe (small wrapper keeps this one-liner; save as `scripts/r2tool.sh`):
+
+```bash
+#!/bin/bash
+SELFDIR="$HOME/tools/r2-portable"
+export LD_LIBRARY_PATH="${SELFDIR}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export RADARE2_SHARE_DIR="${SELFDIR}/share/6.1.5"
+BIN="${R2BIN:-radare2}"; exec "${SELFDIR}/bin/${BIN}" "$@"
+```
+
+```bash
+# one-time full analysis, saved as a reusable project (~48 s on Game.exe)
+r2tool.sh -q -N -e scr.color=0 -c "aaa; Ps /tmp/game114d.r2" Game.exe 2>/dev/null
+# later sessions: load the project, don't re-analyze
+r2tool.sh -q -N -e scr.color=0 -e asm.bytes=false -e asm.lines=false \
+    -c "P /tmp/game114d.r2; pdf @ 0x5544b0" Game.exe 2>/dev/null
+```
+
+More anchor recipes (`/x` constant probes, expire-callback discovery, `axt` xref queries)
+are in [ColdFrozen_DeathPath_r2_Verified_R170.md](ColdFrozen_DeathPath_r2_Verified_R170.md) §3.
+
 ## Prerequisites
 - Linux environment with Python 3
 - radare2 6.1.5 portable version installed to /tmp/r2-portable

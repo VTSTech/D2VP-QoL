@@ -9,6 +9,29 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R170 — issue #39 closed: cold/frozen monsters can no longer strand at 0 HP and vanish**
+  (owner report after R166: "still noticing some disappearing monsters when cold or frozen";
+  r2 verification of Game.exe 1.14d retail in
+  [R2/ColdFrozen_DeathPath_r2_Verified_R170.md](R2/ColdFrozen_DeathPath_r2_Verified_R170.md)).
+  Binary evidence: retail completes a `STATE_death_delay` kill in exactly one place —
+  `SetUninterruptableState(unit, 0)` (retail `0x5544b0`) — and the R166 expiry-callback
+  completion was still guarded by an early return while `STATE_uninterruptable` was set.
+  For a monster killed mid-cast that guard never lifts in time: `MONSTER_EndOfFrameAiDispatch`
+  skips cast modes entirely for frozen-alive units, so the cast-end clear is unreachable
+  until unfreeze, and every re-applied freeze/chill keeps pushing the state timeout out —
+  the unit sat at 0 HP with the deferred kill pending until a room update dropped it.
+  `SUNITDMG_CompleteDeathDelayIfPending` now routes that guard through retail's own
+  completion primitive (`SUnit::SetUninterruptableState(pUnit, 0)` — clears the state and
+  finishes the pending kill atomically, byte-for-byte the retail order), so sustained
+  freeze/chill can no longer strand a deferred death. H2 hardening in the same round: both
+  expiry callbacks now drop a stale `STATE_death_delay` when the unit is already dying/dead
+  (the retail early return stands; the stale flag no longer survives it). Corrects the R2
+  doc address tables in the same pass (`0x0058abc0` is an A5Q3 quest timer, not
+  `RegenAndPsnDecreaser`; the sole retail deferral site is `GetHitCalculation` `0x57cf7b`;
+  `SetUninterruptableState` pinned at `0x5544b0`). Field ask: freeze/chill kills must always
+  drop loot and leave the normal death flow, including mid-cast kills under repeated
+  freeze application.
+
 - **R169 — the Battle.net title-screen click crash fixed + private-server gateway tools**
   (owner ask: "Currently, Clicking 'Battle.net' from the Title Screen crashes the game.
   Can we fix that?"). Root cause: the rebuild never calls `D2Net::SRP::SRP_GlobalInit`, so

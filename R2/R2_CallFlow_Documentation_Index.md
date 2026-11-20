@@ -8,15 +8,19 @@ Comprehensive call flow documentation for common Diablo II gameplay scenarios, p
 ### 📁 R2/
 ```
 R2/
-├── Boot_TitleScreen_CallFlow.md              # Title screen to game entry
-├── Entering_Game_CallFlow.md                  # Character selection to game
-├── Killing_Monster_CallFlow.md                # Monster death and XP
-├── Monster_Dropping_Loot_CallFlow.md          # Item generation and pickup
-├── Opening_Chest_CallFlow.md                  # Chest interaction and loot
-├── Activating_Shrine_CallFlow.md              # Shrine activation and effects
+├── R2_Game.exe_Validation_Expansion_R170.md   # capstone re-verification + monster timer dispatch (START HERE for binary facts)
 ├── R2_Game.exe_Analysis_Guide.md              # R2 usage guide
 ├── R2_Project_Setup_Guide.md                  # Setup instructions
-└── README.md                                   # Documentation index
+├── ColdFrozen_DeathPath_r2_Verified_R170.md   # cold/frozen death path, binary-verified
+├── ColdFrozen_Bug_Complete_Analysis.md        # cold/frozen bug history and fix status
+├── D2VP_ColdFrozen_Validation_GameExe_Analysis.md  # R162-R164 validation vs retail
+├── D2VP_GameExe_Function_Mapping.md           # D2VP <-> Game.exe function mapping
+├── Killing_Monster_CallFlow.md                # Monster death and XP (addresses re-verified R170b)
+├── Battle.net_Authentication_Flow_Analysis.md # BN packet-level flow (constants only)
+├── CD_Key_Functions_Game.exe_Analysis.md      # CD key handling
+├── CD_Key_Analysis_Report.md                  # CD key analysis
+├── CheckRevision_Analysis_and_Fix_Strategies.md # CheckRevision / CRC strategies
+└── R2_CallFlow_Documentation_Index.md          # this index
 ```
 
 ## Quick Reference Tables
@@ -25,22 +29,30 @@ R2/
 
 | Scenario | File | Priority | Complexity |
 |----------|------|----------|------------|
-| Boot to Title Screen | `Boot_TitleScreen_CallFlow.md` | High | Medium |
-| Entering a Game | `Entering_Game_CallFlow.md` | High | High |
 | Killing a Monster | `Killing_Monster_CallFlow.md` | High | High |
-| Monster Dropping Loot | `Monster_Dropping_Loot_CallFlow.md` | Medium | Medium |
-| Opening a Chest | `Opening_Chest_CallFlow.md` | Medium | Medium |
-| Activating a Shrine | `Activating_Shrine_CallFlow.md` | Medium | Low |
+| Cold/Frozen Monster Death (issue #39) | `ColdFrozen_DeathPath_r2_Verified_R170.md` | High | High |
+| Monster Timer Dispatch (regen/poison/AI) | `R2_Game.exe_Validation_Expansion_R170.md` | High | High |
+
+> **R170b housekeeping:** the Boot/Entering/Loot/Chest/Shrine and TCP/IP + Battle.net
+> call-flow docs were **removed** — their address tables were placeholders or 1.10-1.13-era
+> DLL addresses (verified against the 1.14d section map; every one falls in `.rdata`, i.e.
+> not code). Rebuild them only from re-derived pins. See
+> `R2_Game.exe_Validation_Expansion_R170.md` §4 for the audit.
 
 ### Key Addresses Reference
 
-| Component | Typical Address | Purpose |
-|-----------|----------------|---------|
-| Entry Point | 0x00401000 | Game.exe initialization |
-| Title Screen | 0x00406000 | Title screen rendering |
-| Character Select | 0x00407000 | Character selection |
-| Game Entry | 0x00408000 | Game connection |
-| Map Generation | 0x00410000 | Level generation |
+| Component | Verified Address | Purpose |
+|-----------|------------------|---------|
+| SetUninterruptableState | 0x005544b0 | clears uninterruptable AND completes a deferred death |
+| SERVER_KillMonster | 0x0057ccb0 | core death processing (16 xrefs) |
+| SERVER_GetHitCalculation | 0x0057cee0 | damage/kill application; deferral site 1 @ 0x57cf7b |
+| RegenAndPsnDecreaser | 0x005a6920 | hp-regen/poison tick; deferral site 2 @ 0x5a6ac5 |
+| MONSTEREVENT_DefaultCallback | 0x005a7f80 | monster timer dispatcher (freeze gate + route table) |
+| Monster pTimerMethods table | 0x006e2490 | 15-slot function table (nulls 4/11/13/14) |
+| UNITEVENT_DispatchEventsByType | 0x005c0c30 | after-kill event dispatch (types 9/10) |
+| XP award | 0x0057e990 | via KillMonster wrapper 0x57cd44 -> 0x5a4ef0 |
+| Quest monster-death event | 0x00543a30 | via same wrapper -> 0x57cdb7 |
+| COMBAT_ApplyCold / ApplyFreeze | 0x0057af80 / 0x0057b230 | cold/freeze state application |
 | Core Death | 0x0057ccb0 | Unit death processing |
 | XP Award | 0x0057e990 | XP calculation |
 | Quest Events | 0x00543a30 | Quest triggers |
@@ -203,7 +215,8 @@ R2/
 ### R2 Analysis Documentation
 - `D2VP_GameExe_Function_Mapping.md` - Function cross-reference
 - `D2VP_ColdFrozen_Validation_GameExe_Analysis.md` - Death processing validation
-- `ColdFrozen_Bug_Complete_Analysis.md` - Bug investigation record
+- `ColdFrozen_Bug_Complete_Analysis.md` - Bug investigation record (status reopened R170, residual strand H1)
+- `ColdFrozen_DeathPath_r2_Verified_R170.md` - r2-verified retail address map + residual bug analysis (R170)
 
 ### Project Memories
 - `shrine-parameter-typing-fix-r167-complete.md` - Shrine fix documentation

@@ -213,7 +213,29 @@ STATE_cold    // Chilled/slow state
 
 ## Resolution Confirmation
 
-### Final Status: ✅ RESOLVED
+> **⚠ STATUS UPDATE (R170, 2026-11-20).** Not fully resolved. Field report after R166:
+> *"still noticing some disappearing monsters when cold or frozen"*. Binary-verified
+> re-analysis (see [ColdFrozen_DeathPath_r2_Verified_R170.md](ColdFrozen_DeathPath_r2_Verified_R170.md))
+> confirms the R162/R166 mechanisms but identifies residual strand paths — chiefly H1:
+> the R166 expiry-callback completion silently no-ops while `STATE_uninterruptable` is
+> still set, and for frozen-alive mid-cast units the cast-end clear is unreachable until
+> unfreeze, so a re-applied freeze/chill keeps the unit stranded at 0 HP until a room
+> update drops it. Also note this doc's R161/R162 narrative describes the
+> `MONSTEREVENT_DefaultCallback` bypass; the shipped code is the R162 `if (false)` dead
+> block + unconditional dispatch of MODECHANGE/ENDANIM/AITHINK — no active state-based
+> blocking remains in that dispatcher.
+> Also corrected in the R170 pass: `0x0058abc0` is an A5Q3 quest function, **not**
+> `RegenAndPsnDecreaser`; the deferral site is inside `SERVER_GetHitCalculation` (`0x57cf7b`),
+> the only `death_delay` set site in retail.
+>
+> **✅ FIX APPLIED (R170).** H1 and H2 are fixed in `Source/D2Game/UNIT/SUnitDmg.cpp`:
+> `SUNITDMG_CompleteDeathDelayIfPending` now completes through
+> `SUnit::SetUninterruptableState(pUnit, 0)` (retail `0x5544b0`) instead of early-returning
+> while `STATE_uninterruptable` is set, and both expiry callbacks drop a stale
+> `STATE_death_delay` on already dying/dead units. Build self-ID bumped to
+> `Vanilla+0.0.8-R170` (`Redivivus/d2_boot.h`).
+
+### Final Status: ✅ RESOLVED (as of R162) → ⚠ REOPENED (R170, residual strand H1) → ✅ FIXED (R170, H1+H2 applied)
 - **Issue**: Frozen monsters disappearing without dropping loot
 - **Root Cause**: State blocking of timer events during death processing
 - **Solution**: Complete bypass of state checks for critical timer events
