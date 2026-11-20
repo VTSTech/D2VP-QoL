@@ -9,11 +9,11 @@ Comprehensive call flow documentation for common Diablo II gameplay scenarios, p
 ```
 R2/
 ├── R2_Game.exe_Validation_Expansion_R170.md   # capstone re-verification + monster timer dispatch
-├── R2_Game.exe_Diagnostic_Function_Reference_R171.md  # symptom -> function diagnostic reference (START HERE when debugging)
-├── R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R172.md  # client Battle.net path: gateway -> BNCS auth -> realm/charlist -> game create
-├── R2_Game.exe_BNetPath_Function_Reference_R173.md  # per-function reference of the Battle.net path (corrected in R174) — START HERE for D2VP recreation
-├── R2_Game.exe_vs_D2VP_Gap_Analysis_R174.md  # D2VP gap analysis: BNet path certified complete + R173 corrections
-├── R2_Game.exe_BNetPath_Functions_R173.csv  # machine-readable companion table (58 functions)
+├── R2_Game.exe_Diagnostic_Function_Reference_R170.md  # symptom -> function diagnostic reference (START HERE when debugging)
+├── R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R170.md  # client Battle.net path: gateway -> BNCS auth -> realm/charlist -> game create
+├── R2_Game.exe_BNetPath_Function_Reference_R170.md  # per-function reference of the Battle.net path (corrected in the R170 gap-analysis pass) — START HERE for D2VP recreation
+├── R2_Game.exe_vs_D2VP_Gap_Analysis_R170.md  # D2VP gap analysis: BNet path certified complete + R170 corrections
+├── R2_Game.exe_BNetPath_Functions_R170.csv  # machine-readable companion table (58 functions)
 ├── R2_Game.exe_Analysis_Guide.md              # R2 usage guide
 ├── R2_Project_Setup_Guide.md                  # Setup instructions
 ├── ColdFrozen_DeathPath_r2_Verified_R170.md   # cold/frozen death path, binary-verified
@@ -37,10 +37,11 @@ R2/
 | Killing a Monster | `Killing_Monster_CallFlow.md` | High | High |
 | Cold/Frozen Monster Death (issue #39) | `ColdFrozen_DeathPath_r2_Verified_R170.md` | High | High |
 | Monster Timer Dispatch (regen/poison/AI) | `R2_Game.exe_Validation_Expansion_R170.md` | High | High |
-| Symptom-driven debugging (any field report) | `R2_Game.exe_Diagnostic_Function_Reference_R171.md` | High | — |
-| Battle.net connect/auth/charselect/gamecreate issues | `R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R172.md` | High | — |
-| Recreating the Battle.net client path in D2VP | `R2_Game.exe_BNetPath_Function_Reference_R173.md` (+ CSV) | High | corrected in R174 |
-| D2VP vs Game.exe gap status / what to build next | `R2_Game.exe_vs_D2VP_Gap_Analysis_R174.md` | High | — |
+| Symptom-driven debugging (any field report) | `R2_Game.exe_Diagnostic_Function_Reference_R170.md` | High | — |
+| Battle.net connect/auth/charselect/gamecreate issues | `R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R170.md` | High | — |
+| Recreating the Battle.net client path in D2VP | `R2_Game.exe_BNetPath_Function_Reference_R170.md` (+ CSV) | High | corrected in the R170 gap-analysis pass |
+| D2VP vs Game.exe gap status / what to build next | `R2_Game.exe_vs_D2VP_Gap_Analysis_R170.md` | High | — |
+| Full-binary coverage (in-game layer + uncovered-region inventory) | `R2_Game.exe_vs_D2VP_InGame_Layer_Coverage_R170.md` | High | — |
 
 > **R170b housekeeping:** the Boot/Entering/Loot/Chest/Shrine and TCP/IP + Battle.net
 > call-flow docs were **removed** — their address tables were placeholders or 1.10-1.13-era

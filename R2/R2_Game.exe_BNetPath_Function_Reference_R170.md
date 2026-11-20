@@ -1,4 +1,4 @@
-# R2 Game.exe Battle.net-Path Function Reference (R173)
+# R2 Game.exe Battle.net-Path Function Reference (R170)
 
 **Date:** 2026-11-20
 **Binary:** `Game.exe` 1.14d retail, md5 `2b3600c10ee0d6387675a2f6cf0ebed2`, base `0x400000`.
@@ -11,7 +11,7 @@ constants the binary's constants match; no server code was analyzed.
 **Method:** capstone harness phase 11 (`scripts/r2_phase11_dump.py`) — full annotated
 disassembly of 73 functions to `/tmp/r2fn/`, read function-by-function.
 
-> **⚠ CORRECTED IN R174** (`R2_Game.exe_vs_D2VP_Gap_Analysis_R174.md`; verified against
+> **⚠ CORRECTED (see R2_Game.exe_vs_D2VP_Gap_Analysis_R170.md)** (`R2_Game.exe_vs_D2VP_Gap_Analysis_R170.md`; verified against
 > the disassembly and D2VP's implementations): the stage-4 section is void —
 > `0x44c000/0x44c060/0x462d00` are click processing (ProcessQueuedPrimaryClick /
 > ProcessPrimaryClickImmediate / ClickMap), not game-server transitions;
@@ -24,7 +24,7 @@ disassembly of 73 functions to `/tmp/r2fn/`, read function-by-function.
 > error tables, abort codes) was confirmed faithful by the D2VP implementations.
 
 **New module discovery this pass:** `.\BnSend.cpp` (`0x6def84`) — the BNCS send-buffer
-module. [R174 note: the "C++ engine object at 0x88273c" is the SID protocol state
+module. [R170 note: the "C++ engine object at 0x88273c" is the SID protocol state
 (94-slot tables + config); no separate engine needs recreating.]
 
 ---
@@ -33,19 +33,19 @@ module. [R174 note: the "C++ engine object at 0x88273c" is the SID protocol stat
 
 | Global | Meaning (verified usage) |
 |---|---|
-| `0x881bf0` | interlocked flag: BNCS socket present (`g_pBNetSocketData`); `0x51c5c0` fails if unset [corrected R174: flag, not event] |
-| `0x881bfc` | interlocked flag: protocol-ready / proceed [corrected R174: flag, not event] |
-| `0x881bf4` | interlocked flag: probe/teardown signal (reset in 10 ms loops) [corrected R174: flag, not event] |
-| `0x881c00` | interlocked counter: single BattleConnectFastest at a time (InterlockedIncrement guard) [corrected R174] |
+| `0x881bf0` | interlocked flag: BNCS socket present (`g_pBNetSocketData`); `0x51c5c0` fails if unset [corrected R170: flag, not event] |
+| `0x881bfc` | interlocked flag: protocol-ready / proceed [corrected R170: flag, not event] |
+| `0x881bf4` | interlocked flag: probe/teardown signal (reset in 10 ms loops) [corrected R170: flag, not event] |
+| `0x881c00` | interlocked counter: single BattleConnectFastest at a time (InterlockedIncrement guard) [corrected] |
 | `0x8818e0` | socket-mode flag (2 = init/WSAStartup-ish via `[0x6cc258]`, 0 = normal, 1 = ini parse) |
 | `0x881838/0x881844` | server-list object + current item (locked by `0x5186d0`) |
-| `0x8818e8` | gateway name buffer (0x100); `0x8819e8` = DNS server-list buffer flag [corrected R174: DNS, not ini] |
+| `0x8818e8` | gateway name buffer (0x100); `0x8819e8` = DNS server-list buffer flag [corrected R170: DNS, not ini] |
 | `0x882000/0x88201c` | secondary / primary connect-status codes (critsec `0x882004`) |
 | `0x8822a8` | auth step→status-text table, 94 slots (0x5e dwords; get `0x520c20`, set `0x520c30`) |
 | `0x882128` | auth step→completion table, 94 slots (set on step finish; polled by `0x520b70`) |
 | `0x882528/0x88252c` | auth abort marker / last reply dedup id |
 | `0x882318/0x8823f0/0x8822c4` | auth flags: logon-allowed / logon-ack received / vercheck progress |
-| `0x8818bc` | server-token store (`0x51a540 BNSEND_SetServerToken`) [corrected R174] |
+| `0x8818bc` | server-token store (`0x51a540 BNSEND_SetServerToken`) [corrected] |
 | `0x8818c8/0x8818d0/0x8818dc/0x8818cc` | BnSend.cpp payload-buffer slots (alloc/append helpers) |
 | `0x88273c` | BD auth-engine C++ object (ctor `0x5285a0` fed from `.data 0x730164` ("/" separators)) |
 | `0x798fb4` | D2CS (realm) transport/connection handle (send `0x6bc8a0`, peer-check `0x6bc810`) |
@@ -58,7 +58,7 @@ module. [R174 note: the "C++ engine object at 0x88273c" is the SID protocol stat
 | `0x7795d4` | CharSel UI state struct (char name @+0xbd, create fields @+0x3a1/0x3b1, flags @+0x3c1) |
 | `0x70f234` | game-connection state (8 = entering, 0x10 = leaving/teardown) |
 | `0x7a061c/0x7a0650/0x7a0658/0x7a065c/0x7a0660/0x7a0664/0x7a066c/0x7a0670` | game-connect flags (D2GS-side gating) |
-| `0x7a6aac/0x7a6ab0` | cursor coordinates (`0x468730 GetMouseX` / `0x468740 GetMouseY`) [corrected R174 — not tokens] |
+| `0x7a6aac/0x7a6ab0` | cursor coordinates (`0x468730 GetMouseX` / `0x468740 GetMouseY`) [corrected R170 — not tokens] |
 
 Import tables used throughout (from IAT thunks): `[0x6cc250]` `_beginthreadex`,
 `[0x6cc3a0/0x6cc3a4/0x6cc3a8]` `WaitForSingleObject/SetEvent/ResetEvent`-family,
@@ -138,7 +138,7 @@ free `0x40b3c0`/`0x412650`, memcpy `0x6829c0`, sprintf `0x6823fd`, string-table 
   (version %d)", "Server List Version", keys `BATTLENETIP` `0x70572f`, `MCPIP`
   `0x70578b`, `REALM` `0x705a6b`, `CHARACTER` `0x7057cc`+0x5c stride ×9) happens in the
   parser around this loader — parse targets for D2VP: gateway list file format.
-* `0x51c0e0` — **GetDnsRecordSync(ecx=&servers_buf, edx=gateway_name)** [corrected R174]:
+* `0x51c0e0` — **GetDnsRecordSync(ecx=&servers_buf, edx=gateway_name)** [corrected]:
   mode=1, spawns thread (proc `0x51bee0`, args in globals `0x881be8/0x881bec`) that
   resolves the gateway hostname asynchronously (WSAAsync-style lookup with message
   pump), waits for completion, fills the server-list buffer. The server list comes from
@@ -155,7 +155,7 @@ free `0x40b3c0`/`0x412650`, memcpy `0x6829c0`, sprintf `0x6823fd`, string-table 
   `0x12` = generic abort.
 * `0x40dcc0` — BNCS packet-queue enqueue (connection, buf, len).
 * `0x520ad0` — set protocol-dead flag `[0x882528]=1` (checked by step-wait → fail 0x12)
-  [corrected R174].
+  [corrected].
 
 ## 2. Stage 2 — BNCS authentication ("BD" auth engine)
 
@@ -189,7 +189,7 @@ Status text per step: `[step*4 + 0x8822a8]` (94 slots; get `0x520c20(idx)`, set
   returns 1. Invalid → "ERROR BDClientId: invalid response", return 0 (aborts chain).
 * **`0x520d50` — Ack_Store(ecx=payload)**: `0x51a540([ecx])` = `BNSEND_SetServerToken` —
   stores the server token at `0x8818bc` (`g_nBNetServerToken`) for password hashing
-  [corrected R174]. **`0x520d60`**: if `[payload]==0` → `[0x882318]=1` (logon allowed).
+  [corrected]. **`0x520d60`**: if `[payload]==0` → `[0x882318]=1` (logon allowed).
 * **`0x520d70` — LogonAck_RecvHandler(ecx=payload)**: `0x51a540([ecx+4])`; socket mode
   2/4; logs "logon acknowledged"; sets `[0x8823f0]=1` (in the chain head variant at
   `0x521664`). **`0x520da0`**: `[0x72ffa8] = ([payload]==0)`.
@@ -333,7 +333,7 @@ words), and the create-char error mapping (0x14 exists / 0x15 name rejected / el
 The list itself is server data — D2VP's server must emit the same block shape if the
 original UI code is reused.
 
-## 4. Stage 4 — click processing (CORRECTED in R174; the original "game-server session" reading was wrong)
+## 4. Stage 4 — click processing (CORRECTED in R170; the original "game-server session" reading was wrong)
 
 `0x44c000 = ProcessQueuedPrimaryClick`, `0x44c060 = ProcessPrimaryClickImmediate`,
 `0x462d00 = ClickMap(clickType, nX, nY, mouseEventFlags)` — the primary-click state
@@ -359,7 +359,7 @@ The client's game-server session is entered via the MCP join handoff:
 4. **D2CS**: framing `[cmd][dword][word][payload]` (request) and validated-word replies;
    seq tracking (`0x798f8c/0x798f80`); last-status (`0x79929c`); charlist reply → 0x350
    records with 5-minute cache; createchar error mapping.
-5. **Game join** [corrected R174]: MCP reply codes (0x71–0x79 join errors) + join
+5. **Game join** [corrected]: MCP reply codes (0x71–0x79 join errors) + join
    handoff (D2GSGameToken/GameHash/ConnectIp → notify-join) — not a 0x44c000 handshake.
 
 ## 6. Open items
@@ -376,5 +376,5 @@ The client's game-server session is entered via the MCP join handoff:
 
 ---
 *All claims verified this session from full function disassembly (phase 11 dumps).
-Companion CSV: `R2_Game.exe_BNetPath_Functions_R173.csv`. Prior stage overview:
-`R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R172.md`.*
+Companion CSV: `R2_Game.exe_BNetPath_Functions_R170.csv`. Prior stage overview:
+`R2_BattleNet_Connect_Auth_CharSelect_GameCreate_R170.md`.*

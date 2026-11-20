@@ -1,4 +1,4 @@
-# R2 Game.exe Diagnostic Function Reference (R171)
+# R2 Game.exe Diagnostic Function Reference (R170)
 
 **Date:** 2026-11-20
 **Binary:** `Game.exe` 1.14d retail, md5 `2b3600c10ee0d6387675a2f6cf0ebed2`, base `0x400000`.
@@ -83,7 +83,7 @@ mirrors this exactly.
 
 ## 4. Death and damage pipeline (verified core + new census)
 
-Core set (all re-verified R170/R171): `SetUninterruptableState 0x5544b0`,
+Core set (all re-verified R170/R170): `SetUninterruptableState 0x5544b0`,
 `CheckForModeZeroDeath 0x5541b0`, `GetKillerUnit 0x553010`, `SERVER_KillMonster 0x57ccb0`,
 `SERVER_GetHitCalculation 0x57cee0` (kill at `0x57d00f`), `COMBAT_ApplyCold 0x57af80`,
 `COMBAT_ApplyFreeze 0x57b230`, `DAMAGE_OnColdExpire 0x57ad80`, freeze expire callback

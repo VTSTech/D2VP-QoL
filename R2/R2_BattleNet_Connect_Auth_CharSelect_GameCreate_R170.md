@@ -1,4 +1,4 @@
-# R2 Battle.net Connect / Auth / Character Select / Game Create (R172)
+# R2 Battle.net Connect / Auth / Character Select / Game Create (R170)
 
 **Date:** 2026-11-20
 **Binary:** `Game.exe` 1.14d retail, md5 `2b3600c10ee0d6387675a2f6cf0ebed2`, base `0x400000`.
@@ -251,5 +251,5 @@ and the "wait" reply `0x14` (pvpgn CREATGAMEWAIT) gates the countdown.
 ---
 *All binary claims verified this session (phases 10–10g); opcode names for D2CS replies
 cross-checked against pvpgn `d2cs_protocol.h` (URL above). BNCS SID names are community
-convention. See also `R2_Game.exe_Diagnostic_Function_Reference_R171.md` for the in-game
+convention. See also `R2_Game.exe_Diagnostic_Function_Reference_R170.md` for the in-game
 side.*

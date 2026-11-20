@@ -47,7 +47,7 @@ The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.1
 | 0x0057ccb0 | sub_0057CCB0_UnitKilled | Core unit kill function |
 | 0x0057e990 | XP_OnMonsterKill | XP award on monster kill |
 | 0x00543a30 | QUESTS_MonsterDeathEvent | Quest monster death event |
-| 0x005a6ff0 | MONSTER_OnDeathDispatch (R171 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
+| 0x005a6ff0 | MONSTER_OnDeathDispatch (R170 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
 
 ### Timer Event Management Functions
 | Address | Function Name | Purpose |
@@ -75,7 +75,7 @@ The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.1
 | 0x0057ccb0 | sub_0057CCB0_UnitKilled | Core unit kill function |
 | 0x0057e990 | XP_OnMonsterKill | XP award on monster kill |
 | 0x00543a30 | QUESTS_MonsterDeathEvent | Quest monster death event |
-| 0x005a6ff0 | MONSTER_OnDeathDispatch (R171 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
+| 0x005a6ff0 | MONSTER_OnDeathDispatch (R170 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
 
 ### Timer Event Management Functions
 | Address | Function Name | Purpose |
