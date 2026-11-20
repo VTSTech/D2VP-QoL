@@ -144,6 +144,14 @@ static LONG * g_pBNetSocketData = 0; D2_STATIC_GUARD(g_pBNetSocketData, "g_pBNet
 static LONG * Destination_00881bf4 = 0; D2_STATIC_GUARD(Destination_00881bf4, "Destination_00881bf4");
 static uint32_t gbBNetSocketConnected = 0; D2_STATIC_GUARD(gbBNetSocketConnected, "gbBNetSocketConnected");
 static long Target_00881bfc = 0; D2_STATIC_GUARD(Target_00881bfc, "Target_00881bfc");
+// VP-BEGIN [bn-auth-reconnect R174]: the R173 field run proved the BNCS recv abort is
+// deterministic (the one-shot retry recv failed with the SAME 10053 in the SAME
+// millisecond) and the 2026-11-20 pcap proved the wire was healthy - a poisoned
+// connection, not a transient glitch. The server never got past the 0x50 handshake, so a
+// fresh socket can redo the whole auth stage cleanly. Budget = one reconnect per
+// user-initiated connect; re-armed in ConnectingToBattleNet.
+static int s_nBncsReconnectBudget = 1; D2_STATIC_GUARD(s_nBncsReconnectBudget, "s_nBncsReconnectBudget");
+// VP-END [bn-auth-reconnect R174]
 // also labelled: lpAddend_00881c00
 static LONG * Destination_00881c00 = 0; D2_STATIC_GUARD(Destination_00881c00, "Destination_00881c00");
 static uint32_t g_nBNetThreadInitFlag = 0; D2_STATIC_GUARD(g_nBNetThreadInitFlag, "g_nBNetThreadInitFlag");
@@ -1656,7 +1664,14 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
           BOOL bSocketStillOpen = Fog::Src::Safesock::SAFESOCK_IsSocketOpen(pSafesock);
           if (nRecvFailedErr == 10053 && bSocketStillOpen && !s_nRecvAbortRetried) {
             s_nRecvAbortRetried = 1;
-            D2BOOT_MarkFmt("BNet: recv aborted (WSA 10053) but socket still open - retrying once"); // [d2boot]
+            // VP-BEGIN [bn-recv-autopsy R174]: R173's field run showed the one-shot retry recv
+            // failing with the SAME 10053 in the SAME millisecond - the abort is
+            // deterministic. Log the four-way probe so the next d2boot.log says which half
+            // of Winsock still believes the connection is alive (TCB dead vs recv-only
+            // poisoning vs select/recv disagreement).
+            Fog::Src::Safesock::SAFESOCK_LogRecvAutopsy(pSafesock, nRecvFailedErr);
+            // VP-END [bn-recv-autopsy R174]
+            D2BOOT_Mark("BNet: recv aborted (WSA 10053) but socket still open - retrying once"); // [d2boot]
             Sleep(5);
             continue;
           }
@@ -2026,6 +2041,32 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
     _net_sid::NET_SID_CLIENT_Send_0x50_AuthInfo();
     BVar1 = _net_sid::NET_SID_CLIENT_WaitForPacketId(0x50);
     if (!BVar1) {
+      // VP-BEGIN [bn-auth-reconnect R174]: the recv abort is deterministic (R173 field run:
+      // retry failed with the same 10053 in the same millisecond; 2026-11-20 pcap: wire
+      // healthy, server had already flushed AUTHREQ_109). The server never got past the
+      // 0x50 handshake, so free the poisoned socket and redo the whole auth stage on a
+      // fresh connection: BattleConnectFastest() re-resolves DNS, re-runs the race and
+      // replays 0x01/0x50/(0x51) exactly like a retail connect. One attempt per
+      // user-initiated connect (budget re-armed in ConnectingToBattleNet); if the fresh
+      // attempt dies the same way its own wait-failure branch finds the budget spent and
+      // tears down normally, so the recursion depth is hard-capped at 1.
+      // BattleConnectFastest() carries its own single-instance guard
+      // (Destination_00881c00): release it for the duration of the recursive call on this
+      // same thread and re-take it afterwards, so the outer frame's tail decrement stays
+      // balanced and BNSEND_Disconnect's wait semantics are unchanged.
+      if (s_nBncsReconnectBudget > 0) {
+        s_nBncsReconnectBudget--;
+        D2BOOT_Mark("BNet: auth-stage reconnect -> freeing dead socket, replaying handshake on a fresh connection"); // [d2boot]
+        Fog::Src::Safesock::Free(pNetData);
+        (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, (LONG)pNetData);
+        _net_sid::SID_InitializeProtocolState(); // clears the protocol-dead flag the read thread set
+        InterlockedExchange(&Target_00881bfc, 0);
+        InterlockedDecrement((LONG*)&Destination_00881c00);
+        BattleConnectFastest();
+        InterlockedIncrement((LONG*)&Destination_00881c00);
+        return; // the recursive call owned DNS, race, auth stage and the 0x51 version check
+      }
+      // VP-END [bn-auth-reconnect R174]
       _net_sid::SID_GetState(&__frame0.nSIDState);
       BVar1 = _net_sid::SID_GetReadyFlag();
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (BVar1 || __frame0.nSIDState || (lInterlockedResult = (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, 0) , !lInterlockedResult)) {
@@ -2128,6 +2169,10 @@ HANDLE __fastcall ConnectingToBattleNet() {
       bDisconnected = BNSEND_Disconnect();
       if (bDisconnected) {
         /* LONG Value for InterlockedExchange */ /* LONG * Target for InterlockedExchange */ InterlockedExchange(&Target_00881bfc, 0);
+        // VP-BEGIN [bn-auth-reconnect R174]: every user-initiated connect gets one fresh
+        // auth-stage reconnect budget.
+        s_nBncsReconnectBudget = 1;
+        // VP-END [bn-auth-reconnect R174]
         g_nBNetConnectionState = 0;
         D2BOOT_Mark("BNet: connection state -> 0 (reset, reconnecting)"); // [d2boot]
         Sleep(10);

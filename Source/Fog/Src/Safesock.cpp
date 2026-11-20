@@ -26,6 +26,7 @@
 #include "3rdparty/Storm/Storm.h"
 #include "Source/D2Headers/d2_platform.h"
 #include "Source/D2Net/in_addr.h"
+#include "Redivivus/d2_boot.h" // [d2boot] VP [bn-recv-autopsy R174]
 
 #define DEFAULT_SECURITY_COOKIE 0xBB40E64E
 
@@ -333,6 +334,104 @@ BOOL __fastcall SAFESOCK_IsSocketOpen(D2NetDataStrc * pNetData) {
     return getpeername(hSocket, (sockaddr*)&saPeer, &nNameLen) != -1;
 }
 // VP-END [bn-recv-abort-retry R173]
+
+// VP-BEGIN [bn-recv-autopsy R174]: bounded copy of an inet_ntoa result - its static buffer
+// is invalidated by the next inet_ntoa call within the same thread, and the autopsy needs
+// two addresses in one log line.
+static void sCopyInetString(char * pDst, int nSize, uint32_t nAddrHostDword) {
+    char* pSrc = inet_ntoa((in_addr)nAddrHostDword);
+    char* pCur = pDst;
+    if (!pSrc) {
+      pDst[0] = '\0';
+      return;
+    }
+
+    while (*pSrc && pCur < pDst + nSize - 1) {
+      *pCur++ = *pSrc++;
+    }
+    *pCur = '\0';
+}
+
+// One-shot forensic probe for the BNCS read thread's WSAECONNABORTED path. The 2026-11-20
+// pcap proved the wire was healthy when this client's own stack reported 10053 twice on
+// the same blocking socket, so the question is WHICH half of Winsock still believes the
+// connection is alive. Deliberately takes no critical section and touches no safesock
+// state (Free() may run concurrently), exactly like SAFESOCK_IsSocketOpen above:
+//   getpeername / getsockname - does TCP still know both endpoints?
+//   SO_ERROR (0x1007)         - did the stack queue an error of its own on the TCB?
+//   SO_TYPE (0x1004)          - is the handle still a stream socket (reuse detector)?
+//   select(read,except)       - does the readiness layer still report the handle?
+//   recv(MSG_PEEK=0x2)        - does the receive path still fail, and with which error?
+//   send(len 0)               - transmit-path probe: fails too => TCB aborted, succeeds
+//                               => receive-only poisoning.
+int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvError) {
+    if (!pNetData) {
+      D2BOOT_Mark("BNet: autopsy skipped (no safesock struct)"); // [d2boot]
+      return 0;
+    }
+
+    SOCKET hSocket = pNetData->hSocket;
+    if (hSocket == -1) {
+      D2BOOT_Mark("BNet: autopsy skipped (handle already -1)"); // [d2boot]
+      return 0;
+    }
+
+    char szPeerIp[24];
+    char szLocalIp[24];
+    szPeerIp[0] = '\0';
+    szLocalIp[0] = '\0';
+    BOOL bPeerOk;
+    BOOL bLocalOk;
+    {
+      sockaddr_in saPeer;
+      int nNameLen = (int)sizeof(saPeer);
+      bPeerOk = getpeername(hSocket, (sockaddr*)&saPeer, &nNameLen) != -1;
+      if (bPeerOk) {
+        sCopyInetString(szPeerIp, (int)sizeof(szPeerIp), *(uint32_t*)((char*)&saPeer + 4));
+      }
+
+      sockaddr_in saLocal;
+      nNameLen = (int)sizeof(saLocal);
+      bLocalOk = getsockname(hSocket, (sockaddr*)&saLocal, &nNameLen) != -1;
+      if (bLocalOk) {
+        sCopyInetString(szLocalIp, (int)sizeof(szLocalIp), *(uint32_t*)((char*)&saLocal + 4));
+      }
+    }
+
+    int nSoError = -1;
+    int nSoType = -1;
+    int nOptLen = 4;
+    getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen); // SOL_SOCKET / SO_ERROR
+    nOptLen = 4;
+    getsockopt(hSocket, 0xffff, 0x1004, (char*)&nSoType, &nOptLen); // SOL_SOCKET / SO_TYPE
+    fd_set readSet;
+    fd_set exceptSet;
+    readSet.fd_count = 1;
+    readSet.fd_array[0] = hSocket;
+    exceptSet.fd_count = 1;
+    exceptSet.fd_array[0] = hSocket;
+    timeval tvZero;
+    tvZero.tv_sec = 0;
+    tvZero.tv_usec = 0;
+    int nSelect = select(0x40, &readSet, nullptr, &exceptSet, &tvZero);
+    int nReadFlag = (nSelect > 0 && __WSAFDIsSet(hSocket, &readSet)) ? 1 : 0;
+    int nExceptFlag = (nSelect > 0 && __WSAFDIsSet(hSocket, &exceptSet)) ? 1 : 0;
+    char chPeek[8];
+    int nPeek = recv(hSocket, chPeek, (int)sizeof(chPeek), 0x2); // MSG_PEEK
+    int nPeekError = nPeek < 0 ? (int)WSAGetLastError() : 0;
+    char chZero = 0;
+    int nSend0 = send(hSocket, &chZero, 0, 0);
+    int nSend0Error = nSend0 < 0 ? (int)WSAGetLastError() : 0;
+    D2BOOT_MarkFmt(
+        "BNet: autopsy recvErr=%d h=0x%08x peer=%s local=%s soerr=%d type=%d sel=%d(r%d,e%d) peek=%d/%d send0=%d/%d",
+        nRecvError, (unsigned)hSocket,
+        bPeerOk ? szPeerIp : "unavail",
+        bLocalOk ? szLocalIp : "unavail",
+        nSoError, nSoType, nSelect, nReadFlag, nExceptFlag,
+        nPeek, nPeekError, nSend0, nSend0Error); // [d2boot]
+    return 1;
+}
+// VP-END [bn-recv-autopsy R174]
 
 int32_t __fastcall GetPeerNameDoesReturn(D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen) {
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&pNetData->pSync);

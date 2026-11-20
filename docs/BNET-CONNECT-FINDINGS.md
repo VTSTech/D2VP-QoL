@@ -1,5 +1,63 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R174: the abort is deterministic — autopsy probe + auth-stage reconnect
+
+**What the R173 field run added.** The R173 build's one-shot recovery fired exactly as
+designed and answered the open question: the abort is **not transient**. The retry recv
+failed with the *same* 10053 in the *same* millisecond
+(`recv aborted (WSA 10053) but socket still open - retrying once` → `recv failed (-1) -
+WSA err 10053`), so a poisoned connection cannot recover in place; and the R173 teardown
+telemetry showed no free in the fatal window (the only mark is the post-failure
+"auth-stage teardown", after the fact). The same run also confirmed the pre-death wire
+flow is byte-correct: `FF 25 08 00 05 63 4C 00` is PvPGN's SERVER_ECHOREQ (server uptime
+ticks), our 0x25 echo (`SID send op=0x25 len=4 -> 8`) is the correct BNCS ping reply, and
+the "0x50 before 0x25" ordering is D2's real flow — D2VP sends AUTH_INFO immediately
+after the protocol byte and PvPGN accepts it before echoing.
+
+**Code audit closure (R174).** Every remaining in-process suspect was eliminated by
+direct reading: `WSASocket2_Read` captures `WSAGetLastError` immediately after `recv`
+under `pSync`, so 10053 is genuinely the recv's own error on a blocking socket; the read
+thread is provably single-instance (`Destination_00881bf4` refcount, decremented on
+exit); `NET_SID_CLIENT_WaitForPacketId` is a pure flag/Sleep(10) poll — no second
+reader; `WSASocket2_SendOrCloseOnTimeout` only closes on WSAETIMEDOUT; no shutdown/flush
+call touches the socket in the window. Conclusion stands: the abort comes from outside
+our code — local stack/WFP/AV/LSP class — consistent with retail Game.exe connecting
+fine on the same box and with the pcap's healthy-wire evidence.
+
+**R174 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate):**
+
+- `Safesock.cpp/.h` — new `SAFESOCK_LogRecvAutopsy()`: one-shot forensic probe of the
+  poisoned handle, run by the read thread before the R173 retry. Logs peer/local
+  addresses, `SO_ERROR`, `SO_TYPE`, a zero-timeout `select` on read/except, a
+  `MSG_PEEK` recv and a zero-length send probe. Interpretation: send probe fails too →
+  the local TCP TCB is aborted (stack/firewall class); send OK but recv/peek still
+  10053 → receive-only poisoning (LSP/filter class); select readable + recv failing →
+  readiness and receive paths disagree (layer-conflict class). `SO_TYPE`≠SOCK_STREAM
+  would finally prove handle reuse.
+- `BnSend.cpp` — **bn-auth-reconnect**: the wait-0x50 failure path now gets one
+  budget-guarded reconnect (`s_nBncsReconnectBudget`, re-armed in
+  `ConnectingToBattleNet`): free the dead socket (`Safesock::Free` waits for the read
+  thread, so the refcount is re-armable), clear `g_pBNetSocketData`, reset SID protocol
+  state (`SID_InitializeProtocolState` clears the dead flag), release
+  `BattleConnectFastest`'s `Destination_00881c00` single-instance guard, recursively
+  re-enter `BattleConnectFastest()` on the same thread (fresh DNS resolve, fresh race,
+  replay of 0x01/0x50/0x51), re-take the guard so the outer frame's tail decrement
+  stays balanced. Recursion is hard-capped at 1 by the budget: if the fresh connection
+  dies the same way, its own failure path finds the budget spent and tears down
+  normally.
+- `Redivivus/d2_boot.h` — `D2VP_ROUND` → `174` + round note.
+
+**Field-verification checklist for the next run:** expect
+`recv aborted (WSA 10053) ... - retrying once` preceded by the
+`BNet: autopsy recvErr=10053 h=0x... peer=... soerr=... sel=... peek=... send0=...`
+line, then `recv failed ... protocol dead`, then
+`auth-stage reconnect -> freeing dead socket, replaying handshake on a fresh
+connection` followed by a second `connection state -> 2` race. Send us the whole log:
+the autopsy line decides the suspect class; either the reconnect completes the login
+(workaround holds) or it dies again at the same byte (then the failure is per-process,
+not per-connection — AV/LSP becomes the prime suspect and the next lever is a
+retail-vs-D2VP socket API trace on the same box).
+
 ## R173: pcap forensics vs PvPGN 1.99.8 — the 10053 disconnect
 
 **Symptom.** D2VP reaches "SID 0x50 AUTH_INFO stage" against the D2GS/PvPGN stack

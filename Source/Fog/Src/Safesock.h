@@ -73,6 +73,13 @@ int __fastcall Safesock_PollReadReady(struct D2NetDataStrc * pNetData);
 // BNCS read thread to tell a local closesocket() apart from a spurious WSAECONNABORTED.
 BOOL __fastcall SAFESOCK_IsSocketOpen(struct D2NetDataStrc * pNetData);
 // VP-END [bn-recv-abort-retry R173]
+// VP-BEGIN [bn-recv-autopsy R174]: one-shot forensic probe of a handle whose blocking recv
+// just failed with WSAECONNABORTED while getpeername still accepted it. Logs peer/local
+// names, SO_ERROR, SO_TYPE, a zero-timeout select on read/except, a MSG_PEEK recv and a
+// zero-length send probe - together these tell whether the local TCP TCB is dead (send
+// probe fails too), only the receive path is poisoned, or select and recv disagree.
+int32_t __fastcall SAFESOCK_LogRecvAutopsy(struct D2NetDataStrc * pNetData, int nRecvError);
+// VP-END [bn-recv-autopsy R174]
 int32_t __fastcall GetPeerNameDoesReturn(struct D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen);
 uint32_t __fastcall GetSockNameDoesReturn(struct D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen);
 char * __stdcall NET_GetLocalIp();
