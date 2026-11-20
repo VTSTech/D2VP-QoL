@@ -242,7 +242,7 @@ $R2 -q -N -c "P /tmp/game114d.r2; s 0x57cf7b; afi~addr,min,max" $EXE 2>/dev/null
    `SetEvent(pGame, pUnit, 3, frame+1)` (STATREGEN self-reschedule) + the
    `hp<=0 → poison-owner lookup → kill` tail. Search every caller of
    `UnitQueueEvent`-type-3 helper and filter for `GetStatsByState(poison=2)`.
-2. Verify `0x57e990` (XP), `0x543a30` (quest death event), `0x5a6ff0` (death event),
+2. ~~Verify `0x57e990` (XP), `0x543a30` (quest death event), `0x5a6ff0` (death event)~~ DONE R170b/R171: `0x57e990`/`0x543a30` verified via KillMonster wrapper; `0x5a6ff0` = `MONSTER_OnDeathDispatch`;
    `0x5414d0` (GameRunUnitEvents) — the older doc lists them without evidence.
 3. Diff the fork's `MONSTERAI_ExecuteLifecycleTransition` halt (line `0x753` sites at
    `0x4c39cd`, `0x5535a0`, `0x5a7c59`, `0x5d0ffa`) to pin which is the fork's lifecycle

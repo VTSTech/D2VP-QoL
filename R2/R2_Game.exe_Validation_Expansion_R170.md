@@ -241,8 +241,9 @@ supplements it), `R2_Project_Setup_Guide.md`, `Battle.net_Authentication_Flow_An
 
 ## 5. Open items for the next R2 pass
 
-1. Name `0x5a6ff0` formally (follow the `.rdata 0x6e2260` AI-table registration to its caller
-   and confirm it is the fork's `MONSTERAI_ExecuteLifecycleTransition`).
+1. ~~Name `0x5a6ff0` formally~~ DONE (R171): it is `MONSTER_OnDeathDispatch` — per-mode AI
+   dispatch table `.rdata 0x6e2260` record [0] pFn1, matching the fork's `DropHandlerArray`
+   entry 0. The lifecycle-transition candidate moved to `0x5a7c20`. See Diagnostic Reference §3.
 2. Name `0x5a6df0` (state-damage walker) and `0x5a6eb0` (state expire/kill callback) — the
    latter matters for the H3 kill-credit decision.
 3. Verify the remaining cold/frozen docs' minor site addresses (`0x57cf65`→`0x57cf68`,

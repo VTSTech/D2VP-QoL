@@ -8,7 +8,8 @@ Comprehensive call flow documentation for common Diablo II gameplay scenarios, p
 ### 📁 R2/
 ```
 R2/
-├── R2_Game.exe_Validation_Expansion_R170.md   # capstone re-verification + monster timer dispatch (START HERE for binary facts)
+├── R2_Game.exe_Validation_Expansion_R170.md   # capstone re-verification + monster timer dispatch
+├── R2_Game.exe_Diagnostic_Function_Reference_R171.md  # symptom -> function diagnostic reference (START HERE when debugging)
 ├── R2_Game.exe_Analysis_Guide.md              # R2 usage guide
 ├── R2_Project_Setup_Guide.md                  # Setup instructions
 ├── ColdFrozen_DeathPath_r2_Verified_R170.md   # cold/frozen death path, binary-verified
@@ -32,6 +33,7 @@ R2/
 | Killing a Monster | `Killing_Monster_CallFlow.md` | High | High |
 | Cold/Frozen Monster Death (issue #39) | `ColdFrozen_DeathPath_r2_Verified_R170.md` | High | High |
 | Monster Timer Dispatch (regen/poison/AI) | `R2_Game.exe_Validation_Expansion_R170.md` | High | High |
+| Symptom-driven debugging (any field report) | `R2_Game.exe_Diagnostic_Function_Reference_R171.md` | High | — |
 
 > **R170b housekeeping:** the Boot/Entering/Loot/Chest/Shrine and TCP/IP + Battle.net
 > call-flow docs were **removed** — their address tables were placeholders or 1.10-1.13-era

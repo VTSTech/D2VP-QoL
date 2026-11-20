@@ -17,7 +17,7 @@ This reference document maps D2VP functions to their corresponding Game.exe 1.14
 
 | D2VP Function | Game.exe Address | Game.exe Function | Purpose Comparison |
 |---------------|------------------|------------------|-------------------|
-| `MONSTERAI_ExecuteLifecycleTransition` | 0x005a6ff0 | `sub_005A6FF0_MonDeathEvent` | AI lifecycle - D2VP calls this with Death skill, matches Game.exe death event processing |
+| `MONSTERAI_ExecuteLifecycleTransition` | 0x005a7c20 (candidate) | `sub_005A7C20_DeathDropDispatch` | AI lifecycle - R171: `0x5a6ff0` resolved as `MONSTER_OnDeathDispatch` (per-mode table [0] pFn1, `.rdata 0x6e2260`); the lifecycle-transition candidate is now `0x5a7c20` (calls `GetDropHandler 0x5a78a0` twice, reads uninterruptable @ `0x5a7c47`/`0x5a7c78`, calls `SetUninterruptableState` @ `0x5a7c88`). See Diagnostic Reference §3 |
 
 ## Timer Event Functions
 

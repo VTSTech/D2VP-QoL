@@ -47,7 +47,7 @@ The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.1
 | 0x0057ccb0 | sub_0057CCB0_UnitKilled | Core unit kill function |
 | 0x0057e990 | XP_OnMonsterKill | XP award on monster kill |
 | 0x00543a30 | QUESTS_MonsterDeathEvent | Quest monster death event |
-| 0x005a6ff0 | sub_005A6FF0_MonDeathEvent | Monster death event handler |
+| 0x005a6ff0 | MONSTER_OnDeathDispatch (R171 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
 
 ### Timer Event Management Functions
 | Address | Function Name | Purpose |
@@ -75,7 +75,7 @@ The D2VP R162, R163, and R164 fixes have been validated against the Game.exe 1.1
 | 0x0057ccb0 | sub_0057CCB0_UnitKilled | Core unit kill function |
 | 0x0057e990 | XP_OnMonsterKill | XP award on monster kill |
 | 0x00543a30 | QUESTS_MonsterDeathEvent | Quest monster death event |
-| 0x005a6ff0 | sub_005A6FF0_MonDeathEvent | Monster death event handler |
+| 0x005a6ff0 | MONSTER_OnDeathDispatch (R171 resolved) | Per-mode AI table [0] pFn1 at `.rdata 0x6e2260`; death event dispatch |
 
 ### Timer Event Management Functions
 | Address | Function Name | Purpose |
@@ -137,7 +137,7 @@ if (bIsColdOrFrozen) {
 
 1. **No State Checks in Direct Path**: The `SERVER_KillMonster` function does NOT check for `STATE_freeze` or `STATE_cold` before processing death
 2. **Direct Death Handling**: Goes straight to death mode setting and AI lifecycle transition
-3. **Event Processing**: Calls `MONSTERAI_ExecuteLifecycleTransition` and quest events
+3. **Event Processing**: Calls `MONSTER_OnDeathDispatch 0x5a6ff0 / lifecycle-transition candidate 0x5a7c20` and quest events
 4. **Dual Pathway Solution**: 
    - R162 handles direct damage through timer events
    - R163/R164 handles poison damage through `RegenAndPsnDecreaser`
