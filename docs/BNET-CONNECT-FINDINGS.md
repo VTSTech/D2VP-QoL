@@ -1,5 +1,51 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R173: pcap forensics vs PvPGN 1.99.8 — the 10053 disconnect
+
+**Symptom.** D2VP reaches "SID 0x50 AUTH_INFO stage" against the D2GS/PvPGN stack
+(VTSTech/D2VP-D2GS, bnetd on 6112), receives `FF 25 08 00 ...`, echoes it, then
+`recv failed (-1) - WSA err 10053 -> protocol dead`, wait 0x50 aborts, teardown frees the
+socket, the game exits the mode loop. Retail Game.exe reaches the login screen on the same
+server, same machine, same path.
+
+**What the 2026-11-20 packet capture proved (client 192.168.0.12 → server 192.168.0.14:6112):**
+
+- `FF 25` is PvPGN's `SERVER_ECHOREQ` (`bnet_protocol.h:3444`), payload = server uptime
+  ticks; it is sent by `_client_auth_info` **only after** the client's 0x50 passed the size,
+  langstr, countryname and client-tag whitelist checks — so PvPGN fully accepted D2VP's
+  AUTH_INFO (D2VP's 0x50 is byte-identical to retail's: `IX86`/`D2XP`, versionid 14,
+  "CAN"/"Canada").
+- The server then queued and flushed **AUTHREQ_109 (103 B) to D2VP exactly like retail**.
+- Retail's next action was the 0x38 AUTH_CHECK 120 ms later. D2VP instead **sent RST itself**
+  0.75 ms after the AUTHREQ went out, without ever reading it — the RST is the abortive
+  close from `Safesock::Free` in the auth-stage teardown path (`BnSend.cpp`, "auth-stage
+  teardown freeing socket"), closing a socket with the reply unread. The `recv` 10053 came
+  **first** and is the root cause: a WSAECONNABORTED on a connection the capture shows was
+  still healthy.
+- Static audit of every close path (`Safesock::Free` callers: BNSEND_Disconnect, race
+  except-set cleanup, post-race non-winner cleanup, auth-stage teardown; D2QS/BnDownload/
+  QServer own their sockets) found **no closer active in that window** — the 10053 is a
+  genuine local abort (suspects: AV/LSP touching the modded client's sockets, or an
+  unidentified in-process close). pvpgn-side restarts were also ruled in/out via docker
+  inspect; bnetd had restarted earlier but the pcap shows no server-side FIN/RST before the
+  client RST.
+
+**R173 changes (all VP-marked, hand-checked; MSYS2 llvm-mingw build is the compile gate):**
+
+- `Safesock.cpp`/`.h` — new `SAFESOCK_IsSocketOpen()`: CS-free `getpeername` handle probe.
+- `BnSend.cpp` `BnetReadFunction` — one-shot recovery: a `recv` failure with WSA
+  10053 while the handle is still open waits 5 ms, re-polls and lets the next recv pick the
+  buffered reply up instead of declaring the protocol dead; the retry re-arms after every
+  healthy recv, and any second failure or closed handle still tears down as before.
+- `BnSend.cpp` — teardown telemetry marks at all four `Safesock::Free` owner sites
+  (BNSEND_Disconnect, race except-set, post-race non-winner, auth-stage wait-failure), so
+  the next d2boot.log names whoever closes the socket.
+
+**Field-verification checklist for the next run:** expect either "recv aborted (WSA 10053)
+but socket still open - retrying once" followed by the normal 0x50 reply handling (bug
+worked around, root cause still worth chasing), or a teardown mark naming the closer.
+
+
 Round R169 (rev 182) fixed the Battle.net title-screen click crash plus three riders
 on the same connect path. This file records the connect-path findings that were
 **triaged but deliberately NOT fixed in R169** — each needs its own round and its own

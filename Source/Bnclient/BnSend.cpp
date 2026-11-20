@@ -1452,6 +1452,10 @@ BOOL __stdcall BNSEND_Disconnect() {
 
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ pOldNetData = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, (LONG)pNetData);
       if (pOldNetData == pNetData) {
+        // VP-BEGIN [bn-teardown-mark R173]: pcap forensics showed the wire RST came from our
+        // own closesocket with the server reply still unread; mark every teardown owner.
+        D2BOOT_MarkFmt("BNet: BNSEND_Disconnect freeing socket (thread %u)", (unsigned)GetCurrentThreadId()); // [d2boot]
+        // VP-END [bn-teardown-mark R173]
         Fog::Src::Safesock::Free(pNetData);
       }
     }
@@ -1596,6 +1600,12 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ nPollResult = InterlockedCompareExchange(&Target_00881bfc, 0, 0);
     }
 
+    // VP-BEGIN [bn-recv-abort-retry R173]: one-shot spurious WSAECONNABORTED recovery flag.
+    // Reset at every read-thread (re)start; the thread is single-instance via the
+    // Destination_00881bf4 refcount above, so a function static is safe.
+    static int s_nRecvAbortRetried = 0;
+    s_nRecvAbortRetried = 0;
+    // VP-END [bn-recv-abort-retry R173]
     DWORD dwLastKeepaliveTick = GetTickCount();
     // VP-BEGIN [bn-read-offset R169]: nBufPos is a BYTE OFFSET into chRecvBuf, not a pointer.
     // NET_SID_CLIENT_IncomingPacketHandlerLoop returns a pointer one past the compacted
@@ -1635,10 +1645,28 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
       if (nPollResult) {
         nBytesRead = Fog::Src::Safesock::WSASocket2_Read(pSafesock, chRecvBuf + nBufPos, 0x2000 - nBufPos);
         if (nBytesRead <= 0) {
-          D2BOOT_MarkFmt("BNet: recv failed (%d) - WSA err %u -> protocol dead", (int)nBytesRead, (unsigned)WSAGetLastError()); // [d2boot]
+          // VP-BEGIN [bn-recv-abort-retry R173]: pcap-vs-code forensics (2026-11-20 capture)
+          // proved the server DID answer SID_AUTH_INFO with AUTHREQ_109 and this client's own
+          // stack reported WSAECONNABORTED (10053) on a connection that was still healthy -
+          // the wire RST only appeared after our own teardown closed the socket with the reply
+          // unread. A 10053 with the handle still open is therefore treated as spurious once:
+          // wait briefly and re-poll, letting the next recv pick the buffered reply up. Any
+          // second failure, or an already-closed handle, still kills the protocol as before.
+          int nRecvFailedErr = WSAGetLastError();
+          BOOL bSocketStillOpen = Fog::Src::Safesock::SAFESOCK_IsSocketOpen(pSafesock);
+          if (nRecvFailedErr == 10053 && bSocketStillOpen && !s_nRecvAbortRetried) {
+            s_nRecvAbortRetried = 1;
+            D2BOOT_MarkFmt("BNet: recv aborted (WSA 10053) but socket still open - retrying once"); // [d2boot]
+            Sleep(5);
+            continue;
+          }
+          s_nRecvAbortRetried = 0;
+          D2BOOT_MarkFmt("BNet: recv failed (%d) - WSA err %u -> protocol dead", (int)nBytesRead, (unsigned)nRecvFailedErr); // [d2boot]
           _net_sid::SID_SetProtocolDeadFlag();
           break;
+          // VP-END [bn-recv-abort-retry R173]
         }
+        s_nRecvAbortRetried = 0; // VP-BEGIN [bn-recv-abort-retry R173]: re-arm after a healthy recv // VP-END
         D2BOOT_MarkFmt("BNet: recv %d bytes (buffered %d)", (int)nBytesRead, (int)nBufPos + (int)nBytesRead); // [d2boot]
         if (nBufPos == 0) {
           const char chHexDigits[] = "0123456789ABCDEF";
@@ -1877,6 +1905,9 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
               /* fd_set * param_2 for __WSAFDIsSet */ /* SOCKET param_1 for __WSAFDIsSet */ if (*(int*)pCandidateIter) {
                 nFDResult = __WSAFDIsSet(*(SOCKET*)(*(int*)pCandidateIter + 8), &fdExceptSet);
                 if (nFDResult) {
+                  // VP-BEGIN [bn-teardown-mark R173]: race except-set cleanup
+                  D2BOOT_Mark("BNet: race freeing candidate (select except set)"); // [d2boot]
+                  // VP-END [bn-teardown-mark R173]
                   Fog::Src::Safesock::Free(*(D2NetDataStrc**)pCandidateIter);
                   memset(pCandidateIter, 0, 4 * sizeof(pCandidateIter[0]));
                 }
@@ -1940,6 +1971,9 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       do {
         pCandidate = *(D2NetDataStrc**)pCandidateIter;
         if (pCandidate && pCandidate != pNetData) {
+          // VP-BEGIN [bn-teardown-mark R173]: post-race non-winner cleanup
+          D2BOOT_Mark("BNet: race freeing non-winner candidate"); // [d2boot]
+          // VP-END [bn-teardown-mark R173]
           Fog::Src::Safesock::Free(pCandidate);
           memset(pCandidateIter, 0, 4 * sizeof(pCandidateIter[0]));
         }
@@ -1995,6 +2029,10 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       _net_sid::SID_GetState(&__frame0.nSIDState);
       BVar1 = _net_sid::SID_GetReadyFlag();
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (BVar1 || __frame0.nSIDState || (lInterlockedResult = (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, 0) , !lInterlockedResult)) {
+        // VP-BEGIN [bn-teardown-mark R173]: this is the teardown that produced the wire RST in
+        // the 2026-11-20 capture (closesocket with AUTHREQ_109 unread) after "wait 0x50 aborted".
+        D2BOOT_Mark("BNet: auth-stage teardown freeing socket (wait failed)"); // [d2boot]
+        // VP-END [bn-teardown-mark R173]
         Fog::Src::Safesock::Free(pNetData);
         /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, (LONG)pNetData);
         return;

@@ -315,6 +315,25 @@ int __fastcall Safesock_PollReadReady(D2NetDataStrc * pNetData) {
     return 0;
 }
 
+// VP-BEGIN [bn-recv-abort-retry R173]: deliberately takes no critical section and touches no
+// state: Free() can legally run concurrently (it only holds pSync while flipping bBlocked),
+// so the only thing this answers is "would recv() on hSocket still target an open handle?".
+// getpeername succeeds on any valid, connected handle (even one with a pending abort) and
+// fails with WSAENOTSOCK once the handle has been closed by closesocket().
+BOOL __fastcall SAFESOCK_IsSocketOpen(D2NetDataStrc * pNetData) {
+    if (!pNetData || pNetData->bBlocked) {
+      return 0;
+    }
+    SOCKET hSocket = pNetData->hSocket;
+    if (hSocket == -1) {
+      return 0;
+    }
+    sockaddr_in saPeer;
+    int nNameLen = (int)sizeof(saPeer);
+    return getpeername(hSocket, (sockaddr*)&saPeer, &nNameLen) != -1;
+}
+// VP-END [bn-recv-abort-retry R173]
+
 int32_t __fastcall GetPeerNameDoesReturn(D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen) {
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&pNetData->pSync);
     int nResult = getpeername(pNetData->hSocket, pName, pNameLen);
