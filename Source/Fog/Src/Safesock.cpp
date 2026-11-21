@@ -62,31 +62,46 @@ int __fastcall closeSocket(SOCKET hSocket) {
 
 // VP-BEGIN [bn-wsaref R179]: per-process WSAStartup/WSACleanup refcount census. The
 // documented Winsock failure mode for a count that hits zero while sockets are still
-// open is EXACTLY the R176+ autopsy shape: data-plane ops (recv/send) start failing on
-// sockets created before the cleanup while ws2_32-internal probes (SO_ERROR, FIONREAD,
-// select) keep working, and getsockopt(SO_TYPE) - a provider-dispatched option - can
-// produce WSAENOPROTOOPT where the R175 run saw type=1. Every StartUp/cleanup site in
-// the process funnels through this counter (Create/StartUp/net helpers here, the
-// ErrorManager fatal paths via the Safesock::WSACleanup wrapper), so d2boot.log shows
-// whether the count ever moves the wrong way during the auth window.
+// open matches part of the autopsy shape (data-plane ops failing while ws2_32-internal
+// probes keep working). The R179 field run cleared this class for the auth window - the
+// count only ever climbed (0 -> 1 -> 2 -> 3 across both attempts) - and the type=-1/
+// 10042 that motivated the census turned out to be THIS FILE'S OWN probe bug (0x1004 is
+// SO_RCVLOWAT, not SO_TYPE; fixed R180). The census stays as a cheap standing guard:
+// every StartUp/cleanup site funnels through this counter (Create/StartUp here, the
+// ErrorManager fatal paths via the Safesock::WSACleanup wrapper).
 static int s_nWsaRefCount = 0;
-static void sWsaRefDelta(int nDelta, const char* szSite) {
+static void sWsaRefDelta(int nDelta, const char* szSite, void* pvRet) {
     s_nWsaRefCount += nDelta;
-    D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) [tid %lu]", s_nWsaRefCount, szSite, (unsigned long)GetCurrentThreadId()); // [d2boot]
+    // VP-BEGIN [bn-wsaref R180]: the R179 field log opened with "wsaref -> -1 (cleanup)"
+    // BEFORE any of our startups. Working theory: NET_GetLocalIp calls ::WSAStartup
+    // DIRECTLY (uncounted - it predates the wrapper) but its tail calls THIS file's
+    // WSACleanup wrapper (counted) - a -1 counter artifact, harmless to the real Winsock
+    // refcount. ret= is the cleanup caller's return address (captured at level 0 IN the
+    // wrapper, where it is the caller's address): symbolize against d2exe.map (the
+    // standing convention) to confirm it names NET_GetLocalIp. wvsprintfA has no %p, so
+    // the address prints as %08x (i686).
+    if (nDelta < 0) {
+      D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) ret=%08x [tid %lu]", s_nWsaRefCount, szSite,
+                     (unsigned)(uintptr_t)pvRet, (unsigned long)GetCurrentThreadId()); // [d2boot]
+    } else {
+      D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) [tid %lu]", s_nWsaRefCount, szSite,
+                     (unsigned long)GetCurrentThreadId()); // [d2boot]
+    }
+    // VP-END [bn-wsaref R180]
 }
 
 BOOL __stdcall StartUp() {
     WSADATA wsaData;
     int nResult = WSAStartup(0x101, &wsaData);
     if (!nResult) {
-      sWsaRefDelta(1, "startup");
+      sWsaRefDelta(1, "startup", (void*)0);
     }
     return (uint32_t)!nResult;
 }
 
 // JMP thunk
 int __stdcall WSACleanup() {
-    sWsaRefDelta(-1, "cleanup");
+    sWsaRefDelta(-1, "cleanup", __builtin_return_address(0));
     return ::WSACleanup();
 }
 
@@ -163,7 +178,7 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
     // VP-BEGIN [bn-wsaref R179]: Create is the hottest startup site (every race candidate
     // + every auth/reconnect attempt) - counted so the census covers the auth window.
     if (!nResult) {
-      sWsaRefDelta(1, "create");
+      sWsaRefDelta(1, "create", (void*)0);
     }
     // VP-END [bn-wsaref R179]
     // VP-BEGIN [bn-lsp-catalog R177]
@@ -454,7 +469,7 @@ static void sLogCtlProbeBattery(const char* szTag, SOCKET hSock) {
     int nOptLen = 4;
     if (getsockopt(hSock, 0xffff, 0x1007, (char*)&nSoError, &nOptLen) == -1) nSoErrorGet = (int)WSAGetLastError();
     nOptLen = 4;
-    if (getsockopt(hSock, 0xffff, 0x1004, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError();
+    if (getsockopt(hSock, 0xffff, 0x1008, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError();
     DWORD dwHandleFlags = 0;
     BOOL bHandleOk = GetHandleInformation((HANDLE)hSock, &dwHandleFlags);
     int nHandleErr = bHandleOk ? 0 : (int)GetLastError();
@@ -488,20 +503,102 @@ static int s_bCtlReplayPeerValid = 0;
 
 // VP-BEGIN [bn-replay-race R179]: the R178 conversation replay as a reusable runner so the
 // two new probe shapes can drive it. The R178 field result made the conversation itself
-// innocent (both replays completed where the auth socket died), so what is left to split
-// is the socket SHAPE and the handle IDENTITY:
+// innocent (both replays completed where the auth socket died), and the R179 field run
+// exonerated the race shape, the blocking shape and the handle identity in ONE log
+// (race-replay survived; the real socket died BLOCKING; the reuse-replay completed the
+// conversation ON the freed auth handle value 0xb9c itself). What is still different
+// between every dying auth socket and every surviving probe:
 //   nMode 0 = ctl-replay   : plain blocking socket (the R178 control shape; baseline)
 //   nMode 1 = race-replay  : the race's exact shape - FIONBIO(1) -> connect ->
 //                            select(writable) -> FIONBIO(0), then the conversation
 //   nMode 2 = reuse-replay : plain blocking socket, run AFTER Safesock::Free so the fresh
 //                            socket() lands on the just-freed auth handle value
+//   nMode 3 = opt-replay    : plain blocking socket + Safesock::Create's exact three
+//                             setsockopts (TCP_NODELAY / SO_KEEPALIVE / SO_SNDTIMEO)
+//   nMode 4 = twin-replay   : plain blocking socket + a DEDICATED reader thread blocked
+//                             in recv while the creating thread sends - the real flow's
+//                             two-thread shape
+// VP-BEGIN [bn-replay-final R181]: the R180 field run survived ALL FOUR probes on both
+// attempts (opt-replay and twin-replay included) while the real socket died again - the
+// last two behavioral deltas between BnetReadFunction and every probe are now probed:
+//   nMode 5 = bigrecv-replay: the conversation with BOTH recvs into 0x2000-byte STACK
+//                             buffers - BnetReadFunction's exact receive shape (recv
+//                             0x2000 at ebp-0x2008); every surviving probe so far recv'd
+//                             into 64/256-byte buffers, so a stream filter that
+//                             mishandles LARGE receive requests is the remaining class
+//   nMode 6 = dwell-replay  : the conversation with a 30 ms Sleep between the echo send
+//                             and the AUTHREQ read - the real path spends ~15 ms in
+//                             d2boot logging there; probes read within ~1 ms
 // Step coding identical to R178 (step 0 = full conversation survived): 1/2 = send 0x01 /
 // send 0x50 (-2 = no stashed frame), 3/4 = ping wait/recv, 5 = echo send, 6/7 = AUTHREQ
-// wait/recv, 8 = connect failed. Probe batteries (<tag>-live before the conversation,
-// <tag>-post after the verdict) keep the R178 A/B line shape for every probe.
+// wait/recv, 8 = connect failed, 9/10 = twin-replay reader join/event failure. Probe
+// batteries (<tag>-live before the conversation, <tag>-post after the verdict) keep the
+// R178 A/B line shape for every probe.
 // Returns the verdict step (0 = replayed the whole conversation, -1 = no socket).
+// VP-BEGIN [bn-replay-split R180]
+static const char* sReplayTag(int nMode) {
+    switch (nMode) {
+      case 1: return "race-replay";
+      case 2: return "reuse-replay";
+      case 3: return "opt-replay";
+      case 4: return "twin-replay";
+      case 5: return "bigrecv-replay";
+      case 6: return "dwell-replay";
+      default: return "ctl-replay";
+    }
+}
+
+// twin-replay's single-flight reader context (probes run sequentially on one thread)
+static struct {
+    SOCKET hSock;
+    HANDLE hDone;
+    int nStep;
+    int nStepErr;
+    int nPingLen;
+    char chPing[8];
+    int nAuthLen;
+    char chAuth[8];
+} s_TwinCtx;
+
+static DWORD __stdcall sTwinReplayReader(LPVOID pvParam) {
+    // The BnetReadFunction half of the real flow: blocked in recv when the auth side
+    // sends, wakes on the server ping, echoes it inline, blocks again for the AUTHREQ.
+    char chPingReq[64];
+    memset(chPingReq, 0, sizeof(chPingReq));
+    int nPingLen = recv(s_TwinCtx.hSock, chPingReq, (int)sizeof(chPingReq), 0);
+    if (nPingLen < 0) {
+      s_TwinCtx.nStep = 4;
+      s_TwinCtx.nStepErr = (int)WSAGetLastError();
+    } else {
+      s_TwinCtx.nPingLen = nPingLen;
+      for (int i = 0; i < 8 && i < nPingLen; i++) {
+        s_TwinCtx.chPing[i] = chPingReq[i];
+      }
+      int nEchoLen = nPingLen < 8 ? nPingLen : 8;
+      if (send(s_TwinCtx.hSock, chPingReq, nEchoLen, 0) < 0) {
+        s_TwinCtx.nStep = 5;
+        s_TwinCtx.nStepErr = (int)WSAGetLastError();
+      } else {
+        char chAuthReq[256];
+        memset(chAuthReq, 0, sizeof(chAuthReq));
+        int nAuthLen = recv(s_TwinCtx.hSock, chAuthReq, (int)sizeof(chAuthReq), 0);
+        if (nAuthLen < 0) {
+          s_TwinCtx.nStep = 7;
+          s_TwinCtx.nStepErr = (int)WSAGetLastError();
+        } else {
+          s_TwinCtx.nAuthLen = nAuthLen;
+          for (int i = 0; i < 8 && i < nAuthLen; i++) {
+            s_TwinCtx.chAuth[i] = chAuthReq[i];
+          }
+        }
+      }
+    }
+    SetEvent(s_TwinCtx.hDone);
+    return 0;
+}
+// VP-END [bn-replay-split R180]
 static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
-    const char* szTag = nMode == 1 ? "race-replay" : (nMode == 2 ? "reuse-replay" : "ctl-replay");
+    const char* szTag = sReplayTag(nMode);
     SOCKET hCtl = socket(2, 1, 0);
     if (hCtl == -1) {
       D2BOOT_MarkFmt("BNet: %s verdict step=-1 err=%d (socket create failed)", szTag, (int)WSAGetLastError()); // [d2boot]
@@ -552,13 +649,132 @@ static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
       }
       u_long nBlockBack = 0;
       ioctlsocket(hCtl, 0x8004667E, &nBlockBack); // FIONBIO(0) - the post-race toggle
+    } else if (nMode == 3) {
+      // VP-BEGIN [bn-replay-split R180]: Safesock::Create's exact option set, applied
+      // before connect exactly like Create does - the only socket-options delta left.
+      int nOne = 1;
+      int nSndTimeo = 0xB48; // 2888 ms (Create's value, retail parity)
+      setsockopt(hCtl, 6, 1, (char*)&nOne, 4);               // IPPROTO_TCP / TCP_NODELAY
+      setsockopt(hCtl, 0xffff, 8, (char*)&nOne, 4);          // SOL_SOCKET / SO_KEEPALIVE
+      setsockopt(hCtl, 0xffff, 0x1005, (char*)&nSndTimeo, 4); // SOL_SOCKET / SO_SNDTIMEO
+      // VP-END [bn-replay-split R180]
+      if (connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer)) == -1) {
+        nStep = 8;
+        nStepErr = (int)WSAGetLastError();
+      }
     } else if (connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer)) == -1) {
       nStep = 8;
       nStepErr = (int)WSAGetLastError();
     }
 
+    // VP-BEGIN [bn-replay-split R180]: mode 4 - the real flow's threading shape. A
+    // dedicated reader thread blocks in recv (sTwinReplayReader, exactly BnetReadFunction's
+    // arm) while THIS thread sends 0x01/0x50, mimicking Create-spawned reader vs auth
+    // thread. If modes 0-3 survive and THIS dies, the concurrent blocked recv is the
+    // trigger; step 9 (join timeout) means the reader was never woken at all.
+    if (!nStep && nMode == 4) {
+      char szTwinLive[24];
+      wsprintfA(szTwinLive, "%s-live", szTag);
+      sLogCtlProbeBattery(szTwinLive, hCtl);
+      memset(&s_TwinCtx, 0, sizeof(s_TwinCtx));
+      s_TwinCtx.hSock = hCtl;
+      s_TwinCtx.hDone = CreateEventA((LPSECURITY_ATTRIBUTES)0, 0, 0, (LPCSTR)0);
+      if (!s_TwinCtx.hDone) {
+        D2BOOT_MarkFmt("BNet: %s verdict step=10 err=%d (CreateEvent failed)", szTag, (int)GetLastError()); // [d2boot]
+        closesocket(hCtl);
+        return 10;
+      }
+      HANDLE hReader = CreateThread((LPSECURITY_ATTRIBUTES)0, 0, sTwinReplayReader, (LPVOID)0, 0, (LPDWORD)0);
+      if (!hReader) {
+        D2BOOT_MarkFmt("BNet: %s verdict step=10 err=%d (CreateThread failed)", szTag, (int)GetLastError()); // [d2boot]
+        CloseHandle(s_TwinCtx.hDone);
+        closesocket(hCtl);
+        return 10;
+      }
+      Sleep(10); // let the reader arm (block in recv) before the auth side sends
+      char chTwinProto = 0x01;
+      if (send(hCtl, &chTwinProto, 1, 0) < 0) {
+        nStep = 1;
+        nStepErr = (int)WSAGetLastError();
+      }
+      if (!nStep) {
+        if (g_nCtlReplayAuthInfoLen > 0) {
+          if (send(hCtl, g_chCtlReplayAuthInfo, g_nCtlReplayAuthInfoLen, 0) < 0) {
+            nStep = 2;
+            nStepErr = (int)WSAGetLastError();
+          }
+        } else {
+          nStep = 2;
+          nStepErr = -2; // no stashed 0x50
+        }
+      }
+      if (!nStep) {
+        DWORD dwWait = WaitForSingleObject(s_TwinCtx.hDone, 6000);
+        if (dwWait != WAIT_OBJECT_0) {
+          nStep = 9; // reader never finished (stuck blocked in recv / event failure)
+          nStepErr = dwWait == WAIT_TIMEOUT ? 10060 : (int)GetLastError();
+        } else {
+          nStep = s_TwinCtx.nStep;
+          nStepErr = s_TwinCtx.nStepErr;
+          nPingLen = s_TwinCtx.nPingLen;
+          nAuthLen = s_TwinCtx.nAuthLen;
+          int i;
+          for (i = 0; i < 8; i++) {
+            chPingReq[i] = s_TwinCtx.chPing[i];
+          }
+          for (i = 0; i < 8; i++) {
+            chAuthReq[i] = s_TwinCtx.chAuth[i];
+          }
+        }
+      }
+      // if the sends failed the reader may still be blocked in recv; the closesocket
+      // below unblocks it (its recv fails, it records its own step and exits)
+      WaitForSingleObject(hReader, 2000);
+      CloseHandle(hReader);
+      CloseHandle(s_TwinCtx.hDone);
+      D2BOOT_MarkFmt(
+          "BNet: %s verdict step=%d err=%d ping=%d [%02x %02x %02x %02x] authreq=%d [%02x %02x %02x %02x]",
+          szTag,
+          nStep, nStepErr, nPingLen,
+          (unsigned)(unsigned char)chPingReq[0], (unsigned)(unsigned char)chPingReq[1],
+          (unsigned)(unsigned char)chPingReq[2], (unsigned)(unsigned char)chPingReq[3],
+          nAuthLen,
+          (unsigned)(unsigned char)chAuthReq[0], (unsigned)(unsigned char)chAuthReq[1],
+          (unsigned)(unsigned char)chAuthReq[2], (unsigned)(unsigned char)chAuthReq[3]); // [d2boot]
+      char szTwinPost[24];
+      wsprintfA(szTwinPost, "%s-post", szTag);
+      sLogCtlProbeBattery(szTwinPost, hCtl);
+      closesocket(hCtl);
+      return nStep;
+    }
+    // VP-END [bn-replay-split R180]
+
     if (!nStep) {
-      sLogCtlProbeBattery(nMode == 1 ? "race-live" : (nMode == 2 ? "reuse-live" : "ctl-live"), hCtl);
+      char szBatteryLive[24];
+      wsprintfA(szBatteryLive, "%s-live", szTag);
+      sLogCtlProbeBattery(szBatteryLive, hCtl);
+      // VP-BEGIN [bn-replay-final R181]: receive-buffer plumbing. Default: the small
+      // buffers every surviving R178-R180 probe used. Mode 5 (bigrecv) swaps in
+      // BnetReadFunction's exact shape - 0x2000-byte stack buffers for both recvs, the
+      // last untested behavioral delta (a stream filter that mishandles LARGE receive
+      // requests would abort exactly like the real flow and unlike every small-buffer
+      // probe). Mode 6 (dwell) inserts the real path's ~15 ms logging gap as a 30 ms
+      // Sleep between echo and AUTHREQ read.
+      char* pRecv1Buf = chPingReq;
+      int nRecv1Size = (int)sizeof(chPingReq);
+      char* pRecv2Buf = chAuthReq;
+      int nRecv2Size = (int)sizeof(chAuthReq);
+      char chRecv1Big[0x2000];
+      char chRecv2Big[0x2000];
+      if (nMode == 5) {
+        memset(chRecv1Big, 0, sizeof(chRecv1Big));
+        memset(chRecv2Big, 0, sizeof(chRecv2Big));
+        pRecv1Buf = chRecv1Big;
+        nRecv1Size = (int)sizeof(chRecv1Big);
+        pRecv2Buf = chRecv2Big;
+        nRecv2Size = (int)sizeof(chRecv2Big);
+      }
+      // VP-END [bn-replay-final R181]
       char chProtoByte = 0x01;
       int nSend1 = send(hCtl, &chProtoByte, 1, 0);
       if (nSend1 < 0) {
@@ -589,11 +805,14 @@ static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
           nStep = 3;
           nStepErr = nSelPing == 0 ? 10060 : (int)WSAGetLastError();
         } else {
-          nPingLen = recv(hCtl, chPingReq, (int)sizeof(chPingReq), 0);
+          nPingLen = recv(hCtl, pRecv1Buf, nRecv1Size, 0);
           if (nPingLen < 0) {
             nStep = 4;
             nStepErr = (int)WSAGetLastError();
           } else {
+            for (int i = 0; i < 8 && i < nPingLen; i++) {
+              chPingReq[i] = pRecv1Buf[i];
+            }
             int nEchoLen = nPingLen < 8 ? nPingLen : 8;
             if (send(hCtl, chPingReq, nEchoLen, 0) < 0) {
               nStep = 5;
@@ -604,6 +823,14 @@ static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
       }
 
       if (!nStep) {
+        // VP-BEGIN [bn-replay-final R181]: dwell - the real read loop spends ~15 ms in
+        // d2boot logging between the echo send and the AUTHREQ recv (the pcap RST fired
+        // ~0.75 ms after AUTHREQ arrival, inside exactly that gap); probes so far read
+        // within ~1 ms. Mode 6 replicates the gap with 30 ms to spare.
+        if (nMode == 6) {
+          Sleep(30);
+        }
+        // VP-END [bn-replay-final R181]
         fd_set ctlReadSet2;
         ctlReadSet2.fd_count = 1;
         ctlReadSet2.fd_array[0] = hCtl;
@@ -615,10 +842,14 @@ static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
           nStep = 6;
           nStepErr = nSelAuth == 0 ? 10060 : (int)WSAGetLastError();
         } else {
-          nAuthLen = recv(hCtl, chAuthReq, (int)sizeof(chAuthReq), 0);
+          nAuthLen = recv(hCtl, pRecv2Buf, nRecv2Size, 0);
           if (nAuthLen < 0) {
             nStep = 7;
             nStepErr = (int)WSAGetLastError();
+          } else {
+            for (int i = 0; i < 8 && i < nAuthLen; i++) {
+              chAuthReq[i] = pRecv2Buf[i];
+            }
           }
         }
       }
@@ -632,7 +863,9 @@ static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
           nAuthLen,
           (unsigned)(unsigned char)chAuthReq[0], (unsigned)(unsigned char)chAuthReq[1],
           (unsigned)(unsigned char)chAuthReq[2], (unsigned)(unsigned char)chAuthReq[3]); // [d2boot]
-      sLogCtlProbeBattery(nMode == 1 ? "race-post" : (nMode == 2 ? "reuse-post" : "ctl-post"), hCtl);
+      char szBatteryPost[24];
+      wsprintfA(szBatteryPost, "%s-post", szTag);
+      sLogCtlProbeBattery(szBatteryPost, hCtl);
     } else {
       D2BOOT_MarkFmt("BNet: %s verdict step=%d err=%d (connect failed)", szTag, nStep, nStepErr); // [d2boot]
     }
@@ -667,7 +900,7 @@ int32_t __fastcall SAFESOCK_RunReuseReplayProbe() {
 // safesock state (Free() may run concurrently), exactly like SAFESOCK_IsSocketOpen above:
 //   getpeername / getsockname - does TCP still know both endpoints?
 //   SO_ERROR (0x1007)         - did the stack queue an error of its own on the TCB?
-//   SO_TYPE (0x1004)          - is the handle still a stream socket (reuse detector)?
+//   SO_TYPE (0x1008)          - is the handle still a stream socket (reuse detector)?
 //   GetHandleInformation      - [R177] kernel-side handle validity: an in-process
 //                               closesocket frees the kernel handle -> ERROR_INVALID_HANDLE,
 //                               which cleanly splits "our process closed it" from
@@ -724,7 +957,7 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
     int nOptLen = 4;
     if (getsockopt(hSocket, 0xffff, 0x1007, (char*)&nSoError, &nOptLen) == -1) nSoErrorGet = (int)WSAGetLastError(); // SOL_SOCKET / SO_ERROR
     nOptLen = 4;
-    if (getsockopt(hSocket, 0xffff, 0x1004, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError(); // SOL_SOCKET / SO_TYPE
+    if (getsockopt(hSocket, 0xffff, 0x1008, (char*)&nSoType, &nOptLen) == -1) nSoTypeGet = (int)WSAGetLastError(); // SOL_SOCKET / SO_TYPE (0x1008, NOT 0x1004 - 0x1004 is SO_RCVLOWAT, unsupported on Windows, fails 10042 on every healthy socket; R175 knew, R176 regressed it, the type=-1/10042 "anomaly" of R176-R179 was this probe bug)
     // VP-BEGIN [bn-handle-probe R177]: split the layers - kernel handle vs AFD object vs
     // option layer vs readiness layer vs recv/send paths.
     DWORD dwHandleFlags = 0;
@@ -791,6 +1024,21 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
       // the remaining discriminator is handle identity (probe C in the reconnect path).
       sRunAuthConversationReplay(saPeer, 1);
       // VP-END [bn-replay-race R179]
+      // VP-BEGIN [bn-replay-split R180]: probes D and E - the R179 field run killed the
+      // shape and handle theories (blocking real socket died; reuse-replay completed ON
+      // the freed handle), leaving Create's setsockopts and the two-thread reader as the
+      // only structural deltas between dying real sockets and surviving probes.
+      sRunAuthConversationReplay(saPeer, 3); // probe D: Create's exact three setsockopts
+      sRunAuthConversationReplay(saPeer, 4); // probe E: dedicated reader thread + sending main
+      // VP-END [bn-replay-split R180]
+      // VP-BEGIN [bn-replay-final R181]: probes F and G - the R180 field run survived ALL
+      // four earlier probes on both attempts while the real socket died again, leaving
+      // exactly two behavioral deltas between BnetReadFunction and any probe:
+      // F = the 0x2000-byte stack recv buffers (large-receive-request filter bug class),
+      // G = the ~15 ms echo-to-AUTHREQ-read gap the real loop spends logging.
+      sRunAuthConversationReplay(saPeer, 5); // probe F: bigrecv - 0x2000 stack recv buffers
+      sRunAuthConversationReplay(saPeer, 6); // probe G: dwell - 30 ms before the AUTHREQ read
+      // VP-END [bn-replay-final R181]
     } else {
       D2BOOT_Mark("BNet: ctl-socket skipped (peer sockaddr unavailable)"); // [d2boot]
     }

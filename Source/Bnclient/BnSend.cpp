@@ -1699,19 +1699,20 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
             D2BOOT_MarkFmt("BNet: recv aborted (WSA 10053) but socket still open - retry %d/20",
                            s_nRecvAbortRetries); // [d2boot]
             // VP-BEGIN [bn-drift-watch R177]: once per retry iteration, probe the handle's
-            // identity - value, SO_TYPE, kernel validity - and log ONLY on change. R176's
-            // field autopsy produced a one-instant contradiction (soerr=0 yet SO_TYPE failing
-            // while select still claimed readable); the watch turns that snapshot into a
-            // per-10ms timeline: a type flipping back to 1 mid-budget proves the handle got
-            // RECYCLED by a new socket (aliasing bug), a kvalid flip to 0 proves an
-            // in-process closesocket ran, stability across all three proves the provider
-            // layer - not the handle - is what fails.
+            // identity - value, SO_TYPE, kernel validity - and log ONLY on change. (R176's
+            // "SO_TYPE contradiction" was this probe's own 0x1004-typo - SO_RCVLOWAT, not
+            // SO_TYPE - which fails 10042 on any healthy socket; fixed to 0x1008 in R180,
+            // so type should now read 1 here and in every battery.) The watch's real
+            // verdicts stand: a type flip mid-budget proves the handle got RECYCLED by a
+            // new socket (aliasing bug), a kvalid flip to 0 proves an in-process
+            // closesocket ran, stability across all three proves the provider layer - not
+            // the handle - is what fails.
             {
               SOCKET hDriftNow = pSafesock->hSocket;
               int nTypeDriftNow = -1;
               int nTypeDriftErr = 0;
               int nOptLenDrift = 4;
-              if (getsockopt(hDriftNow, 0xffff, 0x1004, (char*)&nTypeDriftNow, &nOptLenDrift) == -1) {
+              if (getsockopt(hDriftNow, 0xffff, 0x1008, (char*)&nTypeDriftNow, &nOptLenDrift) == -1) {
                 nTypeDriftErr = (int)WSAGetLastError();
               }
               DWORD dwDriftFlags = 0;

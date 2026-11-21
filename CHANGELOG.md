@@ -9,6 +9,25 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R181 — final probe pair: big buffers and the logging gap** (the R180 field run
+  survived all five probes on both attempts with clean probe data while the real
+  socket died at the same byte again — every in-process structural delta is now
+  exonerated. The last two behavioral deltas get probes: BnetReadFunction's
+  0x2000-byte stack receive buffers vs the probes' small ones (large-receive-request
+  filter-bug class), and the ~15 ms echo-to-AUTHREQ logging gap vs the probes' ~1 ms.
+  If both survive, the discriminator is kernel/image-name level: rename test,
+  `netsh wfp capture`, torrent-free run.)
+
+- **R180 — probe-split round: our own SO_TYPE probe was the "anomaly"** (the R179 field
+  log cleared the race shape, the blocking shape, handle identity and the Winsock
+  refcount in one run — the reuse probe completed auth ON the freed auth handle itself
+  while the real socket died on it — and the git record showed the `type=-1/10042`
+  driving two rounds of forensics was a probe bug: R176 reverted R175's fix of
+  0x1004→0x1008; 0x1004 is SO_RCVLOWAT and fails on every healthy Windows socket.
+  R180 fixes the probe, adds the last two structural-delta replays — Create's exact
+  socket options, and the real flow's two-thread shape — and preps the kernel-layer
+  endgame: exe-rename test, `netsh wfp capture`, torrent-free run.)
+
 - **R179 — private-server BNCS connects skip the fastest-server race** (the R178 field
   run + packet capture settled the 10053 question: the R178 conversation-replay probes,
   started from the same process milliseconds after each dying auth socket, completed the
