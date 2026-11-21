@@ -2076,13 +2076,17 @@ static void MONSTER_SpawnDeathEffectMissiles(D2UnitStrc * pUnit) {
     }
 
     BOOL eUberState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uberminion);
-    sSkillArg.pOwner = pUnit;
-    sSkillArg.pMissile = pUnit;
     if (eUberState) {
       eUberState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_freeze);
       if (!eUberState) {
         memset(&sSkillArg, 0, 0x5c);
+        // [R187] retail 0x4afc10 order: memset FIRST, then the field writes. The old order
+        // (pOwner/pMissile set BEFORE the memset) zeroed them again, so MakeMissile saw
+        // pMissile == null and rejected both missiles - shatter deaths vanished silently
+        // with no crumble (issue #39 final strand).
         sSkillArg.nFlags = 0x2020;
+        sSkillArg.pOwner = pUnit;
+        sSkillArg.pMissile = pUnit;
         sSkillArg.nSkillLevel = 1;
         sSkillArg.nMissileTxtNo = MISSILE_Suicidefireexplode;
         Missile::MakeMissile(&sSkillArg);
@@ -2095,7 +2099,10 @@ static void MONSTER_SpawnDeathEffectMissiles(D2UnitStrc * pUnit) {
     D2MonStats2Txt* pMonStats2 = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetMonStats2(pUnit->nClassId);
     uint8_t byMonHeight = pMonStats2->Height;
     memset(&sSkillArg, 0, 0x5c);
+    // [R187] memset first, then the writes (retail 0x4afcaf-0x4afcc6) - see above.
     sSkillArg.nFlags = 0x2020;
+    sSkillArg.pOwner = pUnit;
+    sSkillArg.pMissile = pUnit;
     sSkillArg.nSkillLevel = 1;
     sSkillArg.nMissileTxtNo = byMonHeight + MISSILE_Monglacialspike;
     // [CF39] the crumble-into-cubes effect = these two client missiles; log spawn results.
