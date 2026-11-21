@@ -311,7 +311,56 @@ int32_t __fastcall WSASocket2_Read(D2NetDataStrc * pNetData, char * pBuffer, siz
     if (pNetData && !pNetData->bBlocked) {
       int nBytesRead;
       /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&pNetData->pSync);
-      /* int flags for recv */ /* int len for recv */ /* char * buf for recv */ /* SOCKET s for recv */ nBytesRead = recv(pNetData->hSocket, pBuffer, nSize, 0);
+      // VP-BEGIN [bn-afdfastio-workaround R191]: ETW (2026-11-21 bnet.etl) proved the auth
+      // socket death is INSIDE AFD on the client: the 2nd recv() on the healthy BNCS socket
+      // takes the kernel fast-io receive path, is rejected with "Invalid buffer specified
+      // on fastio receive" (AFD event 8007), and AFD closes the endpoint itself
+      // ({Virtual Circuit Closed}, event 4001) - afterwards the socket answers every recv
+      // with WSAECONNABORTED (10053) and SO_ERROR=0 while the AUTHREQ is still buffered
+      // and select still says readable. Calibrated trace (attempt 1): recv 8192@0x9BCDE74
+      // completed 8 bytes at 44943670.44ms, AUTHREQ hit the buffer at 44943672.82ms, the
+      // fastio reject landed at 44943673.78ms - IDENTICAL args to the recv that succeeded
+      // 3.3ms earlier, identical for attempt 2 and both R190 logs. No transport-abort
+      // indication, no WFP classify event, no filter involvement - the endpoint objects
+      // the probes used never trip it. Overlapped WSARecv always builds an IRP and cannot
+      // enter the fast-io path, so this routes around the kernel defect while keeping the
+      // blocking contract: post + wait, bounded at 1 s (the loop only calls Read after
+      // select reported readable, so the bound is a pure safety net); if Free() closed the
+      // handle under us the IRP is cancelled and the error surfaces exactly like the old
+      // recv failure did.
+      WSABUF sWsaBuf;
+      sWsaBuf.len = (u_long)nSize;
+      sWsaBuf.buf = pBuffer;
+      DWORD dwRecvd = 0;
+      DWORD dwFlags = 0;
+      WSAOVERLAPPED sOverlapped;
+      memset(&sOverlapped, 0, sizeof(sOverlapped));
+      sOverlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+      if (sOverlapped.hEvent) {
+        int nPostResult = WSARecv(pNetData->hSocket, &sWsaBuf, 1, &dwRecvd, &dwFlags, &sOverlapped, nullptr);
+        if (nPostResult == 0) {
+          nBytesRead = (int)dwRecvd; // completed synchronously
+        } else if (WSAGetLastError() == WSA_IO_PENDING) {
+          if (WaitForSingleObject(sOverlapped.hEvent, 1000) == WAIT_OBJECT_0) {
+            dwRecvd = 0;
+            if (WSAGetOverlappedResult(pNetData->hSocket, &sOverlapped, &dwRecvd, FALSE, &dwFlags)) {
+              nBytesRead = (int)dwRecvd;
+            } else {
+              nBytesRead = -1;
+            }
+          } else {
+            CancelIoEx((HANDLE)(UINT_PTR)pNetData->hSocket, &sOverlapped);
+            WSASetLastError(WSAEWOULDBLOCK);
+            nBytesRead = -1;
+          }
+        } else {
+          nBytesRead = -1;
+        }
+        /* HANDLE hObject for CloseHandle */ CloseHandle(sOverlapped.hEvent);
+      } else {
+        nBytesRead = -1;
+      }
+      // VP-END [bn-afdfastio-workaround R191]
       /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&pNetData->pSync);
       if (nBytesRead <= 0) {
         nWSAError = WSAGetLastError();
