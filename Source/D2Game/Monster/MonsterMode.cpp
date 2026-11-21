@@ -59,6 +59,8 @@
 #include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/Memory.h"
 #include "Source/Fog/Src/ErrorManager.h"
+#include "Source/Fog/Src/LogManager.h"
+#include "Redivivus/d2_boot.h" // [CF39] diagnostic marks -> d2boot.log
 #include "Source/globals/globals.h"
 #include "Source/D2CMP/Draw.h"
 #include "Source/D2CMP/SRC/Codec.h"
@@ -523,6 +525,8 @@ void __fastcall DropItemForVictim_Unused(::SGAMEDATA * pGame, D2ObjectOperateFnA
     } else {
       eCollisionFlags eCollision;
       if (pVictim->eUnitFlags >> 0x11 & 1) {
+        // [CF39] retail 0x5a686d guard (ISDEAD bit 17): loot drop silently skipped.
+        D2BOOT_MarkFmt("[CF39] DROP-SKIP-ISDEAD classId=%d", (int)pVictim->nClassId);
         return;
       }
       /* bonewall */ if (pVictim->nClassId == 0x158) {
@@ -532,6 +536,9 @@ void __fastcall DropItemForVictim_Unused(::SGAMEDATA * pGame, D2ObjectOperateFnA
         eCollisionFlag = COLLISION_ITEMS;
         eCollision = D2Common::Collision::CheckCollision_BlockPlayerMissile(D2Common::Units::UNITS_GetRoom(pVictim), D2Common::Units::GetXPosFromDynamicPathUnit(pVictim), D2Common::Units::GetYPosFromDynamicPathUnit(pVictim), eCollisionFlag);
         if (eCollision != COLBIT_NONE) {
+          // [CF39] retail 0x5a68a3 guard (items-collision blocked at corpse tile): loot
+          // drop silently skipped — retail 0x5a6830 does the same.
+          D2BOOT_MarkFmt("[CF39] DROP-SKIP-COLLISION classId=%d", (int)pVictim->nClassId);
           return;
         }
 
@@ -660,6 +667,11 @@ D2UnitStrc* pAttacker = 0;
     // the retail event-queue guard 0x541701, or the R166/R170/R182 completion hooks).
     eUnitState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
     if (eUnitState) {
+      // [CF39] poison-tick deferral (retail 0x5a6ab7 shape): strand created here.
+      D2BOOT_MarkFmt("[CF39] DEFER-POISON classId=%d cold=%d freeze=%d",
+        (int)pUnit->nClassId,
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_cold),
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_freeze));
       D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 1);
       return;
     }
@@ -995,6 +1007,15 @@ BOOL __fastcall MONSTER_OnDeathDispatch(::SGAMEDATA * pGame, D2MonsterKillStrc *
     D2UnitStrc* pUnit;
     int32_t nVictimClassIdForStats;
     D2UnitStrc* pVictim = pMonsterKill->pVictim;
+    // [CF39] death reached: loot drops below unless a wrapper guard skips it; shatter
+    // state present = client will play the corpse-gib vanish (retail-intended visual).
+    if (pVictim && pVictim->eUnitType == UNIT_MONSTER) {
+      D2BOOT_MarkFmt("[CF39] DEATH classId=%d cold=%d freeze=%d shatter=%d",
+        (int)pVictim->nClassId,
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_cold),
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_freeze),
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_shatter));
+    }
     UNIT::SUnit::FreeCombatAndChangeAnimMode(pGame, pVictim, 0);
     MONSTERMODE_OnDeath(pMonsterKill->nAnimatedMode1, pGame, pVictim);
     DropItemForVictim_Unused(pGame, (D2ObjectOperateFnArg*)pMonsterKill, 0);
@@ -1685,6 +1706,11 @@ int32_t __stdcall MONSTERAI_ExecuteLifecycleTransition(::SGAMEDATA * pGame, D2Mo
     eD2MonsterAnimMode eTargetMode = pMonsterKill->nUnitMode;
     BOOL eUnitState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_uninterruptable);
     if (eUnitState) {
+      // [CF39] retail 0x5a7c59 halt: an uninterruptable victim reached the lifecycle —
+      // this log firing at all means a deferral invariant hole (crashes follow).
+      D2BOOT_MarkFmt("[CF39] LIFECYCLE-HALT classId=%d mode=%d death_delay=%d",
+        (int)pUnit->nClassId, (int)pUnit->eAnimMode.ePlayerMode,
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_death_delay));
       Fog::Src::ErrorManager::ERROR_UnrecoverableInternalError_Halt("", Fog::Src::ErrorManager::GetInstructionPointer(), 0x753);
       exit(-1);
     }

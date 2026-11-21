@@ -63,6 +63,7 @@
 #include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/Memory.h"
 #include "Source/Fog/SMem.h"
+#include "Source/Fog/Src/LogManager.h"
 #include "Source/Fog/Save.h"
 #include "Source/Fog/Src/ErrorManager.h"
 #include "Source/Fog/Src/LogManager.h"
@@ -1332,7 +1333,13 @@ void __stdcall CleanupIdleRooms(::SGAMEDATA * pGame) {
               D2UnitStrc* pUnitPending = pRoom->pUnitList;
               while (pUnitPending) {
                 D2UnitStrc* pUnitPendingNext = pUnitPending->pRoomNext;
-                if (pUnitPending->eUnitType == UNIT_MONSTER) {
+                if (pUnitPending->eUnitType == UNIT_MONSTER
+                    && D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnitPending, STATE_death_delay)) {
+                  // [CF39] strand reached the room-idle window — completion fires here.
+                  D2BOOT_MarkFmt("[CF39] IDLE-PREPASS classId=%d mode=%d hpState cold=%d freeze=%d",
+                    (int)pUnitPending->nClassId, (int)pUnitPending->eAnimMode.ePlayerMode,
+                    (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnitPending, STATE_cold),
+                    (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnitPending, STATE_freeze));
                   UNIT::SUnitDmg::SUNITDMG_CompleteDeathDelayIfPending(pUnitPending);
                 }
                 pUnitPending = pUnitPendingNext;

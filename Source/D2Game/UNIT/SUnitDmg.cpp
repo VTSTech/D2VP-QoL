@@ -119,6 +119,7 @@
 #include "Source/Fog/Source/SFile.h"
 #include "Source/Fog/Source/SSComp.h"
 #include "Source/Fog/Src/LogManager.h"
+#include "Redivivus/d2_boot.h" // [CF39] diagnostic marks -> d2boot.log
 #include "3rdparty/Storm/3rdparty/zlib/deflate.h"
 #include "3rdparty/Storm/H/stpl.h"
 #include "3rdparty/Storm/Source/SCMD.h"
@@ -488,27 +489,38 @@ BOOL __fastcall SUNITDMG_CompleteDeathDelayIfPending(D2UnitStrc * pUnit) {
       // completion primitive clears STATE_uninterruptable AND finishes the pending kill in
       // one step (its STATE_death_delay branch runs the same killer-aware pair below); the
       // later cast-end call then finds no death_delay and no-ops.
+      D2BOOT_MarkFmt("[CF39] COMPLETE classId=%d via SetUninterruptableState(0) cold=%d freeze=%d",
+        (int)pUnit->nClassId,
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_cold),
+        (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pUnit, STATE_freeze));
       SUnit::SetUninterruptableState(pUnit, 0);
       return 1;
     }
 
     if (SUnit::CheckForModeZeroDeath(pUnit)) {
+      // [CF39] stale death_delay on an already dying/dead unit — flag dropped, no kill.
+      D2BOOT_MarkFmt("[CF39] STALE-FLAG-DROP classId=%d mode=%d",
+        (int)pUnit->nClassId, (int)pUnit->eAnimMode.ePlayerMode);
       D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
       return 0; // already dying/dead — just drop the stale flag
     }
 
     pGame = SUnit::GetGamePointer(pUnit);
     if (!pGame) {
+      // [CF39] stranded unit with no game pointer — completion impossible here.
+      D2BOOT_MarkFmt("[CF39] COMPLETE-NOGAME classId=%d", (int)pUnit->nClassId);
       return 0;
     }
 
     D2Common::DATATBLS::ItemStats::SetState(pUnit, STATE_death_delay, 0);
     pKillerUnit = SUnit::GetKillerUnit(pGame, pUnit);
     if (pKillerUnit) {
+      D2BOOT_MarkFmt("[CF39] COMPLETE-KILL classId=%d killerType=%d", (int)pUnit->nClassId, (int)pKillerUnit->eUnitType);
       memset(&sDamage, 0, 0x70);
       sDamage.wResultFlags |= 2;
       SERVER_GetHitCalculation(pGame, pKillerUnit, pUnit, &sDamage);
     } else {
+      D2BOOT_MarkFmt("[CF39] COMPLETE-KILL-NOKILLER classId=%d (loot drops, xp/credit skipped)", (int)pUnit->nClassId);
       SERVER_KillMonster(pGame, pUnit, nullptr, 1);
     }
 
@@ -2267,14 +2279,20 @@ void __fastcall SERVER_KillMonster(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2Un
             return;
           }
           if (pUnit->eAnimMode.ePlayerMode == Death) {
+            // [CF39] retail 0x57cce0 guard: already in death anim — kill silently refused.
+            D2BOOT_MarkFmt("[CF39] KILL-REJECT-MODE0 classId=%d", (int)pUnit->nClassId);
             return;
           }
           if (pUnit->eAnimMode.ePlayerMode == Kick) {
+            // [CF39] retail 0x57cceb guard: already dead-mode — kill silently refused.
+            D2BOOT_MarkFmt("[CF39] KILL-REJECT-MODEC classId=%d", (int)pUnit->nClassId);
             return;
           }
 
           bMonStats2_objCol = D2Common::DATATBLS::MonsterTbls::TXT_MonStats_GetFlagsByBitOffset(pUnit->nClassId, killable);
           if (!bMonStats2_objCol) {
+            // [CF39] retail 0x57cd00 guard (fcn.00457490 classId,0xf): no killable/death-anim flag — kill silently refused.
+            D2BOOT_MarkFmt("[CF39] KILL-REJECT-NOKILLABLE classId=%d", (int)pUnit->nClassId);
             return;
           }
 
@@ -2447,6 +2465,13 @@ void __fastcall SERVER_GetHitCalculation(::SGAMEDATA * pGameIn, D2UnitStrc * pUn
     eImmovableState = D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_uninterruptable);
     if (eImmovableState) {
       if (pDamage->wResultFlags & 2) {
+        // [CF39] deferral: lethal hit on an uninterruptable victim strands at 0 HP with
+        // STATE_death_delay until an uninterruptable-clear path completes the kill.
+        D2BOOT_MarkFmt("[CF39] DEFER classId=%d hp=0 unint=1 cold=%d freeze=%d killFlags=%04x",
+          (int)pVictim->nClassId,
+          (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_cold),
+          (int)D2Common::DATATBLS::ItemStats::UNIT_GetUnitState(pVictim, STATE_freeze),
+          (unsigned)pDamage->wResultFlags);
         D2Common::DATATBLS::ItemStats::SetState(pVictim, STATE_death_delay, 1);
         return;
       }
