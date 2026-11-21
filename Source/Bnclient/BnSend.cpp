@@ -1886,6 +1886,49 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
     __frame0.dwBatchStartTick = GetTickCount();
     fnInterlockedCompareExchange pfnInterlocked;
     pfnInterlocked = d2_InterlockedCompareExchange;
+    // VP-BEGIN [bn-auth-blocking-connect R179]: a single-entry server list (the private
+    // D2GS/PvPGN case) skips the race entirely and connects the way the R178 replay probes
+    // did - one plain blocking socket (Create flags=0: no FIONBIO dance, no select race).
+    // That is the only connect shape that has provably carried the full auth conversation
+    // on the failing machine (R178 pcap: replay flows :35830/:35832 read the AUTHREQ and
+    // closed cleanly, while the raced + FIONBIO-toggled auth sockets were kernel-RSTed
+    // 1.2ms after AUTHREQ arrival, twice, on byte-identical wire and bnetd logged all
+    // five accepts identically). Multi-entry gateway lists keep the retail race unchanged.
+    if (pszToken && *pszToken != '\0' && !strtok(nullptr, " ,;")
+        && !(D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0)
+        && !InterlockedCompareExchange(&Target_00881bfc, 0, 0)) {
+      char szSingleServer[256];
+      {
+        int nCopyIdx = 0;
+        while (pszToken[nCopyIdx] && nCopyIdx < (int)sizeof(szSingleServer) - 1) {
+          szSingleServer[nCopyIdx] = pszToken[nCopyIdx];
+          nCopyIdx++;
+        }
+        szSingleServer[nCopyIdx] = '\0';
+      }
+      D2BOOT_MarkFmt("BNet: single-server list -> blocking connect %s (race skipped)", szSingleServer); // [d2boot]
+      pNetData = Fog::Src::Safesock::Create(szSingleServer, 0x17e0, (LPTHREAD_START_ROUTINE)BnetReadFunction, (LPVOID)0x0, "Client->BNet", 0);
+      if (pNetData) {
+        pNetData->bConnected = 1;
+        pNetData->bInit = 0;
+        if (!InterlockedCompareExchange((LONG*)&g_pBNetSocketData, (LONG)pNetData, 0)) {
+          __frame0.pWinnerSocket = pNetData;
+        } else {
+          // lost the g_pBNetSocketData slot to another thread (not expected on this path)
+          D2BOOT_Mark("BNet: blocking connect lost g_pBNetSocketData race (unexpected)"); // [d2boot]
+          Fog::Src::Safesock::Free(pNetData);
+          pNetData = nullptr;
+        }
+      } else {
+        D2BOOT_MarkFmt("BNet: blocking connect Create failed err=%d", (int)WSAGetLastError()); // [d2boot]
+      }
+      if (__frame0.pWinnerSocket) {
+        goto bn_race_won; // shared tail; the non-winner cleanup below it is a no-op (count 0)
+      }
+      Bnet::BnetLog_WriteLine("no servers found");
+      return;
+    }
+    // VP-END [bn-auth-blocking-connect R179]
     /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ __frame0.dwBatchStartTick -= 5000;
     tvTimeout.tv_usec = 0;
     __frame0.nSelectTimeouts = 0;
@@ -2062,6 +2105,7 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
       return;
     }
 
+bn_race_won:
     gbBNetSocketConnected = 1;
     D2BOOT_Mark("BNet: fastest-server race WON (socket ready)"); // [d2boot]
     _net_sid::SID_GetState(&__frame0.nSIDState);
@@ -2117,6 +2161,16 @@ void __stdcall NET_SID_CLIENT_ConnectFastest(char * szServerList) {
         s_nBncsReconnectBudget--;
         D2BOOT_Mark("BNet: auth-stage reconnect -> freeing dead socket, replaying handshake on a fresh connection"); // [d2boot]
         Fog::Src::Safesock::Free(pNetData);
+        // VP-BEGIN [bn-replay-race R179]: probe C - the R178 conversation replay on a fresh
+        // socket created immediately AFTER the Free above, so socket() very likely receives
+        // the just-freed auth handle value (R176: the reconnect's own socket landed on
+        // attempt 1's handle 0xdf0 and died like it). Conversation and timing match the
+        // real reconnect minus the race machinery: step=0 here while the reconnect dies at
+        // AUTHREQ names handle identity as the discriminator; step=0 here AND a surviving
+        // reconnect means the R179 blocking shape fixed the round outright; dying here
+        // like the real socket means the death rides on the Free/reconnect sequencing.
+        Fog::Src::Safesock::SAFESOCK_RunReuseReplayProbe();
+        // VP-END [bn-replay-race R179]
         (*pfnInterlocked)((LONG*)&g_pBNetSocketData, 0, (LONG)pNetData);
         _net_sid::SID_InitializeProtocolState(); // clears the protocol-dead flag the read thread set
         InterlockedExchange(&Target_00881bfc, 0);

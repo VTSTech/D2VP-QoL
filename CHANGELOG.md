@@ -9,6 +9,19 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R179 — private-server BNCS connects skip the fastest-server race** (the R178 field
+  run + packet capture settled the 10053 question: the R178 conversation-replay probes,
+  started from the same process milliseconds after each dying auth socket, completed the
+  whole auth conversation twice while the auth sockets were kernel-RSTed 1.2 ms after
+  the AUTHREQ arrived — byte-identical wire, server accepted all five connections
+  identically, so the trigger is the auth socket's own kernel state, not the packet
+  content and not the D2VP image; Windows Firewall fully off changes nothing). The one
+  shape that provably completes auth is the probes': one plain blocking socket. A
+  single-entry server list (any private D2GS/PvPGN realm) now connects exactly that way
+  — no race, no FIONBIO/select dance; multi-entry gateway lists keep the retail race.
+  Two new forensic probes (race-shaped replay + post-Free handle-reuse replay) and a
+  Winsock startup/cleanup refcount trail ride along for the case it still dies.
+
 - **R173 — BNCS recv hex dump + race-winner peer port** (the owner's R172 Battle.net log
   finally named the failure: `SID 0x50 AUTH_INFO` sent ok (51 bytes), the peer sent one
   8-byte frame parsed as a 0x25 PING, the echo sent ok, then `recv failed (-1) - WSA err

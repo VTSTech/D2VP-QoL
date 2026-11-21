@@ -80,6 +80,13 @@ BOOL __fastcall SAFESOCK_IsSocketOpen(struct D2NetDataStrc * pNetData);
 // probe fails too), only the receive path is poisoned, or select and recv disagree.
 int32_t __fastcall SAFESOCK_LogRecvAutopsy(struct D2NetDataStrc * pNetData, int nRecvError);
 // VP-END [bn-recv-autopsy R174]
+// VP-BEGIN [bn-replay-race R179]: probe C - the R178 auth conversation replay on a fresh
+// socket created AFTER Safesock::Free released the dead auth socket, so socket() hands
+// back the just-freed handle value. Called from the R174 auth-stage reconnect path
+// (BnSend.cpp) before the real reconnect; verdict lands in d2boot.log as
+// "BNet: reuse-replay verdict step=...".
+int32_t __fastcall SAFESOCK_RunReuseReplayProbe();
+// VP-END [bn-replay-race R179]
 int32_t __fastcall GetPeerNameDoesReturn(struct D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen);
 uint32_t __fastcall GetSockNameDoesReturn(struct D2NetDataStrc * pNetData, sockaddr * pName, int * pNameLen);
 char * __stdcall NET_GetLocalIp();

@@ -60,14 +60,33 @@ int __fastcall closeSocket(SOCKET hSocket) {
     // VP-END [bn-sock-ops-trap R177]
 }
 
+// VP-BEGIN [bn-wsaref R179]: per-process WSAStartup/WSACleanup refcount census. The
+// documented Winsock failure mode for a count that hits zero while sockets are still
+// open is EXACTLY the R176+ autopsy shape: data-plane ops (recv/send) start failing on
+// sockets created before the cleanup while ws2_32-internal probes (SO_ERROR, FIONREAD,
+// select) keep working, and getsockopt(SO_TYPE) - a provider-dispatched option - can
+// produce WSAENOPROTOOPT where the R175 run saw type=1. Every StartUp/cleanup site in
+// the process funnels through this counter (Create/StartUp/net helpers here, the
+// ErrorManager fatal paths via the Safesock::WSACleanup wrapper), so d2boot.log shows
+// whether the count ever moves the wrong way during the auth window.
+static int s_nWsaRefCount = 0;
+static void sWsaRefDelta(int nDelta, const char* szSite) {
+    s_nWsaRefCount += nDelta;
+    D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) [tid %lu]", s_nWsaRefCount, szSite, (unsigned long)GetCurrentThreadId()); // [d2boot]
+}
+
 BOOL __stdcall StartUp() {
     WSADATA wsaData;
     int nResult = WSAStartup(0x101, &wsaData);
+    if (!nResult) {
+      sWsaRefDelta(1, "startup");
+    }
     return (uint32_t)!nResult;
 }
 
 // JMP thunk
 int __stdcall WSACleanup() {
+    sWsaRefDelta(-1, "cleanup");
     return ::WSACleanup();
 }
 
@@ -141,6 +160,12 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
     Storm::Source::SSTR::SStrCopy(pSafesockStrc->szHost, szConnectionAlias, 0x40);
     /* LPCRITICAL_SECTION lpCriticalSection for InitializeCriticalSection */ InitializeCriticalSection(&pSafesockStrc->pSync);
     int nResult = WSAStartup(0x101, &wsaData);
+    // VP-BEGIN [bn-wsaref R179]: Create is the hottest startup site (every race candidate
+    // + every auth/reconnect attempt) - counted so the census covers the auth window.
+    if (!nResult) {
+      sWsaRefDelta(1, "create");
+    }
+    // VP-END [bn-wsaref R179]
     // VP-BEGIN [bn-lsp-catalog R177]
     sLogWinsockCatalogOnce();
     // VP-END [bn-lsp-catalog R177]
@@ -453,6 +478,188 @@ static void sLogCtlProbeBattery(const char* szTag, SOCKET hSock) {
 }
 // VP-END [bn-ctl-replay R178]
 
+// VP-BEGIN [bn-replay-race R179]: the auth server's sockaddr, captured by the autopsy's
+// getpeername while the auth handle still answers, so the reuse probe (which runs in the
+// R174 reconnect path after Free, when the dead socket's getpeername is gone) can still
+// reach the same server. File-local on purpose: written and read only in this TU.
+static unsigned char s_saCtlReplayPeer[16] = {};
+static int s_bCtlReplayPeerValid = 0;
+// VP-END [bn-replay-race R179]
+
+// VP-BEGIN [bn-replay-race R179]: the R178 conversation replay as a reusable runner so the
+// two new probe shapes can drive it. The R178 field result made the conversation itself
+// innocent (both replays completed where the auth socket died), so what is left to split
+// is the socket SHAPE and the handle IDENTITY:
+//   nMode 0 = ctl-replay   : plain blocking socket (the R178 control shape; baseline)
+//   nMode 1 = race-replay  : the race's exact shape - FIONBIO(1) -> connect ->
+//                            select(writable) -> FIONBIO(0), then the conversation
+//   nMode 2 = reuse-replay : plain blocking socket, run AFTER Safesock::Free so the fresh
+//                            socket() lands on the just-freed auth handle value
+// Step coding identical to R178 (step 0 = full conversation survived): 1/2 = send 0x01 /
+// send 0x50 (-2 = no stashed frame), 3/4 = ping wait/recv, 5 = echo send, 6/7 = AUTHREQ
+// wait/recv, 8 = connect failed. Probe batteries (<tag>-live before the conversation,
+// <tag>-post after the verdict) keep the R178 A/B line shape for every probe.
+// Returns the verdict step (0 = replayed the whole conversation, -1 = no socket).
+static int sRunAuthConversationReplay(const sockaddr_in& saPeer, int nMode) {
+    const char* szTag = nMode == 1 ? "race-replay" : (nMode == 2 ? "reuse-replay" : "ctl-replay");
+    SOCKET hCtl = socket(2, 1, 0);
+    if (hCtl == -1) {
+      D2BOOT_MarkFmt("BNet: %s verdict step=-1 err=%d (socket create failed)", szTag, (int)WSAGetLastError()); // [d2boot]
+      return -1;
+    }
+
+    int nStep = 0;
+    int nStepErr = 0;
+    char chPingReq[64];
+    char chAuthReq[256];
+    int nPingLen = 0;
+    int nAuthLen = 0;
+    memset(chPingReq, 0, sizeof(chPingReq));
+    memset(chAuthReq, 0, sizeof(chAuthReq));
+
+    if (nMode == 1) {
+      // The BattleConnectFastest race shape, replicated exactly: non-blocking connect,
+      // select write/except handshake wait, blocking toggle before any data flows
+      // (BnSend.cpp race loop -> SAFESOCK_SetSocketNonBlocking(0) post-win).
+      u_long nNonBlock = 1;
+      ioctlsocket(hCtl, 0x8004667E, &nNonBlock); // FIONBIO(1)
+      if (connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer)) == -1) {
+        int nConnErr = (int)WSAGetLastError();
+        if (nConnErr != 0x2733) { // WSAEWOULDBLOCK (file style: raw constants)
+          nStep = 8;
+          nStepErr = nConnErr;
+        } else {
+          fd_set raceWriteSet;
+          fd_set raceExceptSet;
+          raceWriteSet.fd_count = 1;
+          raceWriteSet.fd_array[0] = hCtl;
+          raceExceptSet.fd_count = 1;
+          raceExceptSet.fd_array[0] = hCtl;
+          timeval tvRace;
+          tvRace.tv_sec = 3;
+          tvRace.tv_usec = 0;
+          int nSelRace = select(0x40, nullptr, &raceWriteSet, &raceExceptSet, &tvRace);
+          if (nSelRace > 0 && __WSAFDIsSet(hCtl, &raceWriteSet)) {
+            nStep = 0; // handshake complete, exactly the race winner's state
+          } else if (nSelRace > 0 && __WSAFDIsSet(hCtl, &raceExceptSet)) {
+            nStep = 8;
+            nStepErr = 10054; // except-set = connect failed/refused
+          } else {
+            nStep = 8;
+            nStepErr = nSelRace == 0 ? 10060 : (int)WSAGetLastError();
+          }
+        }
+      }
+      u_long nBlockBack = 0;
+      ioctlsocket(hCtl, 0x8004667E, &nBlockBack); // FIONBIO(0) - the post-race toggle
+    } else if (connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer)) == -1) {
+      nStep = 8;
+      nStepErr = (int)WSAGetLastError();
+    }
+
+    if (!nStep) {
+      sLogCtlProbeBattery(nMode == 1 ? "race-live" : (nMode == 2 ? "reuse-live" : "ctl-live"), hCtl);
+      char chProtoByte = 0x01;
+      int nSend1 = send(hCtl, &chProtoByte, 1, 0);
+      if (nSend1 < 0) {
+        nStep = 1;
+        nStepErr = (int)WSAGetLastError();
+      }
+
+      if (!nStep && g_nCtlReplayAuthInfoLen > 0) {
+        int nSend50 = send(hCtl, g_chCtlReplayAuthInfo, g_nCtlReplayAuthInfoLen, 0);
+        if (nSend50 < 0) {
+          nStep = 2;
+          nStepErr = (int)WSAGetLastError();
+        }
+      } else if (!nStep) {
+        nStep = 2;
+        nStepErr = -2; // no stashed 0x50 (send never reached the stash path)
+      }
+
+      if (!nStep) {
+        fd_set ctlReadSet;
+        ctlReadSet.fd_count = 1;
+        ctlReadSet.fd_array[0] = hCtl;
+        timeval tvPingWait;
+        tvPingWait.tv_sec = 2;
+        tvPingWait.tv_usec = 0;
+        int nSelPing = select(0x40, &ctlReadSet, nullptr, nullptr, &tvPingWait);
+        if (nSelPing <= 0) {
+          nStep = 3;
+          nStepErr = nSelPing == 0 ? 10060 : (int)WSAGetLastError();
+        } else {
+          nPingLen = recv(hCtl, chPingReq, (int)sizeof(chPingReq), 0);
+          if (nPingLen < 0) {
+            nStep = 4;
+            nStepErr = (int)WSAGetLastError();
+          } else {
+            int nEchoLen = nPingLen < 8 ? nPingLen : 8;
+            if (send(hCtl, chPingReq, nEchoLen, 0) < 0) {
+              nStep = 5;
+              nStepErr = (int)WSAGetLastError();
+            }
+          }
+        }
+      }
+
+      if (!nStep) {
+        fd_set ctlReadSet2;
+        ctlReadSet2.fd_count = 1;
+        ctlReadSet2.fd_array[0] = hCtl;
+        timeval tvAuthWait;
+        tvAuthWait.tv_sec = 3;
+        tvAuthWait.tv_usec = 0;
+        int nSelAuth = select(0x40, &ctlReadSet2, nullptr, nullptr, &tvAuthWait);
+        if (nSelAuth <= 0) {
+          nStep = 6;
+          nStepErr = nSelAuth == 0 ? 10060 : (int)WSAGetLastError();
+        } else {
+          nAuthLen = recv(hCtl, chAuthReq, (int)sizeof(chAuthReq), 0);
+          if (nAuthLen < 0) {
+            nStep = 7;
+            nStepErr = (int)WSAGetLastError();
+          }
+        }
+      }
+
+      D2BOOT_MarkFmt(
+          "BNet: %s verdict step=%d err=%d ping=%d [%02x %02x %02x %02x] authreq=%d [%02x %02x %02x %02x]",
+          szTag,
+          nStep, nStepErr, nPingLen,
+          (unsigned)(unsigned char)chPingReq[0], (unsigned)(unsigned char)chPingReq[1],
+          (unsigned)(unsigned char)chPingReq[2], (unsigned)(unsigned char)chPingReq[3],
+          nAuthLen,
+          (unsigned)(unsigned char)chAuthReq[0], (unsigned)(unsigned char)chAuthReq[1],
+          (unsigned)(unsigned char)chAuthReq[2], (unsigned)(unsigned char)chAuthReq[3]); // [d2boot]
+      sLogCtlProbeBattery(nMode == 1 ? "race-post" : (nMode == 2 ? "reuse-post" : "ctl-post"), hCtl);
+    } else {
+      D2BOOT_MarkFmt("BNet: %s verdict step=%d err=%d (connect failed)", szTag, nStep, nStepErr); // [d2boot]
+    }
+
+    closesocket(hCtl);
+    return nStep;
+}
+
+// VP-BEGIN [bn-replay-race R179]: probe C for the R174 reconnect path - run AFTER
+// Safesock::Free has released the dead auth socket, so this fresh socket() very likely
+// receives the just-freed handle value (R176 observed exactly that reuse: the reconnect's
+// own socket landed on attempt 1's handle 0xdf0 and died like it). If THIS probe
+// completes the whole conversation while the real reconnect dies at AUTHREQ, handle
+// identity is the discriminator; if it completes AND the reconnect now survives, the
+// blocking-shape change alone fixed the round; if it dies like the real socket, the
+// death rides on something the Free/reconnect sequencing itself produces.
+int32_t __fastcall SAFESOCK_RunReuseReplayProbe() {
+    if (!s_bCtlReplayPeerValid) {
+      D2BOOT_Mark("BNet: reuse-replay skipped (autopsy captured no peer)"); // [d2boot]
+      return -1;
+    }
+    sockaddr_in saPeer;
+    Storm::Source::SMem::SMemCopy(&saPeer, s_saCtlReplayPeer, sizeof(saPeer));
+    return sRunAuthConversationReplay(saPeer, 2);
+}
+// VP-END [bn-replay-race R179]
+
 // One-shot-per-connection forensic probe for the BNCS read thread's WSAECONNABORTED path.
 // The 2026-11-20 pcap proved the wire was healthy when this client's own stack reported
 // 10053 twice on the same blocking socket, so the question is WHICH half of Winsock still
@@ -571,100 +778,19 @@ int32_t __fastcall SAFESOCK_LogRecvAutopsy(D2NetDataStrc * pNetData, int nRecvEr
     // Runs once per read-thread start (the autopsy call site fires on the first 10053 of
     // each attempt), so both reconnect attempts produce one verdict each.
     if (bPeerOk) {
-      SOCKET hCtl = socket(2, 1, 0);
-      if (hCtl == -1) {
-        D2BOOT_MarkFmt("BNet: ctl socket create failed err=%d", (int)WSAGetLastError()); // [d2boot]
-      } else {
-        int nCtlConn = connect(hCtl, (sockaddr*)&saPeer, (int)sizeof(saPeer));
-        if (nCtlConn == -1) {
-          D2BOOT_MarkFmt("BNet: ctl-replay connect failed err=%d", (int)WSAGetLastError()); // [d2boot]
-        } else {
-          sLogCtlProbeBattery("ctl-live", hCtl);
-          int nStep = 0;
-          int nStepErr = 0;
-          char chPingReq[64];
-          char chAuthReq[256];
-          int nPingLen = 0;
-          int nAuthLen = 0;
-          memset(chPingReq, 0, sizeof(chPingReq));
-          memset(chAuthReq, 0, sizeof(chAuthReq));
-          char chProtoByte = 0x01;
-          int nSend1 = send(hCtl, &chProtoByte, 1, 0);
-          if (nSend1 < 0) {
-            nStep = 1;
-            nStepErr = (int)WSAGetLastError();
-          }
-
-          if (!nStep && g_nCtlReplayAuthInfoLen > 0) {
-            int nSend50 = send(hCtl, g_chCtlReplayAuthInfo, g_nCtlReplayAuthInfoLen, 0);
-            if (nSend50 < 0) {
-              nStep = 2;
-              nStepErr = (int)WSAGetLastError();
-            }
-          } else if (!nStep) {
-            nStep = 2;
-            nStepErr = -2; // no stashed 0x50 (send never reached the stash path)
-          }
-
-          if (!nStep) {
-            fd_set ctlReadSet;
-            ctlReadSet.fd_count = 1;
-            ctlReadSet.fd_array[0] = hCtl;
-            timeval tvPingWait;
-            tvPingWait.tv_sec = 2;
-            tvPingWait.tv_usec = 0;
-            int nSelPing = select(0x40, &ctlReadSet, nullptr, nullptr, &tvPingWait);
-            if (nSelPing <= 0) {
-              nStep = 3;
-              nStepErr = nSelPing == 0 ? 10060 : (int)WSAGetLastError();
-            } else {
-              nPingLen = recv(hCtl, chPingReq, (int)sizeof(chPingReq), 0);
-              if (nPingLen < 0) {
-                nStep = 4;
-                nStepErr = (int)WSAGetLastError();
-              } else {
-                int nEchoLen = nPingLen < 8 ? nPingLen : 8;
-                if (send(hCtl, chPingReq, nEchoLen, 0) < 0) {
-                  nStep = 5;
-                  nStepErr = (int)WSAGetLastError();
-                }
-              }
-            }
-          }
-
-          if (!nStep) {
-            fd_set ctlReadSet2;
-            ctlReadSet2.fd_count = 1;
-            ctlReadSet2.fd_array[0] = hCtl;
-            timeval tvAuthWait;
-            tvAuthWait.tv_sec = 3;
-            tvAuthWait.tv_usec = 0;
-            int nSelAuth = select(0x40, &ctlReadSet2, nullptr, nullptr, &tvAuthWait);
-            if (nSelAuth <= 0) {
-              nStep = 6;
-              nStepErr = nSelAuth == 0 ? 10060 : (int)WSAGetLastError();
-            } else {
-              nAuthLen = recv(hCtl, chAuthReq, (int)sizeof(chAuthReq), 0);
-              if (nAuthLen < 0) {
-                nStep = 7;
-                nStepErr = (int)WSAGetLastError();
-              }
-            }
-          }
-
-          D2BOOT_MarkFmt(
-              "BNet: ctl-replay verdict step=%d err=%d ping=%d [%02x %02x %02x %02x] authreq=%d [%02x %02x %02x %02x]",
-              nStep, nStepErr, nPingLen,
-              (unsigned)(unsigned char)chPingReq[0], (unsigned)(unsigned char)chPingReq[1],
-              (unsigned)(unsigned char)chPingReq[2], (unsigned)(unsigned char)chPingReq[3],
-              nAuthLen,
-              (unsigned)(unsigned char)chAuthReq[0], (unsigned)(unsigned char)chAuthReq[1],
-              (unsigned)(unsigned char)chAuthReq[2], (unsigned)(unsigned char)chAuthReq[3]); // [d2boot]
-          sLogCtlProbeBattery("ctl-post", hCtl);
-        }
-
-        closesocket(hCtl);
-      }
+      // VP-BEGIN [bn-replay-race R179]: capture the server for the reuse probe, which runs
+      // later in the R174 reconnect path once this socket and its getpeername are gone.
+      Storm::Source::SMem::SMemCopy(s_saCtlReplayPeer, &saPeer, sizeof(saPeer));
+      s_bCtlReplayPeerValid = 1;
+      // VP-END [bn-replay-race R179]
+      sRunAuthConversationReplay(saPeer, 0); // probe A: plain blocking replay (the R178 shape)
+      // VP-BEGIN [bn-replay-race R179]: probe B - the same conversation through the race's
+      // exact socket shape (FIONBIO(1) -> connect -> select writable -> FIONBIO(0)). If A
+      // survives and B dies at/after connect, the race creation pattern is the trigger;
+      // if both survive, pattern AND conversation are exonerated from a clean handle and
+      // the remaining discriminator is handle identity (probe C in the reconnect path).
+      sRunAuthConversationReplay(saPeer, 1);
+      // VP-END [bn-replay-race R179]
     } else {
       D2BOOT_Mark("BNet: ctl-socket skipped (peer sockaddr unavailable)"); // [d2boot]
     }

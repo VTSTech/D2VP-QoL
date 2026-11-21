@@ -1,5 +1,112 @@
 # BNET-CONNECT-FINDINGS — R169 audit of the Battle.net connect path
 
+## R178 field result: DECISIVE — the replay probes completed the whole conversation; the death is per-flow kernel state, not content, not image (and with Windows Firewall fully off, not the firewall either)
+
+**The R178 pcap (`game-d2vp-bnet-R178.pcapng`, 2026-11-20 ~23:23 bnetd time) caught all
+five BNCS flows.** Retail first (client :35777), then the D2VP run with both replay
+probes firing:
+
+| flow | who | wire outcome |
+|---|---|---|
+| :35777 | retail | full auth (0x50→0x25 echo→AUTHREQ→0x51→0x33), clean FIN at +4.2 s |
+| :35829 | D2VP attempt 1 | 0x01→0x50→echo ok → **client kernel RST 1.24 ms after the 103-byte AUTHREQ arrived** (RST `ack=AUTHREQ_end`, `win=0`, TTL 128, IP-ID continuous) |
+| :35830 | replay probe 1 | **identical conversation, started 0.4 ms after the RST, same process** → read the AUTHREQ, graceful FIN |
+| :35831 | D2VP attempt 2 (R174 reconnect) | same conversation → **RST again, same signature** |
+| :35832 | replay probe 2 | → read the AUTHREQ, graceful FIN |
+
+bnetd (`bnetd.log` in the d2gs container) accepted all five identically — same
+versioncheck selection (`D2XP_114D`, "no upgrade is available"), same AUTH_INFO parse;
+the two auth flows end with pvpgn's own `sd_tcpinput: read returned -1` (it saw the
+client's RST), the probe flows simply closed. IP-IDs 51890-51926 continuous across the
+whole window: **nothing injected, no middlebox** — every RST is emitted by the client's
+own kernel, with the AUTHREQ fully ACKed inside it.
+
+**What this kills (decision-tree branch 1 taken):** the conversation content (probe = the
+verbatim 0x50, same server, same second → survives twice), the process image (the
+surviving socket is created by the same D2VP.exe, same thread that just watched the auth
+socket die), and the server. What remains: **the original auth flow's kernel state** —
+something about HOW that socket was created/connects, not WHAT it says.
+
+**The user-side eliminations this round (owner actions):**
+- **Windows Firewall turned off completely** → still dies. The stock WFP BLOCK-filter
+  class is out; a third-party filter/WFP callout remains possible but now has no
+  firewall involvement at all.
+- **"It's what D2VP does with the 0x25" (client-side close) — checked and refuted:**
+  the pcap shows our 0x25 echo *send succeeded* (server ACKed it) before the abort; the
+  10053 lands on the recv AFTER the echo. No `shutdown()` call exists anywhere in the
+  rebuild; every `closesocket` path is trapped since R177 and the only closers in the
+  death window are the sanctioned post-death teardowns; a WSACleanup-to-zero imbalance
+  is impossible in the auth window (refcount only grows — Create/StartUp add, nothing
+  frees in between; R179 now logs the count to prove it with data). And decisively: the
+  replay probes DO understand the 0x25 (they echo it from the same code shapes) and
+  complete. The user's instinct that the kill is client-host is correct — but it is the
+  kernel per-flow state, not our user-mode packet handling.
+
+**The two remaining structural differences between dying and surviving sockets** (both
+confounded, R179 splits them):
+1. **Creation pattern.** Auth sockets: race → non-blocking `connect` → `select`
+   write/except → winner → `FIONBIO(0)` toggle → blocking conversation. Replay probes:
+   plain `socket()` + blocking `connect` + conversation. Retail completed auth THROUGH
+   the race pattern on the same machine though (flow :35777) — so the pattern alone
+   cannot be sufficient cause; it must combine with something else (state left by the
+   first attempt, handle identity, or a per-flow classifier that trips only when the
+   conversation is driven by the auth thread's raced socket).
+2. **Handle identity.** R176 saw the reconnect's own socket land on attempt 1's freed
+   handle value (0xdf0) and die like it. If the kernel/classifier poisoned the HANDLE
+   TABLE entry, every future socket reusing that value inherits the death — which would
+   also explain why the replays (created BEFORE `Free`, different handles) survive.
+
+## R179 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate)
+
+- `BnSend.cpp` `NET_SID_CLIENT_ConnectFastest` — **bn-auth-blocking-connect**: a
+  **single-entry server list** (the private D2GS/PvPGN case) skips the race entirely and
+  connects exactly like the probes: `Create(..., flags=0)` — one plain blocking socket.
+  This is the only shape that has provably completed auth on the failing machine.
+  Multi-entry gateway lists keep the retail race. The blocking path re-uses the shared
+  post-race tail via `goto bn_race_won` (non-winner cleanup is a no-op with count 0).
+- `Safesock.cpp` — the R178 inline replay became **`sRunAuthConversationReplay(saPeer,
+  mode)`** (step coding unchanged; verdict line now tagged `ctl-replay` / `race-replay` /
+  `reuse-replay`) plus two new probes:
+  - **probe B — race-replay** (mode 1, in the autopsy right after probe A): the same
+    conversation through the race's exact shape — `FIONBIO(1)` → connect → `select`
+    writable → `FIONBIO(0)` → conversation. If A survives and B dies, the pattern is the
+    trigger; if both survive, pattern AND content are exonerated from a clean handle.
+  - **probe C — reuse-replay** (mode 2, `SAFESOCK_RunReuseReplayProbe`, called from the
+    R174 reconnect path **after** `Free`): fresh socket created immediately after the
+    dead auth socket is freed, so `socket()` lands on the just-freed handle value. If C
+    completes while the real reconnect dies at AUTHREQ → handle identity is the
+    discriminator; if C completes and the reconnect now survives → the blocking-shape
+    change alone fixed the round; if C dies like the real socket → the death rides on
+    the Free/reconnect sequencing itself.
+  - The autopsy now stashes the peer sockaddr into `g_saCtlReplayPeer` (d2_boot globals)
+    so probe C can reach the server after the auth socket's `getpeername` is gone.
+- `Safesock.cpp` — **bn-wsaref**: every `WSAStartup`/`WSACleanup` site in the process
+  funnels through a counter (`BNet: wsaref -> N (site) [tid]`): startup, create, and the
+  cleanup wrapper (the ErrorManager fatal-path sites all call the wrapper). Closes the
+  refcount question with data — the autopsy's "data-plane fails, ws2_32-internal probes
+  succeed, SO_TYPE=10042" shape is also the documented count-hit-zero signature, and
+  the count must be provably >0 through the whole auth window.
+- `Redivivus/d2_boot.{h,cpp}` — `D2VP_ROUND` → 179; peer-stash globals.
+
+**How to read the R179 log (decision tree):**
+
+1. `single-server list -> blocking connect <ip> (race skipped)` then login proceeds →
+   **FIXED**: the race shape was the co-trigger; private-server connects stay blocking
+   forever. (If retail lists ever need the race, the multi-entry path is untouched.)
+2. Blocking connect, still `autopsy recvErr=10053` → shape alone is not it; read
+   `ctl-replay`/`race-replay` verdicts: if the plain-shape replay (A) survives but the
+   race-shape replay (B) dies at/after connect → the FIONBIO/select pattern is the
+   trigger and the fix is dropping the race for ALL list shapes.
+3. `reuse-replay verdict step=0` while the real (blocking) connect dies → handle-value
+   poisoning; next round re-seeds the handle table (burn sockets until the value moves)
+   or switches the whole BNCS stage off the racing path permanently.
+4. `reuse-replay` dies AND blocking connect dies → the remaining lever is the
+   `wsaref` trail + `netsh wfp capture` on a fully-clean boot (the P2P-storm hygiene
+   factor matters: the desktop runs heavy torrent/DHT traffic during every failing run;
+   try one run with the torrent client off — retail survived it, but the classifier
+   theory says concurrent P2P flows may arm per-flow inspection that a plain-block
+   firewall rule never exercises).
+
 ## R177 field result: two suspect classes died, the block is conversation-scoped — SO_TYPE fails with WSAENOPROTOOPT(10042)
 
 **Machine-side classes eliminated by the user's Process Hacker dump + the in-log census.**
