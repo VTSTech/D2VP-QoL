@@ -12,7 +12,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R168-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.8--R188-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -57,10 +57,19 @@ Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All
 
 ## Current Status
 
-- **Version:** Vanilla+0.0.8-R168
+- **Version:** Vanilla+0.0.8-R188
 - **Renderer:** D3D/Glide via [Glide3xVK](https://github.com/VTSTech/Glide3xVK)
-- **Scope:** Single-player only, Battle.net not supported
+- **Scope:** Single-player; D2GS private-server realms supported (not working yet)
 - **Compatibility:** Full backward compatibility, `.d2s` files untouched
+
+## What's New (R168 → R188)
+
+- Cold/frozen monsters no longer vanish without dropping loot — idle-room race fixed, and the shatter death effect (ice cubes + smoke) now plays like retail
+- Battle.net title-screen click crash fixed; private-server realms (PvPGN/D2GS) connect reliably
+- New opt-in feature: **Palette 37 Tints** — 8 champion/unique tint rows retail never rendered
+- Full `d2boot.log` diagnostics for the whole game journey
+
+Details: [RELEASE-NOTES-R168-R188.md](RELEASE-NOTES-R168-R188.md)
 
 ## Quick Start
 
@@ -80,7 +89,8 @@ See [docs/building.md](docs/building.md) for detailed build instructions.
 
 ## Links
 
-- [CHANGELOG.md](CHANGELOG.md) - Release history
+- [RELEASE-NOTES-R168-R188.md](RELEASE-NOTES-R168-R188.md) - What's new in this range
+- [CHANGELOG.md](CHANGELOG.md) - Full release history
 - [FEATURES.md](FEATURES.md) - Feature details
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide
 - [LICENSE](LICENSE) - MIT License
