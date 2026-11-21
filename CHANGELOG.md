@@ -9,6 +9,38 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **R187/R188 — shatter crumble fixed; issue #39 fully closed** (the final vanish strand
+  was the client shatter effect: `MONSTER_SpawnDeathEffectMissiles` set
+  `pOwner`/`pMissile` **before** `memset(&sSkillArg, 0, 0x5c)`, erasing them — retail
+  0x4afc10 memsets first. Both missiles were rejected (`MSN-FAIL-NOPMSL`), so shatter
+  deaths vanished with no crumble. Fixed both paths; field-confirmed playing
+  (`MSN-VEL raw=0`, live missiles). The remaining `DROP-SKIP` loot skips were decoded as
+  retail-intended: the wrapper's bit-17 check is `UNITFLAG_NOTC` (no-treasure-class, set
+  by resurrect AI / Necro revive / special spawns) — revived monsters legitimately drop
+  nothing on their next death. Full forensics: `R2/ColdFrozen_R182_IdleRoom_Race_Verified.md`,
+  `[CF39]`/`[CF39] MSN-*` marks in d2boot.log.)
+
+- **R184 — cold/frozen vanish closed: field log pins the last case as retail shatter**
+  (R182's idle-room race fix landed and the residual "cold monster rarely vanishes on
+  melee" case is now field-confirmed as the retail shatter roll — the vanish kill's
+  `[CF39] DEATH` line shows `shatter=2048` active, ApplyCold's 20%-per-cold-application
+  roll is byte-identical to retail 0x57b0fa, loot drops before any shatter handling.
+  R183's [CF39] instrumentation initially read zero because `LOGMANAGER_TraceToModuleLog`
+  doesn't write d2boot.log and `D2TraceFmt` is a release no-op; R184 re-points all 15
+  marks to `D2BOOT_MarkFmt`.)
+
+- **R182 — issue #39 residual fixed: idle-room race, not a completion bug** (fresh r2
+  pass verified the whole death path retail-faithful — RegenAndPsnDecreaser kill tail +
+  deferral, KillMonster guards (`killable` bit 15 IS retail `fcn.00457490(classId,0xf)`),
+  lifecycle halt, SetUninterruptableState incl. its AITHINK-removal tail, and the retail
+  event-queue guard `0x5416f5` the fork already had. The vanish was a race: a mid-cast
+  kill strands at 0 HP with `STATE_death_delay` until freeze/cold expiry, but
+  `CleanupIdleRooms` untiles the room inside that window once the killer walks away and
+  `UNITS_ProcessDeadOrInactiveMonster` — with no death_delay awareness — freed the unit
+  silently, no loot. `CleanupIdleRooms` now completes pending deferred deaths before the
+  save/free walk; the redundant R166 cold/frozen branch in RegenAndPsnDecreaser was
+  removed — r2-verified byte-identical to the general path.)
+
 - **R181 — final probe pair: big buffers and the logging gap** (the R180 field run
   survived all five probes on both attempts with clean probe data while the real
   socket died at the same byte again — every in-process structural delta is now

@@ -525,8 +525,10 @@ void __fastcall DropItemForVictim_Unused(::SGAMEDATA * pGame, D2ObjectOperateFnA
     } else {
       eCollisionFlags eCollision;
       if (pVictim->eUnitFlags >> 0x11 & 1) {
-        // [CF39] retail 0x5a686d guard (ISDEAD bit 17): loot drop silently skipped.
-        D2BOOT_MarkFmt("[CF39] DROP-SKIP-ISDEAD classId=%d", (int)pVictim->nClassId);
+        // [CF39] retail 0x5a686d guard: UNITFLAG_NOTC (bit 17, no-treasure-class) — set on
+        // resurrected/revived/special monsters (AI.cpp resurrect, SkillNec revive, Create
+        // spawns); their next death legitimately drops no loot. Retail-identical.
+        D2BOOT_MarkFmt("[CF39] DROP-SKIP-NOTC classId=%d", (int)pVictim->nClassId);
         return;
       }
       /* bonewall */ if (pVictim->nClassId == 0x158) {
