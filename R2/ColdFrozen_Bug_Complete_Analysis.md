@@ -234,13 +234,35 @@ STATE_cold    // Chilled/slow state
 > while `STATE_uninterruptable` is set, and both expiry callbacks drop a stale
 > `STATE_death_delay` on already dying/dead units. Build self-ID bumped to
 > `Vanilla+0.0.8-R170` (`Redivivus/d2_boot.h`).
+>
+> **⚠ STILL REPRODUCING AFTER R170 → ROOT CAUSE FOUND (R182).** Fresh per-function r2
+> re-verification ([ColdFrozen_R182_IdleRoom_Race_Verified.md](ColdFrozen_R182_IdleRoom_Race_Verified.md))
+> confirmed the entire kill path retail-faithful — RegenAndPsnDecreaser kill tail + deferral,
+> KillMonster guards (fork's `killable` bit 15 IS retail's `fcn.00457490(classId,0xf)` check),
+> lifecycle halt `0x5a7c59` + recovery block, `SetUninterruptableState` (incl. its retail
+> AITHINK-timer removal tail `0x55454d`), and the retail event-queue guard `0x5416f5`
+> (monster + AITHINK + uninterruptable → clear) already present in the fork. The residual
+> vanish is a **race**: a mid-cast (uninterruptable) kill strands at 0 HP with
+> `STATE_death_delay` until freeze/cold expiry, but `CleanupIdleRooms` idles the room out
+> (idle ticks > 10, incremented per frame) inside that window once the killer walks away,
+> and `UNITS_ProcessDeadOrInactiveMonster` has no death_delay awareness — the unit was
+> freed with no removal packet (silent vanish, no loot) or saved as a 0 HP zombie.
+>
+> **✅ FIX APPLIED (R182).** `CleanupIdleRooms` (`Source/D2Game/GAME/Server.cpp`) now runs a
+> pre-pass completing pending deferred deaths (`SUNITDMG_CompleteDeathDelayIfPending`,
+> declared in `SUnitDmg.h`) over the room's monsters BEFORE the save/free walk — loot/XP
+> drop through the normal death flow and the dropped items are saved with the room by the
+> existing walk (killing inside the walk would have let `FreeRoom` force-unlink the fresh
+> loot unsaved). The R166 cold/frozen branch in `RegenAndPsnDecreaser` was removed
+> (r2-verified byte-identical to the general path; retail has no such branch). Build
+> self-ID `Vanilla+0.0.8-R182`.
 
-### Final Status: ✅ RESOLVED (as of R162) → ⚠ REOPENED (R170, residual strand H1) → ✅ FIXED (R170, H1+H2 applied)
+### Final Status: ✅ RESOLVED (R162) → ⚠ REOPENED (R170, H1) → ✅ FIXED (R170) → ⚠ REOPENED (R182, idle-room race) → ✅ FIXED (R182, cleanup pre-pass)
 - **Issue**: Frozen monsters disappearing without dropping loot
-- **Root Cause**: State blocking of timer events during death processing
-- **Solution**: Complete bypass of state checks for critical timer events
-- **Validation**: Confirmed against Game.exe 1.14d retail executable
-- **Impact**: Fully resolved with no breaking changes
+- **Root Cause (final)**: idle-room cleanup destroying deferred-death strands before any completion path runs — NOT a completion-mechanism bug
+- **Solution**: complete pending deferred deaths at room-untile time, before the save/free walk
+- **Validation**: per-function r2 disassembly diffs against Game.exe 1.14d retail
+- **Impact**: no breaking changes; retail-shape preserved everywhere else
 
 ### Long-term Impact
 - **Gameplay**: Improved consistency and reliability

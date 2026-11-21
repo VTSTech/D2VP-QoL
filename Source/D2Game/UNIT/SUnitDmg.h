@@ -144,6 +144,8 @@ void __fastcall SERVER_KillMonster(::SGAMEDATA * pGame, struct D2UnitStrc * pUni
 void __fastcall SERVER_GetHitCalculation(::SGAMEDATA * pGameIn, struct D2UnitStrc * pUnit, struct D2UnitStrc * pVictim, struct D2DamageStrc * pDamage);
 // Resolves a pending deferred-hit combat queue entry between pUnit (attacker) and pVictim. Finds the matching D2CombatEntryStrc, verifies melee range, applies damage via DAMAGE_ApplyDamageToUnit, dispatches hit/defend unit events, applies reflected damage, runs GetHitCalculation, and removes the entry from the queue. No-ops if either unit is null or out of range.
 void __fastcall DAMAGE_ProcessCombatQueueEntry(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * pVictim, uint32_t dwParam);
+// [R182] Completes a pending deferred death (STATE_death_delay) on a monster: retail's completion primitive (r2-verified 0x5544b0 death_delay branch — clears STATE_uninterruptable via SetUninterruptableState(0), then kills through the killer-aware pair GetHitCalculation(KILL)/SERVER_KillMonster). Fork additions (R166 expiry hooks, R182 idle-room pre-pass) call this so a monster killed mid-cast — often while frozen — finishes dying with loot/XP instead of stranding at 0 HP. Returns TRUE when a deferred death was completed.
+BOOL __fastcall SUNITDMG_CompleteDeathDelayIfPending(struct D2UnitStrc * pUnit);
 struct D2DamageStrc * __fastcall DAMAGE_FindCombatEntry(struct D2UnitStrc * pUnit, struct D2UnitStrc * pUnit2);
 uint32_t __stdcall DAMAGE_RollMinMaxDamageRange(struct D2UnitStrc * pUnit, uint32_t * pnMinDamage, uint32_t * pnMaxDamage);
 // TO-HIT CALCULATION: AR vs AC formula with level penalty.

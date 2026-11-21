@@ -1314,6 +1314,30 @@ void __stdcall CleanupIdleRooms(::SGAMEDATA * pGame) {
           if (nIdleTicks > 10) {
             bCanUntile = D2Common::DUNGEON::Dungeon::DRLGROOM_TestRoomCanUntile(*ppActLoop, pRoom);
             if (bCanUntile) {
+              // [R182] Complete pending deferred deaths (STATE_death_delay) in this room
+              // BEFORE the save/free walk below. A monster killed while uninterruptable
+              // (mid-cast), typically frozen, sits at 0 HP with death_delay set until its
+              // freeze/cold state expires (the R166/R170 expiry hooks in SUnitDmg.cpp) or
+              // an uninterruptable-clear path runs — but once the killer walks away the
+              // room idles out inside that window, and UNITS_ProcessDeadOrInactiveMonster
+              // has no death_delay awareness: the unit was freed with no removal packet
+              // (silent vanish, no loot) or saved as a 0 HP live-mode zombie (issue #39
+              // residual, still reported after R170). Completing here runs the kill
+              // through retail's completion primitive (SUnitDmg 0x5544b0 death_delay
+              // branch: GetKillerUnit -> GetHitCalculation(KILL) / SERVER_KillMonster), so
+              // loot/XP/quest credit drop through the normal death flow, and the dropped
+              // items join the room list before the walk below saves them with the room.
+              // The walk caches pRoomNext/pUnitNext before each call, so units and items
+              // this pre-pass adds are handled safely.
+              D2UnitStrc* pUnitPending = pRoom->pUnitList;
+              while (pUnitPending) {
+                D2UnitStrc* pUnitPendingNext = pUnitPending->pRoomNext;
+                if (pUnitPending->eUnitType == UNIT_MONSTER) {
+                  UNIT::SUnitDmg::SUNITDMG_CompleteDeathDelayIfPending(pUnitPending);
+                }
+                pUnitPending = pUnitPendingNext;
+              }
+
               pUnit = pRoom->pUnitList;
               while (pUnit) {
                 pUnitNext = pUnit->pRoomNext;
