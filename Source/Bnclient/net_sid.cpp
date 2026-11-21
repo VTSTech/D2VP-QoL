@@ -1512,15 +1512,28 @@ int32_t __stdcall NET_SID_CLIENT_Send_0x51_AuthCheck() {
     g_dwCdKeyClientToken = g_dwCdKeyClientToken + dwTickCount + _Var1;
     dwClientToken.dwClientToken = g_dwCdKeyClientToken;
     uint32_t bHasPatchFile = BnDownload::BNDOWNLOAD_HasPatchFilename();
+    // VP-BEGIN [bn-patchwait-bound R190]: this wait had no timeout - it relied on the
+    // protocol-dead flag or the BNFTP download thread setting the patch filename. With
+    // the R190 CheckRevision bypass the MPQ is not needed at all, so a 20 s bound
+    // (retail's BNFTP recv timeout) turns a stuck wait (server serves no version MPQ /
+    // download fails) into a logged proceed instead of an unbounded loop in the auth
+    // thread holding the whole connect stage open.
+    DWORD dwPatchWaitStartTick = GetTickCount();
     while (!bHasPatchFile) {
       bIsExpansion = SID_GetReadyFlag();
       if (bIsExpansion) {
         return 0;
       }
 
+      if (GetTickCount() - dwPatchWaitStartTick > 20000) {
+        D2BOOT_Mark("BNet: 0x51 patch-filename wait bound (20 s) expired - proceeding without MPQ (CheckRevision bypass)"); // [d2boot]
+        break;
+      }
+
       /* DWORD dwMilliseconds for Sleep */ Sleep(10);
       bHasPatchFile = BnDownload::BNDOWNLOAD_HasPatchFilename();
     }
+    // VP-END [bn-patchwait-bound R190]
 
     int32_t bCheckRevResult = BnDownload::BNDOWNLOAD_PerformCheckRevision(&dwClientToken.dwExeVersion, &dwClientToken.dwExeHash, szExeInfoClassic);
     if (!bCheckRevResult) {

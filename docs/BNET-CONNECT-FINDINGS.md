@@ -566,3 +566,64 @@ self-contained, and hand-checked (types, namespaces, brace balance). The gateway
 format was validated against `BNGatewayAccess::Load()`'s 3n+1 parse arithmetic with a
 script (one-gateway and retail-shaped four-gateway blobs both parse; trailing double-NUL
 assert holds).
+
+---
+
+## R190 — CheckRevision bypass: the 10053 rounds' real root cause (2026-11-21)
+
+The WFP capture exonerated the kernel (all 15 providers Microsoft, zero third-party
+callouts, the `nsr`/NsrSubLayer `STREAM_FILTER`/`TCP_FILTER` entries are Win11 Web
+Threat Defense **inspection** callouts — cannot block; zero TCP classify-drop events for
+the auth flow), and the pktmon capture (port 6112, one failing run) showed the actual
+death: **15 full auth conversations in ~430 ms** (bursts of 7+8), each one: SYN → 1 B
+protocol byte → 51 B 0x50 → server 8 B ECHOREQ → client echoes 8 B (read thread alive,
+framing parser fine) → server 103 B AUTHREQ_109 → **client FIN 1.4–1.7 ms later** (data
+consumed, graceful) → immediate re-SYN. **SID_AUTH_CHECK (0x51) was never sent on any
+attempt**; retail sends it ~120 ms after AUTHREQ on the same server. The rename-to-
+Game.exe test behaved identically (not image-name-keyed); adapter census = Npcap +
+VBoxNetLwf + MS components only; Defender = only AV. The old "WFP STREAM-layer abort"
+theory (R178–R181) is dead: nothing ever aborted the flow from below.
+
+**Root cause (client, deterministic):** `NET_SID_CLIENT_Send_0x51_AuthCheck` gates on
+`BNDOWNLOAD_PerformCheckRevision` (BnDownload.cpp), whose retail chain —
+`SFileOpenArchive` on the AUTH_INFO MPQ → authenticate → extract CheckRevision DLL →
+`D2FILE_VerifyFileSignature` → `LoadLibrary` → call — can never succeed in the 1.14d
+rebuild (no Blizzard-signed CheckRevision DLL in a D2VP install), so it returned
+0 = failure and 0x51 was never sent, against any server. The Strategy-1 bypass from
+`R2/CheckRevision_Analysis_and_Fix_Strategies.md` was designed on 2026-11-19 but never
+integrated. The Nov-18/19 session's leftovers (the `D2VP-D2GS_Compatibility*` docs, the
+false "IMPLEMENTATION/INTEGRATION_COMPLETE" notes, the test/build scripts, and the
+never-wired `compatibility_patch.{cpp,h}` packet-whitelist — dead code whose whitelist
+would have broken the protocol anyway) were removed after R190 landed.
+
+**R190 changes (all VP-marked; MSYS2 llvm-mingw build remains the compile gate):**
+
+- `BnDownload.cpp` `BNDOWNLOAD_PerformCheckRevision` — Strategy-1 bypass fast path
+  (static `s_bCheckRevisionBypass = TRUE`): ver=0x00010064, checksum=0x00000000, empty
+  exe-info, **return 1** (both callers treat 0 as failure — the strategy doc's "return 0"
+  snippet contradicts the callers and was not used). Retail chain kept below the toggle
+  for a future full-Storm install. Added `Redivivus/d2_boot.h` include for the marks.
+- `net_sid.cpp` `NET_SID_CLIENT_Send_0x51_AuthCheck` — the `HasPatchFilename` wait had
+  **no timeout** (BNFTP failure on a server that serves no version MPQ = auth thread
+  stuck forever); bounded at 20 s with a logged proceed (bypass needs no MPQ).
+- Flag note (correction to the R190 planning notes): `g_bSIDProtocolReady` /
+  `SID_GetReadyFlag` looks like a collapsed dead/ready pair but every consumer treats
+  1 as abort/failure coherently, including the auth-stage site that sets terminal state
+  0xb on dead — it is the protocol-dead flag under a recon misnomer. Not touched.
+
+**Field tuning:** if the server rejects 0x51 (result 0x101/0x102), read the expected
+ver/checksum/exeinfo from pvpgn's versioncheck log (or the D2GS agent's retail pcap) and
+adjust the two constants in the bypass — or set `exactmatch = 0` server-side
+(VTSTech/D2VP-D2GS owns that side).
+
+**Expected d2boot.log on success:** `SID pkt 0x50 received (99 bytes)` → `CheckRevision
+bypass (R190): ver=0x00010064 checksum=0x00000000` → `SID 0x51 AUTH_CHECK sent
+(accepted=1)` → `wait 0x51 -> reply arrived` → `SID 0x51 AUTH_CHECK result=...` →
+`Connected to Battle.net`.
+
+**Riders:** all 90 pktmon drops are the server's UDP 6112 probes hitting an unbound
+client port ("transport endpoint was not found") — D2VP never binds UDP 6112; game
+play will need that after auth lands (allow inbound UDP 6112 / LAN=Private profile).
+Open question: which thread emitted the +1.4 ms FIN (auth thread is timing-excluded;
+primary suspect: launcher-poll `BNSEND_Disconnect` after `BNMESSQUEUE_SetStateIfZero(1)`)
+— the R173 teardown marks in the next d2boot.log will name it.
