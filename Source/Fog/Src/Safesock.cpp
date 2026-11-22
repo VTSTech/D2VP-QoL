@@ -152,6 +152,40 @@ static void sLogWinsockCatalogOnce() {
 // VP-END [bn-lsp-catalog R177]
 
 // @sourcefile .\Src\Safesock.cpp
+// VP-BEGIN [bn-threadconnect R195]: staging for the deferred blocking-path connect.
+// Create (flags 0) stages the sockaddr instead of connecting; the read thread performs
+// the connect itself via SAFESOCK_ThreadConnect before its recv loop - the
+// autopsy-battery sockets, which never die, connect on the receiving thread, and the
+// cross-thread connect is the last surviving structural difference in the elimination
+// matrix (options R193, select R194, page state R192, recv style R191 all exonerated).
+// Single-flight: Safesock::Free waits the read thread before teardown completes, so
+// the next Create's staging cannot race the previous read thread.
+static sockaddr_in g_ThreadConnectAddr;
+static int g_ThreadConnectPending = 0;
+
+// Performs the staged deferred connect on the CALLING thread (the read thread).
+// Returns 0 on connect failure (error stored on the endpoint struct), 1 on success
+// or when nothing was staged.
+int32_t __stdcall SAFESOCK_ThreadConnect(D2NetDataStrc * pNetData) {
+    if (!pNetData || !g_ThreadConnectPending) {
+      return 1;
+    }
+
+    g_ThreadConnectPending = 0;
+    /* int namelen for connect */ /* sockaddr * name for connect */ /* SOCKET s for connect */ int nResult = connect(pNetData->hSocket, (sockaddr*)&g_ThreadConnectAddr, 0x10);
+    if (nResult == -1) {
+      pNetData->nWSALastError = WSAGetLastError();
+      pNetData->nError = 3;
+      D2BOOT_MarkFmt("BNet: thread-side connect failed err=%d", (unsigned)pNetData->nWSALastError); // [d2boot]
+      return 0;
+    }
+
+    pNetData->bConnected = 1;
+    D2BOOT_Mark("BNet: thread-side connect ok (probe-parity)"); // [d2boot]
+    return 1;
+}
+// VP-END [bn-threadconnect R195]
+
 D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_START_ROUTINE pThreadProc, LPVOID pThreadParam, char * szConnectionAlias, uint32_t dwFlags) {
     uint32_t nLocalIpAddr;
     HANDLE hThread;
@@ -234,6 +268,15 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
       /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 0xffff, 0x1005, nSendBufSize, 4);
     }
     // VP-END [bn-option-bisect R193]
+    // VP-BEGIN [bn-recvtimeo R194]: the read loop waits INSIDE recv() now (select gate
+    // removed - bn-skip-select R194), so the socket carries a 100 ms receive timeout:
+    // every idle recv wakes once per 100 ms (10060 -> keepalive-style continue in
+    // BnetReadFunction), keeping the same disconnect liveness the select cycle used to
+    // provide (WSASocket2_Read's CS hold is bounded at <=100 ms so Safesock::Free can
+    // acquire it promptly).
+    DWORD dwRcvTimeout = 100;
+    setsockopt(hSocket, 0xffff, 0x1006, (char*)&dwRcvTimeout, 4);
+    // VP-END [bn-recvtimeo R194]
     uint32_t bNonBlocking = dwFlags & 1;
     if (bNonBlocking) {
       /* u_long * argp for ioctlsocket */ /* long cmd for ioctlsocket */ /* SOCKET s for ioctlsocket */ nNonBlockArg = 1;
@@ -247,19 +290,34 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
     u_short nPortBE = ntohs(nPort);
     connectAddr.sin_port = nPortBE;
     /* char * cp for inet_addr */ connectAddr.sin_addr = inet_addr(szHostNameOrSockLen);
-    /* int namelen for connect */ /* sockaddr * name for connect */ /* SOCKET s for connect */ nResult = connect(hSocket, (sockaddr*)&connectAddr, 0x10);
-    if (nResult == -1) {
-      nResult = WSAGetLastError();
-      if (!bNonBlocking || nResult != 0x2733 && nResult != 0x2734) {
-        pSafesockStrc->nWSALastError = nResult;
-        /* LPCRITICAL_SECTION lpCriticalSection for DeleteCriticalSection */ pSafesockStrc->nError = 3;
-        DeleteCriticalSection(&pSafesockStrc->pSync);
-        D2_FREE_AT(pSafesockStrc, ".\\Src\\Safesock.cpp", 0x123);
-        return nullptr;
+    if (bNonBlocking) {
+      /* int namelen for connect */ /* sockaddr * name for connect */ /* SOCKET s for connect */ nResult = connect(hSocket, (sockaddr*)&connectAddr, 0x10);
+      if (nResult == -1) {
+        nResult = WSAGetLastError();
+        if (nResult != 0x2733 && nResult != 0x2734) {
+          pSafesockStrc->nWSALastError = nResult;
+          /* LPCRITICAL_SECTION lpCriticalSection for DeleteCriticalSection */ pSafesockStrc->nError = 3;
+          DeleteCriticalSection(&pSafesockStrc->pSync);
+          D2_FREE_AT(pSafesockStrc, ".\\Src\\Safesock.cpp", 0x123);
+          return nullptr;
+        }
       }
+    } else {
+      // VP-BEGIN [bn-threadconnect R195]: the blocking path DEFERS the connect to the
+      // read thread. The ETW-calibrated elimination matrix (options: R193; select:
+      // R194; page state: R192; recv style: R191) leaves connect-thread != recv-thread
+      // as the only structural difference between the dying main socket and the
+      // never-dying autopsy-battery sockets, which connect on the receiving thread.
+      // Create stages the sockaddr; the read thread calls SAFESOCK_ThreadConnect
+      // before its recv loop (single-flight: Free waits the read thread before the
+      // next Create can run).
+      g_ThreadConnectAddr = connectAddr;
+      g_ThreadConnectPending = 1;
+      pThreadParamLocal = (LPVOID)pSafesockStrc; // the read thread needs its own struct
+      // VP-END [bn-threadconnect R195]
     }
     if (!bNonBlocking) {
-      pSafesockStrc->bConnected = 1;
+      pSafesockStrc->bConnected = 0;
       pSafesockStrc->bInit = 0;
     }
     /* char * cp for inet_addr */ if (cp_0075d040[0] == '\0' || (nLocalIpAddr = inet_addr(cp_0075d040) , !nLocalIpAddr)) {
@@ -326,7 +384,21 @@ int32_t __fastcall WSASocket2_Read(D2NetDataStrc * pNetData, char * pBuffer, siz
     int nWSAError;
     if (pNetData && !pNetData->bBlocked) {
       int nBytesRead;
+      // VP-BEGIN [bn-threadconnect R195]: the CS is NO LONGER held across the recv -
+      // holding it during the 100 ms RCVTIMEO wait starved the auth thread's sends
+      // (R194 log: the 0x50 delayed 0.4-1 s acquiring pSync). Lifetime does not need
+      // the CS: Safesock::Free waits the read thread (5 s) BEFORE closesocket, so
+      // pNetData is alive and the handle open for as long as this thread is inside
+      // recv. The snapshot under the CS prevents a concurrent bBlocked flip from
+      // racing the recv issue.
       /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&pNetData->pSync);
+      BOOL bSnapshotBlocked = pNetData->bBlocked;
+      SOCKET hSnapshot = pNetData->hSocket;
+      /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&pNetData->pSync);
+      if (bSnapshotBlocked || hSnapshot == -1) {
+        return 0;
+      }
+      // VP-END [bn-threadconnect R195]
       // VP-BEGIN [bn-recvbuf-lock R192]: plain blocking recv restored (retail parity;
       // the R191 overlapped WSARecv detour is reverted - it did not dodge the AFD
       // fast-io reject, because both paths probe-lock the buffer pages). The actual
@@ -336,9 +408,8 @@ int32_t __fastcall WSASocket2_Read(D2NetDataStrc * pNetData, char * pBuffer, siz
       // "Invalid buffer specified on fastio receive" and abort the endpoint (Win11
       // 24H2, bnet.etl 2026-11-21). With the pages guaranteed resident, this recv
       // behaves exactly like retail's.
-      /* int flags for recv */ /* int len for recv */ /* char * buf for recv */ /* SOCKET s for recv */ nBytesRead = recv(pNetData->hSocket, pBuffer, nSize, 0);
+      /* int flags for recv */ /* int len for recv */ /* char * buf for recv */ /* SOCKET s for recv */ nBytesRead = recv(hSnapshot, pBuffer, nSize, 0);
       // VP-END [bn-recvbuf-lock R192]
-      /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&pNetData->pSync);
       if (nBytesRead <= 0) {
         nWSAError = WSAGetLastError();
         pNetData->nWSALastError = nWSAError;

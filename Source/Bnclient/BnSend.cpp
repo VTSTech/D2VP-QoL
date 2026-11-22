@@ -1468,6 +1468,21 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
     if (!VirtualLock(chRecvBuf, sizeof(chRecvBuf))) {
       D2BOOT_MarkFmt("BNet: recvbuf VirtualLock failed gle=%u (continuing unlocked)", (unsigned)GetLastError()); // [d2boot]
     }
+    // VP-BEGIN [bn-threadconnect R195]: probe-parity - THIS thread performs the connect
+    // (dwThreadParam carries the endpoint struct; see Safesock::Create's deferred
+    // blocking path). The autopsy-battery sockets, which never die, connect on the
+    // receiving thread; every cross-thread-connect configuration died. On connect
+    // failure the protocol flags dead and the thread exits; the auth thread's bounded
+    // bConnected wait reports the failure to the user flow.
+    {
+      D2NetDataStrc * pSelf = (D2NetDataStrc *)dwThreadParam;
+      if (pSelf && !Fog::Src::Safesock::SAFESOCK_ThreadConnect(pSelf)) {
+        _net_sid::SID_SetProtocolDeadFlag();
+        /* LONG * lpAddend for InterlockedDecrement */ InterlockedDecrement((LONG*)&Destination_00881bf4);
+        return;
+      }
+    }
+    // VP-END [bn-threadconnect R195]
     int nPollResult = InterlockedCompareExchange(&Target_00881bfc, 0, 0);
     while (!nPollResult && !gbBNetSocketConnected) {
       /* DWORD dwMilliseconds for Sleep */ Sleep(10);
@@ -1516,7 +1531,18 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
       if (lInterlockedResult) {
         break;
       }
-      nPollResult = Fog::Src::Safesock::Safesock_PollReadReady(pSafesock);
+      // VP-BEGIN [bn-skip-select R194]: the poll/select gate is REMOVED from the read
+      // loop - the recv below waits in the kernel on a 100 ms SO_RCVTIMEO instead
+      // (bn-recvtimeo R194, set in Safesock::Create). Rationale: after R193 exonerated
+      // the socket options, the select call is the LAST structural difference between
+      // the dying main socket (select()'ed on every cycle before each recv) and the
+      // always-working autopsy-battery sockets (raw recv, never selected). With this
+      // gate open, recv runs probe-style: blocking, bounded by RCVTIMEO, 10060 handled
+      // as a keepalive-style idle wake below. Disconnect liveness is preserved: the
+      // CS hold inside WSASocket2_Read is bounded by the same 100 ms timer, so Free()
+      // still acquires it promptly.
+      nPollResult = 1;
+      // VP-END [bn-skip-select R194]
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ pSafesock = (D2NetDataStrc*)InterlockedCompareExchange((LONG*)&g_pBNetSocketData, 0, 0);
       /* LONG Comperand for InterlockedCompareExchange */ /* LONG Exchange for InterlockedCompareExchange */ /* LONG * Destination for InterlockedCompareExchange */ if (!pSafesock) {
         break;
@@ -1539,6 +1565,14 @@ void __stdcall BnetReadFunction(uint32_t dwThreadParam) {
           // (R176); budget exhausted, or an already-closed handle, kills the protocol as
           // before.
           int nRecvFailedErr = WSAGetLastError();
+          // VP-BEGIN [bn-skip-select R194]: 10060 = the 100 ms SO_RCVTIMEO expired with
+          // no data - the normal idle wake in the select-free loop (replaces the select
+          // cycle's timeout branch); keep the loop alive, let the keepalive tick run.
+          if (nRecvFailedErr == WSAETIMEDOUT) {
+            s_nRecvAbortRetries = 0;
+            continue;
+          }
+          // VP-END [bn-skip-select R194]
           BOOL bSocketStillOpen = Fog::Src::Safesock::SAFESOCK_IsSocketOpen(pSafesock);
           if (nRecvFailedErr == 10053 && bSocketStillOpen && s_nRecvAbortRetries < 20) {
             s_nRecvAbortRetries++;
@@ -1952,6 +1986,21 @@ bn_race_won:
     Bnet::BnetLog_WriteLine("accessing accounts");
     Fog::Src::Safesock::SAFESOCK_SetSocketNonBlocking(pNetData, 0);
     __frame0.bProtocolByte = '\x01';
+    // VP-BEGIN [bn-threadconnect R195]: the connect is deferred to the read thread now
+    // (probe-parity); wait bounded for it before the first BNCS byte.
+    {
+      DWORD dwConnWaitStart = GetTickCount();
+      while (!pNetData->bConnected && GetTickCount() - dwConnWaitStart < 5000) {
+        Sleep(1);
+      }
+      if (!pNetData->bConnected) {
+        D2BOOT_Mark("BNet: deferred thread-side connect did not complete (5 s bound)"); // [d2boot]
+        Debug::DEBUG_Trace("  Failed connect (thread-side).");
+        return;
+      }
+      D2BOOT_Mark("BNet: thread-side connect ok (probe-parity)"); // [d2boot]
+    }
+    // VP-END [bn-threadconnect R195]
     bAuthInfoAccepted = Fog::Src::Safesock::WSASocket2_Send(pNetData, &__frame0.bProtocolByte, 1);
     D2BOOT_MarkFmt("BNet: BNCS protocol byte sent -> %d", (int)bAuthInfoAccepted); // [d2boot]
     if (bAuthInfoAccepted <= 0) {

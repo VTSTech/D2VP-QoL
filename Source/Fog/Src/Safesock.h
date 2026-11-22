@@ -69,6 +69,12 @@ void __fastcall Free(struct D2NetDataStrc * pNetData);
 int32_t __fastcall WSASocket2_Read(struct D2NetDataStrc * pNetData, char * pBuffer, size_t nSize);
 int32_t __fastcall WSASocket2_Send(struct D2NetDataStrc * pNetData, char * pBytes, size_t nSize);
 int __fastcall Safesock_PollReadReady(struct D2NetDataStrc * pNetData);
+// VP-BEGIN [bn-threadconnect R195]: deferred connect performed BY the read thread
+// (probe-parity - the autopsy-battery sockets, which never die, connect on the
+// receiving thread). Create(deferred mode) stages the sockaddr; the read thread calls
+// this once before its recv loop. Returns 0 on connect failure.
+int32_t __stdcall SAFESOCK_ThreadConnect(struct D2NetDataStrc * pNetData);
+// VP-END [bn-threadconnect R195]
 // VP-BEGIN [bn-recv-abort-retry R173]: cheap "is the handle still open" probe used by the
 // BNCS read thread to tell a local closesocket() apart from a spurious WSAECONNABORTED.
 BOOL __fastcall SAFESOCK_IsSocketOpen(struct D2NetDataStrc * pNetData);
