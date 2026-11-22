@@ -192,25 +192,36 @@ static DWORD BNDOWNLOAD_GetCachedFileSize(LPCSTR szText, FILETIME * pftCompare) 
     return 0;
 }
 
+// VP-BEGIN [bn-checkrev-bypass R190]: Strategy 1 from R2/CheckRevision_Analysis_and_Fix_Strategies.md.
+// The retail chain below (SFileOpenArchive on the SID_AUTH_INFO MPQ -> archive
+// authenticate -> extract CheckRevision DLL -> D2FILE_VerifyFileSignature ->
+// LoadLibrary -> call it) can never succeed in the 1.14d rebuild: a D2VP install
+// carries no Blizzard-signed CheckRevision DLL for the DLL-extraction gate, so
+// nCheckResult stayed 0 and the function returned 0 = failure. That killed
+// NET_SID_CLIENT_Send_0x51_AuthCheck before SID_AUTH_CHECK ever went out - pktmon
+// 2026-11-21: 15 auth conversations in ~430 ms, each answering the server's
+// AUTHREQ_109 with a FIN 1.4 ms later, 0x51 never sent; retail on the same server
+// sends 0x51 ~120 ms after AUTHREQ. Caller contract: both callers
+// (Send_0x51_AuthCheck net_sid.cpp, Send_0x06_StartVersioning BnSend.cpp) treat a
+// 0 return as failure, so the bypass returns 1 - the strategy doc's "return 0"
+// snippet contradicts the callers and is deliberately not used. Field tuning: if
+// the D2GS/PvPGN server enforces an exact versioncheck entry, set the two
+// constants below to that entry's values (or relax exact matching server-side -
+// VTSTech/D2VP-D2GS owns that side). Flip s_bCheckRevisionBypass to FALSE to
+// re-enable the retail chain for a full-Storm install.
+// [bn-patchwait-bypass-skip R196]: moved from a function-local static to file scope so
+// BNDOWNLOAD_CheckRevisionBypassActive() can tell net_sid.cpp's 0x51 patch-filename
+// wait to skip - the bypass never reads the version MPQ, so that wait is a pure stall.
+static BOOL s_bCheckRevisionBypass = TRUE;
+
+int32_t __fastcall BNDOWNLOAD_CheckRevisionBypassActive() {
+    return s_bCheckRevisionBypass ? 1 : 0;
+}
+// VP-END [bn-checkrev-bypass R190]
+
 int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uint32_t * pdwChecksumOut, uint8_t * pbResultOut) {
-    // VP-BEGIN [bn-checkrev-bypass R190]: Strategy 1 from R2/CheckRevision_Analysis_and_Fix_Strategies.md.
-    // The retail chain below (SFileOpenArchive on the SID_AUTH_INFO MPQ -> archive
-    // authenticate -> extract CheckRevision DLL -> D2FILE_VerifyFileSignature ->
-    // LoadLibrary -> call it) can never succeed in the 1.14d rebuild: a D2VP install
-    // carries no Blizzard-signed CheckRevision DLL for the DLL-extraction gate, so
-    // nCheckResult stayed 0 and the function returned 0 = failure. That killed
-    // NET_SID_CLIENT_Send_0x51_AuthCheck before SID_AUTH_CHECK ever went out - pktmon
-    // 2026-11-21: 15 auth conversations in ~430 ms, each answering the server's
-    // AUTHREQ_109 with a FIN 1.4 ms later, 0x51 never sent; retail on the same server
-    // sends 0x51 ~120 ms after AUTHREQ. Caller contract: both callers
-    // (Send_0x51_AuthCheck net_sid.cpp, Send_0x06_StartVersioning BnSend.cpp) treat a
-    // 0 return as failure, so the bypass returns 1 - the strategy doc's "return 0"
-    // snippet contradicts the callers and is deliberately not used. Field tuning: if
-    // the D2GS/PvPGN server enforces an exact versioncheck entry, set the two
-    // constants below to that entry's values (or relax exact matching server-side -
-    // VTSTech/D2VP-D2GS owns that side). Flip s_bCheckRevisionBypass to FALSE to
-    // re-enable the retail chain for a full-Storm install.
-    static BOOL s_bCheckRevisionBypass = TRUE;
+    // VP-BEGIN [bn-checkrev-bypass R190]: rationale and field-tuning notes live in the
+    // file-scope block above (flag moved to file scope in R196 for the bypass getter).
     if (s_bCheckRevisionBypass) {
       if (pdwVersionOut) {
         *pdwVersionOut = 0x00010064; // standard 1.14d versionid per versioncheck docs

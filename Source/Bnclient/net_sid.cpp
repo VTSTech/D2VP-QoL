@@ -1518,7 +1518,16 @@ int32_t __stdcall NET_SID_CLIENT_Send_0x51_AuthCheck() {
     // (retail's BNFTP recv timeout) turns a stuck wait (server serves no version MPQ /
     // download fails) into a logged proceed instead of an unbounded loop in the auth
     // thread holding the whole connect stage open.
+    // VP-BEGIN [bn-patchwait-bypass-skip R196]: the bypass hardcodes ver/checksum/exe-info
+    // and never opens the version MPQ, so under it this wait is a pure stall: the AUTHREQ
+    // handler seeds the filename as "" and only a successful BNFTP download replaces it -
+    // on servers that serve no version MPQ (VTSTech/D2VP-D2GS) every login paid the full
+    // 20 s bound. Skip straight to the bypass when it is active; the wait stays for the
+    // retail chain (s_bCheckRevisionBypass = FALSE in BnDownload.cpp).
     DWORD dwPatchWaitStartTick = GetTickCount();
+    if (BnDownload::BNDOWNLOAD_CheckRevisionBypassActive()) {
+      D2BOOT_Mark("BNet: 0x51 patch-filename wait skipped (CheckRevision bypass needs no MPQ)"); // [d2boot]
+    } else
     while (!bHasPatchFile) {
       bIsExpansion = SID_GetReadyFlag();
       if (bIsExpansion) {

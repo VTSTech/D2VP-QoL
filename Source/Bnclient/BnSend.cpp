@@ -1419,23 +1419,35 @@ void __fastcall BNCLIENT_ParseAndEnqueueChatMessages(char * szMessageText) {
 // BATTLE.NET PACKET DISPATCH LOOP
 // Iterates over received network buffer, scanning for 0xFF packet start markers and dispatching complete packets to NET_SID_CLIENT_IncomingPacketHandler. For each packet: validates 4-byte header (0xFF, ID, size_lo, size_hi), checks if buffer contains full packet based on 2-byte little-endian size field, dispatches packet data (excluding 4-byte header) to handler, advances buffer pointer by packet size. Returns pointer to remaining unparsed buffer data for next iteration.
 char * __fastcall NET_SID_CLIENT_IncomingPacketHandlerLoop(char * pBytes, size_t nSize) {
-    int nBytesProcessed;
+    // VP-BEGIN [bn-handlerloop-arith R196]: the "bytes remaining" endpoint was decompiled
+    // as pBytes + (nSize - (int)pScanPtr). That evaluates to B + nSize - P - a tiny
+    // integer (0..nSize) reinterpreted as an ADDRESS. On the normal fully-consumed path
+    // it is exactly NULL: after a lone packet is dispatched (P = B + nSize) the return
+    // value becomes B + (nSize - B - nSize) = 0, BnetReadFunction turned that into
+    // nBufPos = (int)NULL - (int)chRecvBuf = -(int)chRecvBuf, and the next recv ran as
+    // recv(sock, NULL, 0x2000 + |chRecvBuf|). ETW bnet.etl 2026-11-21 (tracerpt/bnet.txt
+    // ~line 2034, flow :32326): AFD rejected that recv with "Invalid buffer specified on
+    // fastio receive" (event 8007) and ABORTED the endpoint itself ({Virtual Circuit
+    // Closed}, event 4001) - the deterministic recv 10053/soerr=0 auth death since R169,
+    // misread as WFP/AV/kernel aborts through R190. Retail computes the endpoint as
+    // pScanPtr + (nSize - (int)(pScanPtr - pBytes)) (= pBytes + nSize, invariant); that
+    // arithmetic is restored here with the original scan/dispatch order kept.
+    // memmove replaces memcpy: source and destination overlap whenever pScanPtr > pBytes.
     char* pScanPtr = pBytes;
+    char* pEnd = pBytes + nSize;
     do {
       uint32_t wPacketSize;
       if (*pScanPtr != -1) {
-        nBytesProcessed = (int)pScanPtr - (int)pBytes;
         do {
-          if (nBytesProcessed >= (int)nSize) {
+          if (pEnd - pScanPtr <= 0) {
             break;
           }
           pScanPtr++;
-          nBytesProcessed++;
         } while (*pScanPtr != -1);
       }
-      if (pBytes + (nSize - (int)pScanPtr) < (char*)0x4 || (wPacketSize = (uint32_t)*(uint16_t*)(pScanPtr + 2) , (int)(pBytes + (nSize - (int)pScanPtr)) < (int)wPacketSize)) {
-        memcpy(pBytes, pScanPtr, (size_t)(pBytes + (nSize - (int)pScanPtr)));
-        return pBytes + (nSize - (int)pScanPtr);
+      if ((int)(pEnd - pScanPtr) < 0x4 || (wPacketSize = (uint32_t)*(uint16_t*)(pScanPtr + 2) , (int)(pEnd - pScanPtr) < (int)wPacketSize)) {
+        memmove(pBytes, pScanPtr, (size_t)(pEnd - pScanPtr));
+        return pBytes + (pEnd - pScanPtr);
       }
       _net_sid::NET_SID_CLIENT_IncomingPacketHandler(pScanPtr[1], pScanPtr + 4, wPacketSize - 4);
       pScanPtr += wPacketSize;

@@ -49,6 +49,9 @@ namespace Bnclient::BnDownload {
     void __stdcall BNDOWNLOAD_SetCancelFlag();
     uint32_t __stdcall BNDOWNLOAD_HasActiveDownloads();
     int32_t __fastcall BNDOWNLOAD_PerformCheckRevision(uint32_t * pdwVersionOut, uint32_t * pdwChecksumOut, uint8_t * pbResultOut);
+    // VP [bn-patchwait-bypass-skip R196]: TRUE while the R190 CheckRevision bypass flag is set -
+    // net_sid.cpp's 0x51 patch-filename wait uses this to skip the MPQ-less stall.
+    int32_t __fastcall BNDOWNLOAD_CheckRevisionBypassActive();
 void __fastcall BNDOWNLOAD_ExtractFileFromArchive(char * szFileName, struct D2ArchiveStrc * pArchive, LPCSTR szFilePath);
 void __fastcall BNDOWNLOAD_UpdateProgressPercent(uint32_t dwUnused, int32_t nBytesDone, uint32_t nTotalSize);
 void __fastcall BNDOWNLOAD_ResetState(uint32_t nResetValue);

@@ -627,3 +627,88 @@ play will need that after auth lands (allow inbound UDP 6112 / LAN=Private profi
 Open question: which thread emitted the +1.4 ms FIN (auth thread is timing-excluded;
 primary suspect: launcher-poll `BNSEND_Disconnect` after `BNMESSQUEUE_SetStateIfZero(1)`)
 — the R173 teardown marks in the next d2boot.log will name it.
+
+## R196 — Mode A root cause closed: the read loop recv()s through a NULL buffer (2026-11-22)
+
+The tracerpt CSV landed (`etw-analysis/tracerpt/bnet.txt`, from `bnet.etl` 2026-11-21
+18:00, R190-era build, PID 5860 / read TID 2412 / auth TID 5128), and it names the
+killer in one event. Per auth flow on 192.168.0.14:6112:
+
+```
+Bound -> connect -> send 1 B (0x01) -> send 51 B (0x50 AUTH_INFO)
+-> recv 8 B ECHOREQ (recv IRP completes at the user buffer)
+-> send 8 B echo -> AUTHREQ 103 B lands in the kernel buffer
+-> +9.6 ms: Winsock event 1032 "Aborted": "Invalid buffer specified on fastio receive"
+-> {Virtual Circuit Closed} (event 4001) x3   <- AFD ABORTS THE ENDPOINT ITSELF
+-> Freed/Closed by the read thread -> reconnect ~2.6 ms later -> repeat (15x)
+```
+
+**The abort is AFD rejecting OUR recv#2 buffer.** `recv#1` completes at
+`0x9BCDE74` (the 8192-byte `chRecvBuf`); `recv#2` is issued ~9.6 ms later with a
+buffer AFD considers invalid, and on Win11 24H2 AFD's fast-io receive path answers
+an invalid buffer by **aborting the whole endpoint** — hence every subsequent
+op failing with WSAECONNABORTED while `SO_ERROR` stays 0 and the handle stays
+kernel-valid: the exact R175–R177 autopsy signature (`sel=1, peek=-1/10053,
+send0=-1/10053, soerr=0, hvalid=1, fion=0`) that we spent R173–R191 blaming on
+WFP/Defender/LSP/kernel state. Game.exe "working fine" was the tell: retail never
+passes a bad buffer. The R192 `VirtualLock` theory is dead — no page-fault story
+produces a NULL buffer; the pointer itself was NULL.
+
+**The arithmetic bug (BnSend.cpp `NET_SID_CLIENT_IncomingPacketHandlerLoop`, in the
+rebuild since R169):** the "bytes remaining" endpoint was decompiled as
+
+```c
+pBytes + (nSize - (int)pScanPtr)        // = B + nSize - P  (WRONG)
+pScanPtr + (nSize - (int)(pScanPtr - pBytes))  // = B + nSize  (retail, invariant)
+```
+
+The wrong form evaluates to a tiny integer (0..nSize) reinterpreted as an ADDRESS,
+and it doubles as the memmove SIZE and the RETURN VALUE. On the normal path — a
+lone 8-byte ECHOREQ recv'd, dispatched, fully consumed (`pScanPtr = B+8`, nSize=8)
+— the next pass computes the endpoint as `B + (8 - (B+8))` = **0**, memmoves 0
+bytes and **returns NULL**. `BnetReadFunction` then does
+`nBufPos = (int)NULL - (int)chRecvBuf = -(int)chRecvBuf` (≈ −163,000,000), so
+recv#2 is `WSASocket2_Read(pSafesock, chRecvBuf + nBufPos /* = NULL */,
+0x2000 - nBufPos /* ≈ 163 MB */)` — the exact invalid-buffer recv the ETW shows.
+Deterministic on every attempt (nBufPos resets to 0 per thread start), which is
+why the pcap/pktmon always died at the same byte with the AUTHREQ unread, and why
+the ETW shows the later attempts' only *successful* 103-byte reads coming from the
+R178 ctl-replay probe's own buffers, never the real socket. Harness-validated
+(consumed/pipelined/compaction/reassembly/scan scenarios): the corrected loop
+returns `pBytes + 0` after a full consume → `nBufPos = 0`; offsets stay in
+`[0, nSize]`; the recv call is always in-allocation. `memcpy` → `memmove` for the
+compaction copy (overlapping ranges since R169).
+
+**Rider (`bn-patchwait-bypass-skip R196`):** with the loop fixed, the auth flow
+reaches `Send_0x51_AuthCheck`, but `NET_SID_CLIENT_Incoming_AuthInfo` seeds the
+patch filename as `""` and only a successful BNFTP version-MPQ download replaces
+it — on servers that serve none (VTSTech/D2VP-D2GS) every login would pay R190's
+full 20 s bound before proceeding. The bypass hardcodes ver/checksum/exe-info and
+never opens the MPQ, so when `BNDOWNLOAD_CheckRevisionBypassActive()` (new getter;
+`n-checkrev-bypass` flag moved to file scope in BnDownload.cpp) is true the wait
+is skipped with a log mark; the retail chain keeps the bounded wait.
+
+**R196 changes (all VP-marked; MSYS2 llvm-mingw build is the compile gate — edits
+hand-checked, the loop arithmetic additionally harness-validated):**
+
+- `BnSend.cpp` `NET_SID_CLIENT_IncomingPacketHandlerLoop` — **bn-handlerloop-arith**:
+  correct endpoint arithmetic (`pEnd = pBytes + nSize`, remaining = `pEnd - pScanPtr`),
+  memmove for the compaction copy, scan/dispatch order untouched.
+- `BnDownload.cpp` — `s_bCheckRevisionBypass` hoisted to file scope + new
+  `BNDOWNLOAD_CheckRevisionBypassActive()`.
+- `BnDownload.h` — getter declaration.
+- `net_sid.cpp` `NET_SID_CLIENT_Send_0x51_AuthCheck` — **bn-patchwait-bypass-skip**:
+  the 20 s-bounded patch-filename wait runs only when the bypass is off.
+
+**Expected d2boot.log on success (fast path):** `SID pkt 0x50 received (99 bytes)`
+→ `0x51 patch-filename wait skipped (CheckRevision bypass needs no MPQ)` →
+`CheckRevision bypass (R190): ver=0x00010064 checksum=0x00000000` → `SID 0x51
+AUTH_CHECK sent` → `wait 0x51 -> reply arrived` → `SID 0x51 AUTH_CHECK result=0x000`
+(or the server's versioncheck verdict) → `Connected to Battle.net`. No autopsy,
+no `recv aborted`, no reconnect loop: one connection, one conversation.
+
+**Field checklist:** 1) if the server rejects 0x51 with 0x101/0x102, read the
+expected ver/checksum from pvpgn's versioncheck log and set the two constants in
+`BnDownload.cpp` (or relax `exactmatch` server-side); 2) confirm the winsock
+events in a fresh ETW/pktmon show **no** `Aborted/1032` on the auth flow; 3) after
+auth lands, the R190 riders still apply — UDP 6112 inbound for game play.
