@@ -203,21 +203,37 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
       return nullptr;
     }
 
-    /* int optlen for setsockopt */ nNoDelayOpt[0] = '\x01';
-    nNoDelayOpt[1] = '\0';
-    nNoDelayOpt[2] = '\0';
-    nNoDelayOpt[3] = '\0';
-    /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 6, 1, nNoDelayOpt, 4);
-    /* int optlen for setsockopt */ nKeepAliveOpt[0] = '\x01';
-    nKeepAliveOpt[1] = '\0';
-    nKeepAliveOpt[2] = '\0';
-    nKeepAliveOpt[3] = '\0';
-    /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 0xffff, 8, nKeepAliveOpt, 4);
-    /* int optlen for setsockopt */ nSendBufSize[0] = -0x48;
-    nSendBufSize[1] = '\v';
-    nSendBufSize[2] = '\0';
-    nSendBufSize[3] = '\0';
-    /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 0xffff, 0x1005, nSendBufSize, 4);
+    // VP-BEGIN [bn-option-bisect R193]: the main BNCS socket is the ONLY socket in this
+    // process that dies at recv#2 (AFD "Invalid buffer specified on fastio receive" ->
+    // {Virtual Circuit Closed} -> recv WSAECONNABORTED/SO_ERROR=0 forever), and it is
+    // also the only one carrying these three options. The autopsy-battery sockets
+    // (plain socket(), NO options) complete the exact same conversation on the same
+    // thread dozens of times per run; retail sets the same options and connects fine,
+    // so the option VALUES are not poison per se - but options + this process are.
+    // R192's VirtualLock'd static recv buffer did not help (lock succeeded, death
+    // unchanged), so the page-trim theory is dead too. Empirical bisection: run the
+    // auth socket in the proven-good probe state (no options). After auth completes,
+    // restore one option at a time to find the poison (keep TCP_NODELAY for gameplay
+    // latency if it is innocent).
+    static BOOL s_bApplySocketOptions = FALSE;
+    if (s_bApplySocketOptions) {
+      /* int optlen for setsockopt */ nNoDelayOpt[0] = '\x01';
+      nNoDelayOpt[1] = '\0';
+      nNoDelayOpt[2] = '\0';
+      nNoDelayOpt[3] = '\0';
+      /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 6, 1, nNoDelayOpt, 4);
+      /* int optlen for setsockopt */ nKeepAliveOpt[0] = '\x01';
+      nKeepAliveOpt[1] = '\0';
+      nKeepAliveOpt[2] = '\0';
+      nKeepAliveOpt[3] = '\0';
+      /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 0xffff, 8, nKeepAliveOpt, 4);
+      /* int optlen for setsockopt */ nSendBufSize[0] = -0x48;
+      nSendBufSize[1] = '\v';
+      nSendBufSize[2] = '\0';
+      nSendBufSize[3] = '\0';
+      /* char * optval for setsockopt */ /* int optname for setsockopt */ /* int level for setsockopt */ /* SOCKET s for setsockopt */ setsockopt(hSocket, 0xffff, 0x1005, nSendBufSize, 4);
+    }
+    // VP-END [bn-option-bisect R193]
     uint32_t bNonBlocking = dwFlags & 1;
     if (bNonBlocking) {
       /* u_long * argp for ioctlsocket */ /* long cmd for ioctlsocket */ /* SOCKET s for ioctlsocket */ nNonBlockArg = 1;
@@ -311,56 +327,17 @@ int32_t __fastcall WSASocket2_Read(D2NetDataStrc * pNetData, char * pBuffer, siz
     if (pNetData && !pNetData->bBlocked) {
       int nBytesRead;
       /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&pNetData->pSync);
-      // VP-BEGIN [bn-afdfastio-workaround R191]: ETW (2026-11-21 bnet.etl) proved the auth
-      // socket death is INSIDE AFD on the client: the 2nd recv() on the healthy BNCS socket
-      // takes the kernel fast-io receive path, is rejected with "Invalid buffer specified
-      // on fastio receive" (AFD event 8007), and AFD closes the endpoint itself
-      // ({Virtual Circuit Closed}, event 4001) - afterwards the socket answers every recv
-      // with WSAECONNABORTED (10053) and SO_ERROR=0 while the AUTHREQ is still buffered
-      // and select still says readable. Calibrated trace (attempt 1): recv 8192@0x9BCDE74
-      // completed 8 bytes at 44943670.44ms, AUTHREQ hit the buffer at 44943672.82ms, the
-      // fastio reject landed at 44943673.78ms - IDENTICAL args to the recv that succeeded
-      // 3.3ms earlier, identical for attempt 2 and both R190 logs. No transport-abort
-      // indication, no WFP classify event, no filter involvement - the endpoint objects
-      // the probes used never trip it. Overlapped WSARecv always builds an IRP and cannot
-      // enter the fast-io path, so this routes around the kernel defect while keeping the
-      // blocking contract: post + wait, bounded at 1 s (the loop only calls Read after
-      // select reported readable, so the bound is a pure safety net); if Free() closed the
-      // handle under us the IRP is cancelled and the error surfaces exactly like the old
-      // recv failure did.
-      WSABUF sWsaBuf;
-      sWsaBuf.len = (u_long)nSize;
-      sWsaBuf.buf = pBuffer;
-      DWORD dwRecvd = 0;
-      DWORD dwFlags = 0;
-      WSAOVERLAPPED sOverlapped;
-      memset(&sOverlapped, 0, sizeof(sOverlapped));
-      sOverlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-      if (sOverlapped.hEvent) {
-        int nPostResult = WSARecv(pNetData->hSocket, &sWsaBuf, 1, &dwRecvd, &dwFlags, &sOverlapped, nullptr);
-        if (nPostResult == 0) {
-          nBytesRead = (int)dwRecvd; // completed synchronously
-        } else if (WSAGetLastError() == WSA_IO_PENDING) {
-          if (WaitForSingleObject(sOverlapped.hEvent, 1000) == WAIT_OBJECT_0) {
-            dwRecvd = 0;
-            if (WSAGetOverlappedResult(pNetData->hSocket, &sOverlapped, &dwRecvd, FALSE, &dwFlags)) {
-              nBytesRead = (int)dwRecvd;
-            } else {
-              nBytesRead = -1;
-            }
-          } else {
-            CancelIoEx((HANDLE)(UINT_PTR)pNetData->hSocket, &sOverlapped);
-            WSASetLastError(WSAEWOULDBLOCK);
-            nBytesRead = -1;
-          }
-        } else {
-          nBytesRead = -1;
-        }
-        /* HANDLE hObject for CloseHandle */ CloseHandle(sOverlapped.hEvent);
-      } else {
-        nBytesRead = -1;
-      }
-      // VP-END [bn-afdfastio-workaround R191]
+      // VP-BEGIN [bn-recvbuf-lock R192]: plain blocking recv restored (retail parity;
+      // the R191 overlapped WSARecv detour is reverted - it did not dodge the AFD
+      // fast-io reject, because both paths probe-lock the buffer pages). The actual
+      // fix lives in BnetReadFunction [bn-recvbuf-lock R192]: the receive buffer is a
+      // VirtualLock'd static now, so its pages cannot leave the working set between
+      // recvs - the condition that made AFD's fast-io path reject the second recv with
+      // "Invalid buffer specified on fastio receive" and abort the endpoint (Win11
+      // 24H2, bnet.etl 2026-11-21). With the pages guaranteed resident, this recv
+      // behaves exactly like retail's.
+      /* int flags for recv */ /* int len for recv */ /* char * buf for recv */ /* SOCKET s for recv */ nBytesRead = recv(pNetData->hSocket, pBuffer, nSize, 0);
+      // VP-END [bn-recvbuf-lock R192]
       /* LPCRITICAL_SECTION lpCriticalSection for LeaveCriticalSection */ LeaveCriticalSection(&pNetData->pSync);
       if (nBytesRead <= 0) {
         nWSAError = WSAGetLastError();
