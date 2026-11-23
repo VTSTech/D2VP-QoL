@@ -1,0 +1,5 @@
+; [R218] d2vpstash.dll exports - ONE entry point, stagedcall (stdcall), 3 args.
+; The D2GS stub resolves it by name: GetProcAddress("VPSHARED_HookPacket").
+LIBRARY d2vpstash
+EXPORTS
+    VPSHARED_HookPacket@12

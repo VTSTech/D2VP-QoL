@@ -768,3 +768,329 @@ the named function (marks + crash-report frames) against retail Game.exe via the
 r2 project (D2-Game.exe-1.14d-Retail) and fix the transcription. Crash report
 `d2crash-20261122-181430.txt` (12 frames) requested — if d2exe.map was present
 at build time the report may already symbolize the faulting frame.
+
+## R198 — 'Checking Versions' crash root-caused via the crash zip: Sha1_Pump self-clobber (2026-11-22)
+
+The user's `r196-crash.zip` (d2boot.log + **d2exe.map** + d2vp.exe) closed it without
+needing the R197 field run. Symbolization chain: VEH eip `00FD32DC`, runtime base
+`00F70000` (VEH line), PE ImageBase `0x400000` (d2vp.exe) → map VA `0x004632DC`
+→ **`Storm::Source::SSignature::Sha1_Pump` +0x1E8** (nearest symbols: starts
+0x4630F4, next `Sha1_Append` at 0x463C04). Reached via
+`BNSEND_HashCDKeyData` → `Sha1_Append` → `Sha1_Pump` — the 26-char expansion
+CD-key hash inside `PrepareCDKeyHash` case 0x1a, i.e. the virgin region R197
+instrumented.
+
+Disassembly of the faulting instruction (`mov edx, [eax]` at 0x4632DC, eax =
+`[ebp-0x14]+0x2C`) and the full loop tail (`0x46330E add eax,0x38; 0x463313 mov
+[eax],edx; 0x463315 add [ebp-0x14],4; 0x463319 cmp [ebp-8],0x4f; 0x46331D jle`)
+expose the mechanism: the W-expansion loop keeps `P = ebp-0xA4 + ctr*4`, reads
+`[P+0x2C]/[P+0x18]/[P-8]/[P]` (= W[j-3]/W[j-8]/W[j-14]/W[j-16] — standard SHA-1
+read set), stores the new word at `P+0x38`, and keeps its counter at `[ebp-8]`.
+**When ctr = 25, `P+0x38` == `ebp-8`: the freshly computed W word is written over
+the loop counter itself.** A W word with bit 31 set reads as negative → the
+signed `jle` keeps iterating from a garbage counter → billions of iterations →
+`P` wraps through the address space → AV READ at wherever it lands
+(`8A61CD26` in the field run). Bit 31 clear → silent early exit with a corrupted
+schedule (wrong hash, no crash). Which case fires depends on the key data —
+a data-dependent, deterministic-per-install crash.
+
+The reconstruction's read set, big-endian load, round constants
+(0x5a827999/0x6ed9eba1/0x8f1bbcdc/0xca62c1d6) and H+= tail are standard SHA-1,
+so **R198 `bn-sha1pump-rewrite` replaces `Sha1_Pump` with a clean standard SHA-1
+block function** (one 80-word schedule, strictly bounded loops, no pointer
+windows). Harness (`/tmp/r198-test`) validates the composite
+`Sha1_Initialize`+`Sha1_Append`+`Sha1_Pump`+`Sha1_Finalize` against the FIPS
+test vectors and an independent reference across lengths 0..200 × 11 chunk
+splits at -O0, -O2 and -fsanitize=address: ALL PASS.
+
+**Rider (`bn-sha1append-counter R198`):** the -O2 harness build segfaulted where
+-O0 and ASan passed — `Sha1_Append`'s full-block loop used a `uint8_t*` as the
+counter (`(uint8_t*)(nLen >> 6)`, decrementing a pointer through byte address 0:
+UB the optimizer exploits). Fixed with an integer counter; harness -O2 clean.
+The same UB existed in the shipped build's SSignature.cpp (llvm-mingw -O2).
+
+R198 build also carries R197 (`bn-authcheck-marks` + NULL guards) — the key
+decode / hash-failure marks remain useful if anything else in the virgin region
+misbehaves. `WardenClient.cpp` shares Initialize/Append/Pump/Finalize and gets
+the same fixes.
+
+**Expected d2boot.log on success:** `SID pkt 0x50 received (99 bytes)` →
+`0x51 key state: classic=0x… expansion=0x… owner=0x… expansion-game=1` →
+`cd-key hash type=0 … ok=1` / `type=1 … ok=1` → `0x51 AUTH_CHECK sending
+len=…` → `SID send op=0x51 …` → `wait 0x51 -> reply arrived` →
+`SID 0x51 AUTH_CHECK result=0x000` → `Connected to Battle.net`. If a hash
+reports `ok=0`, the corresponding key file is missing/undecodable in the D2VP
+install (guards keep us alive; 0x51 goes out with zeroed hashes and the server
+rejects 0x201 — install-side follow-up).
+
+## R198 field result + R199 — BNCS auth COMPLETE; realm/MCP socket never connects (2026-11-22)
+
+**R198 field log — the auth gauntlet is fully won.** `AUTH_CHECK result=1`
+(versioncheck accepted!), `cd-key hash type=0/1 ok=1` (key files decode fine —
+classic/expansion/owner all non-NULL: the R197 marks show `02CB00F0/02CB0148/
+02CB01A0`; the R196 crash was purely the broken SHA-1), `LOGONRESPONSE2 result=0`,
+**`CharSelect: screen shown`**, `QUERYREALMS2` answered, `LOGONREALM (realm=D2CS)`
+answered with the 81-byte realm reply. Every fix R169→R198 confirmed live.
+
+**New failure, next stage:** right after LOGONREALM, the realm/MCP socket is
+created (`wsaref -> 2 (create)`, h=0xd5c) — and then **nothing**: no
+`thread-side connect ok` mark, zero sends/recvs, 11.8 s of silence, then the main
+thread gives up: `SAFESOCK Free closesocket h=0x00000d5c` → protocol dead →
+`BNSEND_Disconnect` frees the BNCS socket (h=0xd34).
+
+**Cause: the R195 `bn-threadconnect` deferral.** R195 moved the blocking-path
+connect out of `Create` into the socket's read thread via
+`SAFESOCK_ThreadConnect` — but only `BnetReadFunction` calls that. The realm
+socket's thread proc is `D2QSSocket::ReceiveLoopCallback`, which exits its loop
+on `!pSafesock->bConnected` (D2QSSocket.cpp:255) — so with the staged sockaddr
+never picked up, **the MCP socket never performs connect() at all**, the MCP
+stage's own retry/timeout (~12 s) expires, and the flow tears down. This also
+explains why the BNCS socket logged `thread-side connect ok` twice while the
+realm socket logged nothing.
+
+R195's reason to exist (Mode A probe-parity: "connect-thread != recv-thread is
+the last structural difference") is void — R196 proved Mode A was the
+handler-loop NULL recv. Retail connects in `Create`, on the calling thread, and
+sets `bConnected` (`WSASocket2_Send` guards on it; pre-R195 builds sent 0x50
+straight after `Create`, so retail semantics are certain).
+
+**R199 changes (Safesock.cpp only; MSYS2 llvm-mingw compile gate):**
+
+- `bn-threadconnect-revert`: the blocking path connects directly again
+  (failure → nError=3, cleanup, nullptr as the non-blocking path already does),
+  sets `bConnected = 1`. `SAFESOCK_ThreadConnect` + the staging statics remain
+  as inert no-ops (nothing stages; `dwThreadParam` returns to 0x0 for the BNCS
+  Create calls).
+- `bn-options-restore`: `s_bApplySocketOptions` back to TRUE (retail parity:
+  TCP_NODELAY / SO_KEEPALIVE / SO_SNDTIMEO=3000 on every Safesock socket). R193
+  exonerated the options empirically (no-option socket still died; the killer
+  was the buffer bug), and NODELAY is wanted for gameplay latency.
+- Kept: R194's 100 ms SO_RCVTIMEO (harmless for poll-then-read sockets;
+  `BnetReadFunction`'s R194 idle-wake depends on it).
+
+**Expected d2boot.log on success:** after `wait 0x3e -> reply arrived`, a new
+socket connects immediately (`race winner`-style mark absent but no dead flag),
+then the MCP handshake marks (`MCP: connection established=1`, …). NOTE: the
+MCP/charlist stage (`McpConnect.cpp`, `D2QSSocket.cpp`) is virgin code like the
+0x51 region was — the next run may surface its own decompilation defects. The
+R197-style marks + the crash-map workflow (zip with d2exe.map + d2vp.exe +
+fault address) will close anything that surfaces. Rider still standing from
+R190: the client never binds UDP 6112 — allow inbound UDP 6112 on the server
+side for game play once realm charlist works.
+
+## R199 field result + R200 — realm/MCP connects; charlist delivered and dropped (2026-11-22)
+
+**R199 field log:** auth identical (all wins replay). The realm socket now CONNECTS
+(R199 revert confirmed live) — and the same-millisecond `closeSocket h=0x00000d4c`
+turned out to be a different socket's teardown, not the MCP socket: the pcap proves
+the MCP connection lived and talked.
+
+**R199 pcap decode (`game-d2vp-bnet-R199.pcapng`, client-side capture):**
+
+- BNCS 6112 flow: full healthy auth, real 0x51 (139 B) with the decoded CD-key
+  hashes, versioncheck accepted, LOGONRESPONSE2 (user "test"), realms list
+  (`D2CS` / "PvPGN Closed Realm"), LOGONREALM → 81 B reply:
+  `u32 result=1 … u32 0x10 … IP c0 a8 00 0e … port 17 e1 … token da526925 …
+  "PX2D" … ver 0x0e … "Ntest"` — the MCP dial parameters parse CORRECTLY
+  (state+16 = 192.168.0.14, state+20 = 0x17E1 = 6113 after the u16 truncation).
+- MCP 6113 flow: SYN → SYNACK (+102 ms) → connected. Client sent the MCP
+  protocol byte + MCP_STARTUP (72 B, echoing the 0x3E-provided cookie/chunks:
+  server token, "PX2D", ver 14, unique name) → **d2cs replied `07 00 01 00 00
+  00 00` = MCP_STARTUP result 0 (ACCEPTED)** → client sent CHARLIST2 request
+  (0x19) → **d2cs delivered the charlist (0x36 00 19 …) containing the "Test"
+  character** → the client sat on it and FIN'd ~1.66 s later.
+
+The closed-realm handshake works end-to-end on the wire; **the client dropped the
+charlist in user mode.** Two stacked rebuild defects (`bn-mcp-dispatch R200`):
+
+1. `ProcessReceivedData` (D2QSSocket.cpp) called the registered QSSocket handler
+   as `pfnPacketHandler(pHandlerContext)` — passing the registration context
+   (nullptr for the MCP socket) where the PACKET pointer belongs.
+   `MCPCONNECT_SocketCallback_Dispatch(pPacketBuf, nPacketSize, pContext)` then
+   received garbage for its packet/size arguments, bailed at the first guard, and
+   every MCP packet was routed nowhere.
+2. `HandleIncomingPacket` — the full 26-entry INCOMING table (0x02..0x19:
+   charcreate, charlogon, **charlist 0x19 → `CopyCharListToGlobal`**, gamelist
+   0x11, …) — had **zero callers** in the entire tree (dead code since
+   reconstruction). Only the sparse `gaMcpSocketCallbackHandlers[0x01]`
+   join-result signal was ever reachable, and even that never ran (defect 1).
+
+**R200 changes:**
+
+- `bn-mcp-dispatch`: `ProcessReceivedData` now invokes the handler with
+  `(pMessage, wMsgSize, pHandlerContext)` — the retail 3-arg contract
+  (`fpD2QSSocketPacketHandler` typedef and the 0x168/0x16C field comments in
+  D2QSSocketStrc.h updated; the MCP client is the only registrant). Dispatch
+  keeps its 3-arg signature and now chains `HandleIncomingPacket` for any packet
+  the sparse table doesn't consume; consumed packets return 1 so
+  `ProcessReceivedData` skips enqueueing (the UI pumps' `ReadAndParsePacket`
+  path re-runs the full table on queued messages — avoid double-processing,
+  e.g. the 0x11 gamelist append offset). Unhandled packets still enqueue.
+- `bn-mcp-marks`: ReceiveLoopCallback gate-break reasons, recv result/error and
+  close-site marks; `MCP: pkt 0x%02x received` dispatch marks.
+- MILESTONE (user field report): **'Other Multiplayer → Open Battle.net'
+  connects all the way and creates a game** — the R196/R198/R199 fixes
+  unblocked the whole direct-play path.
+
+**Expected d2boot.log on success:** `MCP: pkt 0x01 received (5 bytes)` →
+`MCP: pkt 0x19 received (52 bytes)` (CopyCharListToGlobal) → the realm
+character list renders the "Test" character → char select → charlogon (0x04) →
+`MCP: connection established=1` → D2GS join. If anything else stalls here, the
+MCP marks + the crash-map workflow close it.
+
+## R200 field result + R201 — Open Battle.net PLAYABLE end-to-end; closed-realm MCP EOF is server-side (2026-11-22)
+
+**R200 field log — Open Battle.net is fully playable.** Second connect in the log:
+auth perfect → `CharSelect: screen shown (mode=3)` → chat enter + channel list
+(0x0b/0x0a, channel "Diablo II-1") → news (0x46 ×2, 335/346 B) → chat ops (0x15/0x21)
+→ `enter-world: qserver start (gametype=6)` → `D2GS: ConnectToServer
+192.168.56.1:4000 → 0` → `c2s 0x67 create-game` → SP create-game → DRLG act
+generated → **character "TestMage" loaded** → 0x5B playerjoin → **~2.5 minutes of
+real gameplay** (quest gossip: kashya/akara, NPC menus 0x27/0x31, in-game packets,
+unlock-fps 61/s) → clean exit to charselect → 0x0b/0x0a again → exit. Connect →
+charlist → **create game → play**: the Open Battle.net path works end-to-end.
+
+**Closed realm (Battle.net button) — new signature, server-side:** auth perfect →
+LOGONREALM answered → MCP socket created **and connected** (R199 revert confirmed) →
+`MCP: recv failed/EOF: bytes=0 socketStatus=4 wsaErr=0` at +16 ms — **d2cs closed the
+fresh connection before any client data** (no MCP protocol byte, no STARTUP had gone
+out; the R200 marks caught it). The R199 pcap already proved the full MCP handshake
+works against this same server when the session is fresh (STARTUP accepted, charlist
+delivered) — so the instant close is d2cs-side state, prime suspect a **stale d2cs
+session** from the earlier run (that session ended with a client FIN mid-charlist;
+d2cs may hold the account/IP session and close the new MCP connection on sight).
+This side is VTSTech/D2VP-D2GS: check the d2cs log at the close moment / restart
+d2cs and retry closed realm before any further client work.
+
+**R201 (`bn-wsaref-quiet`):** the R200 run flooded the log with `wsaref -> -974/-975/…`
+(cleanup) lines ~60/s during gameplay — a game-loop site calls the cleanup wrapper
+every frame (harmless to the real Winsock refcount; the count is our instrumentation
+delta). Cleanup marks are now suppressed except a one-time first-negative-crossing
+line (the R179 imbalance tripwire stays armed); create/startup keep their marks.
+
+Sync for R201: `Source/Fog/Src/Safesock.cpp` + `Redivivus/d2_boot.h` only.
+
+## R201 field + R202 — closed-realm LOGINREQ fixed: stack-adjacency luck (2026-11-22)
+
+**The D2GS agent's d2cs log corrected our reading:** `recv failed/EOF bytes=0` did NOT
+mean "no client data" — d2cs's own log shows `on_d2cs_initconn` (client connected and
+sent), `on_client_loginreq: got bad account name`, `d2cs_conn_destroy` — **the client's
+D2CS LOGINREQ arrived and was rejected; d2cs closes without replying**, which our socket
+observed as a 0-byte read. Retail works end-to-end on the same config, so: client packet
+defect.
+
+**pvpgn ground truth** (pvpgn-server `src/d2cs/d2cs_protocol.h` + `handle_d2cs.cpp`,
+fetched verbatim): `t_d2cs_client_header` = size(u16)+type(u8) = 3 bytes;
+`t_client_d2cs_loginreq` = header, seqno@3, u1@7, bncs_addr1@11, sessionnum@15,
+sessionkey@19, cdkey_id@23, u5@27, clienttag@31, bnversion@35, bncs_addr2@39, u6@43,
+secret_hash[5]@47, **account-name string @67** — `on_client_loginreq` reads
+`packet_get_str_const(packet, sizeof(t_client_d2cs_loginreq) /* = 67 */, MAX_CHARNAME_LEN)`.
+
+Our LOGINREQ shape matches pvpgn exactly — the R199 pcap packet carries "test\0" at
+offset 67 and d2cs **accepted it then** (LOGINREPLY 0 + charlist). The R201 rejection
+means the bytes changed. **The defect (`bn-mcp-loginreq R202`):**
+`NET_MCP_CLIENT_Send_0x01_StartUp` sent `pStrLen+0x41` bytes starting at
+`&mcp0x01.nPacketId` — the 65-byte struct **plus whatever sat behind it on the stack**.
+The account string lands in the packet only when the compiler places `payloadBuffer`
+(where `STRING_GetStringLength` copied the name) immediately behind `mcp0x01`. The
+R199-era build had that adjacency by luck; the R200/R201 builds don't — d2cs read stack
+garbage as the account name → reject → close. (The struct even declares
+`char BnetName[0]` at 0x41 — the reconstruction knew the string must follow; the code
+just never guaranteed it.)
+
+**R202 fix:** build one contiguous buffer — `memcpy(aLoginReqBuf, &mcp0x01, 0x41)` +
+`memcpy(aLoginReqBuf + 0x41, payloadBuffer, pStrLen)` — and send exactly
+`pStrLen + 0x41` bytes; new mark `MCP: 0x01 LOGINREQ sending len=%u account='%s'`.
+
+**Expected d2boot.log on success:** `MCP: 0x01 LOGINREQ sending len=70 account='test'`
+→ `MCP: pkt 0x01 received (5 bytes)` (LOGINREPLY 0) → `MCP: pkt 0x19 received` → the
+realm character list renders → charlogon → realm game join. If the mark ever prints
+`account='<EMPTY>'`, the 0x3E state copy is the next suspect (state+0x48 should hold the
+account name bnetd embedded in the reply).
+
+## R202 field + R203 — LOGINREQ accepted server-side; the missing CHARLISTREQ trigger (2026-11-22)
+
+**R202 confirmed by the D2GS agent's d2cs log:** account `test` accepted three times
+(02:12:39, 02:13:04, 02:13:40) — no more "bad account name". The contiguous-buffer
+LOGINREQ fix works.
+
+**The last gap:** after LOGINREPLY (the `MCP: recv 7 bytes` in the log), D2VP sends
+**nothing** — no MCP CHARLISTREQ (0x19). d2cs has **no auto-push charlist** (pvpgn
+`handle_d2cs.cpp`: charlists only go out for 0x17/0x19 requests) and requires
+`conn_state_authed` (set by the login reply) before accepting one — so d2cs correctly
+goes quiet, and the realm charselect sits at "Connecting". The agent's proof: d2cs logs
+zero charlistreqs for D2VP sessions vs retail sessions.
+
+**The user's charcreate detour proved everything else works:** create `test` → 0x14
+"already exists" (correct!), create `testt` → ok, CHARLOGINREQ 0x07 (authed),
+CREATEGAMEREQ 0x03 (game "Test" created on the D2GS), JOINGAME 0x04 (GS IP translated
+to 192.168.0.14), joined, loaded the act, played, exited clean, char saved to d2dbs.
+Closed realm is functionally complete except the charlist trigger.
+
+**R203 (`bn-mcp-charlistreq`) — wire formats per the agent (big-endian d2cs):**
+- CHARLISTREQ_110 (what 1.14d retail sends): h(size u16 + type u8) + u16 maxchar +
+  u16 u1 = **7 bytes**; send right after LOGINREPLY result==0. (Legacy 0x17 also works.)
+- CHARLISTREPLY_110: h + u16 maxchar + u16 currchar + u16 u1 + u16 currchar2 = 11 bytes
+  fixed, then per char: NUL-terminated name + NUL-terminated portrait block.
+- LOGINREQ: 67 fixed + account+NUL — our len=70 + 2 size = 72 exact; **do not touch**.
+- CREATECHARREPLY results: 0x00 ok, 0x14 already exists, 0x15 name reject.
+
+**Changes:**
+1. `NET_MCP_CLIENT_ReadAndParsePacket` — after `HandleIncomingPacket`, on a queue frame
+   `[0]==0x01` (LOGINREPLY payload after the size prefix), send the CHARLISTREQ once per
+   MCP session (`s_bMCPCharListRequested`, reset in `MCPCONNECT_CreateThread`). The
+   builder `NET_MCP_CLIENT_Send_0x19_CharList2` already existed and produces exactly the
+   7-byte request (`19 08 00 00 00` + size prefix) — it was simply never called.
+2. `McpConnectionLoop` — the login-wait loop now pumps the queue via
+   `ReadAndParsePacket` and breaks once the CHARLISTREQ is out; the MCP thread then
+   exits, `PollMCPThreadStatus` proceeds, and the realm charselect pumps consume the
+   CHARLISTREPLY (`Incoming0x19` → `CopyCharListToGlobal`). Post-loop safety send covers
+   the read-thread event path.
+3. `MAINMENU_PollMCPThreadStatusPump` — calls `ReadAndParsePacket` while the "Connecting"
+   wait-pump runs (it previously only polled the thread handle; nothing dequeued).
+4. Dispatch-path note: the R200 per-packet dispatch marks (`MCP: pkt 0x%02x received`)
+   never printed in either field log, while `Incoming0x02` demonstrably ran — packets
+   reach the full handler table via the **enqueue → pump → ReadAndParsePacket** path, not
+   the read-thread Dispatch hop. R203 deliberately routes the trigger through the proven
+   path; the Dispatch question stays open (harmless while the pump path works).
+
+**Expected d2boot.log on success:** `MCP: 0x01 LOGINREQ sending len=70 account='test'`
+→ `MCP: recv 7 bytes` → `MCP: LOGINREPLY result=0 -> sending CHARLISTREQ (0x19)` →
+(the MCP thread exits, "Connecting" releases) → realm charselect renders the saved
+characters → charlogon → realm game join. Sync: `McpConnect.cpp`, `MainMenus.cpp`,
+`d2_boot.h`.
+
+## R203 field — CLOSED REALM: FULL VICTORY (2026-11-22)
+
+The R203 build completed the entire closed-realm flow in one session, twice, plus a
+char creation, against VTSTech/D2VP-D2GS:
+
+```
+LOGINREQ(70B 'test') -> LOGINREPLY result=0 -> CHARLISTREQ(0x19) -> charlist 98B received
+-> CHARLOGON 'Test' result 0 -> CREATEGAME 'Test' result 0 token 65537
+-> JOINGAME -> GS IP 192.168.0.14 -> D2GS :4000 connected -> STARTACT
+-> playerjoin 'Test' -> gameplay -> clean exit
+-> re-login -> second realm session (charlogon again) -> CHARCREATE 'VTSTech' ok
+-> clean shutdown (BNSEND_Disconnect + mode loop exit)
+```
+
+The full fix chain, R169→R203: bn-srp-context + bn-read-offset + bn-authcheck-bound +
+bn-nth-failstr (R169), CheckRevision bypass (R190), handler-loop NULL-recv arithmetic
+(R196, the 10053 root cause — AFD "Invalid buffer on fastio receive"), Sha1_Pump
+self-clobber rewrite + Append counter UB (R198), thread-connect deferral revert + socket
+options restore (R199), MCP dispatch contract + HandleIncomingPacket chain (R200),
+wsaref quiet (R201), LOGINREQ contiguous buffer (R202, d2cs-accepted), CHARLISTREQ
+trigger + queue pumping in the connecting wait (R203). 34 fixes across 9 days; every
+one field-verified.
+
+**One cosmetic note:** a hangwatch stall dump fired during the game-exit → realm
+charselect transition (no main-loop beat for 12.2s). The main thread was alive throughout
+(it logged LOGONREALM/charlogon/chat lines inside the window) — the beat counter just
+isn't fed during mode transitions. False positive, process continued normally; worth a
+beat-feed touch during transitions someday, not urgent.
+
+**Closed.** The original R169 audit's "no Battle.net connection could ever complete"
+rebuild now: authenticates (real CD-key hashes, accepted versioncheck), logs on, lists
+realms, connects d2cs, logs in to the realm, lists characters, creates characters,
+creates games on the D2GS, joins and plays them, and shuts down cleanly — on both the
+closed-realm and Open Battle.net paths.

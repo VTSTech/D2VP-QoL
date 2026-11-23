@@ -1970,23 +1970,37 @@ int __stdcall VPRES_GetWideUiOffsetY() {
 // the goldbank stat carries the shared gold, so the retail deposit/withdraw
 // buttons and the gold display just work.
 //
-// Client/server agreement: in SP every click is delivered, so the client
-// flag and the server page cannot drift (the server toggle is idempotent
-// even if a packet were retried). The feature is inert outside SP on the
-// server side (the toggle is refused), so a TCP/BNet session with the key
-// on shows a tab that toggles only its own label - documented v1 scope.
+// Client/server agreement: every click is delivered and the server (this
+// build's D2Game, local in SP / on the realm host online) handles the
+// toggle for every game type since R204 - the server toggle is idempotent
+// even if a packet were retried. Pools are PER ACCOUNT (R204): the toggle
+// swaps this character's page against its own account's pool file, so two
+// players online hold two different pools and never touch each other's
+// items.
 
 static int gbVpSharedStashMode = 0;   // 2 s ini gate cache
 static DWORD dwVpSharedStashGateTick = 0;
+// [R205] Configurable wire encoding for the toggle packet. Defaults = the
+// R204 shape (button 0x7D, pad 0). Realm probe/deploy shape (D2GS agent:
+// d2server.dll's hack.c drops out-of-range button ids BEFORE D2Game, so on
+// realms the toggle shares a whitelisted retail id - button 3, trade accept
+// - and carries the page plus a magic in the pad u16 the validator does not
+// inspect): shared_stash_button=3, shared_stash_pad_magic=0x00AD. Both ends
+// must match; defaults keep SP identical.
+static int gnVpSharedButton = 0x7D;
+static int gnVpSharedPadMagic = 0;
 static int gnVpSharedPage = 0;        // client mirror of the page toggle:
                                       // 0 personal, 1..100 = shared pages 1..100
                                       // [R161 ARCH-02] cosmetic mirror ONLY - the
                                       // server (VanillaPlusStash.cpp) is authoritative
-                                      // and idempotent; outside SP the label toggles
-                                      // while the server refuses 0x7D (see the
-                                      // client/server agreement note above). Any
-                                      // future non-SP work should echo the effective
-                                      // page in the 0x9C stream so this resyncs.
+                                      // and idempotent. Since R204 the server handles
+                                      // the toggle for every game type (per-account
+                                      // pools), so the mirror matches the server
+                                      // after each accepted click; the only desync is
+                                      // a server-side park (each save parks + the
+                                      // post-save hook re-activates the same page)
+                                      // or a transient file-lock refusal - both
+                                      // self-heal on the next tab click.
 
 // Options-page hook (D2VP_ConfigReloaded, R67): zero the gate tick so the
 // next VPSHAREDUI_FeatureActive() re-reads shared_stash - the "Shared" tab
@@ -2007,8 +2021,14 @@ BOOL __stdcall VPSHAREDUI_FeatureActive() {
             ALTTOGGLE_EnsureIni();
             // Missing file/section/key or a non-numeric value = 0 = vanilla.
             gbVpSharedStashMode = GetPrivateProfileIntA("features", "shared_stash", 0, szIniPath) ? 1 : 0;
+            // [R205] Wire encoding for the toggle packet (both ends must
+            // match; defaults keep SP on the R204 shape).
+            gnVpSharedButton = GetPrivateProfileIntA("features", "shared_stash_button", 0x7D, szIniPath);
+            gnVpSharedPadMagic = GetPrivateProfileIntA("features", "shared_stash_pad_magic", 0, szIniPath);
         } else {
             gbVpSharedStashMode = 0;
+            gnVpSharedButton = 0x7D;
+            gnVpSharedPadMagic = 0;
         }
     }
     return gbVpSharedStashMode;
@@ -2245,12 +2265,16 @@ BOOL __stdcall VPSHAREDUI_HandleStashClick(int nMouseX, int nMouseY) {
     }
 
     gnVpSharedPage = nNewPage;
-    // C->S 0x4F Click Button, VP toggle id 0x7D, the ABSOLUTE desired page
-    // in the param word (0 personal / 1..100 shared-N). The send
-    // helper packs the param word as (arg2 << 16) | (uint16)arg3, so the
-    // page rides arg3 and the server activates exactly that page
-    // (VanillaPlusStash.cpp; idempotent when the page is already active).
-    D2Client::GAME::Msg::NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT(0x4f, 0x7d, 0, (int16_t)gnVpSharedPage);
+    // C->S 0x4F Click Button carrying the ABSOLUTE desired page (0 personal /
+    // 1..100 shared-N) in the last u16, and a magic in the pad u16 so the
+    // fork server can tell a stash toggle from a genuine retail click of the
+    // same button id (R205: on realms the button id must be one d2server.dll's
+    // cheat validator whitelists, so the id and the pad magic are ini keys -
+    // features/shared_stash_button and features/shared_stash_pad_magic; the
+    // server reads the same two keys and both must match). Defaults 0x7D + 0
+    // keep single-player byte-identical to R204.
+    D2Client::GAME::Msg::NET_D2GS_CLIENT_Send_SHORT_SHORT_SHORT(
+        0x4f, (int16_t)gnVpSharedButton, (int16_t)gnVpSharedPadMagic, (int16_t)gnVpSharedPage);
     return TRUE;
 }
 

@@ -2562,12 +2562,17 @@ eD2ServerIncomingStatus __fastcall ClickButton(::SGAMEDATA * pGame, D2UnitStrc *
       return SERVERSTATUS_BAD_TARGET;
     }
 
-    // VP-BEGIN [vanilla-plus shared-stash] the shared-page toggle rides
-    // button 0x7D, outside every retail range handled below, so a retail
-    // server would reject it as a harmless trade-path error; ours parks or
-    // restores the shared stash page (D2Game/PLAYER/VanillaPlusStash.cpp).
-    if (VPSHARED_ShouldInterceptClickButton(pGame, pUnit, nButtonId)) {
-      VPSHARED_OnClickButton(pGame, pUnit, nButtonId, nGoldAmount);
+    // VP-BEGIN [vanilla-plus shared-stash] the shared-page toggle rides an
+    // ini-configured button id, outside every retail range handled below in
+    // single-player, so a retail server would reject it as a harmless
+    // trade-path error; ours parks or restores the shared stash page
+    // (D2Game/PLAYER/VanillaPlusStash.cpp). [R205] On realms the id must be
+    // one d2server.dll's cheat validator whitelists (the stock 0x7D is
+    // dropped before D2Game), so the packet's pad word carries a magic and
+    // only our toggles match it - a genuine click of the same id has no
+    // magic and falls through to the retail trade path unchanged.
+    if (VPSHARED_ShouldInterceptClickButton(pGame, pUnit, (int16_t)nButtonId, nGoldAmount)) {
+      VPSHARED_OnClickButton(pGame, pUnit, (int16_t)nButtonId, nGoldAmount);
       return SERVERSTATUS_OK;
     }
     // VP-END [vanilla-plus shared-stash]

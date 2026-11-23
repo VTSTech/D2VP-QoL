@@ -1157,6 +1157,15 @@ BOOL __fastcall SaveGameAllGameTypes(::SGAMEDATA * pGame, D2UnitStrc * pUnit, ch
     }
 
     _bHasInteractInfo = bSaveSucceeded;
+
+    // VP-BEGIN [vanilla-plus shared-stash] R204: the park above is per-save
+    // (the character save must stay retail-only) - put the shared page back
+    // for its holder now that the .d2s/buffer has been built. Realm saves
+    // fire per-player on intervals/waypoints; without this re-activation
+    // every such save would kick the holder to their personal page.
+    VPSHARED_AfterSave(pGame, pUnit);
+    // VP-END [vanilla-plus shared-stash]
+
     return _bHasInteractInfo;
 }
 

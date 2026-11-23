@@ -29,7 +29,7 @@ Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Q
 | Auto Gold Pickup | `[features] auto_gold` | Gold collected automatically when walking over piles |
 | Persistent Globe Text | `[features] globe_persistent` | Life/Mana readout stays visible without hovering |
 | Item Level Tooltips | `[features] item_ilvl` | Appends ` (N)` to item name on tooltips |
-| Shared Stash | `[features] shared_stash` | 100 shared stash pages (100+ retail-shaped pages) |
+| Shared Stash | `[features] shared_stash` | 100 shared stash pages; on Battle.net realms each account gets its own private pool (`_d2vp_shared_<account>.sss` on the realm host) — shared across your characters, never with other players. Requires the realm host to run D2VP-D2GS. Advanced (realm probe/deploy only): `[features] shared_stash_button` (default `0x7d`) and `[features] shared_stash_pad_magic` (default `0`) must match on client and server |
 | No Panel World Shift | `[features] no_panel_shift` | World stays in place when panels open |
 | Mana Burn Fix | `[features] mana_burn_fix` | Fixes retail's Mana Burn bug to match D2R post-2.4 |
 | Shift Item Compare | `[features] shift_compare` | Shift+hover shows equipped item comparison |
@@ -70,6 +70,7 @@ Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All
 - Realm character list now loads; character creation, login, game creation and game join all verified against PvPGN/D2GS
 - Full `d2boot.log` diagnostics across the whole Battle.net journey, plus crash reports symbolized against `d2exe.map`
 
+Details: [RELEASE-NOTES-R188-R203.md](RELEASE-NOTES-R188-R203.md)
 
 ## Quick Start
 

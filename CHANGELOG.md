@@ -14,6 +14,30 @@ its source round. Per-tag notes: the
   field-verified against VTSTech/D2VP-D2GS; the whole fix chain is R169–R203. The
   individual rounds below shipped as working builds during the campaign.
 
+- **R205 — shared stash realm wire (configurable toggle id + pad magic)** (the D2GS port
+  showed our `0x4F` toggle arriving byte-exact but being dropped by `d2server.dll`'s
+  closed-source cheat validator, which whitelists retail button ids per opcode — before
+  D2Game ever sees it. The toggle's button id and a marker in the packet's pad word are
+  now ini-configurable on **both** ends (`[features] shared_stash_button`,
+  `[features] shared_stash_pad_magic`): realms ride a whitelisted retail id (default
+  candidate: 3, trade-accept — inert outside an active trade) with a magic in the pad
+  word the validator doesn't inspect, and a genuine retail click of that id (no magic)
+  still reaches the retail trade path untouched. Defaults `0x7D`/`0` keep single-player
+  byte-identical to R204.)
+
+- **R204 — shared stash works online: per-account pools** (the shared stash was v1
+  single-player-only — the server refused the page toggle for every other game type, so
+  online the tab flipped its label but nothing moved. Restructured to per-account pools
+  per the owner's design: "each player to have their own shared stash, not shared with
+  other players, just shared for that one account" — the pool key is the player's
+  account name and the pool file is `_d2vp_shared_<account>.sss` on the realm host;
+  single-player keeps the legacy global file. Each character materializes its account's
+  page into its own stash with its own snapshot, so any number of players can use the
+  shared stash simultaneously. Adds a post-save re-activation hook (realm saves fire
+  per-player on intervals/waypoints; without it every server save would kick the holder
+  back to their personal page). Requires the realm host to run this D2Game build — a
+  vanilla d2gs ignores the toggle harmlessly.)
+
 - **R202/R203 — realm login + character list** (d2cs rejected the realm LOGINREQ with
   "got bad account name": the account string was only in the packet when the compiler
   happened to place two stack locals adjacently — now built as one contiguous buffer.

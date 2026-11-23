@@ -358,3 +358,38 @@ if(EXISTS "${D2_IMPLIB_DEFS}")
     add_dependencies(d2 d2_implibs)
     target_link_libraries(d2 PRIVATE ${D2_IMPLIBS})
 endif()
+
+# ---------------------------------------------------------------------------
+# [R218] d2vpstash.dll - the D2GS realm hook DLL (shared stash online).
+#
+# Standalone, self-contained 32-bit DLL: it compiles ONLY the stash TU in its
+# 1.13d mode and resolves every game-side function at runtime (GetModuleHandleA
+# + GetProcAddress by ordinal), so it has no import-table dependency on
+# D2Game.dll/D2Common.dll and loads cleanly into the D2GS process.
+#
+#   VPSTASH_D2GS_113D     : the 1.13d realm code paths
+#   VPSTASH_113D_DLL      : export VPSHARED_HookPacket + local logging
+#   VPSTASH_113D_NO_0X9C  : v1 state-only build (no client repaint)
+#
+# Build:  cmake --build build --target d2vpstash
+# The D2GS stub calls VPSHARED_HookPacket(pGame, pUnit, pPacket).
+if(MINGW OR MSVC)
+    add_library(d2vpstash SHARED
+        "${D2_ROOT}/Source/D2Game/PLAYER/VanillaPlusStash.cpp"
+        "${D2_ROOT}/cmake/d2vpstash.def")
+    target_compile_definitions(d2vpstash PRIVATE
+        VPSTASH_D2GS_113D
+        VPSTASH_113D_DLL
+        VPSTASH_113D_NO_0X9C
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX)
+    # [R221] Do NOT hand-roll the compile flags: reuse d2_flags, which already
+    # carries the SHELL-quoted forced includes (CMake de-duplicates plain repeated
+    # options, which orphaned the second -include and broke the build), the
+    # include directories, cxx_std_17 and -fwrapv.
+    target_link_libraries(d2vpstash PRIVATE d2_flags)
+    set_target_properties(d2vpstash PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "d2vpstash"
+        LINK_FLAGS "-static -static-libgcc -static-libstdc++")
+endif()
