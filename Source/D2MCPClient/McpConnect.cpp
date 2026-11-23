@@ -547,7 +547,28 @@ int32_t __fastcall NET_MCP_CLIENT_Send_0x01_StartUp(int * pnStartupInfo) {
       exit(-1);
     }
 
-    nLine = Fog::Src::D2QSSocket::NET_MCP_CLIENT_Send(MCPD2QSSocket, &mcp0x01.nPacketId, (uint16_t)(uintptr_t)(pStrLen + 0x41));
+    // VP-BEGIN [bn-mcp-loginreq R202]: contiguous-packet fix. The old send read
+    // pStrLen+0x41 bytes starting at &mcp0x01.nPacketId - the 65-byte struct PLUS
+    // whatever happened to sit behind it on the stack. The account string was only in
+    // the packet when the compiler happened to place payloadBuffer (where
+    // STRING_GetStringLength copies the name) immediately behind mcp0x01: the R199-era
+    // build had that lucky adjacency and d2cs ACCEPTED the loginreq (LOGINREPLY 0 +
+    // charlist, R199 pcap); the R200/R201 builds have garbage behind the struct, d2cs
+    // read junk as the account name -> "got bad account name" -> connection closed
+    // without reply (D2GS agent's d2cs log: on_client_loginreq / d2cs_conn_destroy).
+    // Build one contiguous buffer (struct 0x41 bytes + name) and send exactly its
+    // length. pvpgn reads the account name string at packet offset 67 = 0x41 payload
+    // offset + 2 size-prefix bytes (t_client_d2cs_loginreq: h@0 seqno@3 u1@7
+    // bncs_addr1@11 sessionnum@15 sessionkey@19 cdkey_id@23 u5@27 clienttag@31
+    // bnversion@35 bncs_addr2@39 u6@43 secret_hash[5]@47 account@67; pvpgn-server
+    // src/d2cs/d2cs_protocol.h + handle_d2cs.cpp on_client_loginreq).
+    char aLoginReqBuf[0x41 + 1027];
+    memcpy(aLoginReqBuf, &mcp0x01.nPacketId, 0x41);
+    memcpy(aLoginReqBuf + 0x41, payloadBuffer, (size_t)(uintptr_t)pStrLen);
+    D2BOOT_MarkFmt("MCP: 0x01 LOGINREQ sending len=%u account='%s'",
+                   (unsigned)(uintptr_t)pStrLen + 0x41u,
+                   payloadBuffer[0] ? payloadBuffer : "<EMPTY>"); // [d2boot]
+    nLine = Fog::Src::D2QSSocket::NET_MCP_CLIENT_Send(MCPD2QSSocket, aLoginReqBuf, (uint16_t)(uintptr_t)(pStrLen + 0x41));
     return nLine;
 }
 
