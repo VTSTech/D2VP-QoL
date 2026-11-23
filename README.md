@@ -12,7 +12,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.8--R188-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.9--R203-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -57,19 +57,19 @@ Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All
 
 ## Current Status
 
-- **Version:** Vanilla+0.0.8-R188
+- **Version:** Vanilla+0.0.9-R203
 - **Renderer:** D3D/Glide via [Glide3xVK](https://github.com/VTSTech/Glide3xVK)
-- **Scope:** Single-player; D2GS private-server realms supported (not working yet)
+- **Scope:** Single-player; Battle.net **closed realms** (PvPGN/D2GS) and **Open Battle.net** both fully working
 - **Compatibility:** Full backward compatibility, `.d2s` files untouched
 
-## What's New (R168 → R188)
+## What's New (R188 → R203)
 
-- Cold/frozen monsters no longer vanish without dropping loot — idle-room race fixed, and the shatter death effect (ice cubes + smoke) now plays like retail
-- Battle.net title-screen click crash fixed; private-server realms (PvPGN/D2GS) connect reliably
-- New opt-in feature: **Palette 37 Tints** — 8 champion/unique tint rows retail never rendered
-- Full `d2boot.log` diagnostics for the whole game journey
+- **Battle.net works.** Closed realms (PvPGN/D2GS) and Open Battle.net both connect, list characters, join/create games and play — the whole multiplayer surface
+- Fixed the Battle.net connection death (recv 10053): the packet parser was receiving through a NULL buffer after the first server packet, aborting the socket
+- Fixed a SHA-1 hashing bug that crashed the client at "Checking Versions" on realm login
+- Realm character list now loads; character creation, login, game creation and game join all verified against PvPGN/D2GS
+- Full `d2boot.log` diagnostics across the whole Battle.net journey, plus crash reports symbolized against `d2exe.map`
 
-Details: [RELEASE-NOTES-R168-R188.md](RELEASE-NOTES-R168-R188.md)
 
 ## Quick Start
 
@@ -89,7 +89,8 @@ See [docs/building.md](docs/building.md) for detailed build instructions.
 
 ## Links
 
-- [RELEASE-NOTES-R168-R188.md](RELEASE-NOTES-R168-R188.md) - What's new in this range
+- [RELEASE-NOTES-R188-R203.md](RELEASE-NOTES-R188-R203.md) - Battle.net multiplayer release notes
+- [RELEASE-NOTES-R168-R188.md](RELEASE-NOTES-R168-R188.md) - Previous release notes (issue #39 era)
 - [CHANGELOG.md](CHANGELOG.md) - Full release history
 - [FEATURES.md](FEATURES.md) - Feature details
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide

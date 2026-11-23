@@ -9,6 +9,46 @@ build self-IDs `Vanilla+0.0.x-Ryy`; the first `d2boot.log` line pins any shipped
 its source round. Per-tag notes: the
 [releases page](https://github.com/VTSTech/D2VP-QoL/releases).
 
+- **0.0.9-R203 — Battle.net works: closed realms (PvPGN/D2GS) and Open Battle.net fully
+  playable.** Character list, character creation/login, game creation and game join all
+  field-verified against VTSTech/D2VP-D2GS; the whole fix chain is R169–R203. The
+  individual rounds below shipped as working builds during the campaign.
+
+- **R202/R203 — realm login + character list** (d2cs rejected the realm LOGINREQ with
+  "got bad account name": the account string was only in the packet when the compiler
+  happened to place two stack locals adjacently — now built as one contiguous buffer.
+  Then the missing MCP CHARLISTREQ (0x19) after a successful login: d2cs has no
+  auto-push charlist, so the realm charselect sat at "Connecting" forever. Both
+  d2cs-log-confirmed: login accepted, charlist delivered, realm characters render.)
+
+- **R196/R198 — the two crash-class bugs behind the Battle.net connection death** (the
+  "recv 10053 on a healthy connection" root cause was our own packet parser: the
+  decompiled "bytes remaining" arithmetic returned NULL, so the second recv ran as
+  `recv(sock, NULL, ~163 MB)` and Winsock aborted the socket — recv#1 had worked since
+  R169 by luck of the pointer math. Independently, a reconstructed SHA-1 wrote its
+  W-schedule over its own loop counter on certain CD-key data, crashing at "Checking
+  Versions"; rewritten as clean standard SHA-1 and harness-verified against FIPS test
+  vectors. ETW + crash-map symbolization closed both.)
+
+- **R200 — realm packet dispatch actually wired** (the full MCP handler table had zero
+  callers and the QSSocket handler was invoked with the wrong argument, so realm packets
+  were received and dropped; charlist/charlogon/gamelist handlers now run).
+
+- **R199 — retail-faithful socket connect restored** (the R195 connect-in-read-thread
+  experiment was obsoleted by the R196 root cause and silently prevented the realm
+  socket from ever connecting; retail's connect-in-Create restored, plus the
+  TCP_NODELAY/KEEPALIVE/SNDTIMEO options un-bisected back to retail parity).
+
+- **R190 — CheckRevision bypass: closed-realm auth can complete** (the version check
+  required a Blizzard-signed CheckRevision DLL no 1.14d rebuild install carries, so
+  SID_AUTH_CHECK was never sent to any server; bypass supplies the 1.14d version id and
+  empty statstring, real CD-key hashes still sent — d2cs-accepted).
+
+- **R191–R195, R201 — forensic elimination rounds** (probe batteries, ETW traces, pcap
+  forensics and a crash-map symbolization workflow that exonerated Windows Firewall,
+  WFP, Defender Web Threat Defense, Winsock LSPs and the 24H2 kernel one layer at a
+  time; every diagnostic mark kept in `d2boot.log`).
+
 - **R187/R188 — shatter crumble fixed; issue #39 fully closed** (the final vanish strand
   was the client shatter effect: `MONSTER_SpawnDeathEffectMissiles` set
   `pOwner`/`pMissile` **before** `memset(&sSkillArg, 0, 0x5c)`, erasing them — retail
