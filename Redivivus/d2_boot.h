@@ -17,7 +17,7 @@
 // (D2VP_BUILD_TAG) both derive from this header, so a release bump touches
 // exactly one place - the old hardcoded "0.0.8" literal in the self-ID
 // would have drifted from CHANGELOG reality at the next bump.
-#define D2VP_VERSION_TAG "0.0.8-R" D2VP_ROUND
+#define D2VP_VERSION_TAG "0.0.9-R" D2VP_ROUND
 
 extern "C" {
 void D2BOOT_Mark(const char* pszStage);
