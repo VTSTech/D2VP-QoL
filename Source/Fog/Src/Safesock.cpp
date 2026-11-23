@@ -249,7 +249,11 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
     // auth socket in the proven-good probe state (no options). After auth completes,
     // restore one option at a time to find the poison (keep TCP_NODELAY for gameplay
     // latency if it is innocent).
-    static BOOL s_bApplySocketOptions = FALSE;
+    // [bn-options-restore R199]: flag restored to TRUE (retail parity). R196 proved the
+    // recv#2 death was the handler-loop NULL recv - the options were never poison, and
+    // running without TCP_NODELAY costs gameplay latency. R193/R194 field runs already
+    // exonerated them empirically.
+    static BOOL s_bApplySocketOptions = TRUE;
     if (s_bApplySocketOptions) {
       /* int optlen for setsockopt */ nNoDelayOpt[0] = '\x01';
       nNoDelayOpt[1] = '\0';
@@ -303,22 +307,26 @@ D2NetDataStrc * __fastcall Create(char * szHostName, u_short nPort, LPTHREAD_STA
         }
       }
     } else {
-      // VP-BEGIN [bn-threadconnect R195]: the blocking path DEFERS the connect to the
-      // read thread. The ETW-calibrated elimination matrix (options: R193; select:
-      // R194; page state: R192; recv style: R191) leaves connect-thread != recv-thread
-      // as the only structural difference between the dying main socket and the
-      // never-dying autopsy-battery sockets, which connect on the receiving thread.
-      // Create stages the sockaddr; the read thread calls SAFESOCK_ThreadConnect
-      // before its recv loop (single-flight: Free waits the read thread before the
-      // next Create can run).
-      g_ThreadConnectAddr = connectAddr;
-      g_ThreadConnectPending = 1;
-      pThreadParamLocal = (LPVOID)pSafesockStrc; // the read thread needs its own struct
-      // VP-END [bn-threadconnect R195]
-    }
-    if (!bNonBlocking) {
-      pSafesockStrc->bConnected = 0;
-      pSafesockStrc->bInit = 0;
+      // VP-BEGIN [bn-threadconnect-revert R199]: R195 deferred the blocking-path connect to
+      // the read thread (Mode A probe-parity - obsolete: R196 proved the death was the
+      // handler-loop NULL recv, not the connect thread, and R195's own field run showed no
+      // change). The deferral BREAKS every socket whose thread proc is not
+      // BnetReadFunction: only BnetReadFunction calls SAFESOCK_ThreadConnect, so the
+      // MCP/realm socket (D2QSSocket::ReceiveLoopCallback, which breaks on !bConnected)
+      // never connected at all - R198 field log: realm socket h=0xd5c created after
+      // LOGONREALM, zero sends/recvs, freed 11.8 s later by the giving-up auth flow.
+      // Retail connects here, on the calling thread, and sets bConnected (WSASocket2_Send
+      // guards on bConnected; pre-R195 builds sent 0x50 straight after Create).
+      nResult = connect(hSocket, (sockaddr*)&connectAddr, 0x10);
+      if (nResult == -1) {
+        pSafesockStrc->nWSALastError = WSAGetLastError();
+        pSafesockStrc->nError = 3;
+        /* LPCRITICAL_SECTION lpCriticalSection for DeleteCriticalSection */ DeleteCriticalSection(&pSafesockStrc->pSync);
+        D2_FREE_AT(pSafesockStrc, ".\\Src\\Safesock.cpp", 0x123);
+        return nullptr;
+      }
+      pSafesockStrc->bConnected = 1;
+      // VP-END [bn-threadconnect-revert R199]
     }
     /* char * cp for inet_addr */ if (cp_0075d040[0] == '\0' || (nLocalIpAddr = inet_addr(cp_0075d040) , !nLocalIpAddr)) {
       char* pSrcIp;
