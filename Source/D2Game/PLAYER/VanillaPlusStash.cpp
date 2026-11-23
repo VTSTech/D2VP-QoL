@@ -130,24 +130,36 @@
 // boot-log marks are satisfied locally: append to d2vpstash.log next to the DLL.
 // (The in-exe build keeps the real D2BOOT_* writers.)
 static void VPSHARED_Log113d(const char * szFmt, ...) {
+    static const char * s_szLogPath = nullptr;
     char szPath[260];
-    DWORD dwLen = GetModuleFileNameA((HMODULE)&VPSHARED_Log113d, szPath, 240);
-    if (dwLen && dwLen < 240) {
-        char * pSlash = strrchr(szPath, '\\');
-        if (pSlash) {
-            pSlash[1] = '\0';
-            strcat(szPath, "d2vpstash.log");
-            FILE * f = fopen(szPath, "a");
-            if (f) {
-                va_list ap;
-                va_start(ap, szFmt);
-                vfprintf(f, szFmt, ap);
-                va_end(ap);
-                fputc('\n', f);
-                fclose(f);
+    if (!s_szLogPath) {
+        // Resolve once, with a hard fallback: the D2GS workdir is C:\d2gs, and
+        // a log we cannot find is the same as no log at all (round-one lesson).
+        DWORD dwLen = GetModuleFileNameA((HMODULE)&VPSHARED_Log113d, szPath, 240);
+        if (dwLen && dwLen < 240) {
+            char * pSlash = strrchr(szPath, '\\');
+            if (pSlash) {
+                pSlash[1] = '\0';
+                strcat(szPath, "d2vpstash.log");
+                s_szLogPath = _strdup(szPath);
             }
         }
+        if (!s_szLogPath) {
+            s_szLogPath = _strdup("C:\\d2gs\\d2vpstash.log");
+        }
     }
+    FILE * f = fopen(s_szLogPath, "a");
+    if (!f) {
+        return;
+    }
+    setvbuf(f, nullptr, _IONBF, 0);      // unbuffered: a crash must not eat the tail
+    va_list ap;
+    va_start(ap, szFmt);
+    vfprintf(f, szFmt, ap);
+    va_end(ap);
+    fputc('\n', f);
+    fflush(f);
+    fclose(f);
 }
 #define D2BOOT_Mark(...)    VPSHARED_Log113d(__VA_ARGS__)
 #define D2BOOT_MarkFmt(...) VPSHARED_Log113d(__VA_ARGS__)
@@ -583,8 +595,15 @@ static int VPSHARED_SerializeItem113d(D2UnitStrc * pItem, uint8_t * pOut, uint32
     if (!pfn) {
         return -1;
     }
+    // [R225] ARGUMENT FIX - this is what crashed the first realm attempt.
+    // The 4th argument is NOT optional: our own working single-player call passes
+    // a sentinel statlist marker 0x1 and isSave=1:
+    //     SerializeItem(pItem, pCursor, remaining, (D2StatListExStrc*)0x1, 1, 0)
+    // The first adapter draft passed (nullptr, 0, 0), so the serializer walked a
+    // NULL stat list and faulted inside Fog's bit-buffer (EIP in Fog.dll, report
+    // D2-261123 -- exactly the crash shape reported).
     return (int)((uint32_t(__stdcall*)(D2UnitStrc*, uint8_t*, uint32_t, void*, int, int))pfn)(
-        pItem, pOut, nMax, nullptr, 0, 0);
+        pItem, pOut, nMax, (void *)0x1, 1, 0);
 }
 #endif // VPSTASH_D2GS_113D
 
@@ -999,6 +1018,8 @@ static int VPSHARED_SerializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint
         // Retail per-item encoder, same call shape as the .d2s writer
         // (SAVE_SerializeInventoryItems): own statlist marker, all items.
 #if defined(VPSTASH_D2GS_113D)
+        VPSHARED_Log113d("SERIALIZE item %d/%d pItem=%p room=%u", nCount + 1, VPSTASH_PAGE_ITEM_CAP,
+                         pCarried, (unsigned)(pEnd - pCursor));
         int nWritten = VPSHARED_SerializeItem113d(pCarried, pCursor, (uint32_t)(pEnd - pCursor));
 #else
         int nWritten = D2Common::ITEMS::Items::SerializeItem(pCarried, pCursor, (size_t)(pEnd - pCursor),
@@ -1706,6 +1727,39 @@ extern "C" int __stdcall VPSHARED_HookPacket(void * pGame, void * pUnit, void * 
     }
     const uint8_t * p = (const uint8_t *)pPacket;
     if (p[0] != 0x4F) {
+        return 0;
+    }
+
+    // Entry marker: proves the hook fired even if everything below dies.
+    VPSHARED_Log113d("HOOK 0x4F pGame=%p pUnit=%p btn=0x%04x page=%u",
+                     pGame, pUnit, *(const uint16_t *)(p + 1), *(const uint16_t *)(p + 5));
+
+#if defined(VPSTASH_113D_PROBE)
+    // [R224] ZERO-RISK PROBE: never acts, only reports what the hook actually
+    // receives. Used to verify that ECX/EDX at 0x6fc8cf6f really are pGame/pUnit
+    // before any state is touched again. Returns 0 so the stub replays stock.
+    {
+        const uint8_t * q = (const uint8_t *)pUnit;
+        uint32_t dwMaybeType = *(const uint32_t *)q;
+        VPSHARED_Log113d("PROBE pGame=%p pUnit=%p unitType@0=%u pkt=%02X %02X%02X %02X%02X %02X%02X",
+                         pGame, pUnit, dwMaybeType,
+                         p[0], p[2], p[1], p[4], p[3], p[6], p[5]);
+    }
+    return 0;
+#endif
+
+    // [R224] HARD SANITY GUARD: the hook only ever acts on a real player unit.
+    // eUnitType sits at +0x00 (confirmed on 1.13d) and is UNIT_PLAYER for a
+    // character. If ECX/EDX were not (pGame, pUnit) this refuses instead of
+    // calling into the gated state machine with garbage - the failure that made
+    // items unpickable in the first field attempt.
+    if (((D2UnitStrc *)pUnit)->eUnitType != UNIT_PLAYER) {
+        static int s_nRefused = 0;
+        if (!s_nRefused) {
+            s_nRefused = 1;
+            VPSHARED_Log113d("REFUSED: pUnit=%p type=%u (not a player unit) - arg mapping wrong?",
+                             pUnit, (unsigned)((D2UnitStrc *)pUnit)->eUnitType);
+        }
         return 0;
     }
     uint16_t nButton = *(const uint16_t *)(p + 1);
