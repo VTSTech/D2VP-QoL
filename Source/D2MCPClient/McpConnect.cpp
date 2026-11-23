@@ -82,6 +82,13 @@ static uint16_t nMcpPacketSequence = 0; D2_STATIC_GUARD(nMcpPacketSequence, "nMc
 namespace D2MCPClient::McpConnect {
 uint32_t D2GSGameToken = 0; D2_GLOBAL_GUARD(D2GSGameToken, "D2MCPClient::McpConnect::D2GSGameToken");
 D2QSSocketStrc * MCPD2QSSocket = 0; D2_GLOBAL_GUARD(MCPD2QSSocket, "D2MCPClient::McpConnect::MCPD2QSSocket");
+// VP [bn-mcp-charlistreq R203]: set once the LOGINREPLY (result 0) has been seen and the
+// MCP CHARLISTREQ (0x19) sent. d2cs has no auto-push charlist (pvpgn handle_d2cs.cpp:
+// charlists only go out for 0x17/0x19 requests) and requires conn_state_authed (set by the
+// login reply) first - retail sends CHARLISTREQ_110 right after LOGINREPLY; the rebuild
+// never did, so the realm charselect sat at "Connecting" (D2GS agent: d2cs logs zero
+// charlistreqs for D2VP sessions vs retail). Reset per MCP session in MCPCONNECT_CreateThread.
+static BOOL s_bMCPCharListRequested = 0;
 } // namespace D2MCPClient::McpConnect
 static uint8_t gMCPConnectionState[328] = {}; D2_STATIC_GUARD(gMCPConnectionState, "gMCPConnectionState");
 static uint32_t g_bMCPListGameSuccess = 0; D2_STATIC_GUARD(g_bMCPListGameSuccess, "g_bMCPListGameSuccess");
@@ -170,6 +177,16 @@ BOOL __stdcall NET_MCP_CLIENT_ReadAndParsePacket() {
     uint32_t uVar1 = Fog::Src::D2QSSocket::ReadBytesFromSocket(MCPD2QSSocket, szPacketBuf, 0x400);
     if ((short int)uVar1) {
       /* At self point nSize is removed from packet structure */ HandleIncomingPacket(szPacketBuf, (uint16_t)uVar1);
+      // VP-BEGIN [bn-mcp-charlistreq R203]: queue frames hold the payload after the 2-byte
+      // size prefix, so [0] is the packet type and [1..4] the LOGINREPLY result (LE u32).
+      // On a successful login reply, request the character list (once per MCP session).
+      if ((uint8_t)szPacketBuf[0] == 0x01 && !s_bMCPCharListRequested) {
+        s_bMCPCharListRequested = 1;
+        D2BOOT_MarkFmt("MCP: LOGINREPLY result=%u -> sending CHARLISTREQ (0x19)",
+                       *(uint32_t*)(void*)&szPacketBuf[1]); // [d2boot]
+        NET_MCP_CLIENT_Send_0x19_CharList2();
+      }
+      // VP-END [bn-mcp-charlistreq R203]
     }
 
     return 1;
@@ -435,6 +452,19 @@ void __stdcall McpConnectionLoop(int * pnParam) {
         return;
       }
 
+      // VP-BEGIN [bn-mcp-charlistreq R203]: pump the MCP queue while waiting for the
+      // LOGINREPLY. The reply only reaches HandleIncomingPacket when something dequeues -
+      // the read-thread Dispatch hop is not guaranteed (R202 field log: no 'MCP: pkt'
+      // marks, packets flowed via the pump path) and nothing else dequeues during this
+      // loop. ReadAndParsePacket also fires the CHARLISTREQ (0x19) on LOGINREPLY result 0
+      // (retail sends it immediately after the login reply; d2cs requires
+      // conn_state_authed first and has no auto-push charlist).
+      NET_MCP_CLIENT_ReadAndParsePacket();
+      if (s_bMCPCharListRequested) {
+        break; // login reply processed + CHARLISTREQ sent; the charlist reply follows via the UI pumps
+      }
+      // VP-END [bn-mcp-charlistreq R203]
+
       dwWaitResult = GetTickCount();
       if (dwWaitResult >= dwStartTick + 60000) {
         D2GSJoinResult = 2;
@@ -452,6 +482,15 @@ void __stdcall McpConnectionLoop(int * pnParam) {
 
       /* DWORD dwMilliseconds for Sleep */ Sleep(10);
     }
+
+    // VP-BEGIN [bn-mcp-charlistreq R203]: safety net for the event path (read-thread
+    // Dispatch signalled the login event without the queue-pump trigger having fired).
+    if (!s_bMCPCharListRequested) {
+      s_bMCPCharListRequested = 1;
+      D2BOOT_Mark("MCP: login event path -> sending CHARLISTREQ (0x19)"); // [d2boot]
+      NET_MCP_CLIENT_Send_0x19_CharList2();
+    }
+    // VP-END [bn-mcp-charlistreq R203]
 }
 
 // lpStartAddress parameter of CreateThread
@@ -498,6 +537,8 @@ void __stdcall MCPCONNECT_CreateThread(uint32_t * pSrcState) {
       pSrcCursor++;
       pdwDest++;
     }
+
+    s_bMCPCharListRequested = 0; // VP [bn-mcp-charlistreq R203]: fresh MCP session, re-arm the charlist request
 
     MCPThread = CreateThread((LPSECURITY_ATTRIBUTES)0x0, 0, (LPTHREAD_START_ROUTINE)ThreadHandler, (LPVOID)0x0, 0, (LPDWORD)&pSrcState);
 }

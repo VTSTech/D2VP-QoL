@@ -6712,6 +6712,12 @@ int __stdcall MAINMENU_PollMCPThreadStatusPump(int nFrameIndex) {
       gnMCPConnectThreadHandle = 1;
     }
 
+    // VP [bn-mcp-charlistreq R203]: dequeue MCP packets while the "Connecting" wait-pump
+    // runs. PollMCPThreadStatus only polls the MCP thread handle - without this the queue
+    // sat unprocessed during the wait (the CHARLISTREQ trigger in ReadAndParsePacket and
+    // the reply consumption both depend on a pump running).
+    D2MCPClient::McpConnect::NET_MCP_CLIENT_ReadAndParsePacket();
+
     uint32_t nMcpThreadStatus = MAINMENU_PollMCPThreadStatus();
     if (nMcpThreadStatus != 3) {
       D2Win::Src::D2WinMain::D2WINMAIN_ClearMessageLoopFlag();
