@@ -70,6 +70,7 @@ int __fastcall closeSocket(SOCKET hSocket) {
 // every StartUp/cleanup site funnels through this counter (Create/StartUp here, the
 // ErrorManager fatal paths via the Safesock::WSACleanup wrapper).
 static int s_nWsaRefCount = 0;
+static int s_nWsaRefNegativeLogged = 0;
 static void sWsaRefDelta(int nDelta, const char* szSite, void* pvRet) {
     s_nWsaRefCount += nDelta;
     // VP-BEGIN [bn-wsaref R180]: the R179 field log opened with "wsaref -> -1 (cleanup)"
@@ -80,13 +81,24 @@ static void sWsaRefDelta(int nDelta, const char* szSite, void* pvRet) {
     // wrapper, where it is the caller's address): symbolize against d2exe.map (the
     // standing convention) to confirm it names NET_GetLocalIp. wvsprintfA has no %p, so
     // the address prints as %08x (i686).
+    // VP-BEGIN [bn-wsaref-quiet R201]: the R200 field run flooded the log with per-call
+    // cleanup lines (wsaref -> -974/-975/-976..., ~60/s - a game-loop site calls the
+    // cleanup wrapper every frame; harmless to the real Winsock refcount, pure log noise).
+    // Cleanups are no longer logged per call: create/startup keep their one-line marks,
+    // and a cleanup only logs ONCE when the count first goes negative (the R179
+    // "impossible imbalance" tripwire stays armed).
     if (nDelta < 0) {
-      D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) ret=%08x [tid %lu]", s_nWsaRefCount, szSite,
-                     (unsigned)(uintptr_t)pvRet, (unsigned long)GetCurrentThreadId()); // [d2boot]
+      if (s_nWsaRefCount < 0 && !s_nWsaRefNegativeLogged) {
+        s_nWsaRefNegativeLogged = 1;
+        D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) ret=%08x [tid %lu] (first negative crossing; further cleanup marks suppressed)",
+                       s_nWsaRefCount, szSite, (unsigned)(uintptr_t)pvRet,
+                       (unsigned long)GetCurrentThreadId()); // [d2boot]
+      }
     } else {
       D2BOOT_MarkFmt("BNet: wsaref -> %d (%s) [tid %lu]", s_nWsaRefCount, szSite,
                      (unsigned long)GetCurrentThreadId()); // [d2boot]
     }
+    // VP-END [bn-wsaref-quiet R201]
     // VP-END [bn-wsaref R180]
 }
 
