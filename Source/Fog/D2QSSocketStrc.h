@@ -15,7 +15,14 @@
 struct D2QSQueueEntryStrc;
 #ifndef RECON_FPTD_fpD2QSSocketPacketHandler
 #define RECON_FPTD_fpD2QSSocketPacketHandler
-typedef int (__stdcall *fpD2QSSocketPacketHandler)(void * pContext);
+// VP [bn-mcp-dispatch R200]: retail's registered handler receives the PACKET payload
+// (pMessage = frame + nHeaderSize), its size, and the registration context. The old
+// 1-arg (pContext) shape made ProcessReceivedData pass pHandlerContext (nullptr for the
+// MCP socket) where the packet pointer belongs - MCPCONNECT_SocketCallback_Dispatch then
+// saw garbage for its packet/size arguments and dropped every MCP packet. Only the MCP
+// client registers this handler (QSSOCKET_SetCallbackHandler1, McpConnect.cpp), whose
+// dispatcher is (pPacketBuf, nPacketSize, pContext).
+typedef int (__stdcall *fpD2QSSocketPacketHandler)(void * pPacketBuf, int nPacketSize, void * pContext);
 #endif
 
 // Data types
@@ -51,7 +58,7 @@ struct __attribute__((packed)) D2QSSocketStrc {
     /* 0x120 */ int nHeaderLeadByte; // Third argument of QSSOCKET_SetCallbackHandler2; no use site found.
     /* 0x124 */ int bStopRequested; // Set to 1 by QSSOCKET_BlockSocket; polled by ReceiveLoopCallback to exit the receive loop. Was mis-named szName - the name buffer is at 0x128.
     /* 0x128 */ char szName[64]; // SStrCopy target in STRUCT_D2QSSocket_Init; defaults to "UNKNOWN". Runs to 0x168.
-    /* 0x168 */ int (__stdcall *pfnPacketHandler)(void *); // Set by QSSOCKET_SetCallbackHandler1. When non-null ProcessReceivedData calls it with pHandlerContext; a zero return means "not consumed, enqueue it".
-    /* 0x16C */ void * pHandlerContext; // Second argument of QSSOCKET_SetCallbackHandler1; the sole argument passed to pfnPacketHandler.
+    /* 0x168 */ int (__stdcall *pfnPacketHandler)(void *, int, void *); // Set by QSSOCKET_SetCallbackHandler1. When non-null ProcessReceivedData calls it with (pMessage, wMsgSize, pHandlerContext); a zero return means "not consumed, enqueue it". VP [bn-mcp-dispatch R200].
+    /* 0x16C */ void * pHandlerContext; // Third argument of QSSOCKET_SetCallbackHandler1; passed as the handler's context argument.
     /* 0x170 */ D2QSQueueStrc aQueue; // Inbound message queue. D2QSQUEUE_Initialize(&this) in STRUCT_D2QSSocket_Init, FOG_EnqueueMessage(&this,...) in ProcessReceivedData, D2QSQueue::Free(&this) in FreeD2QSSocket. Runs to the 0x194 allocation size; no named struct exists for it yet.
 };

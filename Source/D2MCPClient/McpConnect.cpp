@@ -1194,15 +1194,31 @@ BOOL __fastcall MCPCONNECT_SocketCallback_Dispatch(uint8_t * pPacketBuf, int nPa
 }; D2_STATIC_GUARD(gaMcpSocketCallbackHandlers, "D2MCPClient::McpConnect::MCPCONNECT_SocketCallback_Dispatch::gaMcpSocketCallbackHandlers");
 
     BOOL BVar1 = 0;
-    if ((uint32_t)nPacketSize <= 0) {
+    if (!pPacketBuf || (uint32_t)nPacketSize <= 0) {
       return BVar1;
     }
     if (*pPacketBuf >= 0x1a) {
       return 0;
     }
+    D2BOOT_MarkFmt("MCP: pkt 0x%02x received (%u bytes)", (unsigned)*pPacketBuf, (unsigned)nPacketSize); // [d2boot] VP [bn-mcp-dispatch R200]
     if (gaMcpSocketCallbackHandlers[*pPacketBuf]) {
       BVar1 = (*gaMcpSocketCallbackHandlers[*pPacketBuf])((char*)pPacketBuf, nPacketSize);
     }
+    // VP-BEGIN [bn-mcp-dispatch R200]: chain the full INCOMING table. It had ZERO callers in
+    // the rebuild (dead code since reconstruction): the MCP charlist (0x19 ->
+    // CopyCharListToGlobal), charlogon, and gamelist responses were received and dropped.
+    // R199 pcap: d2cs accepted MCP_STARTUP (result 0) and delivered the charlist with the
+    // "Test" character; the client never processed it and tore down ~1.6 s later. Two
+    // stacked defects closed here: (1) ProcessReceivedData passed pHandlerContext (nullptr)
+    // where the packet pointer belongs, so Dispatch saw garbage arguments; (2) nothing ever
+    // called HandleIncomingPacket. Handled packets return 1 so ProcessReceivedData does not
+    // enqueue them - the UI pumps' ReadAndParsePacket path re-runs HandleIncomingPacket on
+    // queued messages, and double-processing would corrupt e.g. the 0x11 gamelist append
+    // offset. Unhandled packets still enqueue for the pump path as before.
+    if (!BVar1) {
+      BVar1 = HandleIncomingPacket((char*)pPacketBuf, nPacketSize);
+    }
+    // VP-END [bn-mcp-dispatch R200]
 
     return BVar1;
 }
