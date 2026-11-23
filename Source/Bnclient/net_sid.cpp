@@ -1553,12 +1553,28 @@ int32_t __stdcall NET_SID_CLIENT_Send_0x51_AuthCheck() {
     dwClientToken.dwSpawnKeyFlag = 0;
     DecodeAndLoadKeys();
     bIsExpansion = BnSend::D2CheckExpansionGame();
+    // VP-BEGIN [bn-authcheck-marks R197]: this region first executed in R196 (every earlier
+    // field run died inside PerformCheckRevision before reaching it) and the R196 field run
+    // crashed here (AV READ 8A61CD26, eip 00FD32DC). Step marks + key-state line so the next
+    // run names its step; NULL guards keep a missing key file from faulting - a guarded 0x51
+    // with zeroed hashes gets cleanly rejected by the server (0x201) instead of crashing.
+    char* szCdKeyOwner = NET_SID_CLIENT_GetCdKeyOwner();
+    D2BOOT_MarkFmt("BNet: 0x51 key state: classic=%p expansion=%p owner=%p expansion-game=%d",
+                   (void*)NET_SID_CLIENT_GetCdKeyByType(0),
+                   (void*)NET_SID_CLIENT_GetCdKeyByType(1),
+                   (void*)szCdKeyOwner,
+                   (int)bIsExpansion); // [d2boot]
+    // VP-END [bn-authcheck-marks R197]
     if (bIsExpansion) {
       bHasPatchFile = Storm::Source::SSTR::SStrCopy(dwClientToken.szTail, (char*)szExeInfoClassic, 0x200);
       szBufferOutput = (uint8_t*)(dwClientToken.szTail + bHasPatchFile + 1);
       dwClientToken.dwKeyCount = 2;
-      BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sClassicKeyHash, g_dwCdKeyClientToken, 0);
-      BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sExpansionKeyHash, g_dwCdKeyClientToken, 1);
+      if (!BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sClassicKeyHash, g_dwCdKeyClientToken, 0)) {
+        D2BOOT_Mark("BNet: 0x51 classic CD-key hash FAILED (missing/undecodable key)"); // [d2boot]
+      }
+      if (!BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sExpansionKeyHash, g_dwCdKeyClientToken, 1)) {
+        D2BOOT_Mark("BNet: 0x51 expansion CD-key hash FAILED (missing/undecodable key)"); // [d2boot]
+      }
       // VP-BEGIN [bn-authcheck-bound R169]: the bound for the CD-key owner copy must be the end
       // of the packet's szTail (szTail is 0x200 bytes at 0x5C, packet total 0x25c) - as
       // decompiled it pointed at the 256-byte LOCAL szExeInfoClassic buffer, so
@@ -1571,15 +1587,25 @@ int32_t __stdcall NET_SID_CLIENT_Send_0x51_AuthCheck() {
       bHasPatchFile = Storm::Source::SSTR::SStrCopy((char*)&dwClientToken.sExpansionKeyHash, (char*)szExeInfoClassic, 0x200);
       szBufferOutput = dwClientToken.sExpansionKeyHash.abHash + (bHasPatchFile - 0xf);
       dwClientToken.dwKeyCount = 1;
-      BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sClassicKeyHash, g_dwCdKeyClientToken, 0);
+      if (!BnSend::BNSEND_HashCDKeyByType(&dwClientToken.sClassicKeyHash, g_dwCdKeyClientToken, 0)) {
+        D2BOOT_Mark("BNet: 0x51 classic CD-key hash FAILED (missing/undecodable key)"); // [d2boot]
+      }
       pPacketEnd = dwClientToken.szTail + 0x1dc;
     }
 
     pKeyOwnerStr = (int)pPacketEnd - (int)szBufferOutput;
-    Storm::Source::SSTR::SStrCopy((char*)szBufferOutput, NET_SID_CLIENT_GetCdKeyOwner(), pKeyOwnerStr);
+    // VP [bn-authcheck-marks R197]: owner pointer is fetched once at the key-state mark and
+    // NULL-guarded (font.clh not loaded) - SStrCopy(dst, NULL, n) would fault.
+    if (!szCdKeyOwner) {
+      D2BOOT_Mark("BNet: 0x51 CD-key owner string missing - sending empty owner"); // [d2boot]
+      szCdKeyOwner = "";
+    }
+    Storm::Source::SSTR::SStrCopy((char*)szBufferOutput, szCdKeyOwner, pKeyOwnerStr);
     FreeKeys();
     bHasPatchFile = Storm::Source::SSTR::SStrLen((char*)szBufferOutput);
-    BnSend::NET_SID_CLIENT_Send(0x51, (char*)&dwClientToken, (size_t)(szBufferOutput + (bHasPatchFile + 1 - (uintptr_t)&dwClientToken)));
+    size_t nAuthCheckSendSize = (size_t)(szBufferOutput + (bHasPatchFile + 1 - (uintptr_t)&dwClientToken));
+    D2BOOT_MarkFmt("BNet: 0x51 AUTH_CHECK sending len=%u", (unsigned)nAuthCheckSendSize); // [d2boot]
+    BnSend::NET_SID_CLIENT_Send(0x51, (char*)&dwClientToken, nAuthCheckSendSize);
     return 1;
 }
 
@@ -2652,6 +2678,7 @@ void __stdcall DecodeAndLoadKeys() {
 
     store_classic_key:
     KeyClassic = (char*)pKeyClassicBuf;
+    D2BOOT_MarkFmt("BNet: key decode: classic=%p (missing = key file not in MPQ/dir)", (void*)KeyClassic); // [d2boot] VP [bn-authcheck-marks R197]
     sprintf(szFileName, "%s\\%s.clh", "font", "font");
     g_dwCdKeyOwnerSize = 0x400;
     Storm::Source::SFile::SFileLoadFile(szFileName, (void**)&pFileBuf, (DWORD*)&g_dwCdKeyOwnerSize, 1, 0);
@@ -2706,6 +2733,7 @@ void __stdcall DecodeAndLoadKeys() {
 
     store_owner_key:
     KeyOwner = (char*)pKeyBuf;
+    D2BOOT_MarkFmt("BNet: key decode: owner=%p (missing = font.clh not in MPQ/dir)", (void*)KeyOwner); // [d2boot] VP [bn-authcheck-marks R197]
     BOOL bIsExpansion;
     bIsExpansion = BnSend::D2CheckExpansionGame();
     pKeyBuf = (int*)KeyExpansion;
@@ -2748,6 +2776,7 @@ void __stdcall DecodeAndLoadKeys() {
 
     store_expansion_key:
     KeyExpansion = (char*)pKeyBuf;
+    D2BOOT_MarkFmt("BNet: key decode: expansion=%p (missing = expansion key file not in MPQ/dir)", (void*)KeyExpansion); // [d2boot] VP [bn-authcheck-marks R197]
     g_dwProductId = 0;
     if (szFileName[0] != '\0') {
       char* pLoadedKeyBuf;

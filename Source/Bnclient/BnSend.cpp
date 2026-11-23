@@ -3097,6 +3097,14 @@ static int32_t __stdcall BNSEND_PrepareCDKeyHash(uint32_t nToken, uint32_t nServ
     uint32_t aCDKeyHashInput[6];
     uint32_t nPublic2;
     BnCDKeyHashInput26 sHashInput26;
+    // VP-BEGIN [bn-authcheck-marks R197]: NULL key guard. Retail never reaches this without
+    // key files, but an MPQ-less/partial install hands us a NULL classic or expansion key
+    // and the SStrLen below would fault - this path never ran in any build before R196
+    // (PerformCheckRevision failed first), so its failure modes are unfixed.
+    if (!szCDKey) {
+      return 0;
+    }
+    // VP-END [bn-authcheck-marks R197]
     uint32_t pKeyLenPtr = Storm::Source::SSTR::SStrLen(szCDKey);
     switch (pKeyLenPtr) {
       case 0x10:
@@ -3249,10 +3257,18 @@ void __stdcall BNNEWS_DecodeCDKeys() {
     _net_sid::FreeKeys();
 }
 // High-level CD key hash helper. Gets server token, retrieves CD key by type (0=classic, 1=expansion), and prepares hash structure for SID_AUTH_CHECK.
-void __fastcall BNSEND_HashCDKeyByType(D2CDKeyHashStrc * pOutHash, uint32_t nToken, int32_t nCDKeyType) {
+// VP [bn-authcheck-marks R197]: now returns PrepareCDKeyHash's result (was discarded - the
+// R196 field run crashed somewhere in this virgin region and a failed hash must be visible),
+// and logs key presence/length per call.
+int __fastcall BNSEND_HashCDKeyByType(D2CDKeyHashStrc * pOutHash, uint32_t nToken, int32_t nCDKeyType) {
     uint32_t nServerToken = BNSEND_GetServerToken();
     char* szCDKey = _net_sid::NET_SID_CLIENT_GetCdKeyByType(nCDKeyType);
-    BNSEND_PrepareCDKeyHash(nToken, nServerToken, szCDKey, pOutHash);
+    int bHashOk = BNSEND_PrepareCDKeyHash(nToken, nServerToken, szCDKey, pOutHash);
+    D2BOOT_MarkFmt("BNet: cd-key hash type=%d key=%p len=%u -> ok=%d",
+                   nCDKeyType, (void*)szCDKey,
+                   szCDKey ? (unsigned)Storm::Source::SSTR::SStrLen(szCDKey) : 0u,
+                   bHashOk); // [d2boot]
+    return bHashOk;
 }
 int __fastcall BNSEND_SendRawBytes(void * pBytes, size_t nSize) {
     /* LPCRITICAL_SECTION lpCriticalSection for EnterCriticalSection */ EnterCriticalSection(&BnDownload::lpCriticalSection_00881f64);

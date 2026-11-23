@@ -316,128 +316,66 @@ int __fastcall Unreferenced_00425830(int param_1, int param_2) {
 // @oracle 2026-08-28 pass 5. Oracle: Mac PPC 1.10b Storm.
 // Was SBIG_SHA1Transform, and filed under Storm::Source::SBig. Oracle name is the class method Sha1::Pump, PPC mangled symbol ".Pump__4Sha1FPUlPCUc" @100a2ee0 = Pump(unsigned long*, const unsigned char*). Basis: same two arguments (state array, 64-byte block), no callees in either build, and it is the sole callee of Sha1_Append/Sha1::Append. PPC body 1680 bytes vs 1339 here - both fully unrolled. NOT part of SBig: it is a client of SBig's file, not a member; module fixed to SSignature.
 void __fastcall Sha1_Pump(uint32_t * pHashState, uint8_t * pBuffer) {
-    uint32_t uVar1;
-    int nIndex2;
+    // VP-BEGIN [bn-sha1pump-rewrite R198]: the decompiled reconstruction's W-expansion loop
+    // walked its store window across the loop-counter spill slot. In the R196 binary the
+    // loop was P = ebp-0xA4 + ctr*4 with the store at P+0x38 and the counter at [ebp-8]:
+    // on expansion iteration ctr=25 the freshly computed W word was written OVER the
+    // counter. A W word with bit 31 set made the signed counter negative, the loop ran
+    // billions of iterations and faulted reading wrapped memory - the R196 field crash at
+    // 'Checking Versions' (AV READ 8A61CD26, eip 00FD32DC = Sha1_Pump+0x1E8, hit from
+    // BNSEND_HashCDKeyData's 26-char CD-key hash). A clear bit 31 silently exited early
+    // with a corrupted schedule. The reconstruction's read set (W[j-16]/W[j-14]/W[j-8]/
+    // W[j-3]), big-endian load, round constants 0x5a827999/0x6ed9eba1/0x8f1bbcdc/
+    // 0xca62c1d6 and H+= tail are all standard SHA-1, so this is a clean standard SHA-1
+    // block function: one 80-word schedule, strictly bounded loops, no pointer windows.
+    // Composite (Initialize/Append/Pump/Finalize) verified against SHA-1 test vectors and
+    // an independent reference across lengths 0..200 (R198 harness).
+    uint32_t aW[80];
+    uint32_t dwA;
     uint32_t dwB;
-    uint32_t uVar2;
-    uint32_t dwTmp10;
-    uint32_t auStack_194[10];
-    uint32_t uStack_16c;
-    uint32_t aMsgSchedule[80];
-    uint8_t byMsgByte10;
-    uint32_t dwSchedWord;
-    uint32_t dwSchedWord2;
-    int nIndex = 0;
-    do {
-      uint8_t byMsgByte0e;
-      nIndex2 = nIndex + 4;
-      (&uStack_16c)[nIndex2] = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)*pBuffer << 8 | (uint16_t)(uint8_t)pBuffer[1]) << 8 | (uint32_t)(uint8_t)pBuffer[2]) & 0xffffffu) << 8 | (uint32_t)(uint8_t)pBuffer[3]);
-      byMsgByte10 = pBuffer[10];
-      aMsgSchedule[nIndex + 1] = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)pBuffer[4] << 8 | (uint16_t)(uint8_t)pBuffer[5]) << 8 | (uint32_t)(uint8_t)pBuffer[6]) & 0xffffffu) << 8 | (uint32_t)(uint8_t)pBuffer[7]);
-      byMsgByte0e = pBuffer[0xe];
-      aMsgSchedule[nIndex + 2] = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)pBuffer[8] << 8 | (uint16_t)(uint8_t)pBuffer[9]) << 8 | (uint32_t)(uint8_t)byMsgByte10) & 0xffffffu) << 8 | (uint32_t)(uint8_t)pBuffer[0xb]);
-      aMsgSchedule[nIndex + 3] = (uint32_t)((uint32_t)((uint32_t)((uint32_t)(uint16_t)((uint16_t)(uint8_t)pBuffer[0xc] << 8 | (uint16_t)(uint8_t)pBuffer[0xd]) << 8 | (uint32_t)(uint8_t)byMsgByte0e) & 0xffffffu) << 8 | (uint32_t)(uint8_t)pBuffer[0xf]);
-      nIndex = nIndex2;
-      pBuffer += 0x10;
-    } while (nIndex2 < 0x10);
-
-    uint32_t* pSchedule = auStack_194 + nIndex2;
-    do {
-      nIndex2++;
-      dwB = pSchedule[0xb] ^ pSchedule[6] ^ pSchedule[-2] ^ *pSchedule;
-      pSchedule[0xe] = dwB << 1 | (uint32_t)((int)dwB < 0);
-      pSchedule++;
-    } while (nIndex2 < 0x50);
-
-    uint32_t dwC = pHashState[2];
-    uint32_t dwD = pHashState[3];
-    uint32_t dwWorkA = *pHashState;
+    uint32_t dwC;
+    uint32_t dwD;
+    uint32_t dwE;
+    uint32_t dwT;
+    uint32_t dwF;
+    uint32_t dwK;
+    int nRound;
+    int nWord;
+    for (nWord = 0; nWord < 16; nWord++) {
+      aW[nWord] = ((uint32_t)pBuffer[nWord * 4] << 24) | ((uint32_t)pBuffer[nWord * 4 + 1] << 16) |
+                  ((uint32_t)pBuffer[nWord * 4 + 2] << 8) | (uint32_t)pBuffer[nWord * 4 + 3];
+    }
+    for (nWord = 16; nWord < 80; nWord++) {
+      dwT = aW[nWord - 3] ^ aW[nWord - 8] ^ aW[nWord - 14] ^ aW[nWord - 16];
+      aW[nWord] = dwT << 1 | dwT >> 31;
+    }
+    dwA = pHashState[0];
     dwB = pHashState[1];
-    uint32_t dwE = pHashState[4];
-    nIndex = 0;
-    do {
-      uVar1 = dwE + 0x5a827999 + (dwWorkA << 5 | dwWorkA >> 0x1b) + (~dwB & dwD | dwC & dwB) + aMsgSchedule[nIndex];
-      uVar2 = _rotl(dwB, 0x1e);
-      aMsgSchedule[nIndex] = 0;
-      dwTmp10 = _rotl(dwWorkA, 0x1e);
-      dwB = dwD + 0x5a827999 + (uVar1 * 0x20 | uVar1 >> 0x1b) + (~dwWorkA & dwC | uVar2 & dwWorkA) + aMsgSchedule[nIndex + 1];
-      aMsgSchedule[nIndex + 1] = 0;
-      dwE = uVar1 * 0x40000000 | uVar1 >> 2;
-      dwWorkA = dwC + 0x5a827999 + (dwB * 0x20 | dwB >> 0x1b) + (~uVar1 & uVar2 | uVar1 & dwTmp10) + aMsgSchedule[nIndex + 2];
-      aMsgSchedule[nIndex + 2] = 0;
-      dwD = dwB * 0x40000000 | dwB >> 2;
-      dwB = uVar2 + 0x5a827999 + (dwWorkA * 0x20 | dwWorkA >> 0x1b) + (~dwB & dwTmp10 | dwE & dwB) + aMsgSchedule[nIndex + 3];
-      aMsgSchedule[nIndex + 3] = 0;
-      dwSchedWord = aMsgSchedule[nIndex + 4];
-      aMsgSchedule[nIndex + 4] = 0;
-      dwC = dwWorkA * 0x40000000 | dwWorkA >> 2;
-      nIndex += 5;
-      dwWorkA = dwTmp10 + 0x5a827999 + (dwB * 0x20 | dwB >> 0x1b) + (~dwWorkA & dwE | dwD & dwWorkA) + dwSchedWord;
-    } while (nIndex < 0x14);
-
-    do {
-      uVar2 = _rotl(dwB, 0x1e);
-      dwB = dwE + 0x6ed9eba1 + (dwWorkA << 5 | dwWorkA >> 0x1b) + (dwD ^ dwC ^ dwB) + aMsgSchedule[nIndex];
-      aMsgSchedule[nIndex] = 0;
-      dwTmp10 = _rotl(dwWorkA, 0x1e);
-      dwWorkA = dwD + 0x6ed9eba1 + (dwB * 0x20 | dwB >> 0x1b) + (dwC ^ uVar2 ^ dwWorkA) + aMsgSchedule[nIndex + 1];
-      aMsgSchedule[nIndex + 1] = 0;
-      nIndex2 = nIndex + 5;
-      dwE = dwB * 0x40000000 | dwB >> 2;
-      uVar1 = dwC + 0x6ed9eba1 + (dwWorkA * 0x20 | dwWorkA >> 0x1b) + (dwB ^ uVar2 ^ dwTmp10) + aMsgSchedule[nIndex + 2];
-      aMsgSchedule[nIndex + 2] = 0;
-      dwD = dwWorkA * 0x40000000 | dwWorkA >> 2;
-      dwB = uVar2 + 0x6ed9eba1 + (uVar1 * 0x20 | uVar1 >> 0x1b) + (dwE ^ dwWorkA ^ dwTmp10) + aMsgSchedule[nIndex + 3];
-      aMsgSchedule[nIndex + 3] = 0;
-      dwSchedWord = aMsgSchedule[nIndex + 4];
-      aMsgSchedule[nIndex + 4] = 0;
-      dwC = uVar1 * 0x40000000 | uVar1 >> 2;
-      dwWorkA = dwTmp10 + 0x6ed9eba1 + (dwB * 0x20 | dwB >> 0x1b) + (dwE ^ dwD ^ uVar1) + dwSchedWord;
-      nIndex = nIndex2;
-    } while (nIndex2 < 0x28);
-
-    do {
-      uVar2 = _rotl(dwB, 0x1e);
-      dwB = ((dwC | dwB) & dwD | dwC & dwB) + aMsgSchedule[nIndex2] + dwE - 0x70e44324 + (dwWorkA << 5 | dwWorkA >> 0x1b);
-      aMsgSchedule[nIndex2] = 0;
-      dwTmp10 = _rotl(dwWorkA, 0x1e);
-      dwWorkA = ((uVar2 | dwWorkA) & dwC | uVar2 & dwWorkA) + aMsgSchedule[nIndex2 + 1] + dwD - 0x70e44324 + (dwB * 0x20 | dwB >> 0x1b);
-      aMsgSchedule[nIndex2 + 1] = 0;
-      dwE = dwB * 0x40000000 | dwB >> 2;
-      uVar1 = ((dwB | dwTmp10) & uVar2 | dwB & dwTmp10) + aMsgSchedule[nIndex2 + 2] + dwC - 0x70e44324 + (dwWorkA * 0x20 | dwWorkA >> 0x1b);
-      aMsgSchedule[nIndex2 + 2] = 0;
-      dwD = dwWorkA * 0x40000000 | dwWorkA >> 2;
-      dwB = ((dwE | dwWorkA) & dwTmp10 | dwE & dwWorkA) + aMsgSchedule[nIndex2 + 3] + uVar2 - 0x70e44324 + (uVar1 * 0x20 | uVar1 >> 0x1b);
-      aMsgSchedule[nIndex2 + 3] = 0;
-      dwSchedWord = aMsgSchedule[nIndex2 + 4];
-      aMsgSchedule[nIndex2 + 4] = 0;
-      dwC = uVar1 * 0x40000000 | uVar1 >> 2;
-      nIndex2 += 5;
-      dwWorkA = ((dwD | uVar1) & dwE | dwD & uVar1) + dwSchedWord + dwTmp10 - 0x70e44324 + (dwB * 0x20 | dwB >> 0x1b);
-    } while (nIndex2 < 0x3c);
-
-    do {
-      uVar2 = _rotl(dwB, 0x1e);
-      dwB = (dwD ^ dwC ^ dwB) + aMsgSchedule[nIndex2] + dwE - 0x359d3e2a + (dwWorkA << 5 | dwWorkA >> 0x1b);
-      aMsgSchedule[nIndex2] = 0;
-      dwTmp10 = _rotl(dwWorkA, 0x1e);
-      dwWorkA = (dwC ^ uVar2 ^ dwWorkA) + aMsgSchedule[nIndex2 + 1] + dwD - 0x359d3e2a + (dwB * 0x20 | dwB >> 0x1b);
-      aMsgSchedule[nIndex2 + 1] = 0;
-      dwE = dwB * 0x40000000 | dwB >> 2;
-      uVar1 = (dwB ^ uVar2 ^ dwTmp10) + aMsgSchedule[nIndex2 + 2] + dwC - 0x359d3e2a + (dwWorkA * 0x20 | dwWorkA >> 0x1b);
-      aMsgSchedule[nIndex2 + 2] = 0;
-      dwSchedWord = aMsgSchedule[nIndex2 + 3];
-      dwD = dwWorkA * 0x40000000 | dwWorkA >> 2;
-      aMsgSchedule[nIndex2 + 3] = 0;
-      dwSchedWord2 = aMsgSchedule[nIndex2 + 4];
-      dwB = (dwE ^ dwWorkA ^ dwTmp10) + dwSchedWord + uVar2 - 0x359d3e2a + (uVar1 * 0x20 | uVar1 >> 0x1b);
-      dwC = uVar1 * 0x40000000 | uVar1 >> 2;
-      aMsgSchedule[nIndex2 + 4] = 0;
-      nIndex2 += 5;
-      dwWorkA = (dwE ^ dwD ^ uVar1) + dwSchedWord2 + dwTmp10 - 0x359d3e2a + (dwB * 0x20 | dwB >> 0x1b);
-    } while (nIndex2 < 0x50);
-
-    *pHashState += dwWorkA;
+    dwC = pHashState[2];
+    dwD = pHashState[3];
+    dwE = pHashState[4];
+    for (nRound = 0; nRound < 80; nRound++) {
+      if (nRound < 20) {
+        dwF = (dwB & dwC) | (~dwB & dwD);
+        dwK = 0x5a827999;
+      } else if (nRound < 40) {
+        dwF = dwB ^ dwC ^ dwD;
+        dwK = 0x6ed9eba1;
+      } else if (nRound < 60) {
+        dwF = (dwB & dwC) | (dwB & dwD) | (dwC & dwD);
+        dwK = 0x8f1bbcdc;
+      } else {
+        dwF = dwB ^ dwC ^ dwD;
+        dwK = 0xca62c1d6;
+      }
+      dwT = (dwA << 5 | dwA >> 27) + dwF + dwE + dwK + aW[nRound];
+      dwE = dwD;
+      dwD = dwC;
+      dwC = dwB << 30 | dwB >> 2;
+      dwB = dwA;
+      dwA = dwT;
+    }
+    pHashState[0] += dwA;
     pHashState[1] += dwB;
     pHashState[2] += dwC;
     pHashState[3] += dwD;
@@ -476,13 +414,18 @@ void __thiscall Sha1_Append(D2Sha1ContextStrc * pCtx, uint8_t * pData, uint32_t 
       nBufIndex = 0;
     }
     if (nLen >= 0x40) {
-      pData = (uint8_t*)(nLen >> 6);
+      // VP-BEGIN [bn-sha1append-counter R198]: the block-pump loop used a uint8_t* as the
+      // counter ((uint8_t*)(nLen >> 6), decrementing a pointer through byte address 0).
+      // That is UB; the R198 harness segfaulted at -O2 while -O0 and -fsanitize=address
+      // builds passed, i.e. gcc/clang exploit it under optimization - and llvm-mingw
+      // builds this file at -O2 for the game. Same semantics with an integer counter.
+      uint32_t nBlocksLeft = nLen >> 6;
       do {
         Sha1_Pump(pCtx->aState, pCursor);
         nLen -= 0x40;
         pCursor += 0x40;
-        pData--;
-      } while (pData);
+        nBlocksLeft--;
+      } while (nBlocksLeft);
     }
 
     for (; nBufIndex < nLen; nBufIndex++) {

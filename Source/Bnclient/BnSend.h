@@ -318,7 +318,8 @@ BOOL __stdcall NET_SID_CLIENT_Send_0x42_CDKey3();
 int Unreferenced_0051e240();
 void __stdcall BNNEWS_DecodeCDKeys();
 // High-level CD key hash helper. Gets server token, retrieves CD key by type (0=classic, 1=expansion), and prepares hash structure for SID_AUTH_CHECK.
-void __fastcall BNSEND_HashCDKeyByType(struct D2CDKeyHashStrc * pOutHash, uint32_t nToken, int32_t nCDKeyType);
+// VP [bn-authcheck-marks R197]: returns PrepareCDKeyHash's result (0 = key missing/undecodable)
+int __fastcall BNSEND_HashCDKeyByType(struct D2CDKeyHashStrc * pOutHash, uint32_t nToken, int32_t nCDKeyType);
 int __fastcall BNSEND_SendRawBytes(void * pBytes, size_t nSize);
 int __fastcall BNSEND_SendString(char * szString);
 BOOL __fastcall NET_SID_CLIENT_Send_0x33_GetFileTime(char * szText, uint32_t dwRequestId);

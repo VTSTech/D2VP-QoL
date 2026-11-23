@@ -712,3 +712,59 @@ expected ver/checksum from pvpgn's versioncheck log and set the two constants in
 `BnDownload.cpp` (or relax `exactmatch` server-side); 2) confirm the winsock
 events in a fresh ETW/pktmon show **no** `Aborted/1032` on the auth flow; 3) after
 auth lands, the R190 riders still apply — UDP 6112 inbound for game play.
+
+## R196 field result + R197 — auth flow advanced 2 stages; new crash in virgin key-decode region (2026-11-22)
+
+**R196 field log — the 10053 war is won.** First field log ever past recv#2:
+`recv 8 bytes` → 0x25 echo → **`recv 103 bytes (buffered 103)`** → `SID pkt 0x50
+received (99 bytes)` → `wait 0x50 -> reply arrived` → `0x51 patch-filename wait
+skipped (CheckRevision bypass needs no MPQ)` → `CheckRevision bypass (R190):
+ver=0x00010064 checksum=0x00000000`. No autopsy, no 10053, no reconnect loop. The
+handler-loop arithmetic fix + patch-wait skip are confirmed in the field.
+
+**New crash, further down the same call:** `VEH: fatal exception 0xC0000005 at
+addr 00FD32DC`, `AV READ at 8A61CD26`, auth thread (tid 14384), right after the
+bypass mark and before any `SID send op=0x51` mark — i.e. inside the region that
+**never executed in any earlier build**: pre-R196, `PerformCheckRevision`
+returned 0 at net_sid.cpp:1548 and the auth thread returned before
+`DecodeAndLoadKeys()`. The R196 run is the first execution ever of:
+`DecodeAndLoadKeys` (loads disguised key files font\font.gid/.clh/expansion
+from MPQ/dir, XOR+IDEA+SHA1-chain decode) → `D2CheckExpansionGame` → per-key
+`BNSEND_HashCDKeyByType` → `PrepareCDKeyHash` (`SStrLen`/decode/XSHA1 or
+TransformCdKeyToken) → CD-key owner `SStrCopy` → `NET_SID_CLIENT_Send(0x51)`.
+
+Audited so far, no AV found with valid inputs: `DecodeAndLoadKeys` (paths and
+permute tables in-bounds; `aKeyPathTable[0]` never set but never read),
+`PrepareCDKeyHash` (switch on strlen, rejects other lengths), `DecodeCDKeyString`
+(NULL guard, bounded copies, checksum gate), `TransformCdKeyToken` (bounded
+locals). Suspects remaining: the virgin crypto helpers
+(`XSHA1`/`BNSEND_HashCDKeyData`/`SHA1Compress`/`IDEAEncryptDecrypt`/
+`SetupIDEAKey`/`EncodeCDKeyHash` — note `EncodeCDKeyHash`'s decompiled XOR loop
+reads up to 3 bytes past its 196-byte stack work buffer, benign-looking but a
+transcription-bug flag) and the possibility that a key file simply failed to
+load in the D2VP install (missing `font\font.gid`/`.clh` → NULL key →
+`SStrLen(NULL)`/`SStrCopy(dst,NULL,n)` fault, or decoded garbage used as data).
+
+**R197 changes (bn-authcheck-marks; MSYS2 llvm-mingw is the compile gate):**
+
+- `net_sid.cpp` `DecodeAndLoadKeys` — result marks after each store:
+  `key decode: classic=%p` / `owner=%p` / `expansion=%p` (a NULL says the key
+  file is not in the MPQ/dir).
+- `net_sid.cpp` `Send_0x51_AuthCheck` — `0x51 key state:` line (classic/expansion/
+  owner pointers + expansion-game), per-key `hash FAILED` marks, `0x51 AUTH_CHECK
+  sending len=%u` before the send. Owner pointer NULL-guarded (empty owner).
+- `BnSend.cpp` `BNSEND_HashCDKeyByType` — returns `PrepareCDKeyHash`'s result
+  (was discarded), logs `cd-key hash type=%d key=%p len=%u -> ok=%d`; header
+  decl updated.
+- `BnSend.cpp` `BNSEND_PrepareCDKeyHash` — NULL key top guard (retail never sees
+  a missing key file here; the SStrLen would fault).
+
+**Decision tree for the next run:** a NULL in `key decode:` lines → the key file
+is missing in the D2VP install → guards keep us alive, 0x51 goes out with zeroed
+hashes → server rejects 0x201 (invalid key) → the fix is install-side (ship/copy
+the key files) or a registry-based key reader. All pointers non-NULL but the
+crash persists → the fault is data-dependent in the decode/hash crypto → diff
+the named function (marks + crash-report frames) against retail Game.exe via the
+r2 project (D2-Game.exe-1.14d-Retail) and fix the transcription. Crash report
+`d2crash-20261122-181430.txt` (12 frames) requested — if d2exe.map was present
+at build time the report may already symbolize the faulting frame.
