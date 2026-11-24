@@ -130,36 +130,67 @@
 // boot-log marks are satisfied locally: append to d2vpstash.log next to the DLL.
 // (The in-exe build keeps the real D2BOOT_* writers.)
 static void VPSHARED_Log113d(const char * szFmt, ...) {
-    static const char * s_szLogPath = nullptr;
+    // [R226] Raw Win32 logging, no CRT stdio: an already-open/failing FILE* or a
+    // CRT that is unhappy inside an injected DLL was a plausible reason for a
+    // completely absent log. CreateFileA + WriteFile cannot be defeated that way,
+    // and the target path is discovered by TRYING several candidates once each
+    // call until one opens (dll dir, C:\d2gs, then the working directory) - we
+    // do not know where the D2GS keeps the DLL, only that C:\d2gs is writable.
+    static char s_szLogPath[260] = { 0 };
+    static int s_nAttempts = 0;
+    static int s_nOpenFailedLogged = 0;
     char szPath[260];
-    if (!s_szLogPath) {
-        // Resolve once, with a hard fallback: the D2GS workdir is C:\d2gs, and
-        // a log we cannot find is the same as no log at all (round-one lesson).
-        DWORD dwLen = GetModuleFileNameA((HMODULE)&VPSHARED_Log113d, szPath, 240);
-        if (dwLen && dwLen < 240) {
-            char * pSlash = strrchr(szPath, '\\');
-            if (pSlash) {
-                pSlash[1] = '\0';
-                strcat(szPath, "d2vpstash.log");
-                s_szLogPath = _strdup(szPath);
+
+    if (!s_szLogPath[0]) {
+        DWORD dwErr = 0;
+        if (s_nAttempts < 3) {
+            ++s_nAttempts;
+            if (s_nAttempts == 1) {
+                DWORD dwLen = GetModuleFileNameA((HMODULE)&VPSHARED_Log113d, szPath, 240);
+                if (dwLen && dwLen < 240) {
+                    char * pSlash = strrchr(szPath, '\\');
+                    if (pSlash) {
+                        pSlash[1] = '\0';
+                        strcat(szPath, "d2vpstash.log");
+                        strcpy(s_szLogPath, szPath);
+                    }
+                }
+            } else if (s_nAttempts == 2) {
+                strcpy(s_szLogPath, "C:\\d2gs\\d2vpstash.log");
+            } else {
+                strcpy(s_szLogPath, "d2vpstash.log"); // working directory
             }
+        } else if (!s_nOpenFailedLogged) {
+            s_nOpenFailedLogged = 1;   // nothing we can do; stay silent and cheap
         }
-        if (!s_szLogPath) {
-            s_szLogPath = _strdup("C:\\d2gs\\d2vpstash.log");
+        if (!s_szLogPath[0]) {
+            return;
         }
     }
-    FILE * f = fopen(s_szLogPath, "a");
-    if (!f) {
+
+    HANDLE h = CreateFileA(s_szLogPath, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                           nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        DWORD dwErr = GetLastError();
+        // This candidate failed - drop it so the next call tries the next one.
+        (void)dwErr;
+        s_szLogPath[0] = '\0';
         return;
     }
-    setvbuf(f, nullptr, _IONBF, 0);      // unbuffered: a crash must not eat the tail
+
+    char szLine[512];
     va_list ap;
     va_start(ap, szFmt);
-    vfprintf(f, szFmt, ap);
+    int nLen = _vsnprintf(szLine, sizeof(szLine) - 2, szFmt, ap);
     va_end(ap);
-    fputc('\n', f);
-    fflush(f);
-    fclose(f);
+    if (nLen < 0) {
+        nLen = (int)strlen(szLine);
+    }
+    szLine[nLen] = '\r';
+    szLine[nLen + 1] = '\n';
+    DWORD dwWritten = 0;
+    WriteFile(h, szLine, (DWORD)(nLen + 2), &dwWritten, nullptr);
+    CloseHandle(h);
 }
 #define D2BOOT_Mark(...)    VPSHARED_Log113d(__VA_ARGS__)
 #define D2BOOT_MarkFmt(...) VPSHARED_Log113d(__VA_ARGS__)
@@ -1018,8 +1049,16 @@ static int VPSHARED_SerializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint
         // Retail per-item encoder, same call shape as the .d2s writer
         // (SAVE_SerializeInventoryItems): own statlist marker, all items.
 #if defined(VPSTASH_D2GS_113D)
-        VPSHARED_Log113d("SERIALIZE item %d/%d pItem=%p room=%u", nCount + 1, VPSTASH_PAGE_ITEM_CAP,
-                         pCarried, (unsigned)(pEnd - pCursor));
+        // [R226] validate the item before handing it to the serialiser: the fault
+        // signature was byte-identical before and after the sentinel fix, so the
+        // remaining suspect is pItem itself. eUnitType@+0x00 must be UNIT_ITEM.
+        if (pCarried->eUnitType != UNIT_ITEM) {
+            VPSHARED_Log113d("SERIALIZE SKIP item %u type=%u (not an item)", (unsigned)nCount,
+                             (unsigned)pCarried->eUnitType);
+            continue;
+        }
+        VPSHARED_Log113d("SERIALIZE item %u pItem=%p type=%u room=%u", (unsigned)nCount,
+                         pCarried, (unsigned)pCarried->eUnitType, (unsigned)(pEnd - pCursor));
         int nWritten = VPSHARED_SerializeItem113d(pCarried, pCursor, (uint32_t)(pEnd - pCursor));
 #else
         int nWritten = D2Common::ITEMS::Items::SerializeItem(pCarried, pCursor, (size_t)(pEnd - pCursor),
