@@ -1,5 +1,8 @@
-; [R218] d2vpstash.dll exports - ONE entry point, stagedcall (stdcall), 3 args.
-; The D2GS stub resolves it by name: GetProcAddress("VPSHARED_HookPacket").
+; [R230] d2vpstash.dll exports.
+; NOTE: the underlying function uses CDECL cleanup (verified by disassembly:
+; epilogue is `pop ebp; ret`, no `ret 12`). The stub must `add esp, 12` after
+; the call. The export NAME keeps its historical @12 spelling so existing
+; GetProcAddress("VPSHARED_HookPacket@12") calls keep working.
 LIBRARY d2vpstash
 EXPORTS
     VPSHARED_HookPacket@12

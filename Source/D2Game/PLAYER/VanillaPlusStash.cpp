@@ -129,53 +129,79 @@
 // [R218] The standalone d2vpstash.dll must not link the rest of the tree, so the
 // boot-log marks are satisfied locally: append to d2vpstash.log next to the DLL.
 // (The in-exe build keeps the real D2BOOT_* writers.)
-static void VPSHARED_Log113d(const char * szFmt, ...) {
-    // [R226] Raw Win32 logging, no CRT stdio: an already-open/failing FILE* or a
-    // CRT that is unhappy inside an injected DLL was a plausible reason for a
-    // completely absent log. CreateFileA + WriteFile cannot be defeated that way,
-    // and the target path is discovered by TRYING several candidates once each
-    // call until one opens (dll dir, C:\d2gs, then the working directory) - we
-    // do not know where the D2GS keeps the DLL, only that C:\d2gs is writable.
-    static char s_szLogPath[260] = { 0 };
-    static int s_nAttempts = 0;
-    static int s_nOpenFailedLogged = 0;
-    char szPath[260];
+static HMODULE s_hVpSelfModule = nullptr;   // [R229] real HMODULE from DllMain
+static char s_szVpLogPath[260] = { 0 };
+static int  s_nVpLogAttempts = 0;
+static int  s_bVpLogFirst = 1;
+static void VPSHARED_LogBeaconEvent(const char * szWhat, DWORD dwErr);
 
-    if (!s_szLogPath[0]) {
-        DWORD dwErr = 0;
-        if (s_nAttempts < 3) {
-            ++s_nAttempts;
-            if (s_nAttempts == 1) {
-                DWORD dwLen = GetModuleFileNameA((HMODULE)&VPSHARED_Log113d, szPath, 240);
-                if (dwLen && dwLen < 240) {
-                    char * pSlash = strrchr(szPath, '\\');
-                    if (pSlash) {
-                        pSlash[1] = '\0';
-                        strcat(szPath, "d2vpstash.log");
-                        strcpy(s_szLogPath, szPath);
-                    }
-                }
-            } else if (s_nAttempts == 2) {
-                strcpy(s_szLogPath, "C:\\d2gs\\d2vpstash.log");
-            } else {
-                strcpy(s_szLogPath, "d2vpstash.log"); // working directory
-            }
-        } else if (!s_nOpenFailedLogged) {
-            s_nOpenFailedLogged = 1;   // nothing we can do; stay silent and cheap
-        }
-        if (!s_szLogPath[0]) {
-            return;
+// [R228] Raw write with real result reporting: >0 success, negative = OS error.
+static int VPSHARED_LogWriteRaw(const char * szPath, const void * pData, DWORD nLen, int bTruncate) {
+    HANDLE h = CreateFileA(szPath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                           bTruncate ? CREATE_ALWAYS : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        return -(int)GetLastError();
+    }
+    SetFilePointer(h, 0, nullptr, FILE_END);
+    DWORD dwWritten = 0;
+    BOOL bOk = WriteFile(h, pData, nLen, &dwWritten, nullptr) && dwWritten == nLen;
+    DWORD dwErr = bOk ? 0 : GetLastError();
+    CloseHandle(h);
+    return bOk ? 1 : -(int)dwErr;
+}
+
+// [R231] Two hex nibbles appended to the trace, so an unexpected branch carries
+// its evidence with it (X4F = comparison bug, X7D = pointer one byte into the
+// frame, anything else = a different structure entirely).
+static void VPSHARED_VPLogHex(uint8_t bValue) {
+    static const char s_hex[] = "0123456789ABCDEF";
+    char aTwo[2];
+    aTwo[0] = s_hex[(bValue >> 4) & 0xF];
+    aTwo[1] = s_hex[bValue & 0xF];
+    VPSHARED_LogWriteRaw("VPLOG.TXT", aTwo, 2, 0);
+}
+
+// [R234] Pointer-sized hex (8 nibbles) for the indirection probe.
+static void VPSHARED_VPLogHex32(uint32_t uValue) {
+    VPSHARED_VPLogHex((uint8_t)(uValue >> 24));
+    VPSHARED_VPLogHex((uint8_t)(uValue >> 16));
+    VPSHARED_VPLogHex((uint8_t)(uValue >> 8));
+    VPSHARED_VPLogHex((uint8_t)uValue);
+}
+
+// [R228] Fixed, underived trace: literal C:\d2gs\VPLOG.TXT, one char per event.
+static void VPSHARED_VPLogChar(char cEvent) {
+    if (VPSHARED_LogWriteRaw("VPLOG.TXT", &cEvent, 1, 0) <= 0) {
+        static int s_nOnce = 0;
+        if (!s_nOnce) {
+            s_nOnce = 1;
+            VPSHARED_LogBeaconEvent("VPLOGFAIL", GetLastError());
         }
     }
+}
 
-    HANDLE h = CreateFileA(s_szLogPath, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                           nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) {
-        DWORD dwErr = GetLastError();
-        // This candidate failed - drop it so the next call tries the next one.
-        (void)dwErr;
-        s_szLogPath[0] = '\0';
-        return;
+static int VPSHARED_Log113d(const char * szFmt, ...) {
+    char szPath[260];
+    if (!s_szVpLogPath[0] && s_nVpLogAttempts < 3) {
+        ++s_nVpLogAttempts;
+        if (s_nVpLogAttempts == 1) {
+            strcpy(s_szVpLogPath, "d2vpstash.log");      // [R229] CWD first: C:\d2gs
+        } else if (s_nVpLogAttempts == 2) {
+            DWORD dwLen = GetModuleFileNameA(s_hVpSelfModule, szPath, 240);
+            if (dwLen && dwLen < 240) {
+                char * pSlash = strrchr(szPath, '\\');
+                if (pSlash) {
+                    pSlash[1] = '\0';
+                    strcat(szPath, "d2vpstash.log");
+                    strcpy(s_szVpLogPath, szPath);
+                }
+            }
+        } else {
+            strcpy(s_szVpLogPath, "C:\\d2gs\\d2vpstash.log");
+        }
+    }
+    if (!s_szVpLogPath[0]) {
+        return 0;
     }
 
     char szLine[512];
@@ -188,9 +214,70 @@ static void VPSHARED_Log113d(const char * szFmt, ...) {
     }
     szLine[nLen] = '\r';
     szLine[nLen + 1] = '\n';
-    DWORD dwWritten = 0;
-    WriteFile(h, szLine, (DWORD)(nLen + 2), &dwWritten, nullptr);
-    CloseHandle(h);
+
+    int n = VPSHARED_LogWriteRaw(s_szVpLogPath, szLine, (DWORD)(nLen + 2), s_bVpLogFirst);
+    if (n > 0) {
+        s_bVpLogFirst = 0;
+        return 1;
+    }
+    VPSHARED_LogBeaconEvent("LOGFAIL", n < 0 ? (DWORD)(-n) : 0);
+    s_szVpLogPath[0] = '\0';
+    return 0;
+}
+
+// [R227/R228] Load beacon: proves the DLL initialised, and records the resolved
+// paths + any logging failure so one run answers "where is the log".
+static void VPSHARED_WriteBeacon(const char * szName) {
+    char szPath[260];
+    static const char * aRoots[3] = { nullptr, ".\\", "C:\\d2gs\\" };
+    char szDllDir[240];
+    szDllDir[0] = '\0';
+    DWORD dwLen = GetModuleFileNameA(s_hVpSelfModule, szDllDir, 240);
+    if (dwLen && dwLen < 240) {
+        char * pSlash = strrchr(szDllDir, '\\');
+        if (pSlash) {
+            pSlash[1] = '\0';
+            aRoots[0] = szDllDir;
+        }
+    }
+    char szBody[400];
+    _snprintf(szBody, sizeof(szBody), "BEAC dll=%s log=%s\r\n", szDllDir,
+              s_szVpLogPath[0] ? s_szVpLogPath : "(unresolved)");
+    for (int i = 0; i < 3; ++i) {
+        if (!aRoots[i]) {
+            continue;
+        }
+        strcpy(szPath, aRoots[i]);
+        strcat(szPath, szName);
+        if (VPSHARED_LogWriteRaw(szPath, szBody, (DWORD)strlen(szBody), 1) > 0) {
+            return;
+        }
+    }
+}
+
+static void VPSHARED_LogBeaconEvent(const char * szWhat, DWORD dwErr) {
+    static const char * aRoots[2] = { ".\\", "C:\\d2gs\\" };
+    char szPath[260];
+    char szBody[200];
+    _snprintf(szBody, sizeof(szBody), "%s err=%lu log=%s\r\n", szWhat, (unsigned long)dwErr,
+              s_szVpLogPath[0] ? s_szVpLogPath : "(none)");
+    for (int i = 0; i < 2; ++i) {
+        strcpy(szPath, aRoots[i]);
+        strcat(szPath, "vpstash-beacon.txt");
+        if (VPSHARED_LogWriteRaw(szPath, szBody, (DWORD)strlen(szBody), 0) > 0) {
+            return;
+        }
+    }
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {
+    (void)hModule; (void)lpReserved;
+    if (dwReason == DLL_PROCESS_ATTACH) {
+        s_hVpSelfModule = hModule;                 // real handle for path queries
+        VPSHARED_VPLogChar('D');                   // prove CWD writes work at load
+        VPSHARED_WriteBeacon("vpstash-beacon.txt");
+    }
+    return TRUE;
 }
 #define D2BOOT_Mark(...)    VPSHARED_Log113d(__VA_ARGS__)
 #define D2BOOT_MarkFmt(...) VPSHARED_Log113d(__VA_ARGS__)
@@ -1059,7 +1146,21 @@ static int VPSHARED_SerializePage4(::SGAMEDATA * pGame, D2UnitStrc * pUnit, uint
         }
         VPSHARED_Log113d("SERIALIZE item %u pItem=%p type=%u room=%u", (unsigned)nCount,
                          pCarried, (unsigned)pCarried->eUnitType, (unsigned)(pEnd - pCursor));
+        // [R227] STACK-SKEW PROBE: the agent's calling-convention theory in one
+        // measurement. A callee that does NOT pop its arguments (declared wrong)
+        // leaves the stack shifted, which used to surface as a fault inside the
+        // Fog bit-buffer a few frames later.
+        VPSHARED_VPLogChar('S');
+        uintptr_t spBefore;
+        __asm__ __volatile__("mov %%esp, %0" : "=r"(spBefore));
         int nWritten = VPSHARED_SerializeItem113d(pCarried, pCursor, (uint32_t)(pEnd - pCursor));
+        uintptr_t spAfter;
+        __asm__ __volatile__("mov %%esp, %0" : "=r"(spAfter));
+        if (spBefore != spAfter) {
+            VPSHARED_Log113d("STACK SKEW after SerializeItem: esp %p -> %p (delta %d) - convention mismatch",
+                             (void*)spBefore, (void*)spAfter, (int)(spAfter - spBefore));
+            return 0; // do not continue on a skewed stack
+        }
 #else
         int nWritten = D2Common::ITEMS::Items::SerializeItem(pCarried, pCursor, (size_t)(pEnd - pCursor),
                                                              (D2StatListExStrc *)0x1, 1, 0);
@@ -1374,6 +1475,7 @@ static int VPSHARED_MaterializePage4_113d(::SGAMEDATA * pGame, D2UnitStrc * pUni
             ++nRestored;
         }
     }
+    VPSHARED_VPLogChar('M');
     D2BOOT_MarkFmt("shared stash [1.13d]: materialized %d/%u items", nRestored, nCount); // [d2boot]
     return (uint32_t)nRestored == nCount;
 }
@@ -1760,18 +1862,60 @@ void __stdcall VPSHARED_AfterSave(::SGAMEDATA * pGame, D2UnitStrc * pUnit) {
 // mangled (_Z19VPSHARED_HookPacketPvS_) and ld cannot satisfy the .def's
 // `VPSHARED_HookPacket@12` ("symbol not defined"). C linkage + __stdcall yields
 // _VPSHARED_HookPacket@12 exactly as the D2GS stub's GetProcAddress expects.
-extern "C" int __stdcall VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
+// [R230] CALLING CONVENTION IS CDECL - the caller cleans 12 bytes.
+// Disassembly of the shipped DLL showed the epilogue is `pop ebp; ret` with no
+// `ret 12`: the .def renamed the export to VPSHARED_HookPacket@12 but the code
+// itself uses C cleanup. The stub MUST therefore `add esp, 12` after the call;
+// leaving the 3 arguments on the stack shifted ESP by 12 and made the stub's
+// replay (`mov eax,[esp+4]`) read the wrong slot, which is what pushed a bogus
+// packet pointer into ClickButton and crashed the item serialiser.
+extern "C" int VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
+    // [R230] The FIRST executable statement, before any check or logging path:
+    // tells us the export was entered at all, independent of the arguments.
+    VPSHARED_VPLogChar('H');
     if (!pGame || !pUnit || !pPacket) {
+        VPSHARED_VPLogChar('N');   // entered, but an argument was null
         return 0;
     }
     const uint8_t * p = (const uint8_t *)pPacket;
     if (p[0] != 0x4F) {
-        return 0;
+        // [R234] INDIRECTION PROBE. The D2GS agent proved the dispatcher passes the
+        // same buffer it read the opcode from, and that our 7-byte dump
+        // (34 FD 30 02 80 29 00) is a STACK ADDRESS whose target holds the real
+        // 4F 7D 00 00 00 01 00 frame. So try one dereference: if the dword at
+        // pPacket is a plausible user-mode pointer whose target starts 0x4F, that
+        // target IS the frame and the hook simply needs to dereference once.
+        VPSHARED_VPLogChar('X');
+        for (int k = 0; k < 7; ++k) {   // raw bytes at the pointer we were given
+            VPSHARED_VPLogHex(p[k]);
+        }
+        uint32_t uCandidate = *(const uint32_t *)pPacket;
+        VPSHARED_VPLogChar('>');
+        VPSHARED_VPLogHex32(uCandidate);
+        if (uCandidate >= 0x10000u && uCandidate < 0x7FFF0000u) {
+            const uint8_t * q = (const uint8_t *)uCandidate;
+            VPSHARED_VPLogChar('<');
+            for (int k = 0; k < 7; ++k) {
+                VPSHARED_VPLogHex(q[k]);
+            }
+            if (q[0] == 0x4F) {
+                VPSHARED_VPLogChar('R');   // resolved: adopted the dereferenced frame
+                p = q;
+            }
+        }
+        if (p[0] != 0x4F) {
+            return 0;              // still not ours: hand the click back to stock
+        }
     }
 
     // Entry marker: proves the hook fired even if everything below dies.
-    VPSHARED_Log113d("HOOK 0x4F pGame=%p pUnit=%p btn=0x%04x page=%u",
-                     pGame, pUnit, *(const uint16_t *)(p + 1), *(const uint16_t *)(p + 5));
+    // FAIL CLOSED: if the log cannot be written we must not proceed - an
+    // unwritable log means we would be debugging blind, so hand the click back
+    // to stock behaviour instead (the agent's request, and the right default).
+    if (!VPSHARED_Log113d("HOOK 0x4F pGame=%p pUnit=%p btn=0x%04x page=%u",
+                          pGame, pUnit, *(const uint16_t *)(p + 1), *(const uint16_t *)(p + 5))) {
+        return 0;
+    }
 
 #if defined(VPSTASH_113D_PROBE)
     // [R224] ZERO-RISK PROBE: never acts, only reports what the hook actually
