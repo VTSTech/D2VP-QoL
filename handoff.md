@@ -1,4 +1,4 @@
-# main branch — handoff (rev 186, 2026-11-23 — **R204–R234: Vanilla+ shared stash on closed realms — server-side hook DLL, mid field bring-up**): the previous handoff (rev 185, R168/R173-era) is preserved verbatim in **HISTORY.md H83**. Everything below is the live state of the realm work.
+# main branch — handoff (rev 187, 2026-11-23 — **R204–R235: Vanilla+ shared stash on closed realms — frame recovered in the field, argument mapping now the blocker**): the previous handoff (rev 185, R168/R173-era) is preserved verbatim in **HISTORY.md H83**. Everything below is the live state of the realm work.
 
 ## 1. Branch topology (unchanged from H83)
 
@@ -12,7 +12,7 @@
 | --- | --- |
 | SP + Open Battle.net + closed-realm login / charlist / creategame / join (R169→R203) | **WORKING — field-verified twice** (`docs/BNET-CONNECT-FINDINGS.md`; agent memory `bnet-connect-10053-investigation`) |
 | Vanilla+ 17 opt-in features (SP) | **SHIPPED + FIELD-PROVEN** (H83 §2) |
-| **Shared stash on closed realms (R204–R234)** | **IN FIELD BRING-UP — not yet working.** Our function is passive on reject paths; the 0x4F toggle reaches the handler but the buffer pointer is one indirection short. See §3. |
+| **Shared stash on closed realms (R204–R235)** | **IN FIELD BRING-UP — not yet working.** The 0x4F frame is now recovered in the field (one dereference). Remaining: read `pGame`/`pUnit` from the dispatch struct (register mapping is wrong) and settle the post-click Fog crash. See §3.6. |
 | Release `Vanilla+0.0.9-R203` | shipped (README / CHANGELOG / RELEASE-NOTES-R188-R203.md) |
 
 ## 3. OPEN TRACK — shared stash on closed realms (R204–R234)
@@ -38,13 +38,14 @@ Each **account** gets its own shared pool, shared across that account's characte
 | `VPSTASH_113D_DLL` | export + local logging + DllMain beacon |
 | `VPSTASH_113D_NO_0X9C` | v1 state-only: no client repaint (grid refreshes on stash reopen) |
 | `VPSTASH_113D_PROBE` | zero-risk: logs arguments, always returns 0 |
+| `VPSTASH_113D_PASSTHROUGH` | [R235] isolation: logs `H`, touches nothing, returns 0 — separates our code from the stub/replay |
 
 `cmake --build build --target d2vpstash` → `build/d2vpstash.dll` (the target links `d2_flags`; never restate flags — CMake de-duplicates repeated `-include`).
 
 ### 3.4 What is PROVEN in the field
 - The DLL loads in the D2GS (module list, base `0x76F00000`); `DllMain` runs (beacon: `BEAC dll=C:\d2gs\ log=…`); relative-path writes from inside the DLL work (`VPLOG.TXT` starts with `D` at load).
 - The stub executes and calls our export; the dispatcher was independently disassembled (`0x6fc873a0`: opcode byte → table `0x6fd1a698` → `call [edi*8+…]`, pGame=ECX, pUnit=EDX, buf=EBX).
-- Trace alphabet in `VPLOG.TXT`: `D` load, `H` entered, `N` null argument, `X` not-0x4F, `S` serialize, `M` materialize, `>` candidate pointer, `<` dereferenced bytes, `R` adopted dereferenced frame.
+- Trace alphabet in `VPLOG.TXT`: `D` load, `H` entered, `N` null argument, `X` not-0x4F, `S` serialize, `M` materialize, `>` candidate pointer, `<` dereferenced bytes, `R` adopted dereferenced frame. [R235] `#` = 24 bytes (6 dwords) of the dispatch struct, `[` ECX + EDX `]` as forwarded, `T` = 24 bytes at the adopted frame.
 
 ### 3.5 Pinned inventory (do NOT re-derive)
 | What | Value | Evidence |
@@ -72,23 +73,27 @@ Each **account** gets its own shared pool, shared across that account's characte
 | `PlayerTrade::ClickButton` | D2Game RVA **0x9b8210** | call site |
 | 0x4F handler (patched) | `0x6fc8cf60`; dispatch table at file `0xfa698`, entry `0x4f` → this address, and it is the only entry referencing it | table read |
 
-### 3.6 CURRENT BLOCKER — one indirection short
-Latest field trace: **`VPLOG.TXT = DHX34FD3002802900`**.
-- `D` load, `H` entered, `X` (p[0] != 0x4F), bytes `34 FD 30 02 80 29 00`.
-- The first dword, `0x0230FD34`, is a **stack address**, and the D2GS crash dump shows the real `4F 7D 00 00 00 01 00` frame **at exactly that address** → the pointer we receive points at a *pointer to* the frame.
-- Dispatcher verified independently (`0x6fc873a0`), stub frame arithmetic verified — so the remaining unknown is a single dereference, not a dispatch or ABI problem.
-- The Fog fault (`0x6FF5DF6F`, reached from `D2COMMON+0x4704E`) accompanies these clicks.
+- [`dh`/`R234`] **The frame is reachable — field-proven.** Trace `DHX34FD3002802900>0230FD34<4F7D0000000100R`: `*(uint32_t*)pPacket` is a stack address whose target is the real `4F 7D 00 00 00 01 00` frame (button `0x7D`, page 1 — the exact ClickButton the client sends). `d2vpstash.log` confirms the handler ran: `HOOK 0x4F … btn=0x007d page=1`.
+- **The receive shape is a dispatch struct, not the frame.** `pGame` as forwarded equals `*(uint32_t*)pPacket` (the packet pointer), and `pUnit` reads `type=146955615 (0x08C1F45F)`. So `(ECX, EDX)` at `0x6fc8cf6f` are **not** `(pGame, pUnit)` (R235, per the D2GS agent's instruction trace: dispatcher pushes `ebx` and sets `ecx=ebp, edx=esi`).
 
-### 3.7 NEXT EXPERIMENT (R234 — built, not yet field-run)
-On `p[0] != 0x4F`, `VPSHARED_HookPacket` now logs the raw 7 bytes, logs the dword at `pPacket` (`>` + 8 nibbles), dereferences it **only when it is a plausible user-mode pointer** (`0x10000..0x7FFF0000`), logs the target's 7 bytes (`<` + 14 nibbles), and **adopts that target as the frame** (`R`) when it begins with 0x4F.
-Expected next trace: `DHX34FD3002802900>0230FD34<4F7D0000000100R…` — after which the stash logic should finally run (watch for `S`/`M` and for `d2vpstash.log`).
-If the target is not 0x4F, the next ask is the agent's `ebx` value at the dispatcher call.
+### 3.6 CURRENT BLOCKER — argument mapping (dispatch is settled)
+Latest field trace: **`VPLOG.TXT = DHX34FD3002802900>0230FD34<4F7D0000000100R`**.
+- `D` load, `H` entered, `X` (p[0] != 0x4F), struct bytes `34 FD 30 02 80 29 00`, `>` candidate `0x0230FD34`, `<` target `4F 7D 00 00 00 01 00`, `R` adopted.
+- The one-dereference theory is correct; the remaining unknown is **which dwords of that struct are `pGame`/`pUnit`**.
+- The Fog fault (`0x6FF5DF6F`, from `D2COMMON+0x4704E`) follows the refused click and is replayed into stock. Our function's REFUSED path performs **only reads and file writes**; no game-state write precedes the `return 0`. That is audited, not assumed.
+
+### 3.7 NEXT EXPERIMENT (R235 — built, not yet field-run)
+- On `p[0] != 0x4F` the trace now also carries: `#` + 48 nibbles = **the first 24 bytes (six dwords) of the dispatch struct**; `[` + 16 nibbles = **ECX, EDX exactly as the stub forwarded them** (match them against the dwords); `T` + 48 nibbles = **24 bytes at the adopted frame** (the handler's stack copy, where its own `pGame`/`pUnit` usually sit). The `REFUSED` line in `d2vpstash.log` now logs `pPacket` plus all six dwords.
+- Expected trace shape: `DHX34FD3002802900>0230FD34#<6 dwords>[<ecx><edx>]<4F7D0000000100T<6 dwords>R`.
+- **Read-out:** identify the dword equal to a validated `UNIT_PLAYER` (or to `0x025274B5`, the current EDX) — that is the real unit; the dword holding a pointer that validates as `pGame` is the other. Then read both from the struct instead of guessing registers.
+- **Crash isolation:** build with `VPSTASH_113D_PASSTHROUGH` (logs `H`, touches nothing, returns 0). If stock then handles the click cleanly, our function's execution is implicated; if it still crashes in Fog, the fault is the stub's replay/return path, not our code. Both runs are cheap; run passthrough first.
 
 ### 3.8 Remaining for a working realm stash
-1. Resolve the indirection (§3.7).
-2. **`Clients::GetAccountName` (#10)** — the pool key is currently the literal `"smoketest"`; a one-line swap once pinned.
-3. **`ChangeGoldForPlayer` RVA** — restores the shared-gold pool (v1 deliberately skips gold).
-4. Then unset `VPSTASH_113D_NO_0X9C` for the full build with client repaint (all four resync values are already pinned).
+1. **Map the dispatch struct** to `pGame`/`pUnit` (§3.7) and read them from the struct.
+2. Settle the Fog crash: passthrough run, then stub replay/return-path check if needed.
+3. **`Clients::GetAccountName` (#10)** — the pool key is currently the literal `"smoketest"`; a one-line swap once pinned.
+4. **`ChangeGoldForPlayer` RVA** — restores the shared-gold pool (v1 deliberately skips gold).
+5. Then unset `VPSTASH_113D_NO_0X9C` for the full build with client repaint (all four resync values are already pinned).
 
 ## 4. Standing watches (carried from H83)
 

@@ -169,6 +169,16 @@ static void VPSHARED_VPLogHex32(uint32_t uValue) {
     VPSHARED_VPLogHex((uint8_t)uValue);
 }
 
+// [R235] Consecutive dwords as one hex run (the caller writes the marker).
+// Used to fingerprint the dispatch struct and the handler's stack copy, so the
+// real pGame/pUnit can be identified by matching values rather than guessed.
+static void VPSHARED_VPLogDwords(const void * pv, int nCount) {
+    const uint32_t * pdw = (const uint32_t *)pv;
+    for (int i = 0; i < nCount; ++i) {
+        VPSHARED_VPLogHex32(pdw[i]);
+    }
+}
+
 // [R228] Fixed, underived trace: literal C:\d2gs\VPLOG.TXT, one char per event.
 static void VPSHARED_VPLogChar(char cEvent) {
     if (VPSHARED_LogWriteRaw("VPLOG.TXT", &cEvent, 1, 0) <= 0) {
@@ -1857,6 +1867,14 @@ void __stdcall VPSHARED_AfterSave(::SGAMEDATA * pGame, D2UnitStrc * pUnit) {
 //
 // Packet layout at the hook (1.13d, verified): +0 type 0x4F, +1 button u16,
 // +3 pad u16, +5 page u16.
+//
+// [R235] FIELD-CONFIRMED ARGUMENT SHAPE: the pointer the stub is handed is a
+// DISPATCH STRUCT, not the frame. Its dword 0 is a STACK address whose target
+// starts `4F 7D 00 00 00 01 00` - the real ClickButton frame - and the stub's
+// ECX equals that same dword. So at this site ECX is the packet pointer, NOT
+// pGame, and EDX is not pUnit either (type read as 0x08C1F45F). The frame is
+// reached by one dereference; the true pGame/pUnit must be read from the
+// struct's remaining dwords, which the R235 24-byte fingerprint identifies.
 #if defined(VPSTASH_113D_DLL)
 // [R223] extern "C" is REQUIRED: this TU is C++, so without it the symbol is
 // mangled (_Z19VPSHARED_HookPacketPvS_) and ld cannot satisfy the .def's
@@ -1873,6 +1891,15 @@ extern "C" int VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
     // [R230] The FIRST executable statement, before any check or logging path:
     // tells us the export was entered at all, independent of the arguments.
     VPSHARED_VPLogChar('H');
+#if defined(VPSTASH_113D_PASSTHROUGH)
+    // [R235] ISOLATION BUILD: locate the post-click Fog crash. Log the entry
+    // token, then return 0 without touching an argument - no null check, no
+    // struct read, no second log. If stock then handles the click cleanly, our
+    // function's mere execution is implicated; if it still crashes, the fault
+    // is the stub's replay/return path (or stock itself), never our code.
+    (void)pGame; (void)pUnit; (void)pPacket;
+    return 0;
+#endif
     if (!pGame || !pUnit || !pPacket) {
         VPSHARED_VPLogChar('N');   // entered, but an argument was null
         return 0;
@@ -1892,12 +1919,26 @@ extern "C" int VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
         uint32_t uCandidate = *(const uint32_t *)pPacket;
         VPSHARED_VPLogChar('>');
         VPSHARED_VPLogHex32(uCandidate);
+        // [R235] 24-byte fingerprint of the dispatch struct we were handed, then
+        // the two registers exactly as the stub forwarded them. The agent's
+        // request: if the struct is {pPacket, pGame, pUnit, ...} the register
+        // values will match one of these dwords, and the mapping is settled.
+        VPSHARED_VPLogChar('#');
+        VPSHARED_VPLogDwords(pPacket, 6);
+        VPSHARED_VPLogChar('[');
+        VPSHARED_VPLogHex32((uint32_t)(uintptr_t)pGame);   // ECX at the hook
+        VPSHARED_VPLogHex32((uint32_t)(uintptr_t)pUnit);   // EDX at the hook
+        VPSHARED_VPLogChar(']');
         if (uCandidate >= 0x10000u && uCandidate < 0x7FFF0000u) {
             const uint8_t * q = (const uint8_t *)uCandidate;
             VPSHARED_VPLogChar('<');
             for (int k = 0; k < 7; ++k) {
                 VPSHARED_VPLogHex(q[k]);
             }
+            // [R235] 24 bytes at the adopted frame: it is the handler's stack
+            // copy, so its own pGame/pUnit usually sit one or two slots away.
+            VPSHARED_VPLogChar('T');
+            VPSHARED_VPLogDwords(q, 6);
             if (q[0] == 0x4F) {
                 VPSHARED_VPLogChar('R');   // resolved: adopted the dereferenced frame
                 p = q;
@@ -1912,8 +1953,12 @@ extern "C" int VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
     // FAIL CLOSED: if the log cannot be written we must not proceed - an
     // unwritable log means we would be debugging blind, so hand the click back
     // to stock behaviour instead (the agent's request, and the right default).
-    if (!VPSHARED_Log113d("HOOK 0x4F pGame=%p pUnit=%p btn=0x%04x page=%u",
-                          pGame, pUnit, *(const uint16_t *)(p + 1), *(const uint16_t *)(p + 5))) {
+    // [R235] pGame/pUnit here are the stub's ECX/EDX, which the field proved are
+    // NOT the game/unit pointers (ECX == *(pPacket)); pPacket is logged too so
+    // the struct address can be lined up with the `#` fingerprint in VPLOG.TXT.
+    if (!VPSHARED_Log113d("HOOK 0x4F pGame=%p pUnit=%p pPacket=%p btn=0x%04x page=%u",
+                          pGame, pUnit, pPacket,
+                          *(const uint16_t *)(p + 1), *(const uint16_t *)(p + 5))) {
         return 0;
     }
 
@@ -1940,8 +1985,15 @@ extern "C" int VPSHARED_HookPacket(void * pGame, void * pUnit, void * pPacket) {
         static int s_nRefused = 0;
         if (!s_nRefused) {
             s_nRefused = 1;
-            VPSHARED_Log113d("REFUSED: pUnit=%p type=%u (not a player unit) - arg mapping wrong?",
-                             pUnit, (unsigned)((D2UnitStrc *)pUnit)->eUnitType);
+            // [R235] Full context on the refusal: pPacket itself (the address
+            // the stub was handed), pGame as forwarded, and the 24-byte struct
+            // fingerprint, so the mapping can be diagnosed from the log alone.
+            const uint32_t * pdw = (const uint32_t *)pPacket;
+            VPSHARED_Log113d("REFUSED: pGame=%p pUnit=%p type=%u pPacket=%p "
+                             "d0=%08x d1=%08x d2=%08x d3=%08x d4=%08x d5=%08x "
+                             "(reads only; nothing written before this return)",
+                             pGame, pUnit, (unsigned)((D2UnitStrc *)pUnit)->eUnitType,
+                             pPacket, pdw[0], pdw[1], pdw[2], pdw[3], pdw[4], pdw[5]);
         }
         return 0;
     }

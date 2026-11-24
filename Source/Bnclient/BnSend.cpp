@@ -238,16 +238,27 @@ int __fastcall NET_SID_CLIENT_Send_0x3A_LogonResponse2(char * szText1, char * sz
 }
 int __fastcall NET_SID_CLIENT_Send_0x3D_CreateAccount2(char * szText1, char * szText2) {
     D2BOOT_Mark("BNet: SID 0x3D CREATEACCOUNT2 sending"); // [d2boot]
-    D2XSHA1Strc sha1Password;
-    char szUsername[256];
+    // [R236] The 20-byte hash and the username are ONE object: the wire packet is
+    // [sha1(20)][username\0] and the length below spans both (0x15 = 20 + the NUL).
+    // As separate locals the compiler is free to put nLen/nUsernameLen between
+    // them, and that is what happened in the field: the packet carried
+    // [sha1][1A 00 00 00][05 00] instead of [sha1]"test2\0", so PvPGN parsed
+    // control bytes as the account name and answered status 2 ("Account name
+    // contains illegal characters"). Same fix as the 0x31/0x06 senders.
+    struct __frame0_t {
+      D2XSHA1Strc sha1Password;
+      char szUsername[256];
+    };
+    static_assert(sizeof(void*) != 4 || sizeof(__frame0_t) == 276, "frame group __frame0_t must keep the hash adjacent to the username");
+    __frame0_t __frame0;
     char szPasswordLower[256];
     Storm::Source::SSTR::SStrCopy(szPasswordLower, szText2, 0x100);
     uint32_t nLen = Storm::Source::SSTR::SStrLen(szPasswordLower);
     /* DWORD cchLength for CharLowerBuffA */ /* LPSTR lpsz for CharLowerBuffA */ CharLowerBuffA(szPasswordLower, nLen);
-    _net_sid::XSHA1(&sha1Password, szPasswordLower, nLen);
-    uint32_t nUsernameLen = Storm::Source::SSTR::SStrCopy(szUsername, szText1, 0x100);
+    _net_sid::XSHA1(&__frame0.sha1Password, szPasswordLower, nLen);
+    uint32_t nUsernameLen = Storm::Source::SSTR::SStrCopy(__frame0.szUsername, szText1, 0x100);
     nUsernameLen += 0x15;
-    NET_SID_CLIENT_Send(0x3d, (char*)&sha1Password, nUsernameLen);
+    NET_SID_CLIENT_Send(0x3d, (char*)&__frame0, nUsernameLen);
     return 1;
 }
 int __fastcall NET_SID_CLIENT_Send_0x31_ChangePassword(char * szText1, char * szText2, char * szNewPassword) {

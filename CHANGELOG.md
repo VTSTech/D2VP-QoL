@@ -14,6 +14,15 @@ its source round. Per-tag notes: the
   field-verified against VTSTech/D2VP-D2GS; the whole fix chain is R169–R203. The
   individual rounds below shipped as working builds during the campaign.
 
+- **R236 — closed-realm account creation fixed** (creating an account on a PvPGN
+  realm always answered "Account name contains illegal characters". The SID 0x3D
+  `CREATEACCOUNT2` sender built its packet from a bare `D2XSHA1Strc` local and relied on
+  the username buffer happening to sit immediately after it on the stack; the compiler
+  put other locals in between, so the wire packet carried `[sha1][1A 00 00 00][05 00]`
+  instead of `[sha1]"name\0"` and the server parsed control bytes as the name. Hash and
+  username are now one struct, as in the 0x31/0x06 senders. Field evidence:
+  `d2vp-illegal-acct.pcapng` — request `ff 3d 1e 00 …`, reply `ff 3d 08 00 02 00 00 00`.)
+
 - **R205 — shared stash realm wire (configurable toggle id + pad magic)** (the D2GS port
   showed our `0x4F` toggle arriving byte-exact but being dropped by `d2server.dll`'s
   closed-source cheat validator, which whitelists retail button ids per opcode — before

@@ -370,6 +370,9 @@ endif()
 #   VPSTASH_D2GS_113D     : the 1.13d realm code paths
 #   VPSTASH_113D_DLL      : export VPSHARED_HookPacket + local logging
 #   VPSTASH_113D_NO_0X9C  : v1 state-only build (no client repaint)
+#   VPSTASH_113D_PASSTHROUGH (R235) : log entry, touch nothing, return 0 -
+#                          isolates a crash to our code vs. the stub's replay
+#   VPSTASH_113D_PROBE    : log the arguments, never act
 #
 # Build:  cmake --build build --target d2vpstash
 # The D2GS stub calls VPSHARED_HookPacket(pGame, pUnit, pPacket).
