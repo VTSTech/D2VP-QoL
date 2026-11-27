@@ -14,6 +14,40 @@ its source round. Per-tag notes: the
   field-verified against VTSTech/D2VP-D2GS; the whole fix chain is R169–R203. The
   individual rounds below shipped as working builds during the campaign.
 
+- **R241 — gamble Refresh on the Act 4/5 vendors, behind an ini gate** (Jamella (0x195) and
+  Larzuk (0x200/0x202) complete the six vendors `UseMenu`'s gamble-open accepts, and the whole
+  feature now needs `[features] gamble_refresh=1` in `d2vp.ini` — default 0 = retail. It is
+  **Options row 18 ("Gamble Refresh")**, filling column 1's band 8 so the page is two full
+  columns of nine with no geometry change. Both ends poll the same file on the same 2 s cadence —
+  `GAMBLEUI_FeatureActive` builds the button, and the server re-polls in
+  `SUNITNPC_GambleRefreshEnabled` and refuses the re-roll when unset, so a stock ini cannot reach
+  it even if a packet arrives. On a realm the D2GS needs the key in its own `d2vp.ini`. Acts 1-3
+  field-confirmed 2026-11-26; Acts 4/5 and the row itself awaiting a field run.)
+
+- **R240 — Act 4/5 start crash fixed** (a character created with `-act4`/`-act5` crashed the
+  client on the first rendered frame: `0xC0000005`, read of `0x14`, in `DrawFloorTile` ←
+  `DRAW_DrawEdgeFloorTile` ← `DrawFloorByViewAndFloor`. `D2DrlgStrc::sTileCache` is left
+  all-zero for acts 3 and 4 — `InitCache` fills only acts 0-2 and no town DT1 is loaded for
+  them — so the cached `pTileLibraryEntry` is NULL. Retail never reads that cache; its only
+  consumer is the fork's wide-stop edge-void fill, which is why the NULL stayed invisible
+  until the R117/R121 band fill reached it. `DrawFloorTile` now skips a tile with no library
+  entry, i.e. acts 3/4 get no edge fill, exactly as retail at 640x480. Detail: HISTORY H84.)
+
+- **R239 — Refresh on the Act 3 gamble panel** (the owner asked for Act 3 next: "R239 Act3
+  0xfe". Alkor joins Gheed (0x93, R237) and Elzix (0xc7, R238) in
+  `INV_IsGambleRefreshNpc` — one predicate, one line per vendor, no other change. All three
+  gambling vendors now show Buy | Sell | Refresh | Close and re-roll all 14 offerings.
+  Field-confirmed 2026-11-26.)
+
+- **R238 — a Refresh button on the gamble panel** (R237 added it for Gheed (0x93); the owner
+  then asked for "the same for the Act 2 NPC Elzix 0xc7", which R238 adds by generalising the
+  class predicate to `INV_IsGambleRefreshNpc`. The gamble panel's 3rd slot is blank in retail;
+  it now carries a Refresh button that re-rolls all 14 offerings. Retail only ever re-rolls the
+  single slot a purchase frees, and a second gamble-open is a no-op because the server refuses
+  to regenerate while the player still owns a proxy-inventory node — so the button sends the
+  existing gamble-open packet with a magic params dword and the server drops the node,
+  regenerates and pushes the deltas. Field-confirmed 2026-11-26.)
+
 - **R236 — closed-realm account creation fixed** (creating an account on a PvPGN
   realm always answered "Account name contains illegal characters". The SID 0x3D
   `CREATEACCOUNT2` sender built its packet from a bare `D2XSHA1Strc` local and relied on

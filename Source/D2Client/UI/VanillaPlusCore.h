@@ -272,6 +272,10 @@ void __stdcall VANILLAPLUS_SelfCheck();
 // and restores the personal page + personal gold before any .d2s is built
 // (I1: character saves stay retail-pure).
 BOOL __stdcall VPSHAREDUI_FeatureActive();   // config: shared_stash on?
+// [R241] config: gamble_refresh on? The gamble panel's blank 3rd slot becomes a
+// Refresh button that re-rolls the vendor's whole inventory. ini-only (no
+// Options row); the server half polls the same key in D2Game/UNIT/SUNITNPC.cpp.
+BOOL __stdcall GAMBLEUI_FeatureActive();
 int __stdcall VPSHAREDUI_IsSharedPage();     // client mirror: 0 personal, 1..100 = shared page on screen
 void __stdcall VPSHAREDUI_ResetForNewGame(); // entering a game starts personal
 // Hit-test + pager for the tab composite (word + << >> arrows). TRUE = the

@@ -161,7 +161,7 @@ struct VPPFeatureRow {
     const wchar_t* wszLabel;  // row label
     int nReadDefault;         // R144: read default while the key is missing - must match what the key's own gate assumes (0 everywhere; unlock_fps_interp's gate reads missing as 1)
 };
-static const VPPFeatureRow gaVanillaPlusRows[17] = {
+static const VPPFeatureRow gaVanillaPlusRows[18] = {
     { "alt_toggle", L"Show Items Toggle", 0 },
     { "auto_gold", L"Auto Gold Pickup", 0 },
     { "portable_save", L"Portable Saves", 0 },
@@ -278,10 +278,23 @@ static const VPPFeatureRow gaVanillaPlusRows[17] = {
     // >= 30 clamp discarded the eight loaded rows 30..37) - tints retail
     // never rendered start appearing; purely cosmetic, no gameplay data.
     { "palette_37", L"Palette 37 Tints", 0 },
+    // VP: [gamble-refresh R241] gamble_refresh - the eighteenth row, and the
+    // first that fills col 1 band 8 (two full columns of nine, no empty band).
+    // Label = the feature's own name ("Gamble Refresh"). The gate
+    // GAMBLEUI_FeatureActive (VanillaPlusCore.cpp) is 2 s hot-read and the
+    // write bridge busts dwVpGambleRefreshTick (D2VP_ConfigReloaded), so a flip
+    // here lands on the next panel draw - no restart, no panel reopen. With the
+    // gate on, the gamble panel's blank 3rd slot becomes a Refresh button that
+    // re-rolls the vendor's whole inventory (Gheed/Elzix/Alkor/Jamella/Larzuk);
+    // with it off the slot stays blank, byte-retail. The server half
+    // (SUNITNPC_GambleRefreshEnabled, D2Game/UNIT/SUNITNPC.cpp) polls the same
+    // key on the same 2 s cadence, so a realm D2GS needs the key in its own
+    // d2vp.ini as well.
+    { "gamble_refresh", L"Gamble Refresh", 0 },
 };
-static const int VPP_ROW_COUNT = 17;
-static const int VPP_ROW_BACK = 17; // hit-test index of the Previous Menu row
-static const int VPP_ROWS_PER_COL = 9; // R168: was 8 (R155: 7; R158: 8) - seventeen rows: col 0 bands 0-8 (rows 0-8), col 1 bands 0-7 (rows 9-16; band 8 empty, the R147 precedent)
+static const int VPP_ROW_COUNT = 18;
+static const int VPP_ROW_BACK = 18; // hit-test index of the Previous Menu row
+static const int VPP_ROWS_PER_COL = 9; // R168: was 8 (R155: 7; R158: 8) - R241: eighteen rows: col 0 bands 0-8 (rows 0-8), col 1 bands 0-8 (rows 9-17) - two FULL columns, the empty band 8 of the R168 seventeen-row layout is now the Gamble Refresh row
 // Layout check (R101, re-run for R108 and R125): the seventh feature row spans
 // boxTop+0x110..0x12a, so R101 moved the Previous Menu row down from
 // boxTop+0x124 (which would overlap it by 6 px) to boxTop+0x144 - the same

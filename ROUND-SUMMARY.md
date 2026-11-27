@@ -1,3 +1,113 @@
+# Round summary — R241 (rev 191, 2026-11-26): gamble Refresh on all six vendors, behind `[features] gamble_refresh`
+
+## What shipped
+
+Two things. First, Jamella (0x195, Act 4) and Larzuk (0x200/0x202, Act 5) join the predicate, so
+every class `UseMenu`'s gamble-open accepts is wired — the owner's log confirmed both panels open
+and generate (`gen start npc=0x0195` / `npc=0x0202`, 14 items each).
+
+Second, the feature is now gated. `[features] gamble_refresh` defaults to 0, so a stock `d2vp.ini`
+is byte-retail: no button, no re-roll. It is **Options row 18 ("Gamble Refresh")** — the row that
+fills column 1's band 8, so the page becomes two full columns of nine and no geometry constant
+moves (box `0x1b1`, back row `0x184`, 640x480 top margin 23 px all unchanged). Both ends poll the
+same file on the same 2 s cadence: `GAMBLEUI_FeatureActive` (`VanillaPlusCore.cpp`, flushed by
+`D2VP_ConfigReloaded`) decides whether the button is built, and `SUNITNPC_GambleRefreshEnabled`
+(`SUNITNPC.cpp`) re-polls and refuses the re-roll when unset — so a hand-crafted packet cannot
+reach it on a default install. On a realm the D2GS needs the key in its own `d2vp.ini`, same as
+`shared_stash`.
+
+## Verification
+
+Acts 1-3 field-confirmed 2026-11-26. Acts 4/5 and the gate itself **await a field run**. Compiles
+clean; docs gate green.
+
+---
+
+# Round summary — R240 (rev 190, 2026-11-26): the Act 4/5 start crash — a NULL tile in the fork's own edge-void fill, found by symbolicating the owner's d2exe.map
+
+## What shipped
+
+A `-act4`/`-act5` character crashed the client on the first rendered frame. The owner supplied
+`d2exe.map` from the same build, which turned the "own-code fault" into a precise answer:
+`DrawFloorTile +0xc6` ← `DRAW_DrawEdgeFloorTile +0xde` ← `DrawFloorByViewAndFloor +0x87b`,
+`0xC0000005` reading `0x14` with EAX=0.
+
+`D2DrlgStrc::sTileCache` is left all-zero for acts 3 and 4: `InitCache` (`Drlg.cpp:971`) fills
+only acts 0-2, and `DRLGACTMISC_LoadTileProjects` (`:371`) loads no town DT1 for them, so the
+cached `pTileLibraryEntry` stays NULL and `pTileOther->nOrientation` reads `[0+0x14]`. Retail
+never reads that cache — its only consumer is the fork's R117/R121 edge-void band fill, which
+runs only at the wide stops. `DrawFloorTile` now returns early on a NULL entry, so acts 3/4 get
+no edge fill, exactly as retail at 640x480.
+
+Teaching `InitCache` about acts 3/4 instead is not viable: `apTileProjects` is empty there, so
+the lookup would return 0 and hit the `ERROR_UnrecoverableInternalError_Halt` at `Drlg.cpp:993`.
+
+## Verification
+
+Compiles clean; `docs_gate --round 240` green apart from the handoff size cap (the detail lives
+in HISTORY H84). **Awaiting the owner's field run.**
+
+---
+
+# Round summary — R239 (rev 189, 2026-11-26): the gamble Refresh button reached Act 3 — Alkor (0xfe) joins Gheed (0x93) and Elzix (0xc7) behind one predicate, field-confirmed
+
+## What shipped
+
+R239 is a one-line change: `INV_IsGambleRefreshNpc` gains `0xfe`, so Alkor's gamble panel
+shows Buy | Sell | Refresh | Close and re-rolls all 14 offerings exactly as Act 1 and Act 2 do.
+The predicate is the only place a vendor is named — the button setup, the click branch and the
+tooltip all route through it.
+
+The server side is untouched: `SUNITNPC_GambleRefresh` already keys off the magic params dword
+in the C→S `0x38` action-2 packet, and `UseMenu`'s gamble branch already accepted class 0xfe.
+The owner's log confirms the panel opens and generates (`gen start npc=0x00fe … gen done
+items=14`).
+
+## Verification
+
+Owner field test 2026-11-26. `tools/docs_gate.py --round 239` green; both changed TUs compile
+clean. The pre-existing repo-wide VP-marker census delta (7) is unchanged.
+
+---
+
+# Round summary — R238 (rev 188, 2026-11-26): the gamble panel's blank 3rd slot became a Refresh button that re-rolls all 14 offerings — Gheed (0x93) in R237, Elzix (0xc7) in R238, field-confirmed
+
+## What shipped
+
+The owner asked for a Refresh button in slot index 2 of Gheed's gamble panel, then for the
+same on the Act 2 vendor Elzix. The slot is blank in retail, so the button is new; the
+re-roll is not — retail re-rolls only the single slot a purchase frees
+(`SUNITNPC_DeductGoldForPurchase` → `SUNITNPC_RefreshNpcItem`), and a second gamble-open is
+a no-op because `SUNITNPC_ValidateNpcInteraction` returns early while the player still owns a
+proxy-inventory node.
+
+The button sends the existing C→S `0x38` action 2 (open gamble) with a magic value in the
+params dword retail always leaves 0 (`D2VP_GAMBLE_REFRESH_PARAM`, `Redivivus/d2_hand.h`).
+No new packet id — the C→S dispatch table is a fixed array and both ends ship as one build.
+`SUNITNPC_GambleRefresh` then queues the old items as shop-removes, flushes, drops the proxy
+node, regenerates, queues the new items as shop-adds, flushes, and drains.
+
+## Three silent failures the field runs exposed
+
+1. **Wrong discriminator.** Keying the click branch on the shop-mode global fell through to
+   the retail Repair All path whenever it read 0, and `ShopAction`'s `if (!bValidNpc) return 0;`
+   is a silent no-op for a gambling vendor. Now keyed on the NPC class.
+2. **Shifted parameter names.** `SUNITPROXY_SendProxyItemsToClient`'s names are off by one —
+   the retail caller passes `(pGame, pNpc, pPlayer, pClient)`. Reversed, the
+   `pNpc != pUnit` check in `Pre0x9DAnd0x9CPacket` drops every packet. The same swap exists in
+   `SUNITPROXY_GetPlayerProxyInventory`.
+3. **Adds never queued.** Gamble generation places items with
+   `SERVER_ItemToInventory(..., bSendUpdate = 0)`, so they only get a unit-update flag —
+   enough when the panel opens, not when re-rolling under an open one.
+
+## Verification
+
+Owner field test 2026-11-26: both panels show Buy | Sell | Refresh | Close and the click
+clears and refills all 14 offerings. `tools/check-vanilla-plus.sh` green on the round
+identity; the pre-existing marker-census delta (232/225 at R236) is unchanged.
+
+---
+
 # Round summary — R173 (rev 185, 2026-11-20): the R172 field log named the BNet death (recv -1 WSA 10053 right after the 0x25 ping echo, no AUTH_INFO reply) — 2 marks to identify the peer: BNCS recv hex dump + race-winner peer IP:port
 
 

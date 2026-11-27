@@ -2315,8 +2315,8 @@ void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc 
     GAMBLE_GenerateGambleInventory(pGame, pUnit, pPlayerUnit, (int32_t)nNpcGameData);
 }
 
-// VP-BEGIN [gamble-refresh R237]: re-roll the whole gamble inventory for one
-// player. Retail only ever re-rolls the single slot a purchase frees
+// VP-BEGIN [gamble-refresh R237/R241]: re-roll the whole gamble inventory for
+// one player. Retail only ever re-rolls the single slot a purchase frees
 // (SUNITNPC_DeductGoldForPurchase -> SUNITNPC_RefreshNpcItem), and a second
 // "open gamble" is a no-op because SUNITNPC_ValidateNpcInteraction returns
 // early while the player still owns a proxy inventory node. So: tell the client
@@ -2325,10 +2325,46 @@ void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc 
 // The removals go out first, while the item units still exist - the 0x9C walk
 // in SendUpdatedItemsToClient looks them up by GUID, and
 // SUNITPROXY_RemovePlayerProxyInventory frees them.
+
+// [R241] Server half of the [features] gamble_refresh gate. D2Game cannot import
+// D2Client helpers (module boundary), so this is the same 2 s poll on the same
+// file the client gate uses (VPSHARED_BuildIniPath's sibling in
+// VanillaPlusStash.cpp is the pattern) - in single-player both resolve to the
+// d2vp.ini beside d2vp.exe. Missing file/section/key = 0 = inert, so a stock ini
+// can never reach the re-roll even if a packet arrives.
+static int s_nGambleRefreshGateCache = 0;
+static DWORD s_dwGambleRefreshGateTick = 0;
+
+static BOOL SUNITNPC_GambleRefreshEnabled() {
+    DWORD dwNow = GetTickCount();
+    if (!s_dwGambleRefreshGateTick || dwNow - s_dwGambleRefreshGateTick >= 2000) {
+        char szIniPath[260];
+        s_dwGambleRefreshGateTick = dwNow;
+        szIniPath[0] = '\0';
+        DWORD dwLen = GetModuleFileNameA(nullptr, szIniPath, 240);
+        if (dwLen && dwLen < 240) {
+            char* pSlash = strrchr(szIniPath, '\\');
+            if (pSlash) {
+                pSlash[1] = '\0';
+                lstrcatA(szIniPath, "d2vp.ini");
+                s_nGambleRefreshGateCache = GetPrivateProfileIntA("features", "gamble_refresh", 0, szIniPath) ? 1 : 0;
+            } else {
+                s_nGambleRefreshGateCache = 0;
+            }
+        } else {
+            s_nGambleRefreshGateCache = 0;
+        }
+    }
+    return s_nGambleRefreshGateCache;
+}
+
 void __fastcall SUNITNPC_GambleRefresh(::SGAMEDATA * pGame, D2UnitStrc * pPlayer, D2UnitStrc * pNpc) {
+    if (!SUNITNPC_GambleRefreshEnabled()) {
+        return;
+    }
+
     int nNpcIdx;
     D2GameNpcStrc* pNpcData = sunitproxy::GetGameNpcByUnit(pGame, pNpc, &nNpcIdx);
-    D2BOOT_MarkFmt("gamble-refresh: enter npc=%08x data=%08x flags=%08x", (unsigned)(pNpc ? pNpc->nUnitGUID : 0), (unsigned)pNpcData, (unsigned)(pNpcData ? pNpcData->flags0x0C : 0));
     if (!pNpcData || !pNpcData->flags0x0C) {
       return;
     }
@@ -2339,13 +2375,11 @@ void __fastcall SUNITNPC_GambleRefresh(::SGAMEDATA * pGame, D2UnitStrc * pPlayer
       pProxyNode = pProxyNode->pNext;
     }
 
-    D2BOOT_MarkFmt("gamble-refresh: player=%08x node=%08x", (unsigned)nPlayerGUID, (unsigned)pProxyNode);
     if (!pProxyNode || !pProxyNode->pInventory || !pPlayer) {
       return;
     }
 
     D2ClientStrc* pClient = SUnit::SUNIT_GetClient(pPlayer, ".\\UNIT\\SUNITNPC.CPP", 0xc72);
-    D2BOOT_MarkFmt("gamble-refresh: node=%08x inv=%08x client=%08x items=%d", (unsigned)pProxyNode, (unsigned)pProxyNode->pInventory, (unsigned)pClient, (int)D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pProxyNode->pInventory) != 0);
     if (!pClient) {
       return;
     }
@@ -2408,10 +2442,8 @@ void __fastcall SUNITNPC_GambleRefresh(::SGAMEDATA * pGame, D2UnitStrc * pPlayer
         }
       }
     }
-
-    D2BOOT_MarkFmt("gamble-refresh: done newinv=%08x", (unsigned)pNewInventory);
 }
-// VP-END [gamble-refresh R237]
+// VP-END [gamble-refresh R237/R241]
 
 // Dispatches an NPC interaction for a player. nMode==0: repair/trade path — registers player interaction, repairs items, and initialises inventory for vendor NPCs (Charsi=0x96, Fara=0xC6, Larzuk=0x203, Halbu=0xFC) if not yet done. nMode!=0 with a personal inventory: registers gamble interaction and validates it via SUNITNPC_ValidateNpcInteraction.
 void __fastcall SUNITNPC_ProcessNpcAction(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pNpc, int32_t nMode) {
@@ -3417,17 +3449,15 @@ int __fastcall UseMenu(::SGAMEDATA * pGame, D2UnitStrc * pUnit, eD2QuestState pQ
       return 0;
     }
     if (pQState == QUESTSTATE_Step0x02) {
-      // VP-BEGIN [gamble-refresh R237]: the Refresh button sends action 2 (open
+      // VP-BEGIN [gamble-refresh R237/R241]: the Refresh button sends action 2 (open
       // gamble) with D2VP_GAMBLE_REFRESH_PARAM in the otherwise-unused params
       // dword. Retail always sends 0 there, so this cannot fire for a stock
       // client. Everything below is the retail gamble-open path.
       if (nGuid == D2VP_GAMBLE_REFRESH_PARAM) {
-        D2BOOT_MarkFmt("gamble-refresh: UseMenu magic guid=%08x param=%08x", (unsigned)guid, (unsigned)nGuid);
         SUNITNPC_GambleRefresh(pGame, pUnit, pClonedItem);
         return 0;
       }
-      D2BOOT_MarkFmt("gamble-refresh: UseMenu act2 guid=%08x param=%08x", (unsigned)guid, (unsigned)nGuid);
-      // VP-END [gamble-refresh R237]
+      // VP-END [gamble-refresh R237/R241]
       nNpcClassId = pClonedItem->nClassId;
       if (nNpcClassId <= 0x195) {
         if (nNpcClassId != 0x195 && nNpcClassId != 0x93 && nNpcClassId != 199) {

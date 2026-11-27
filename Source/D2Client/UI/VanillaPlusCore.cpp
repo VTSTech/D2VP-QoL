@@ -240,6 +240,16 @@ static void ALTTOGGLE_WriteIniTemplate(const char* pszPath) {
         ";       or without the key.\r\n"
         "shared_stash=0\r\n"
         "\r\n"
+        "; Gamble Refresh button (all acts):\r\n"
+        ";   0 = off                                        (vanilla behavior)\r\n"
+        ";   1 = the gamble panel's blank 3rd slot becomes a \"Refresh\" button\r\n"
+        ";       that re-rolls the vendor's whole gamble inventory. Gheed (Act 1),\r\n"
+        ";       Elzix (Act 2), Alkor (Act 3), Jamella (Act 4) and Larzuk (Act 5).\r\n"
+        ";       Both ends read this key - the client builds the button, the server\r\n"
+        ";       performs the re-roll - so set it in the D2GS's d2vp.ini too when\r\n"
+        ";       playing on a realm.\r\n"
+        "gamble_refresh=0\r\n"
+        "\r\n"
         "; Static world with one panel open (wide layouts only):\r\n"
         ";   0 = opening one panel slides the game world aside so the action\r\n"
         ";       re-centers in the uncovered strip    (vanilla behavior)\r\n"
@@ -1570,6 +1580,7 @@ int __stdcall D2VP_SetFeatureToggle(const char* szKey, int nValue) {
 // Called by D2VP_SetFeatureToggle after each write; exported for future
 // tooling (console commands, external reload hooks).
 static void VPSHAREDUI_FlushGateCache(); // defined in the shared-stash block below
+static void GAMBLEUI_FlushGateCache();   // [R241] defined in the gamble-refresh block below
 // [automap-clock R147] the clock's gate cache + session anchor live here so
 // the reload bust below sees them; the functions are in the clock block at
 // the end of the TU.
@@ -1601,6 +1612,7 @@ void __stdcall D2VP_ConfigReloaded() {
     dwVpExtStatsLastCheck = 0;    // next VPEXTSTATS_Active() re-reads extended_stats (R158)
     dwVpPalshift37LastCheck = 0;  // next PALSHIFT37_Active() re-reads palette_37 (R168)
     VPSHAREDUI_FlushGateCache();  // next VPSHAREDUI_FeatureActive() re-reads shared_stash
+    GAMBLEUI_FlushGateCache();    // next GAMBLEUI_FeatureActive() re-reads gamble_refresh [R241]
     Fog::Source::SFile::PORTABLESAVE_FlushConfig(); // next save-path poll re-reads portable_save
 }
 
@@ -2010,6 +2022,38 @@ static int gnVpSharedPage = 0;        // client mirror of the page toggle:
 // external ini edit, still far faster than walking to a stash.
 static void VPSHAREDUI_FlushGateCache() {
     dwVpSharedStashGateTick = 0;
+}
+
+// --- [R241] gamble_refresh: the gamble panel's Refresh button ---------------
+// ini-only (deliberately no Options row): the button is a vendor-panel
+// affordance, not a display preference. The key must exist on BOTH ends - the
+// client builds the button, the server (D2Game/UNIT/SUNITNPC.cpp) performs the
+// re-roll and polls the same file on the same 2 s cadence (D2Game cannot import
+// D2Client helpers). Missing file/section/key = 0 = retail: no button, no
+// re-roll.
+static int gbVpGambleRefreshMode = 0;   // 2 s ini gate cache
+static DWORD dwVpGambleRefreshTick = 0;
+
+// Options-page hook (D2VP_ConfigReloaded): zero the tick so the next
+// GAMBLEUI_FeatureActive() re-reads gamble_refresh.
+static void GAMBLEUI_FlushGateCache() {
+    dwVpGambleRefreshTick = 0;
+}
+
+BOOL __stdcall GAMBLEUI_FeatureActive() {
+    DWORD dwNow = GetTickCount();
+    if (!dwVpGambleRefreshTick || dwNow - dwVpGambleRefreshTick >= 2000) {
+        char szIniPath[260];
+        dwVpGambleRefreshTick = dwNow;
+        if (ALTTOGGLE_BuildIniPath(szIniPath)) {
+            ALTTOGGLE_EnsureIni();
+            // Missing file/section/key or a non-numeric value = 0 = vanilla.
+            gbVpGambleRefreshMode = GetPrivateProfileIntA("features", "gamble_refresh", 0, szIniPath) ? 1 : 0;
+        } else {
+            gbVpGambleRefreshMode = 0;
+        }
+    }
+    return gbVpGambleRefreshMode;
 }
 
 BOOL __stdcall VPSHAREDUI_FeatureActive() {

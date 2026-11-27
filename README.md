@@ -12,7 +12,7 @@
        width="88" height="31" alt="Made Openly: Mostly AI">
 </a>
 
-[![Release](https://img.shields.io/badge/release-0.0.9--R203-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
+[![Release](https://img.shields.io/badge/release-0.0.9--R241-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
 
@@ -41,6 +41,7 @@ Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Q
 | Transparent HUD | `[features] transparent_hud` | Bottom bar background, run/menu buttons hidden |
 | Camera Zoom | `[features] camera_zoom` | Press **Z** to zoom world (1.0→1.25→1.5→1.0) |
 | Palette 37 Tints | `[features] palette_37` | Full tint table: 8 tint rows retail never rendered start appearing on champions/uniques |
+| Gamble Refresh | `[features] gamble_refresh` | The gamble panel's blank 3rd slot becomes a **Refresh** button that re-rolls the vendor's whole inventory — Gheed, Elzix, Alkor, Jamella and Larzuk. Both ends read this key, so a realm host needs it in its own `d2vp.ini` |
 
 ## Install
 
@@ -57,20 +58,19 @@ Press **Esc → Options → "Vanilla+ Options"** to toggle features in-game. All
 
 ## Current Status
 
-- **Version:** Vanilla+0.0.9-R203
+- **Version:** Vanilla+0.0.9-R241
 - **Renderer:** D3D/Glide via [Glide3xVK](https://github.com/VTSTech/Glide3xVK)
 - **Scope:** Single-player; Battle.net **closed realms** (PvPGN/D2GS) and **Open Battle.net** both fully working
 - **Compatibility:** Full backward compatibility, `.d2s` files untouched
 
-## What's New (R188 → R203)
+## What's New (R204 → R241)
 
-- **Battle.net works.** Closed realms (PvPGN/D2GS) and Open Battle.net both connect, list characters, join/create games and play — the whole multiplayer surface
-- Fixed the Battle.net connection death (recv 10053): the packet parser was receiving through a NULL buffer after the first server packet, aborting the socket
-- Fixed a SHA-1 hashing bug that crashed the client at "Checking Versions" on realm login
-- Realm character list now loads; character creation, login, game creation and game join all verified against PvPGN/D2GS
-- Full `d2boot.log` diagnostics across the whole Battle.net journey, plus crash reports symbolized against `d2exe.map`
+- **Gamble Refresh.** The gamble panel's blank 3rd slot is now a **Refresh** button that re-rolls the vendor's whole inventory — Gheed, Elzix, Alkor, Jamella and Larzuk (Acts 1–5). Opt-in via `[features] gamble_refresh` or the in-game Options page
+- **Act 4/5 start crash fixed.** A character created with `-act4` or `-act5` crashed on the first frame in the floor renderer; the fork's wide-resolution edge fill was reading a tile the game never populates for those acts
+- **Closed-realm account creation fixed.** "Create Account" on a PvPGN realm answered *"Account name contains illegal characters"* — the name never made it into the packet
+- **Crash fixes continue** from the R188–R203 line: the Battle.net connection death (recv 10053), the SHA-1 login crash, the Ctrl+Click deposit crash (#37) and the frozen-monster loot loss (#39)
 
-Details: [RELEASE-NOTES-R188-R203.md](RELEASE-NOTES-R188-R203.md)
+Details: [CHANGELOG.md](CHANGELOG.md) · [FEATURES.md](FEATURES.md)
 
 ## Quick Start
 

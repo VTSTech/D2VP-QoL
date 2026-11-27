@@ -750,6 +750,20 @@ void __thiscall DrawFloorTile(D2DrawFloorStrc * pFloor, D2DrlgTileDataStrc * pTi
     }
 
     D2TileLibraryEntryStrc* pTileOther = pTileData->pTileLibraryEntry;
+    // VP-BEGIN [R240]: acts 3 and 4 leave D2DrlgStrc::sTileCache all-zero.
+    // InitCache (Drlg.cpp:971) only fills acts 0-2 and DRLGACTMISC_LoadTileProjects
+    // (Drlg.cpp:371) loads no town DT1 for them, so the cached
+    // pTileLibraryEntry stays NULL. Nothing in retail reads that cache - its one
+    // consumer is the fork's edge-void fill (DRAW_DrawEdgeFloorTile below), which
+    // only runs at the wide stops - but the R117/R121 band fill does reach it on
+    // the first frame in Act 4/5 town, so a -act4/-act5 character faulted here
+    // reading pTileOther->nOrientation (offset 0x14) with pTileOther == NULL.
+    // Skip the tile, exactly as the retail 640x480 path does by never running the
+    // fill at all.
+    if (!pTileOther) {
+      return;
+    }
+    // VP-END [R240]
     if (pTileOther->nOrientation) {
       return;
     }

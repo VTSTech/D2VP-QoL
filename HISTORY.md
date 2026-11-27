@@ -3135,3 +3135,35 @@ Open: **rows 12, 13** (issues #25, #18 — tracks R, Q). Row 16 (#31, track V �
 ### 9.1 Track C — minion skeletons gold — FIXED R51, FIELD-VERIFIED R91 ("Skeletons are finally white again") — issue #8
 
 A baseline transcription defect (`44e3518`) with two inverted-polarity write sites — the roster pet-recolor `(uint32_t)!bHostile` (R50) and the spawn-time `CreateObject` `Utrans==0xFF` fallback (R51, the write that sticks for SP summons); both now write the raw hostility flag. Full record verbatim: **H31** (original H26 Revs 55/56). Lifts to history at the owner's close.
+
+---
+
+## H84 — R240: Act 4/5 start crash (2026-11-26)
+
+**Owner report:** "When I try to start a game with a character created with -act4 or -act5 the game crashes." Acts 0-2 starts were unaffected.
+
+**Field evidence** (`d2crash-20261126-230926.txt`, build `R236-1-gb79e3445c-dirty (release)`, gcc 16.2.0): `0xC0000005 ACCESS_VIOLATION`, **read of `00000014`**, `EAX=00000000`, 20 frames, "own-code fault". The last marks before it were `s2c 0x04 STARTACT`, `s2c 0x5B playerjoin … name='act_four'`, the unlock-fps and camera-zoom feature lines, then the fault.
+
+**Symbolication.** The owner supplied `d2exe.map` from the same build. Image base is `0x400000`, so map address = `0x400000 + RVA`:
+
+| Frame | Symbol | Offset |
+| --- | --- | --- |
+| #0 | `D2Client::GAME::Draw::DrawFloorTile(D2DrawFloorStrc*, D2DrlgTileDataStrc*, void*, int, int, int, int)` | +0xc6 |
+| #1 | `D2Client::GAME::Draw::DRAW_DrawEdgeFloorTile(D2DrawFloorStrc*, int, int)` | +0xde |
+| #2 | `D2Client::GAME::Draw::DrawFloorByViewAndFloor(D2DrawFloorStrc*, D2GameViewStrc*)` | +0x87b |
+| #3 | `dFloorDraw` | +0x19 |
+| #4 | `ViewDraw2` | +0x22d |
+| #5 | `InGameDraw` | +0x2be |
+| #6 | `CLIENT_GameLoopFrame` | +0x502 |
+
+**Diagnosis.** Two candidate null derefs in `DrawFloorTile`, both at struct offset `0x14`: `D2DrlgTileDataStrc::nFlags` (`D2DrlgTileDataStrc.h:25`) and `D2TileLibraryEntryStrc::nOrientation` (`D2TileLibraryEntryStrc.h:26`). Frame #1 is `DRAW_DrawEdgeFloorTile`, which passes `GetTileDataFromAct(sgpDrlgAct)` = `&sgpDrlgAct->sTileCache` — a non-NULL embedded struct, so `pTileData` is fine and the fault is `pTileOther->nOrientation` with `pTileOther == NULL`.
+
+`D2DrlgStrc::sTileCache` is populated by `InitCache` (`Source/D2Common/Drlg/Drlg.cpp:954`), whose switch on `pDrlg->nActNo` has cases for 1 and 2 and `default: return` — **acts 3 and 4 return with the struct still zeroed from the `memset` at :967**, so `pTileLibraryEntry` stays NULL. `DRLGACTMISC_LoadTileProjects` (`Drlg.cpp:365`) likewise loads a town DT1 only for acts 0-2 (`Act1/Town/Floor.dt1`, `Act2/Town/Ground.dt1`, `ACT3/Kurast/sets.dt1`) and returns for acts 3/4.
+
+The NULL is invisible in retail because `sTileCache` has exactly **one** consumer in the whole tree — `DRAW_DrawEdgeFloorTile` (`Draw.cpp:833`) — and that is reached only from the fork's R117/R121 edge-void band fill, which is gated on `VPRES_IsWideLayoutMode` (`Draw.cpp:1011`/`1037`) and therefore never runs at 640x480/800x600. The wide stops reach it on the first frame in an Act 4/5 town.
+
+**Fix (R240).** `DrawFloorTile` returns early when `pTileData->pTileLibraryEntry` is NULL (`Draw.cpp:752`, VP-marked). Acts 3/4 then get no edge-void fill — identical to what retail does at 640x480 by never running the fill at all. The alternative (teaching `InitCache` about acts 3/4) is not viable: `apTileProjects` is empty for those acts, so `TILEPROJECT_LookupTilesInAllProjects` would return 0 and hit the `ERROR_UnrecoverableInternalError_Halt` at `Drlg.cpp:993`. The other candidate fix — guarding inside `DRAW_DrawEdgeFloorTile` — would leave the cache inconsistent for `DRAW_UpdateTileVisibilityBounds`, which also reads `pTileData`.
+
+**Not the cause:** the fork's `[R118]`/`[R121]` wide-view room walk (`DRAW_DrawWideViewRoomFloors`, `Draw.cpp:855`). It feeds room tiles from `DRLGROOM_GetFloorTilesFromRoom`, which always carry an entry, and the stack goes through `DRAW_DrawEdgeFloorTile`, not the wide walk.
+
+**Status:** fixed, compiles clean, **awaiting the owner's field run**.
