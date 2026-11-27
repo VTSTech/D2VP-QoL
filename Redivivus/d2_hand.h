@@ -63,4 +63,16 @@ namespace D2Common { namespace Stats { namespace StatsEx {
 int32_t __stdcall UNITS_CalcCombinedStatValue(struct D2UnitStrc * pUnit, eD2UnitStat eUnitStat);
 }}} // D2Common::Stats::StatsEx
 
+// --- [Vanilla+ R237] C->S 0x38 (NPC menu select) gamble "Refresh" selector --
+// Not a declaration: the one constant the fork needs in BOTH halves of the
+// client/server split. 0x38's second dword is the menu action (1 trade,
+// 2 open-gamble, 3 hire) and its fourth dword (dwParams) is unused by retail
+// for action 2 - the client always sends 0. The Refresh button sends this
+// value there, so SUNITNPC::UseMenu can tell a re-roll request from a plain
+// re-open without a new packet id (the C->S dispatch table in PlayerMsg.cpp is
+// a fixed array and both ends ship as one build). Retail never sends it, so a
+// stock client is unaffected. It lives here because D2Game cannot import
+// D2Client and this header is the only non-generated one both already see.
+constexpr uint32_t D2VP_GAMBLE_REFRESH_PARAM = 0x00005246; // 'R','F'
+
 #endif  // D2_HAND_H

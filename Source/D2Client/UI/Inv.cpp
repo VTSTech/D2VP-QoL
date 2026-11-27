@@ -79,6 +79,7 @@
 #include "Source/D2gfx/D2GFX.h"
 #include "Source/Fog/D2PoolManagerStrc.h"
 #include "Source/Fog/File.h"
+#include "Redivivus/d2_boot.h" // [gamble-refresh R237] temporary click diagnostics
 #include "Source/Fog/Fog.h"
 #include "Source/Fog/SMem.h"
 #include "Source/Fog/Src/ErrorManager.h"
@@ -4138,6 +4139,23 @@ static void INV_ClearNpcButton(int32_t nButtonIndex) {
     gaNpcShopButtons[nButtonIndex].nSelectedState = 0;
 }
 
+// VP-BEGIN [gamble-refresh R237]: the gamble panel's 3rd button (index 2) is
+// blank in retail. Gheed (class 0x93) gets a Refresh button there that asks the
+// server to re-roll the whole gamble inventory.
+// The button is the narrow BuySellBtn frame the repair NPCs already use for
+// their 3rd slot (wCurrentSelection 0x12); the label is the VP literal drawn by
+// INV_DrawNpcButtonTooltip, because the fork ships no string table of its own.
+// nActionType 1 keeps g_nCurrentInventoryPage on the shop page - the click
+// handler intercepts on wCurrentSelection before the page is used.
+static void INV_SetNpcButtonRefresh(int32_t nButtonIndex) {
+    gaNpcShopButtons[nButtonIndex].wStringId = 0x102e;
+    gaNpcShopButtons[nButtonIndex].nActionType = 1;
+    gaNpcShopButtons[nButtonIndex].nIconId = 3;
+    gaNpcShopButtons[nButtonIndex].wCurrentSelection = 0x12;
+    gaNpcShopButtons[nButtonIndex].nSelectedState = 1;
+}
+// VP-END [gamble-refresh R237]
+
 void __stdcall INV_InitNpcButtonsByClass() {
     int32_t nNpcGuid;
     int nShopModeOrClass;
@@ -4157,11 +4175,14 @@ void __stdcall INV_InitNpcButtonsByClass() {
       TypeOfShopMaybe = 1;
       INV_SetNpcButtonBuy(0);
       INV_SetNpcButtonSell(1);
-      gaNpcShopButtons[2].wStringId = 0;
-      gaNpcShopButtons[2].nActionType = 1;
-      gaNpcShopButtons[2].nIconId = 1;
-      gaNpcShopButtons[2].wCurrentSelection = 0;
-      gaNpcShopButtons[2].nSelectedState = 0;
+      // VP-BEGIN [gamble-refresh R237]: Gheed's gamble panel gets Refresh in the
+      // blank 3rd slot; every other gambling NPC keeps the retail blank.
+      if (pNpcUnit->nClassId == 0x93) {
+        INV_SetNpcButtonRefresh(2);
+      } else {
+        INV_ClearNpcButton(2);
+      }
+      // VP-END [gamble-refresh R237]
     } else {
       nShopModeOrClass = pNpcUnit->nClassId;
       if (nShopModeOrClass <= 0x195) {
@@ -4502,6 +4523,19 @@ void __stdcall INV_DrawNpcButtonTooltip() {
       }
     }
 
+    // VP-BEGIN [gamble-refresh R237]: the Refresh button carries the "Gamble"
+    // string id (the fork ships no string table of its own), so the tooltip
+    // substitutes the literal here. The 0x12 frame + gamble shop mode pair is
+    // unique to it - the repair NPCs' Repair All uses the same frame but only
+    // ever appears with shop mode 0.
+    if (gaNpcShopButtons[nButtonIdx].wStringId == 0x102e && gaNpcShopButtons[nButtonIdx].wCurrentSelection == 0x12 && npcmenu::NPCMENU_GetCurrentShopMode() != 0) {
+      static uint16_t sVwRefreshLabel[8] = { 'R', 'e', 'f', 'r', 'e', 's', 'h', 0 };
+      D2Lang::Unicode::UNISYS::STRING_CopyWideString(wszTooltipText, sVwRefreshLabel);
+      D2Win::Src::D2WinFont::TEXT_TooltipSetAttributes(wszTooltipText, NPCButtonArray[nButtonIdx + CurrentNpcButtonSelection * 4] + gnPanelOffsetX, gnPanelOffsetY - 100 + ScreenSizeY, 0, 0);
+      return;
+    }
+    // VP-END [gamble-refresh R237]
+
     if (gaNpcShopButtons[nButtonIdx].wStringId == 0x276f) {
       D2UnitStrc* pUnit;
       Fog::File::CONTAINER_InitializeBuffer(wszTooltipText, 2, 0x100, D2Lang::Unicode::UNISYS::STRING_ZeroOneWCHAR);
@@ -4707,13 +4741,38 @@ void __stdcall INV_HandleShopLeftClick(D2UIMouseMsgStrc * pMsg) {
             } else {
               bButtonHandled = true;
               if (wButtonSelection == 0x12) {
-                dwArg7 = 1;
-                dwArg6 = 1;
-                dwMode = 0;
-                dwSell = 1;
-                gbInvGambleMode = 1;
-                npcmenu::ShopAction(UNIT::Player::GetPlayerUnit_UI(), nullptr, dwSell, nMouseX, nMouseY, dwMode, dwArg6, dwArg7);
-                gbInvGambleMode = 0;
+                // VP-BEGIN [gamble-refresh R237]: Gheed's Refresh button. The
+                // server answers with the usual 0x9C shop-item remove ('9') and
+                // add ('8') pairs, so the grid repaints itself - nothing is
+                // cleared locally and no unit is touched on this side.
+                // Discriminated on the NPC class, not on the shop-mode global:
+                // Repair All is the only other 0x12 button and it only ever
+                // belongs to the repair NPCs (0x9a/0xb2/0xfd/0x101/0x1ff), never
+                // to Gheed.
+                int32_t nRefreshNpcGuid = 0;
+                D2UnitStrc* pRefreshNpc = nullptr;
+                if (npcmenu::GetInteractedUnitGuid(&nRefreshNpcGuid)) {
+                  pRefreshNpc = UNIT::Player::UNITS_FindClientSideUnit(nRefreshNpcGuid, UNIT_MONSTER);
+                }
+
+                D2BOOT_MarkFmt("gamble-refresh: stage2 btn=%d sel=%x npc=%08x class=%x", nButtonCount, (unsigned)wButtonSelection, (unsigned)nRefreshNpcGuid, (unsigned)(pRefreshNpc ? pRefreshNpc->nClassId : 0));
+                if (pRefreshNpc && pRefreshNpc->nClassId == 0x93) {
+                  D2BOOT_MarkFmt("gamble-refresh: send npc=%08x", (unsigned)nRefreshNpcGuid);
+                  GAME::Msg::NET_D2GS_CLIENT_Send_INT_INT_INT(0x38, 2, nRefreshNpcGuid, (int32_t)D2VP_GAMBLE_REFRESH_PARAM);
+                  gaNpcShopButtons[0].nDrawCallback = 0;
+                  gaNpcShopButtons[1].nDrawCallback = 0;
+                  gaNpcShopButtons[2].nDrawCallback = 0;
+                  gaNpcShopButtons[3].nDrawCallback = 0;
+                } else {
+                  dwArg7 = 1;
+                  dwArg6 = 1;
+                  dwMode = 0;
+                  dwSell = 1;
+                  gbInvGambleMode = 1;
+                  npcmenu::ShopAction(UNIT::Player::GetPlayerUnit_UI(), nullptr, dwSell, nMouseX, nMouseY, dwMode, dwArg6, dwArg7);
+                  gbInvGambleMode = 0;
+                }
+                // VP-END [gamble-refresh R237]
               } else {
                 Cursor::UI_SetCursorToSpecialIcon(((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->nIconId, 0);
                 gnInvShopButton2 = (uint32_t)((D2NpcShopButtonStrc*)((char*)pButton - 0xa))->wCurrentSelection;
@@ -11459,6 +11518,9 @@ void __stdcall INPUT_InventoryLeftClick(D2UIMouseMsgStrc * pMsg) {
                   }
                 } else {
                   gaNpcShopButtons[(int)pClickedButton].nDrawCallback = 1;
+                  if (gaNpcShopButtons[(int)pClickedButton].wCurrentSelection == 0x12) {
+                    D2BOOT_MarkFmt("gamble-refresh: stage1 arm btn=%d mode=%d", (int)pClickedButton, (int)npcmenu::NPCMENU_GetCurrentShopMode());
+                  }
                 }
 
                 gShopTradeUIState = 1;

@@ -117,6 +117,11 @@ void __fastcall SUNITNPC_CheckCanIdentify(::SGAMEDATA * pGame, struct D2UnitStrc
 // @sourcefile .\UNIT\SUNITNPC.CPP
 void __fastcall GAMBLE_GenerateGambleInventory(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * pPlayerUnit, int32_t nNpcGameData);
 void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * pPlayerUnit, struct D2GameNpcStrc * nNpcGameData);
+// [R237] Fork-only: re-rolls the whole gamble inventory for one player. Retail
+// only re-rolls the slot a purchase frees, and a second gamble-open is a no-op
+// while the player still owns a proxy inventory node, so this drops the node
+// (after queueing the client-side removals) and re-runs the normal generation.
+void __fastcall SUNITNPC_GambleRefresh(::SGAMEDATA * pGame, struct D2UnitStrc * pPlayer, struct D2UnitStrc * pNpc);
 // Dispatches an NPC interaction for a player. nMode==0: repair/trade path — registers player interaction, repairs items, and initialises inventory for vendor NPCs (Charsi=0x96, Fara=0xC6, Larzuk=0x203, Halbu=0xFC) if not yet done. nMode!=0 with a personal inventory: registers gamble interaction and validates it via SUNITNPC_ValidateNpcInteraction.
 void __fastcall SUNITNPC_ProcessNpcAction(::SGAMEDATA * pGame, struct D2UnitStrc * pUnit, struct D2UnitStrc * pNpc, int32_t nMode);
 // Strips all active hireable-only states (flag array 12) from a unit by iterating every state in sgptDataTable->nTxtStatesSize. For each active state that has the hireable flag set and owns a stat list, calls STATLIST_RemoveAndRecalc then FreeStatList. Returns non-zero if any state was removed.

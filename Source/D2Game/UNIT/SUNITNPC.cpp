@@ -2315,6 +2315,104 @@ void __fastcall SUNITNPC_ValidateNpcInteraction(::SGAMEDATA * pGame, D2UnitStrc 
     GAMBLE_GenerateGambleInventory(pGame, pUnit, pPlayerUnit, (int32_t)nNpcGameData);
 }
 
+// VP-BEGIN [gamble-refresh R237]: re-roll the whole gamble inventory for one
+// player. Retail only ever re-rolls the single slot a purchase frees
+// (SUNITNPC_DeductGoldForPurchase -> SUNITNPC_RefreshNpcItem), and a second
+// "open gamble" is a no-op because SUNITNPC_ValidateNpcInteraction returns
+// early while the player still owns a proxy inventory node. So: tell the client
+// to drop the items it is holding, drop the node, then let the normal
+// generation path build a fresh one and push it.
+// The removals go out first, while the item units still exist - the 0x9C walk
+// in SendUpdatedItemsToClient looks them up by GUID, and
+// SUNITPROXY_RemovePlayerProxyInventory frees them.
+void __fastcall SUNITNPC_GambleRefresh(::SGAMEDATA * pGame, D2UnitStrc * pPlayer, D2UnitStrc * pNpc) {
+    int nNpcIdx;
+    D2GameNpcStrc* pNpcData = sunitproxy::GetGameNpcByUnit(pGame, pNpc, &nNpcIdx);
+    D2BOOT_MarkFmt("gamble-refresh: enter npc=%08x data=%08x flags=%08x", (unsigned)(pNpc ? pNpc->nUnitGUID : 0), (unsigned)pNpcData, (unsigned)(pNpcData ? pNpcData->flags0x0C : 0));
+    if (!pNpcData || !pNpcData->flags0x0C) {
+      return;
+    }
+
+    int nPlayerGUID = !pPlayer ? -1 : pPlayer->nUnitGUID;
+    D2NpcProxyInventoryStrc* pProxyNode = pNpcData->pProxyInventories;
+    while (pProxyNode && pProxyNode->nPlayerGUID != nPlayerGUID) {
+      pProxyNode = pProxyNode->pNext;
+    }
+
+    D2BOOT_MarkFmt("gamble-refresh: player=%08x node=%08x", (unsigned)nPlayerGUID, (unsigned)pProxyNode);
+    if (!pProxyNode || !pProxyNode->pInventory || !pPlayer) {
+      return;
+    }
+
+    D2ClientStrc* pClient = SUnit::SUNIT_GetClient(pPlayer, ".\\UNIT\\SUNITNPC.CPP", 0xc72);
+    D2BOOT_MarkFmt("gamble-refresh: node=%08x inv=%08x client=%08x items=%d", (unsigned)pProxyNode, (unsigned)pProxyNode->pInventory, (unsigned)pClient, (int)D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pProxyNode->pInventory) != 0);
+    if (!pClient) {
+      return;
+    }
+
+    D2UnitStrc* pItem = D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pProxyNode->pInventory);
+    while (pItem) {
+      D2UnitStrc* pCarriedItem = D2Common::INVENTORY::Inventory::GetCarriedItem(pItem);
+      D2UnitStrc* pNextItem = D2Common::INVENTORY::Inventory::INVENTORY_GetNextItem(pItem);
+      if (pCarriedItem) {
+        // UNITFLAGEX_ITEMINIT is Pre0x9DAnd0x9CPacket's '9' (remove from shop)
+        // trigger; ITEMCMD_DELETE is what SUNITNPC_RefreshNpcItem uses to retire
+        // a gamble item, and the node free below is what actually reclaims it.
+        pCarriedItem->eUnitFlagsEx |= UNITFLAGEX_ITEMINIT;
+        D2Common::INVENTORY::Inventory::UpsertToUpdateList(pProxyNode->pInventory, pCarriedItem);
+        D2Common::ITEMS::Items::ITEM_EditItemData_eD2ItemCmd(pCarriedItem, ITEMCMD_DELETE, 1);
+      }
+
+      pItem = pNextItem;
+    }
+
+    // NOTE: the parameter names in sunitproxy.h are shifted by one - the retail
+    // caller (Item.cpp:592, `NpcStateIs2(pUnit, pPlayer)` guard) passes
+    // (pGame, pNpc, pPlayer, pClient). SendUpdatedItemsToClient compares the
+    // interacted NPC against its pUnit argument, so passing the player here
+    // makes every packet bail out silently.
+    sunitproxy::SUNITPROXY_SendProxyItemsToClient(pGame, pNpc, pPlayer, pClient);
+    sunitproxy::SUNITPROXY_RemovePlayerProxyInventory(pGame, pNpc, pPlayer);
+    SUNITNPC_ValidateNpcInteraction(pGame, pNpc, pPlayer, pNpcData);
+
+    // GAMBLE_GenerateGambleInventory places its items with
+    // SERVER_ItemToInventory(..., bSendUpdate = 0), so they are only queued as
+    // ordinary unit updates - enough when the panel is being opened, not when we
+    // re-roll underneath an already-open one. Queue them exactly the way the
+    // removals above were queued (UNITFLAGEX_ISVENDORITEM is Pre0x9DAnd0x9CPacket's
+    // '8' add-to-shop trigger), then drain the queue again so a later NPC sweep
+    // cannot re-send the same items.
+    D2InventoryStrc* pNewInventory = sunitproxy::SUNITPROXY_GetPlayerProxyInventory(pGame, pPlayer, pNpc);
+    if (pNewInventory) {
+      D2UnitStrc* pNewItem = D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pNewInventory);
+      while (pNewItem) {
+        D2UnitStrc* pNewCarried = D2Common::INVENTORY::Inventory::GetCarriedItem(pNewItem);
+        D2UnitStrc* pNextNewItem = D2Common::INVENTORY::Inventory::INVENTORY_GetNextItem(pNewItem);
+        if (pNewCarried) {
+          pNewCarried->eUnitFlagsEx |= UNITFLAGEX_ISVENDORITEM;
+          D2Common::INVENTORY::Inventory::UpsertToUpdateList(pNewInventory, pNewCarried);
+        }
+
+        pNewItem = pNextNewItem;
+      }
+    }
+
+    sunitproxy::SUNITPROXY_SendProxyItemsToClient(pGame, pNpc, pPlayer, pClient);
+
+    if (pNewInventory) {
+      D2Common::INVENTORY::Inventory::FreeUpdatesFromInventory(pNewInventory);
+      for (D2UnitStrc* pNewItem = D2Common::INVENTORY::Inventory::INVENTORY_GetFirstItem(pNewInventory); pNewItem; pNewItem = D2Common::INVENTORY::Inventory::INVENTORY_GetNextItem(pNewItem)) {
+        D2UnitStrc* pNewCarried = D2Common::INVENTORY::Inventory::GetCarriedItem(pNewItem);
+        if (pNewCarried) {
+          pNewCarried->eUnitFlagsEx &= ~UNITFLAGEX_ISVENDORITEM;
+        }
+      }
+    }
+
+    D2BOOT_MarkFmt("gamble-refresh: done newinv=%08x", (unsigned)pNewInventory);
+}
+// VP-END [gamble-refresh R237]
+
 // Dispatches an NPC interaction for a player. nMode==0: repair/trade path — registers player interaction, repairs items, and initialises inventory for vendor NPCs (Charsi=0x96, Fara=0xC6, Larzuk=0x203, Halbu=0xFC) if not yet done. nMode!=0 with a personal inventory: registers gamble interaction and validates it via SUNITNPC_ValidateNpcInteraction.
 void __fastcall SUNITNPC_ProcessNpcAction(::SGAMEDATA * pGame, D2UnitStrc * pUnit, D2UnitStrc * pNpc, int32_t nMode) {
     D2NpcPlayerInteractionStrc* nGambleInteractNode;
@@ -3319,6 +3417,17 @@ int __fastcall UseMenu(::SGAMEDATA * pGame, D2UnitStrc * pUnit, eD2QuestState pQ
       return 0;
     }
     if (pQState == QUESTSTATE_Step0x02) {
+      // VP-BEGIN [gamble-refresh R237]: the Refresh button sends action 2 (open
+      // gamble) with D2VP_GAMBLE_REFRESH_PARAM in the otherwise-unused params
+      // dword. Retail always sends 0 there, so this cannot fire for a stock
+      // client. Everything below is the retail gamble-open path.
+      if (nGuid == D2VP_GAMBLE_REFRESH_PARAM) {
+        D2BOOT_MarkFmt("gamble-refresh: UseMenu magic guid=%08x param=%08x", (unsigned)guid, (unsigned)nGuid);
+        SUNITNPC_GambleRefresh(pGame, pUnit, pClonedItem);
+        return 0;
+      }
+      D2BOOT_MarkFmt("gamble-refresh: UseMenu act2 guid=%08x param=%08x", (unsigned)guid, (unsigned)nGuid);
+      // VP-END [gamble-refresh R237]
       nNpcClassId = pClonedItem->nClassId;
       if (nNpcClassId <= 0x195) {
         if (nNpcClassId != 0x195 && nNpcClassId != 0x93 && nNpcClassId != 199) {
