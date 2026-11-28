@@ -4,6 +4,7 @@
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/999da238-d2f1-4c83-9a01-910daeea65a2" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3f776f89-2545-41bf-8927-5b7513241d81" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/416c240a-8f74-48d0-8749-285b3af1a315" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ef801a70-22e2-4928-b748-54071d9b09d6" />
 
 # D2VP Vanilla+QoL
 
@@ -15,6 +16,11 @@
 [![Release](https://img.shields.io/badge/release-0.0.9--R241-8f2b2b)](https://github.com/VTSTech/D2VP-QoL/releases/latest)
 [![Build](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml/badge.svg)](https://github.com/VTSTech/D2VP-QoL/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQXpH5Nj5)
+
+SERVER IS LIVE!
+```
+D2VP-SetPrivateGateway.ps1 -Server d2vp.vts-tech.org
+```
 
 Diablo II: Lord of Destruction 1.14d with **D2VP+QoL** on top: a crash fix and Quality of Life layer maintained by VTSTech directly in the source. Features true in game rendered widescreen (not stretched), 60FPS Unlock, portable saves, auto-gold pickup, iLvl tooltips, shift compare, ctrl+click xfer and many more opt-in quality-of-life improvements, all toggled via a settings page. No balance changes, no save-format changes. 100% Compatible with 1.14d Retail saves.
 
